@@ -358,12 +358,14 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String) {
                 fontWeight = FontWeight.W500,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = repo.description,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (repo.description.isNotBlank()) {
+                Text(
+                    text = repo.description,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (repo.aiSummaries.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
