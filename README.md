@@ -29,7 +29,7 @@ Trending AI is a cross-platform application built with Kotlin Multiplatform (KMP
 ## ✨ Core Features
 
 - 📈 **Comprehensive Trends**: Real-time trending project lists for today, this week, and this month.
-- 🤖 **AI Summaries**: Integration with Gemini / DeepSeek models to automatically extract core features and logic for each repository.
+- 🤖 **AI Summaries**: Integration with ChatGPT / DeepSeek models to automatically extract core features and logic for each repository.
 - 📅 **Historical Records**: Support for querying past lists by date and batch (Morning/Evening reports).
 - 📱 **Native Cross-platform**: Built with Compose Multiplatform, supporting both Android and iOS with a single codebase.
 
