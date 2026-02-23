@@ -53,5 +53,6 @@
     <string name="notification_title">GitHub Trending Updated</string>
     <string name="notification_content">Fresh batch of trending repos is ready. Check them out!</string>
     <string name="settings_daily_reminder">Daily Reminders</string>
-    <string name="settings_daily_reminder_desc">Notify at 00:30 &amp; 12:30 (UTC). Note: On Android, reminders may be delayed due to battery optimization.</string>
+    <string name="settings_daily_reminder_desc">Notify daily at %1$s and %2$s</string>
+    <string name="settings_daily_reminder_desc_android">Notify daily at %1$s and %2$s. Note: Reminders may be delayed due to battery optimization.</string>
 </resources>

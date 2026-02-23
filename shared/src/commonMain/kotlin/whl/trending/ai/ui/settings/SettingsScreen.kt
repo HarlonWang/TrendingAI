@@ -9,6 +9,7 @@ import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.NotificationScheduler
+import whl.trending.ai.core.DateTimeUtils
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,7 @@ import trending.shared.generated.resources.settings_daily_reminder_desc
 
 import trending.shared.generated.resources.feedback
 import trending.shared.generated.resources.feedback_desc
+import trending.shared.generated.resources.settings_daily_reminder_desc_android
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,9 +159,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             // 分组 2: 应用设置
             item { SettingsHeader(stringResource(Res.string.app_settings)) }
             item {
+                val localTime1 = remember { DateTimeUtils.getLocalTimeFromUtc(0, 30) }
+                val localTime2 = remember { DateTimeUtils.getLocalTimeFromUtc(12, 30) }
+                val descriptionRes = if (isIos) Res.string.settings_daily_reminder_desc else Res.string.settings_daily_reminder_desc_android
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.settings_daily_reminder)) },
-                    supportingContent = { Text(stringResource(Res.string.settings_daily_reminder_desc)) },
+                    supportingContent = { Text(stringResource(descriptionRes, localTime1, localTime2)) },
                     leadingContent = { Icon(Icons.Default.Notifications, null) },
                     trailingContent = {
                         Switch(

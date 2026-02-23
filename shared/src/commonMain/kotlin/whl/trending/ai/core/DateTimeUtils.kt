@@ -7,6 +7,7 @@ import kotlinx.datetime.format.char
 import kotlinx.datetime.number
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 object DateTimeUtils {
@@ -56,5 +57,15 @@ object DateTimeUtils {
         val instant = Instant.fromEpochMilliseconds(millis)
         val date = instant.toLocalDateTime(TimeZone.UTC).date
         return "${date.year}-${date.month.number.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}"
+    }
+
+    /**
+     * 获取 UTC 时分对应的本地时间字符串 (HH:mm)
+     */
+    fun getLocalTimeFromUtc(hour: Int, minute: Int): String {
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+        val utcDateTime = LocalDateTime(now.year, now.month, now.day, hour, minute)
+        val localDateTime = utcDateTime.toInstant(TimeZone.UTC).toLocalDateTime(TimeZone.currentSystemDefault())
+        return "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
     }
 }
