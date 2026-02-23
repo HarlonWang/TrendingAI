@@ -50,4 +50,8 @@
     <string name="history_info_content">系统记录了每日两个批次（上午/下午）的数据快照，您可以回溯并查看过往任何时段的趋势。</string>
     <string name="feedback">反馈建议</string>
     <string name="feedback_desc">提交反馈、问题或改进建议</string>
+    <string name="notification_title">GitHub 趋势榜已更新</string>
+    <string name="notification_content">今日热门项目已更新，快来看看有哪些新趋势！</string>
+    <string name="settings_daily_reminder">每日更新提醒</string>
+    <string name="settings_daily_reminder_desc">在每日 00:30 和 12:30 (UTC) 提醒。注：Android 端受系统省电策略影响，提醒可能存在延迟。</string>
 </resources>

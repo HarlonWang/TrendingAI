@@ -50,4 +50,8 @@
     <string name="history_info_content">The system records data snapshots for both morning (AM) and afternoon (PM) sessions daily, allowing you to trace project growth over time.</string>
     <string name="feedback">Feedback</string>
     <string name="feedback_desc">Report issues or suggest improvements</string>
+    <string name="notification_title">GitHub Trending Updated</string>
+    <string name="notification_content">Fresh batch of trending repos is ready. Check them out!</string>
+    <string name="settings_daily_reminder">Daily Reminders</string>
+    <string name="settings_daily_reminder_desc">Notify at 00:30 &amp; 12:30 (UTC). Note: On Android, reminders may be delayed due to battery optimization.</string>
 </resources>

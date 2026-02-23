@@ -8,6 +8,7 @@ import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.Constants
+import whl.trending.ai.core.platform.NotificationScheduler
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Feedback
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +40,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,6 +70,8 @@ import trending.shared.generated.resources.settings
 import trending.shared.generated.resources.theme_dark
 import trending.shared.generated.resources.theme_follow_system
 import trending.shared.generated.resources.theme_light
+import trending.shared.generated.resources.settings_daily_reminder
+import trending.shared.generated.resources.settings_daily_reminder_desc
 
 import trending.shared.generated.resources.feedback
 import trending.shared.generated.resources.feedback_desc
@@ -77,6 +82,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val isIos = isIosPlatform()
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
+    val isNotificationEnabled by globalSettingsManager.isNotificationEnabled.collectAsState(false)
     val appVersion = remember { getAppVersion() }
 
     Scaffold(
@@ -150,6 +156,27 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             // 分组 2: 应用设置
             item { SettingsHeader(stringResource(Res.string.app_settings)) }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.settings_daily_reminder)) },
+                    supportingContent = { Text(stringResource(Res.string.settings_daily_reminder_desc)) },
+                    leadingContent = { Icon(Icons.Default.Notifications, null) },
+                    trailingContent = {
+                        Switch(
+                            checked = isNotificationEnabled,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    NotificationScheduler.requestPermission {
+                                        globalSettingsManager.setNotificationEnabled(true)
+                                    }
+                                } else {
+                                    globalSettingsManager.setNotificationEnabled(false)
+                                }
+                            }
+                        )
+                    }
+                )
+            }
             item {
                 if (isIos) {
                     ListItem(

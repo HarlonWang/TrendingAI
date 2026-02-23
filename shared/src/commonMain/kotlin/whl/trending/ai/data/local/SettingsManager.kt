@@ -4,6 +4,7 @@ import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.coroutines.getIntFlow
+import com.russhwolf.settings.coroutines.getBooleanFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -23,6 +24,7 @@ enum class AppLanguage(val isoCode: String?) {
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val LANGUAGE_KEY = "prefs_language"
+    private val NOTIFICATION_KEY = "prefs_notification_enabled"
 
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
@@ -36,6 +38,13 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setLanguage(language: AppLanguage) {
         settings.putInt(LANGUAGE_KEY, language.ordinal)
+    }
+
+    val isNotificationEnabled: Flow<Boolean> = settings.getBooleanFlow(NOTIFICATION_KEY, false)
+
+    fun setNotificationEnabled(enabled: Boolean) {
+        settings.putBoolean(NOTIFICATION_KEY, enabled)
+        whl.trending.ai.core.platform.NotificationScheduler.update(enabled)
     }
 }
 
