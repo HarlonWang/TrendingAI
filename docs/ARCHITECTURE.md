@@ -77,6 +77,16 @@ data class MainUiState(
 -   ViewModel 中的异步操作必须绑定在 `viewModelScope` 中。
 -   Repository 中的挂起函数必须是线程安全的，不应依赖特定的 Dispatcher（内部应指定 `Dispatchers.Default` 或 `IO`）。
 
+### 5. Commit 规范
+
+- `feat`: 新功能
+- `fix`: 修复 bug
+- `docs`: 文档更新
+- `style`: 格式（不影响代码运行的更改）
+- `refactor`: 代码重构（既不是修复 bug 也不是添加功能）
+- `test`: 添加缺失的测试或修正现有测试
+- `chore`: 其他杂项更改（构建过程或辅助工具的变更）
+
 ---
 
 ## 🧪 测试策略

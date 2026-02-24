@@ -3,3 +3,4 @@
 - 新增的类必须添加注释说明
 - 提交默认只执行 commit ，不 push
 - 默认不需要执行编译校验
+- docs/ARCHITECTURE.md
