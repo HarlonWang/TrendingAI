@@ -21,6 +21,7 @@ import org.jetbrains.compose.resources.getString
 import trending.shared.generated.resources.Res
 import trending.shared.generated.resources.notification_content
 import trending.shared.generated.resources.notification_title
+import whl.trending.ai.shared.R
 import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 
@@ -62,7 +63,7 @@ class DailyReminderWorker(
         )
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Placeholder icon
+            .setSmallIcon(R.drawable.ic_stat_name)
             .setContentTitle(title)
             .setContentText(content)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

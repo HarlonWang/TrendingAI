@@ -3,6 +3,7 @@ package whl.trending.ai
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
@@ -12,14 +13,22 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import whl.trending.ai.core.App
+import whl.trending.ai.core.platform.NotificationScheduler
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 
 class MainActivity : AppCompatActivity() {
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        NotificationScheduler.onPermissionResult(isGranted)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         whl.trending.ai.core.platform.AndroidContextHolder.initialize(this)
+        NotificationScheduler.initLauncher(requestPermissionLauncher)
 
         lifecycleScope.launch {
             globalSettingsManager.appLanguage
