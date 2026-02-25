@@ -48,6 +48,12 @@ Trending AI is a cross-platform application built with Kotlin Multiplatform (KMP
 
 ---
 
+## 📈 Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/HarlonWang/TrendingAI.svg)](https://starchart.cc/HarlonWang/TrendingAI)
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
