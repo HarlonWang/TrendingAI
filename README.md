@@ -16,9 +16,9 @@
 
 Currently in early preview:
 
-| Android | iOS | Website |
-| --- | --- | --- |
-| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | https://trendingai.cn |
+| Android | iOS | Website                                |
+| --- | --- |----------------------------------------|
+| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
 
 ---
 
