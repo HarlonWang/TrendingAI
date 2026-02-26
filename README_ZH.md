@@ -10,13 +10,13 @@
 
 ## 📸 界面预览
 
-<img src="assets/android_screenshot_zh.png" width="300">
+<img width="1920" height="1080" alt="TrendingAI预览图 001 2" src="https://github.com/user-attachments/assets/28a840b3-ff3e-42c1-85e8-670af1d6933e" />
 
 目前处于早期预览阶段：
 
-| Android | iOS |
-| --- | --- |
-| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* |
+| Android | iOS | Website |
+| --- | --- | --- |
+| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | https://trendingai.cn |
 
 ---
 
