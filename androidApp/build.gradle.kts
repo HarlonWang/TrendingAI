@@ -84,5 +84,6 @@ android {
 
 dependencies {
     implementation(libs.aptabase)
+    implementation(libs.androidx.lifecycle.process)
     debugImplementation(libs.compose.uiTooling)
 }
