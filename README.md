@@ -50,7 +50,7 @@ Trending AI 是一款使用 Kotlin Multiplatform (KMP) 构建的跨平台应用�
 
 ## 📈 Star 趋势
 
-[![Stargazers over time](https://starchart.cc/HarlonWang/TrendingAI.svg)](https://starchart.cc/HarlonWang/TrendingAI)
+[![Star History Chart](https://api.star-history.com/svg?repos=HarlonWang/TrendingAI&type=date&legend=top-left)](https://www.star-history.com/#HarlonWang/TrendingAI&type=date&legend=top-left)
 
 ---
 

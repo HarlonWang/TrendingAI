@@ -48,9 +48,9 @@ Trending AI is a cross-platform application built with Kotlin Multiplatform (KMP
 
 ---
 
-## 📈 Stargazers over time
+## 📈 Star History
 
-[![Stargazers over time](https://starchart.cc/HarlonWang/TrendingAI.svg)](https://starchart.cc/HarlonWang/TrendingAI)
+[![Star History Chart](https://api.star-history.com/svg?repos=HarlonWang/TrendingAI&type=date&legend=top-left)](https://www.star-history.com/#HarlonWang/TrendingAI&type=date&legend=top-left)
 
 ---
 
