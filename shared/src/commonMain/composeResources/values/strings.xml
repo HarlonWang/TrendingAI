@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Trending AI</string>
-    <string name="tab_daily">Today</string>
-    <string name="tab_weekly">This week</string>
-    <string name="tab_monthly">This month</string>
+    <string name="period_daily">Today</string>
+    <string name="period_weekly">This week</string>
+    <string name="period_monthly">This month</string>
     <string name="settings">Settings</string>
     <string name="personalization">Personalization</string>
     <string name="dark_mode">Dark Mode</string>
@@ -29,7 +29,7 @@
     <string name="error_fetch">Failed to fetch data: %1$s</string>
     <string name="back">Back</string>
     <string name="filter_options">Filter</string>
-    <string name="filter_period">Time</string>
+    <string name="filter_period">Trending Period</string>
     <string name="filter_language">Language</string>
     <string name="filter_ai_provider">AI Provider</string>
     <string name="filter_done">Done</string>

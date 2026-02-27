@@ -109,9 +109,9 @@ import trending.shared.generated.resources.retry
 import trending.shared.generated.resources.select_date
 import trending.shared.generated.resources.settings
 import trending.shared.generated.resources.stars_since
-import trending.shared.generated.resources.tab_daily
-import trending.shared.generated.resources.tab_monthly
-import trending.shared.generated.resources.tab_weekly
+import trending.shared.generated.resources.period_daily
+import trending.shared.generated.resources.period_monthly
+import trending.shared.generated.resources.period_weekly
 import trending.shared.generated.resources.update_info_content
 import trending.shared.generated.resources.update_info_title
 
@@ -188,9 +188,9 @@ private fun TrendingTopBar(
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val periodLabel = when (selectedPeriod) {
-        "daily" -> stringResource(Res.string.tab_daily)
-        "weekly" -> stringResource(Res.string.tab_weekly)
-        "monthly" -> stringResource(Res.string.tab_monthly)
+        "daily" -> stringResource(Res.string.period_daily)
+        "weekly" -> stringResource(Res.string.period_weekly)
+        "monthly" -> stringResource(Res.string.period_monthly)
         else -> selectedPeriod
     }
 
@@ -502,9 +502,9 @@ private fun FilterBottomSheet(
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 periods.forEachIndexed { index, period ->
                     val label = when (period) {
-                        "daily" -> stringResource(Res.string.tab_daily)
-                        "weekly" -> stringResource(Res.string.tab_weekly)
-                        "monthly" -> stringResource(Res.string.tab_monthly)
+                        "daily" -> stringResource(Res.string.period_daily)
+                        "weekly" -> stringResource(Res.string.period_weekly)
+                        "monthly" -> stringResource(Res.string.period_monthly)
                         else -> period
                     }
                     SegmentedButton(

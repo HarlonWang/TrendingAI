@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Trending AI</string>
-    <string name="tab_daily">今日</string>
-    <string name="tab_weekly">本周</string>
-    <string name="tab_monthly">本月</string>
+    <string name="period_daily">今日</string>
+    <string name="period_weekly">本周</string>
+    <string name="period_monthly">本月</string>
     <string name="settings">设置</string>
     <string name="personalization">个性化</string>
     <string name="dark_mode">深色模式</string>
@@ -29,7 +29,7 @@
     <string name="error_fetch">获取数据失败: %1$s</string>
     <string name="back">返回</string>
     <string name="filter_options">筛选</string>
-    <string name="filter_period">时间</string>
+    <string name="filter_period">趋势周期</string>
     <string name="filter_language">热门语言</string>
     <string name="filter_ai_provider">AI 服务商</string>
     <string name="filter_done">完成</string>
