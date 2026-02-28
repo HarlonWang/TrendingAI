@@ -80,7 +80,7 @@ jobs:
           
           if not commits:
               with open("release_summary.md", "w") as f:
-                  f.write("### What's Changed\n\n* No specific changes.\n\n")
+                  f.write("* No specific changes.\n\n")
               exit(0)
               
           if not api_key:
@@ -108,7 +108,7 @@ jobs:
                   res_data = json.loads(response.read().decode("utf-8"))
                   summary = res_data["choices"][0]["message"]["content"]
                   with open("release_summary.md", "w") as f:
-                      f.write("### What's Changed\n\n" + summary + "\n\n")
+                      f.write(summary + "\n\n")
                   print("✅ ChatGPT generated release notes successfully.")
           except Exception as e:
               print(f"⚠️ ChatGPT API call failed: {e}")
