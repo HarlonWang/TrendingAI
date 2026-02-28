@@ -89,7 +89,7 @@ jobs:
                   f.write(fallback_text + "\n\n")
               exit(0)
               
-          prompt = f"请根据以下 git commit 记录，生成一份面向用户的 Release Notes。\n要求：\n1. 忽略琐碎的构建或内部调整，总结出核心的新特性、优化和修复。\n2. 同时提供清晰的中文和英文版本（英文在上，中文在下）。\n3. 使用 Markdown 列表格式，不要输出过于啰碎的技术术语。\n\nCommits:\n{commits}"
+          prompt = f"请根据以下 git commit 记录，生成一份面向用户的 Release Notes。\n要求：\n1. 忽略琐碎的构建或内部调整，总结出核心的新特性、优化和修复。\n2. 同时提供清晰的中文和英文版本（中文在上，英文在下）。\n3. 使用 Markdown 列表格式，不要输出过于啰碎的技术术语。\n\nCommits:\n{commits}"
           
           data = {
               "model": "gpt-5.1",
