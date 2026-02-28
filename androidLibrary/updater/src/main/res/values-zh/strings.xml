@@ -4,4 +4,5 @@
     <string name="update_dialog_message">当前版本 %1$s，前往官网下载最新版本。</string>
     <string name="update_dialog_download">去下载</string>
     <string name="update_dialog_cancel">取消</string>
+    <string name="update_dialog_changelog">查看更新日志</string>
 </resources>

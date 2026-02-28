@@ -1,5 +1,6 @@
 package whl.trending.updater
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,8 +28,16 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.update_dialog_cancel))
+            Row {
+                TextButton(onClick = {
+                    openUrl(Constants.RELEASES_URL)
+                    onDismiss()
+                }) {
+                    Text(stringResource(R.string.update_dialog_changelog))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.update_dialog_cancel))
+                }
             }
         }
     )
