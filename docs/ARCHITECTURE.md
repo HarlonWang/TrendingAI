@@ -8,7 +8,20 @@
 
 项目采用 **分层架构 (Layered Architecture)**，结合 **单向数据流 (UDF)** 模式进行设计。整体代码主要集中在 `shared` 模块中，以实现 Android 和 iOS 的高度逻辑复用。
 
-### 核心分层说明
+### 项目模块结构
+
+```text
+Trending/
+├── androidApp/             # Android 应用入口
+├── androidLibrary/         # Android 专属库模块（不含业务逻辑）
+│   └── updater/            # 版本更新检测模块（:androidLibrary:updater）
+├── shared/                 # KMP 共享模块（Android + iOS 复用）
+└── iosApp/                 # iOS 应用入口
+```
+
+> **设计原则**：`shared` 模块承载与平台无关的业务逻辑；`androidLibrary` 下的模块仅包含 Android 平台专属能力，通过接口与 `shared` 解耦，不参与 iOS 构建。
+
+### shared 模块内部分层
 
 ```text
 shared/src/commonMain/kotlin/whl/trending/ai/
@@ -21,11 +34,65 @@ shared/src/commonMain/kotlin/whl/trending/ai/
 │   ├── remote/             # 远程数据源 (Ktor API 请求实现)
 │   ├── local/              # 本地持久化 (Settings / Preferences)
 │   └── repository/         # 存储库 (业务逻辑入口，数据聚合)
-└── ui/                     # 表现层 (Presentation Layer)
-    ├── main/               # 首页趋势列表模块 (Screen & ViewModel)
-    ├── settings/           # 设置与偏好模块
-    └── component/          # 可复用的公共 UI 组件
+├── ui/                     # 表现层 (Presentation Layer)
+│   ├── main/               # 首页趋势列表模块 (Screen & ViewModel)
+│   ├── settings/           # 设置与偏好模块
+│   └── component/          # 可复用的公共 UI 组件
+└── update/                 # 平台能力扩展接口
+    └── UpdateChecker.kt    # 版本检测接口 + globalUpdateChecker 全局单例
 ```
+
+---
+
+## 📦 androidLibrary 模块规范
+
+`androidLibrary/` 用于存放 Android 平台专属的独立功能库。每个子模块需满足：
+
+- 职责单一，不依赖其他 `androidLibrary` 子模块
+- 通过在 `shared/commonMain` 中定义接口与 `shared` 模块解耦
+- `shared` 模块只感知接口，不感知具体实现
+
+### updater 模块（:androidLibrary:updater）
+
+负责 Android 端的版本更新检测与提示，不参与 iOS 构建。
+
+**模块内部结构：**
+
+```text
+androidLibrary/updater/
+└── src/main/kotlin/whl/trending/updater/
+    ├── UpdateApi.kt            # 调用 GitHub Releases API 获取最新版本
+    ├── UpdateInfo.kt           # 版本信息数据类
+    ├── UpdateViewModel.kt      # 检测逻辑，实现 shared 中的 UpdateChecker 接口
+    ├── UpdateDialog.kt         # 更新提示弹窗 Composable
+    └── UpdateAwareContent.kt   # 入口 Composable，供 androidApp 的 MainActivity 调用
+```
+
+**与 shared 的协作方式（接口解耦）：**
+
+```text
+shared/commonMain
+  └── UpdateChecker (interface)     # 定义 isChecking、isUpToDate、manualCheck()
+      └── globalUpdateChecker       # 全局单例，默认 NoOpUpdateChecker
+
+androidLibrary/updater
+  └── UpdateViewModel               # 实现 UpdateChecker，注册到 globalUpdateChecker
+
+shared/commonMain/ui/settings
+  └── SettingsScreen                # 读取 globalUpdateChecker，无需感知 updater 模块
+```
+
+**更新检测触发时机：**
+
+| 场景 | 行为 |
+| :--- | :--- |
+| Android 冷启动，距上次检测 > 24h | 自动请求 GitHub API，有新版本弹窗提示 |
+| Android 冷启动，距上次检测 < 24h | 跳过，不请求接口（限流） |
+| 用户在设置页点击「版本更新」 | 立即检测，无视 24h 限流 |
+| iOS 用户点击「版本更新」 | 跳转官网（`globalUpdateChecker` 保持 NoOpUpdateChecker） |
+| 网络请求失败 | 静默处理，不影响正常使用 |
+
+**Google Play 扩展点：** 上架 Google Play 时，将 `androidApp/build.gradle.kts` 中的 `implementation` 改为按渠道的 flavor 依赖，并在 play flavor source set 中接入 Play In-App Update API，无需修改 `shared` 或 `updater` 模块内部逻辑。
 
 ---
 
