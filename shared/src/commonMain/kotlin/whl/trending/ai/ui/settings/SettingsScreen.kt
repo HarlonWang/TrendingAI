@@ -8,6 +8,7 @@ import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.Constants
+import whl.trending.ai.update.globalUpdateChecker
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,7 +17,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
@@ -70,6 +73,7 @@ import trending.shared.generated.resources.theme_light
 
 import trending.shared.generated.resources.feedback
 import trending.shared.generated.resources.feedback_desc
+import trending.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +82,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val appVersion = remember { getAppVersion() }
+    val isChecking by globalUpdateChecker.isChecking.collectAsState()
+    val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
 
     Scaffold(
         topBar = {
@@ -212,10 +218,26 @@ fun SettingsScreen(onBack: () -> Unit) {
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.check_updates)) },
-                    trailingContent = { Text(appVersion, color = MaterialTheme.colorScheme.outline) },
+                    trailingContent = {
+                        when {
+                            isChecking -> CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            isUpToDate -> Text(
+                                stringResource(Res.string.version_up_to_date),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
+                        }
+                    },
                     leadingContent = { Icon(Icons.Default.Refresh, null) },
-                    modifier = Modifier.clickable {
-                        openUrl("https://github.com/HarlonWang/Trending/releases")
+                    modifier = Modifier.clickable(enabled = !isChecking) {
+                        if (isIos) {
+                            openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                        } else {
+                            globalUpdateChecker.manualCheck()
+                        }
                     }
                 )
             }
