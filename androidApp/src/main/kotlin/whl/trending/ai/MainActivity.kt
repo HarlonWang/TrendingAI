@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import whl.trending.ai.core.App
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.updater.UpdateAwareContent
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +36,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContent {
-            App()
+            UpdateAwareContent {
+                App()
+            }
         }
     }
 }

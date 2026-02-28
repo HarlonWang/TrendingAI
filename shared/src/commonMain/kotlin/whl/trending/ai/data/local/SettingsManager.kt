@@ -23,6 +23,7 @@ enum class AppLanguage(val isoCode: String?) {
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val LANGUAGE_KEY = "prefs_language"
+    private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
 
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
@@ -37,6 +38,12 @@ class SettingsManager(private val settings: ObservableSettings) {
     fun setLanguage(language: AppLanguage) {
         settings.putInt(LANGUAGE_KEY, language.ordinal)
     }
+
+    fun getLastUpdateCheckTime(): Long =
+        settings.getLong(LAST_UPDATE_CHECK_KEY, 0L)
+
+    fun setLastUpdateCheckTime(time: Long) =
+        settings.putLong(LAST_UPDATE_CHECK_KEY, time)
 }
 
 val globalSettings by lazy { Settings() as ObservableSettings }

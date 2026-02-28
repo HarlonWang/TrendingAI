@@ -15,6 +15,9 @@ kotlin {
 
     dependencies {
         implementation(projects.shared)
+        implementation(project(":androidLibrary:updater"))
+        // 上架 Google Play 时：将上方改为 "apkImplementation"(project(":updater"))
+        // 并在 play flavor source set 中接入 Play In-App Update API
         implementation(libs.androidx.activity.compose)
         implementation(libs.androidx.appcompat)
         implementation(libs.compose.uiToolingPreview)
