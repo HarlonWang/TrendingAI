@@ -29,7 +29,7 @@ class UpdateApi {
 
     suspend fun fetchLatestVersion(): String? = try {
         client.get(
-            "https://api.github.com/repos/HarlonWang/Trending/releases/latest"
+            "https://api.github.com/repos/HarlonWang/TrendingAI/releases/latest"
         ).body<GitHubRelease>().tagName
     } catch (e: Exception) {
         null
