@@ -31,4 +31,4 @@ dependencyResolutionManagement {
 
 include(":shared")
 include(":androidApp")
-include(":updater")
+include(":androidLibrary:updater")
