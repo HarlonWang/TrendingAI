@@ -1,5 +1,6 @@
 package whl.trending.ai.core
 
+import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.main.MainScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.data.local.ThemeMode
@@ -20,6 +21,7 @@ import androidx.navigation3.ui.NavDisplay
 
 data object Main
 data object Settings
+data class RepoDetail(val owner: String, val repo: String)
 
 @Composable
 @Preview
@@ -45,6 +47,9 @@ fun App() {
                         MainScreen(
                             onNavigateToSettings = {
                                 backStack.add(Settings)
+                            },
+                            onNavigateToDetail = { owner, repo ->
+                                backStack.add(RepoDetail(owner, repo))
                             }
                         )
                     }
@@ -54,6 +59,14 @@ fun App() {
                             onBack = {
                                 backStack.removeLastOrNull()
                             }
+                        )
+                    }
+
+                    is RepoDetail -> NavEntry(key) {
+                        ReadmeScreen(
+                            owner = key.owner,
+                            repo = key.repo,
+                            onBack = { backStack.removeLastOrNull() }
                         )
                     }
 
