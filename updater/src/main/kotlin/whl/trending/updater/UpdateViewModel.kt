@@ -37,7 +37,9 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
         doCheck()
     }
 
-    override fun manualCheck() = doCheck()
+    override fun manualCheck() {
+        doCheck()
+    }
 
     private fun doCheck() = viewModelScope.launch {
         if (_isChecking.value) return@launch
