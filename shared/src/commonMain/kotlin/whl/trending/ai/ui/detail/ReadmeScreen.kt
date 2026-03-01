@@ -27,7 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,7 +50,15 @@ fun ReadmeScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val colorScheme = MaterialTheme.colorScheme
+    val webViewColors = WebViewColors(
+        bg     = colorScheme.surface.toHex(),
+        text   = colorScheme.onSurface.toHex(),
+        codeBg = colorScheme.surfaceVariant.toHex(),
+        border = colorScheme.outlineVariant.toHex(),
+        link   = colorScheme.primary.toHex(),
+        muted  = colorScheme.onSurfaceVariant.toHex(),
+    )
     val repoUrl = "https://github.com/$owner/$repo"
 
     Scaffold(
@@ -129,10 +137,17 @@ fun ReadmeScreen(
             else -> {
                 HtmlWebView(
                     html = uiState.html,
-                    isDark = isDark,
+                    colors = webViewColors,
                     modifier = Modifier.fillMaxSize().padding(innerPadding)
                 )
             }
         }
     }
+}
+
+private fun Color.toHex(): String {
+    val r = (red * 255 + 0.5f).toInt().coerceIn(0, 255)
+    val g = (green * 255 + 0.5f).toInt().coerceIn(0, 255)
+    val b = (blue * 255 + 0.5f).toInt().coerceIn(0, 255)
+    return "#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}"
 }

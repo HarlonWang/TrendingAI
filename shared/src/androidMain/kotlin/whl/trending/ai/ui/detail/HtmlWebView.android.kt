@@ -7,7 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
 @Composable
-actual fun HtmlWebView(html: String, isDark: Boolean, modifier: Modifier) {
+actual fun HtmlWebView(html: String, colors: WebViewColors, modifier: Modifier) {
     AndroidView(
         factory = { context ->
             WebView(context).apply {
@@ -20,7 +20,7 @@ actual fun HtmlWebView(html: String, isDark: Boolean, modifier: Modifier) {
         update = { webView ->
             webView.loadDataWithBaseURL(
                 null,
-                wrapHtml(html, isDark),
+                wrapHtml(html, colors),
                 "text/html",
                 "UTF-8",
                 null

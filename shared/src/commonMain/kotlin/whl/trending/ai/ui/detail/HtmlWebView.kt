@@ -3,16 +3,25 @@ package whl.trending.ai.ui.detail
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
-@Composable
-expect fun HtmlWebView(html: String, isDark: Boolean, modifier: Modifier = Modifier)
+data class WebViewColors(
+    val bg: String,
+    val text: String,
+    val codeBg: String,
+    val border: String,
+    val link: String,
+    val muted: String,
+)
 
-internal fun wrapHtml(body: String, isDark: Boolean): String {
-    val textColor   = if (isDark) "#e6edf3" else "#24292f"
-    val bgColor     = if (isDark) "#1c1b1f" else "#ffffff"
-    val codeBg      = if (isDark) "#161b22" else "#f6f8fa"
-    val borderColor = if (isDark) "#30363d" else "#d0d7de"
-    val linkColor   = if (isDark) "#58a6ff" else "#0969da"
-    val mutedColor  = if (isDark) "#8b949e" else "#57606a"
+@Composable
+expect fun HtmlWebView(html: String, colors: WebViewColors, modifier: Modifier = Modifier)
+
+internal fun wrapHtml(body: String, colors: WebViewColors): String {
+    val textColor   = colors.text
+    val bgColor     = colors.bg
+    val codeBg      = colors.codeBg
+    val borderColor = colors.border
+    val linkColor   = colors.link
+    val mutedColor  = colors.muted
 
     return buildString {
         appendLine("<!DOCTYPE html>")

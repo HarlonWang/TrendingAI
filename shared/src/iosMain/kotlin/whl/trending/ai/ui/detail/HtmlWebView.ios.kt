@@ -10,7 +10,7 @@ import platform.WebKit.WKWebViewConfiguration
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
-actual fun HtmlWebView(html: String, isDark: Boolean, modifier: Modifier) {
+actual fun HtmlWebView(html: String, colors: WebViewColors, modifier: Modifier) {
     UIKitView(
         factory = {
             WKWebView(
@@ -19,7 +19,7 @@ actual fun HtmlWebView(html: String, isDark: Boolean, modifier: Modifier) {
             )
         },
         update = { webView ->
-            webView.loadHTMLString(wrapHtml(html, isDark), baseURL = null)
+            webView.loadHTMLString(wrapHtml(html, colors), baseURL = null)
         },
         modifier = modifier
     )
