@@ -9,6 +9,6 @@ data class ReadmeResponse(
     val repo: String = "",
     val branch: String = "",
     val filename: String = "",
-    val content: String = "",
+    val html: String = "",
     val error: String? = null
 )

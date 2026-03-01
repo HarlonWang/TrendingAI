@@ -11,8 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ReadmeUiState(
-    val content: String = "",
-    val branch: String = "",
+    val html: String = "",
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -36,7 +35,7 @@ class ReadmeViewModel(
             try {
                 val response = repository.getReadme(owner, repo)
                 if (response.success) {
-                    _uiState.update { it.copy(content = response.content, branch = response.branch, isLoading = false) }
+                    _uiState.update { it.copy(html = response.html, isLoading = false) }
                 } else {
                     _uiState.update { it.copy(error = response.error, isLoading = false) }
                 }

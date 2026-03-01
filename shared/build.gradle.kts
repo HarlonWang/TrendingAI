@@ -59,10 +59,6 @@ kotlin {
             implementation(libs.jetbrains.navigation3.ui)
             implementation(libs.multiplatform.settings)
             implementation(libs.multiplatform.settings.coroutines)
-            implementation(libs.multiplatform.markdown.renderer)
-            implementation(libs.multiplatform.markdown.renderer.coil3)
-            implementation(libs.coil3.compose)
-            implementation(libs.coil3.network.ktor3)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
