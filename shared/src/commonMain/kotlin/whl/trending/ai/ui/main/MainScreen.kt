@@ -1,11 +1,5 @@
 package whl.trending.ai.ui.main
 
-import whl.trending.ai.data.model.TrendingRepo
-import whl.trending.ai.data.model.TrendingAiSummary
-import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.Constants
-import whl.trending.ai.core.DateTimeUtils
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -104,16 +98,19 @@ import trending.shared.generated.resources.icon_openai_dark
 import trending.shared.generated.resources.icon_openai_light
 import trending.shared.generated.resources.last_updated
 import trending.shared.generated.resources.no_data
-import trending.shared.generated.resources.retry
-import trending.shared.generated.resources.select_date
-import trending.shared.generated.resources.settings
-import trending.shared.generated.resources.stars_total
-import trending.shared.generated.resources.stars_period
 import trending.shared.generated.resources.period_daily
 import trending.shared.generated.resources.period_monthly
 import trending.shared.generated.resources.period_weekly
+import trending.shared.generated.resources.retry
+import trending.shared.generated.resources.select_date
+import trending.shared.generated.resources.settings
+import trending.shared.generated.resources.stars_period
+import trending.shared.generated.resources.stars_total
 import trending.shared.generated.resources.update_info_content
 import trending.shared.generated.resources.update_info_title
+import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.data.model.TrendingAiSummary
+import whl.trending.ai.data.model.TrendingRepo
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
