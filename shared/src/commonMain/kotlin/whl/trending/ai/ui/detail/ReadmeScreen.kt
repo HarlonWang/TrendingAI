@@ -3,6 +3,7 @@ package whl.trending.ai.ui.detail
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.openUrl
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -139,6 +140,7 @@ fun ReadmeScreen(
                     html = uiState.html,
                     colors = webViewColors,
                     modifier = Modifier.fillMaxSize().padding(innerPadding)
+                        .background(colorScheme.surface)
                 )
             }
         }

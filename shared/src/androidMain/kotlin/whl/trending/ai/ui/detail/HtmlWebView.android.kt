@@ -15,6 +15,7 @@ actual fun HtmlWebView(html: String, colors: WebViewColors, modifier: Modifier) 
                 settings.javaScriptEnabled = false
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
         },
         update = { webView ->
