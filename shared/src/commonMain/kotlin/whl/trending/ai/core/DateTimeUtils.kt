@@ -49,6 +49,23 @@ object DateTimeUtils {
     }
 
     /**
+     * 将整数格式化为带千位分隔符的字符串，例如 20846 → "20,846"。
+     */
+    fun formatNumber(n: Int): String {
+        val s = n.toString()
+        val sb = StringBuilder()
+        val start = s.length % 3
+        if (start > 0) sb.append(s.substring(0, start))
+        var i = start
+        while (i < s.length) {
+            if (sb.isNotEmpty()) sb.append(',')
+            sb.append(s.substring(i, i + 3))
+            i += 3
+        }
+        return sb.toString()
+    }
+
+    /**
      * 将 DatePicker 返回的毫秒值转换为 YYYY-MM-DD 字符串。
      */
     fun formatEpochMillisToDate(millis: Long?): String {

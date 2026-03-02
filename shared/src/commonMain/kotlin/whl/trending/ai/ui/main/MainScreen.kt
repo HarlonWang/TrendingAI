@@ -98,7 +98,6 @@ import trending.shared.generated.resources.history_info_title
 import trending.shared.generated.resources.history_trending
 import trending.shared.generated.resources.icon_deepseek_dark
 import trending.shared.generated.resources.icon_deepseek_light
-import trending.shared.generated.resources.icon_flame
 import trending.shared.generated.resources.icon_gemini_dark
 import trending.shared.generated.resources.icon_gemini_light
 import trending.shared.generated.resources.icon_openai_dark
@@ -108,7 +107,8 @@ import trending.shared.generated.resources.no_data
 import trending.shared.generated.resources.retry
 import trending.shared.generated.resources.select_date
 import trending.shared.generated.resources.settings
-import trending.shared.generated.resources.stars_since
+import trending.shared.generated.resources.stars_total
+import trending.shared.generated.resources.stars_period
 import trending.shared.generated.resources.period_daily
 import trending.shared.generated.resources.period_monthly
 import trending.shared.generated.resources.period_weekly
@@ -430,28 +430,31 @@ private fun AiSummaryBox(aiSummary: TrendingAiSummary) {
 
 @Composable
 private fun RepoMetadata(repo: TrendingRepo, since: String) {
+    val periodLabel = when (since) {
+        "daily" -> stringResource(Res.string.period_daily)
+        "weekly" -> stringResource(Res.string.period_weekly)
+        "monthly" -> stringResource(Res.string.period_monthly)
+        else -> since
+    }
+    val starsTotal = stringResource(Res.string.stars_total, DateTimeUtils.formatNumber(repo.stars))
+    val starsPeriod = stringResource(Res.string.stars_period, periodLabel, DateTimeUtils.formatNumber(repo.currentPeriodStars))
+    val metadataText = buildString {
+        if (!repo.language.isNullOrEmpty()) append("${repo.language} · ")
+        append("$starsTotal · $starsPeriod")
+    }
+
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            modifier = Modifier.size(12.dp),
+            modifier = Modifier.size(8.dp),
             shape = CircleShape,
             color = repo.languageColor?.toColorOrNull() ?: MaterialTheme.colorScheme.outline
         ) {}
         Text(
-            text = repo.language ?: "",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Icon(
-            painter = painterResource(Res.drawable.icon_flame),
-            contentDescription = "Flame",
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = stringResource(Res.string.stars_since, repo.currentPeriodStars, since),
-            fontSize = 14.sp,
+            text = metadataText,
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

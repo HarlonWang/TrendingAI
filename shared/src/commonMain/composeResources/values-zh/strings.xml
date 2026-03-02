@@ -24,7 +24,8 @@
     <string name="about_us">关于我们</string>
     <string name="about_us_desc">了解更多关于 Trending AI 的信息</string>
     <string name="last_updated">最后更新于: %1$s</string>
-    <string name="stars_since">%1$d stars %2$s</string>
+    <string name="stars_total">Stars %1$s</string>
+    <string name="stars_period">Stars (%1$s) %2$s</string>
     <string name="no_data">暂无数据</string>
     <string name="retry">重试</string>
     <string name="error_fetch">获取数据失败: %1$s</string>

@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Trending AI</string>
     <string name="period_daily">Today</string>
-    <string name="period_weekly">This week</string>
-    <string name="period_monthly">This month</string>
+    <string name="period_weekly">This Week</string>
+    <string name="period_monthly">This Month</string>
     <string name="settings">Settings</string>
     <string name="personalization">Personalization</string>
     <string name="dark_mode">Dark Mode</string>
@@ -24,7 +24,8 @@
     <string name="about_us">About Us</string>
     <string name="about_us_desc">Learn more about Trending AI</string>
     <string name="last_updated">Last updated at: %1$s</string>
-    <string name="stars_since">%1$d stars %2$s</string>
+    <string name="stars_total">Stars %1$s</string>
+    <string name="stars_period">Stars (%1$s) %2$s</string>
     <string name="no_data">No data available</string>
     <string name="retry">Retry</string>
     <string name="error_fetch">Failed to fetch data: %1$s</string>
