@@ -119,6 +119,7 @@ import trending.shared.generated.resources.update_info_title
 @Composable
 fun MainScreen(
     onNavigateToSettings: () -> Unit,
+    onNavigateToDetail: (owner: String, repo: String) -> Unit,
     viewModel: MainViewModel = viewModel { MainViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -144,7 +145,8 @@ fun MainScreen(
         RepoList(
             uiState = uiState,
             modifier = Modifier.padding(innerPadding),
-            onRefresh = { viewModel.fetchData(isRefresh = true) }
+            onRefresh = { viewModel.fetchData(isRefresh = true) },
+            onNavigateToDetail = onNavigateToDetail
         )
     }
 
@@ -259,7 +261,8 @@ private fun TrendingTopBar(
 private fun RepoList(
     uiState: MainUiState,
     modifier: Modifier = Modifier,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onNavigateToDetail: (owner: String, repo: String) -> Unit
 ) {
     val state = rememberPullToRefreshState()
     
@@ -313,7 +316,13 @@ private fun RepoList(
                     count = uiState.repos.size,
                     key = { index -> uiState.repos[index].url }
                 ) { index ->
-                    RepoItem(index = index, repo = uiState.repos[index], since = uiState.since)
+                    val repo = uiState.repos[index]
+                    RepoItem(
+                        index = index,
+                        repo = repo,
+                        since = uiState.since,
+                        onClick = { onNavigateToDetail(repo.author, repo.repoName) }
+                    )
                     HorizontalDivider(modifier = Modifier.fillMaxWidth())
                 }
 
@@ -334,10 +343,10 @@ private fun RepoList(
 }
 
 @Composable
-private fun RepoItem(index: Int, repo: TrendingRepo, since: String) {
+private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
-            .clickable { openUrl(repo.url, Constants.GITHUB_APP_PACKAGE) }
+            .clickable { onClick() }
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {

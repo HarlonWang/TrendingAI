@@ -1,5 +1,6 @@
 package whl.trending.ai.data.remote
 
+import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.TrendingResponse
 
 import io.ktor.client.HttpClient
@@ -51,5 +52,13 @@ open class TrendingApi {
             }
         }
         return response.body<TrendingResponse>()
+    }
+
+    open suspend fun fetchReadme(owner: String, repo: String): ReadmeResponse {
+        val response = client.get("$baseHost/api/readme") {
+            parameter("owner", owner)
+            parameter("repo", repo)
+        }
+        return response.body<ReadmeResponse>()
     }
 }
