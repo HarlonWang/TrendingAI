@@ -1,6 +1,7 @@
 package whl.trending.ai.ui.main
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -111,7 +113,12 @@ import trending.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.TrendingAiSummary
+import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.zIndex
+import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -397,9 +404,67 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 }
             }
 
+            if (repo.builtBy.isNotEmpty()) {
+                ContributorAvatars(contributors = repo.builtBy)
+            }
+
             RepoMetadata(repo = repo, since = since)
         }
     }
+}
+
+@Composable
+private fun ContributorAvatars(contributors: List<TrendingContributor>) {
+    val display = contributors.take(5)
+    val extra = (contributors.size - 5).coerceAtLeast(0)
+    val avatarSize = 20.dp
+    val step = 14.dp
+    val totalCount = display.size + if (extra > 0) 1 else 0
+    val totalWidth = avatarSize + step * (totalCount - 1)
+
+    Box(modifier = Modifier.size(width = totalWidth, height = avatarSize)) {
+        display.forEachIndexed { index, contributor ->
+            AvatarCircle(
+                url = contributor.avatar,
+                modifier = Modifier
+                    .size(avatarSize)
+                    .offset(x = step * index)
+                    .zIndex((display.size - index).toFloat())
+            )
+        }
+        if (extra > 0) {
+            Box(
+                modifier = Modifier
+                    .size(avatarSize)
+                    .offset(x = step * display.size)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                    .zIndex(0f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "+$extra",
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.W500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvatarCircle(url: String, modifier: Modifier = Modifier) {
+    AsyncImage(
+        model = url,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
+    )
 }
 
 @Composable
