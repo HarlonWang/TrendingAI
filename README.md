@@ -2,6 +2,10 @@
 
 [English](./README_EN.md)
 
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.10-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.10.1-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Material 3](https://img.shields.io/badge/Material_3-1.10.0--alpha05-673AB7?logo=materialdesign&logoColor=white)](https://m3.material.io/)
+
 > 🚧 **当前状态：项目积极开发中 (Work in Progress)**
 
 **用 AI 快速读懂 GitHub Trending 开源项目。**
