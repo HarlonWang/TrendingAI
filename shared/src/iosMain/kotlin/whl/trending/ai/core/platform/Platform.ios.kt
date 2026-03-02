@@ -48,3 +48,7 @@ actual fun getSystemLanguage(): String {
     val preferredLanguage = NSLocale.preferredLanguages.firstOrNull() as? String ?: "en"
     return preferredLanguage.split("-").firstOrNull() ?: "en"
 }
+
+actual fun trackEvent(name: String, props: Map<String, Any>) {
+    // iOS 暂不接入事件上报
+}

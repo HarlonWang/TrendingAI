@@ -109,6 +109,7 @@ import trending.shared.generated.resources.stars_total
 import trending.shared.generated.resources.update_info_content
 import trending.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingRepo
 
@@ -154,6 +155,14 @@ fun MainScreen(
             selectedProviders = uiState.selectedProviders,
             onDismiss = { showFilterSheet = false },
             onConfirm = { period, language, providers ->
+                trackEvent(
+                    "filter_confirm",
+                    mapOf(
+                        "period" to period,
+                        "language" to language,
+                        "providers" to providers.sorted().joinToString(",")
+                    )
+                )
                 viewModel.updateFilter(period, language, providers)
                 showFilterSheet = false
             }
@@ -166,6 +175,13 @@ fun MainScreen(
             selectedBatch = uiState.selectedBatch,
             onDismiss = { showHistorySheet = false },
             onConfirm = { date, batch ->
+                trackEvent(
+                    "history_confirm",
+                    mapOf(
+                        "date" to (date ?: ""),
+                        "batch" to (batch ?: "")
+                    )
+                )
                 viewModel.updateHistoryFilter(date, batch)
                 showHistorySheet = false
             }

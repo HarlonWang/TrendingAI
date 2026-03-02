@@ -65,3 +65,7 @@ actual fun getAppVersion(): String {
 actual fun isIosPlatform(): Boolean = false
 
 actual fun getSystemLanguage(): String = java.util.Locale.getDefault().language
+
+actual fun trackEvent(name: String, props: Map<String, Any>) {
+    com.aptabase.Aptabase.instance.trackEvent(name, props)
+}

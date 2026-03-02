@@ -38,6 +38,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.aptabase)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
