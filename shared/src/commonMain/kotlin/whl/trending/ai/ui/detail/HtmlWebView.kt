@@ -39,7 +39,7 @@ internal fun wrapHtml(body: String, colors: WebViewColors): String {
                 margin: 0;
                 word-wrap: break-word;
             }
-            img { max-width: 100%; height: auto; display: block; }
+            img { max-width: 100%; height: auto; display: inline-block; vertical-align: middle; }
             a { color: $linkColor; }
             h1, h2 { border-bottom: 1px solid $borderColor; padding-bottom: 8px; }
             pre {
