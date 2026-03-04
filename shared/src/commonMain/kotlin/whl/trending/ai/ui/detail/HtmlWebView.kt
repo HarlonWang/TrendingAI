@@ -26,9 +26,13 @@ internal fun wrapHtml(body: String, colors: WebViewColors): String {
     return buildString {
         appendLine("<!DOCTYPE html>")
         appendLine("<html><head>")
-        appendLine("""<meta name="viewport" content="width=device-width, initial-scale=1">""")
+        appendLine("""<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">""")
         appendLine("<style>")
         appendLine("""
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 color: $textColor;
@@ -38,6 +42,7 @@ internal fun wrapHtml(body: String, colors: WebViewColors): String {
                 font-size: 15px;
                 margin: 0;
                 word-wrap: break-word;
+                overflow-wrap: break-word;
             }
             img { max-width: 100%; height: auto; display: inline-block; vertical-align: middle; }
             a { color: $linkColor; }
@@ -57,7 +62,7 @@ internal fun wrapHtml(body: String, colors: WebViewColors): String {
                 border-radius: 3px;
             }
             pre code { background: none; padding: 0; }
-            table { border-collapse: collapse; width: 100%; }
+            table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
             th, td { border: 1px solid $borderColor; padding: 8px 12px; text-align: left; }
             th { background: $codeBg; }
             blockquote {
