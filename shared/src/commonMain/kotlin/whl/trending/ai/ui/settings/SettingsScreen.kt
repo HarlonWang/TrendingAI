@@ -221,16 +221,20 @@ fun SettingsScreen(onBack: () -> Unit) {
                     ListItem(
                         headlineContent = { Text(stringResource(Res.string.check_updates)) },
                         trailingContent = {
-                            when {
-                                isChecking -> CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                isUpToDate -> Text(
-                                    stringResource(Res.string.version_up_to_date),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
+                            if (isIos) {
+                                Text(appVersion, color = MaterialTheme.colorScheme.outline)
+                            } else {
+                                when {
+                                    isChecking -> CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    isUpToDate -> Text(
+                                        stringResource(Res.string.version_up_to_date),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
+                                }
                             }
                         },
                         leadingContent = { Icon(Icons.Default.Refresh, null) },

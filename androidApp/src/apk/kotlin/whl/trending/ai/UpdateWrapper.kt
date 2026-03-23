@@ -5,5 +5,5 @@ import whl.trending.updater.UpdateAwareContent
 
 @Composable
 fun UpdateWrapper(content: @Composable () -> Unit) {
-    UpdateAwareContent { content() }
+    UpdateAwareContent(content)
 }
