@@ -14,6 +14,8 @@ import whl.trending.ai.update.UpdateChecker
 
 class UpdateViewModel : ViewModel(), UpdateChecker {
 
+    override val isEnabled = true
+
     private val api = UpdateApi()
 
     private val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L

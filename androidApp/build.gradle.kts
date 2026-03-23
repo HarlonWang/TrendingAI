@@ -15,9 +15,6 @@ kotlin {
 
     dependencies {
         implementation(projects.shared)
-        implementation(project(":androidLibrary:updater"))
-        // 上架 Google Play 时：将上方改为 "apkImplementation"(project(":updater"))
-        // 并在 play flavor source set 中接入 Play In-App Update API
         implementation(libs.androidx.activity.compose)
         implementation(libs.androidx.appcompat)
         implementation(libs.compose.uiToolingPreview)
@@ -56,6 +53,18 @@ android {
         }
     }
 
+    // apk: 独立分发（GitHub Release + R2），包含自建 updater
+    // play: Google Play 渠道，不含 updater（Play 自管更新）
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("apk") {
+            dimension = "distribution"
+        }
+        create("play") {
+            dimension = "distribution"
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -86,6 +95,7 @@ android {
 }
 
 dependencies {
+    "apkImplementation"(project(":androidLibrary:updater"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
     debugImplementation(libs.compose.uiTooling)

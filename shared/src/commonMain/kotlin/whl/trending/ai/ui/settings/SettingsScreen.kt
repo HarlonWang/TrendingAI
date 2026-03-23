@@ -215,31 +215,34 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 )
             }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.check_updates)) },
-                    trailingContent = {
-                        when {
-                            isChecking -> CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                            isUpToDate -> Text(
-                                stringResource(Res.string.version_up_to_date),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
+            // apk 渠道显示自建更新检查，iOS 跳转官网；play 渠道由商店管理更新，不显示
+            if (globalUpdateChecker.isEnabled || isIos) {
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(Res.string.check_updates)) },
+                        trailingContent = {
+                            when {
+                                isChecking -> CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                isUpToDate -> Text(
+                                    stringResource(Res.string.version_up_to_date),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
+                            }
+                        },
+                        leadingContent = { Icon(Icons.Default.Refresh, null) },
+                        modifier = Modifier.clickable(enabled = !isChecking) {
+                            if (isIos) {
+                                openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                            } else {
+                                globalUpdateChecker.manualCheck()
+                            }
                         }
-                    },
-                    leadingContent = { Icon(Icons.Default.Refresh, null) },
-                    modifier = Modifier.clickable(enabled = !isChecking) {
-                        if (isIos) {
-                            openUrl(Constants.OFFICIAL_WEBSITE_URL)
-                        } else {
-                            globalUpdateChecker.manualCheck()
-                        }
-                    }
-                )
+                    )
+                }
             }
             item {
                 ListItem(
