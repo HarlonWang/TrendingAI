@@ -42,7 +42,7 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$(pwd)/release.jks" >> $GITHUB_ENV
 
       - name: Build Release APK
-        run: ./gradlew :androidApp:assembleRelease
+        run: ./gradlew :androidApp:assembleApkRelease
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -129,7 +129,7 @@ jobs:
           # 2. 获取上一个 Tag
           PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | grep -v "${{ github.ref_name }}" | head -n 1)
           
-          NEW_APK=$(find androidApp/build/outputs/apk/release -name "*.apk" | head -n 1)
+          NEW_APK=$(find androidApp/build/outputs/apk/apk/release -name "*.apk" | head -n 1)
           
           echo "### Apk Diff" >> release_summary.md
           
@@ -206,7 +206,7 @@ jobs:
           fi
           
           # 收集待上传的文件
-          FILES=(androidApp/build/outputs/apk/release/*.apk)
+          FILES=(androidApp/build/outputs/apk/apk/release/*.apk)
           if [ -s diff-apk.txt ]; then
             FILES+=("diff-apk.txt")
           fi
@@ -226,7 +226,7 @@ jobs:
           ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
         run: |
           # 动态寻找刚才打包好的 APK 路径 
-          APK_PATH=$(find androidApp/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APK_PATH=$(find androidApp/build/outputs/apk/apk/release -name "*.apk" | head -n 1)
           
           if [ -z "$APK_PATH" ]; then
             echo "Error: APK file not found!"
