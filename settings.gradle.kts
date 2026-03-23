@@ -1,4 +1,4 @@
-rootProject.name = "TrendingAI"
+rootProject.name = "Trending"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
