@@ -51,29 +51,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
-import trending.shared.generated.resources.Res
-import trending.shared.generated.resources.about
-import trending.shared.generated.resources.about_us
-import trending.shared.generated.resources.about_us_desc
-import trending.shared.generated.resources.app_settings
-import trending.shared.generated.resources.back
-import trending.shared.generated.resources.check_updates
-import trending.shared.generated.resources.dark_mode
-import trending.shared.generated.resources.language_settings
-import trending.shared.generated.resources.language_option_chinese
-import trending.shared.generated.resources.language_option_english
-import trending.shared.generated.resources.language_option_follow_system
-import trending.shared.generated.resources.language_system_follow
-import trending.shared.generated.resources.open_system_settings
-import trending.shared.generated.resources.personalization
-import trending.shared.generated.resources.settings
-import trending.shared.generated.resources.theme_dark
-import trending.shared.generated.resources.theme_follow_system
-import trending.shared.generated.resources.theme_light
+import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.about
+import trendingai.shared.generated.resources.about_us
+import trendingai.shared.generated.resources.about_us_desc
+import trendingai.shared.generated.resources.app_settings
+import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.check_updates
+import trendingai.shared.generated.resources.dark_mode
+import trendingai.shared.generated.resources.language_settings
+import trendingai.shared.generated.resources.language_option_chinese
+import trendingai.shared.generated.resources.language_option_english
+import trendingai.shared.generated.resources.language_option_follow_system
+import trendingai.shared.generated.resources.language_system_follow
+import trendingai.shared.generated.resources.open_system_settings
+import trendingai.shared.generated.resources.personalization
+import trendingai.shared.generated.resources.settings
+import trendingai.shared.generated.resources.theme_dark
+import trendingai.shared.generated.resources.theme_follow_system
+import trendingai.shared.generated.resources.theme_light
 
-import trending.shared.generated.resources.feedback
-import trending.shared.generated.resources.feedback_desc
-import trending.shared.generated.resources.version_up_to_date
+import trendingai.shared.generated.resources.feedback
+import trendingai.shared.generated.resources.feedback_desc
+import trendingai.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

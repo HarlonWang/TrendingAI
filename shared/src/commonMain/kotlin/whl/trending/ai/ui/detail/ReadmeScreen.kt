@@ -35,11 +35,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.stringResource
-import trending.shared.generated.resources.Res
-import trending.shared.generated.resources.back
-import trending.shared.generated.resources.readme_no_content
-import trending.shared.generated.resources.retry
-import trending.shared.generated.resources.view_on_github
+import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.readme_no_content
+import trendingai.shared.generated.resources.retry
+import trendingai.shared.generated.resources.view_on_github
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
