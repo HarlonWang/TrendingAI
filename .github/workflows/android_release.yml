@@ -41,8 +41,9 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release.jks
           echo "ANDROID_KEYSTORE_PATH=$(pwd)/release.jks" >> $GITHUB_ENV
 
-      - name: Build Release APK
-        run: ./gradlew :androidApp:assembleApkRelease
+      - name: Build Release APK & AAB
+        run: |
+          ./gradlew :androidApp:assembleApkRelease :androidApp:bundlePlayRelease
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -205,8 +206,11 @@ jobs:
             IS_PRERELEASE="--prerelease"
           fi
           
-          # 收集待上传的文件
+          # 收集待上传的文件（APK + AAB）
           FILES=(androidApp/build/outputs/apk/apk/release/*.apk)
+          for aab in androidApp/build/outputs/bundle/playRelease/*.aab; do
+            [ -f "$aab" ] && FILES+=("$aab")
+          done
           if [ -s diff-apk.txt ]; then
             FILES+=("diff-apk.txt")
           fi
@@ -242,3 +246,4 @@ jobs:
             --endpoint-url "https://$ACCOUNT_ID.r2.cloudflarestorage.com"
           
           echo "✅ Upload completed. Download link: https://download.trendingai.cn/TrendingAI-latest.apk"
+
