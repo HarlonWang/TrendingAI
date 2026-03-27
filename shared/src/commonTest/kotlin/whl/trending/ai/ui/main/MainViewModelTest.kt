@@ -49,9 +49,8 @@ class MainViewModelTest {
         var callCount = 0
 
         override suspend fun fetchTrending(
-            period: String, 
-            language: String, 
-            providers: String?, 
+            period: String,
+            language: String,
             summaryLang: String,
             date: String?,
             batch: String?
@@ -104,7 +103,7 @@ class MainViewModelTest {
         advanceTimeBy(100) 
         // Initial fetch started but suspended
         
-        viewModel.updateFilter("weekly", "all", setOf("chatgpt"))
+        viewModel.updateFilter("weekly", "all")
         
         advanceUntilIdle()
 

@@ -32,7 +32,6 @@ open class TrendingApi {
     open suspend fun fetchTrending(
         period: String,
         language: String,
-        providers: String? = null,
         summaryLang: String,
         date: String? = null,
         batch: String? = null
@@ -41,9 +40,6 @@ open class TrendingApi {
             parameter("since", period.lowercase())
             parameter("lang", language.lowercase())
             parameter("summary_lang", summaryLang)
-            if (!providers.isNullOrBlank()) {
-                parameter("provider", providers)
-            }
             if (!date.isNullOrBlank()) {
                 parameter("date", date)
             }

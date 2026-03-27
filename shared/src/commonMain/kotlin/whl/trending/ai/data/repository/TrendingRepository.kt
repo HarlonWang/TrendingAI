@@ -10,13 +10,12 @@ class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
     }
 
     suspend fun getTrending(
-        period: String, 
-        language: String, 
-        providers: String? = null,
+        period: String,
+        language: String,
         summaryLang: String,
         date: String? = null,
         batch: String? = null
     ): TrendingResponse {
-        return api.fetchTrending(period, language, providers, summaryLang, date, batch)
+        return api.fetchTrending(period, language, summaryLang, date, batch)
     }
 }

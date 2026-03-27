@@ -33,7 +33,6 @@
     <string name="filter_options">Filter</string>
     <string name="filter_period">Trending Period</string>
     <string name="filter_language">Language</string>
-    <string name="filter_ai_provider">AI Provider</string>
     <string name="filter_done">Done</string>
     <string name="filter_reset">Reset</string>
     <string name="history_trending">History</string>

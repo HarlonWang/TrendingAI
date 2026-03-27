@@ -27,7 +27,6 @@ data class MainUiState(
     val isRefreshing: Boolean = false,
     val selectedPeriod: String = "daily",
     val selectedLanguage: String = "all",
-    val selectedProviders: Set<String> = setOf("chatgpt"),
     val selectedDate: String? = null,
     val selectedBatch: String? = null,
     val error: String? = null
@@ -67,11 +66,9 @@ class MainViewModel(
                 val currentAppLanguage = settingsManager.appLanguage.first()
                 val summaryLang = currentAppLanguage.isoCode ?: getSystemLanguage()
                 
-                val providerParam = _uiState.value.selectedProviders.joinToString(",")
                 val response = repository.getTrending(
-                    _uiState.value.selectedPeriod, 
+                    _uiState.value.selectedPeriod,
                     _uiState.value.selectedLanguage,
-                    providerParam,
                     summaryLang,
                     _uiState.value.selectedDate,
                     _uiState.value.selectedBatch
@@ -99,16 +96,14 @@ class MainViewModel(
         }
     }
 
-    fun updateFilter(period: String, language: String, providers: Set<String>) {
-        if (_uiState.value.selectedPeriod == period && 
-            _uiState.value.selectedLanguage == language &&
-            _uiState.value.selectedProviders == providers) return
-        
-        _uiState.update { 
+    fun updateFilter(period: String, language: String) {
+        if (_uiState.value.selectedPeriod == period &&
+            _uiState.value.selectedLanguage == language) return
+
+        _uiState.update {
             it.copy(
                 selectedPeriod = period,
-                selectedLanguage = language,
-                selectedProviders = providers
+                selectedLanguage = language
             )
         }
         fetchData()

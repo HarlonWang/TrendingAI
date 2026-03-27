@@ -81,7 +81,6 @@ import trending.shared.generated.resources.cancel
 import trending.shared.generated.resources.click_to_select_date
 import trending.shared.generated.resources.confirm
 import trending.shared.generated.resources.error_fetch
-import trending.shared.generated.resources.filter_ai_provider
 import trending.shared.generated.resources.filter_done
 import trending.shared.generated.resources.filter_language
 import trending.shared.generated.resources.filter_options
@@ -159,18 +158,16 @@ fun MainScreen(
         FilterBottomSheet(
             selectedPeriod = uiState.selectedPeriod,
             selectedLanguage = uiState.selectedLanguage,
-            selectedProviders = uiState.selectedProviders,
             onDismiss = { showFilterSheet = false },
-            onConfirm = { period, language, providers ->
+            onConfirm = { period, language ->
                 trackEvent(
                     "filter_confirm",
                     mapOf(
                         "period" to period,
-                        "language" to language,
-                        "providers" to providers.sorted().joinToString(",")
+                        "language" to language
                     )
                 )
-                viewModel.updateFilter(period, language, providers)
+                viewModel.updateFilter(period, language)
                 showFilterSheet = false
             }
         )
@@ -543,17 +540,14 @@ private fun RepoMetadata(repo: TrendingRepo, since: String) {
 private fun FilterBottomSheet(
     selectedPeriod: String,
     selectedLanguage: String,
-    selectedProviders: Set<String>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Set<String>) -> Unit
+    onConfirm: (String, String) -> Unit
 ) {
     val periods = listOf("daily", "weekly", "monthly")
     val languages = listOf("all", "javascript", "java", "go", "rust", "typescript", "c++", "c", "swift", "kotlin")
-    val providers = listOf("chatgpt", "deepseek")
-    
+
     var tempPeriod by remember { mutableStateOf(selectedPeriod) }
     var tempLanguage by remember { mutableStateOf(selectedLanguage) }
-    var tempProviders by remember { mutableStateOf(selectedProviders) }
     var showHelpDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -608,35 +602,6 @@ private fun FilterBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = stringResource(Res.string.filter_ai_provider),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                providers.forEach { provider ->
-                    FilterChip(
-                        selected = tempProviders.contains(provider),
-                        onClick = {
-                            tempProviders = if (tempProviders.contains(provider)) {
-                                if (tempProviders.size > 1) tempProviders - provider else tempProviders
-                            } else {
-                                tempProviders + provider
-                            }
-                        },
-                        label = { Text(provider.replaceFirstChar { it.uppercase() }) },
-                        leadingIcon = null
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
                 text = stringResource(Res.string.filter_language),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
@@ -665,7 +630,7 @@ private fun FilterBottomSheet(
             ) {
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
-                        onConfirm("daily", "all", setOf("chatgpt"))
+                        onConfirm("daily", "all")
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -673,7 +638,7 @@ private fun FilterBottomSheet(
                 }
 
                 Button(
-                    onClick = { onConfirm(tempPeriod, tempLanguage, tempProviders) },
+                    onClick = { onConfirm(tempPeriod, tempLanguage) },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(stringResource(Res.string.filter_done))
