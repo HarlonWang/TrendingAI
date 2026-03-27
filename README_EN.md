@@ -16,7 +16,7 @@
 
 ## 📸 Preview
 
-<img width="1920" height="1080" alt="TrendingAI预览图 001 2" src="https://github.com/user-attachments/assets/28a840b3-ff3e-42c1-85e8-670af1d6933e" />
+<img width="300" alt="TrendingAI Preview" src="./assets/android_screenshot.png" />
 
 Currently in early preview:
 
