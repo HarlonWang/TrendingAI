@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -392,16 +393,24 @@ private fun LabeledText(label: String, value: String) {
 
 @Composable
 private fun SourceTag(source: String, label: String) {
+    val bgColor = when (source) {
+        "github" -> MaterialTheme.colorScheme.primary
+        "hackernews" -> Color(0xFFFF6600)
+        "producthunt" -> Color(0xFFDA552F)
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val textColor = when (source) {
+        "github" -> MaterialTheme.colorScheme.onPrimary
+        "hackernews", "producthunt" -> Color.White
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Text(
         text = label,
         modifier = Modifier
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = RoundedCornerShape(12.dp)
-            )
+            .background(color = bgColor, shape = RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 2.dp),
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = textColor
     )
 }
 
