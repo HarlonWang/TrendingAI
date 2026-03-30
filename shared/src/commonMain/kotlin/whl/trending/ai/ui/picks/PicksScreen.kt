@@ -394,13 +394,13 @@ private fun LabeledText(label: String, value: String) {
 @Composable
 private fun SourceTag(source: String, label: String) {
     val bgColor = when (source) {
-        "github" -> MaterialTheme.colorScheme.primary
+        "github" -> MaterialTheme.colorScheme.onSurface
         "hackernews" -> Color(0xFFFF6600)
         "producthunt" -> Color(0xFFDA552F)
         else -> MaterialTheme.colorScheme.surfaceContainerHighest
     }
     val textColor = when (source) {
-        "github" -> MaterialTheme.colorScheme.onPrimary
+        "github" -> MaterialTheme.colorScheme.surface
         "hackernews", "producthunt" -> Color.White
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
