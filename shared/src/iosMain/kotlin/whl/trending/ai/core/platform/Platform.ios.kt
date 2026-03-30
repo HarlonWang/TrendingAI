@@ -52,3 +52,11 @@ actual fun getSystemLanguage(): String {
 actual fun trackEvent(name: String, props: Map<String, Any>) {
     // iOS 暂不接入事件上报
 }
+
+actual fun getUserAgent(): String {
+    val appVersion = getAppVersion()
+    val device = UIDevice.currentDevice
+    val osVersion = device.systemVersion
+    val model = device.model
+    return "TrendingAI/$appVersion (iOS $osVersion; $model)"
+}

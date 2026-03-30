@@ -1,6 +1,7 @@
 package whl.trending.ai.core
 
 import whl.trending.ai.ui.detail.ReadmeScreen
+import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.data.local.ThemeMode
@@ -21,6 +22,7 @@ import androidx.navigation3.ui.NavDisplay
 
 data object Home
 data object Settings
+data object Feedback
 data class RepoDetail(val owner: String, val repo: String)
 
 @Composable
@@ -56,6 +58,17 @@ fun App() {
 
                     is Settings -> NavEntry(key) {
                         SettingsScreen(
+                            onBack = {
+                                backStack.removeLastOrNull()
+                            },
+                            onNavigateToFeedback = {
+                                backStack.add(Feedback)
+                            }
+                        )
+                    }
+
+                    is Feedback -> NavEntry(key) {
+                        FeedbackScreen(
                             onBack = {
                                 backStack.removeLastOrNull()
                             }

@@ -69,3 +69,10 @@ actual fun getSystemLanguage(): String = java.util.Locale.getDefault().language
 actual fun trackEvent(name: String, props: Map<String, Any>) {
     com.aptabase.Aptabase.instance.trackEvent(name, props)
 }
+
+actual fun getUserAgent(): String {
+    val appVersion = getAppVersion()
+    val osVersion = Build.VERSION.RELEASE
+    val model = Build.MODEL
+    return "TrendingAI/$appVersion (Android $osVersion; $model)"
+}

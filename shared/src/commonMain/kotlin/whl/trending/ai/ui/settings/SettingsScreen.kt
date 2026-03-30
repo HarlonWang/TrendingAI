@@ -77,7 +77,7 @@ import trendingai.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onNavigateToFeedback: () -> Unit = {}) {
     val isIos = isIosPlatform()
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
@@ -210,9 +210,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     headlineContent = { Text(stringResource(Res.string.feedback)) },
                     supportingContent = { Text(stringResource(Res.string.feedback_desc)) },
                     leadingContent = { Icon(Icons.Default.Feedback, null) },
-                    modifier = Modifier.clickable {
-                        openUrl(Constants.FEEDBACK_URL, Constants.GITHUB_APP_PACKAGE)
-                    }
+                    modifier = Modifier.clickable { onNavigateToFeedback() }
                 )
             }
             // apk 渠道显示自建更新检查，iOS 跳转官网；play 渠道由商店管理更新，不显示
