@@ -139,8 +139,11 @@ private fun PicksList(
         if (controversy.isNotEmpty()) {
             item { SectionDivider() }
             item { SectionHeader(title = "争议话题") }
-            items(controversy, key = { "controversy_${it.rank}" }) { item ->
-                ControversyCard(item = item, onClick = { onItemClick(item) })
+            item {
+                ControversyGroup(
+                    items = controversy,
+                    onItemClick = onItemClick
+                )
             }
         }
 
@@ -258,41 +261,47 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
+private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> Unit) {
     ElevatedCard(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // 标题 + 源标签
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        items.forEachIndexed { index, item ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onItemClick(item) }
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = item.title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                SourceTag(source = item.source, label = item.sourceLabel)
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    SourceTag(source = item.source, label = item.sourceLabel)
+                }
 
-            item.analysis?.let { analysis ->
-                Text(
-                    text = analysis.core,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
+                item.analysis?.let { analysis ->
+                    Text(
+                        text = analysis.core,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+            }
+            if (index < items.lastIndex) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
     }
