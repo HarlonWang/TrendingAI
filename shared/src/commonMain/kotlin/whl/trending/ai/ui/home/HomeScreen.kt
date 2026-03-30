@@ -231,18 +231,13 @@ private fun PicksTopBar(
                     text = "Picks",
                     style = MaterialTheme.typography.titleMedium
                 )
-                val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
                 Text(
-                    text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = subtitleColor)) { append("GitHub · ") }
-                        withStyle(SpanStyle(color = Color(0xFFFF6600))) { append("Hacker News") }
-                        withStyle(SpanStyle(color = subtitleColor)) { append(" · ") }
-                        withStyle(SpanStyle(color = Color(0xFFDA552F))) { append("Product Hunt") }
-                        if (!date.isNullOrBlank()) {
-                            withStyle(SpanStyle(color = subtitleColor)) { append(" · $date") }
-                        }
+                    text = buildString {
+                        append("GitHub · Hacker News · Product Hunt")
+                        if (!date.isNullOrBlank()) append(" · $date")
                     },
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
