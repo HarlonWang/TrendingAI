@@ -226,13 +226,14 @@ private fun PicksTopBar(
                     text = "Picks",
                     style = MaterialTheme.typography.titleMedium
                 )
-                if (!date.isNullOrBlank()) {
-                    Text(
-                        text = date,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = buildString {
+                        append("GitHub · HN · PH")
+                        if (!date.isNullOrBlank()) append(" · $date")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         actions = {
