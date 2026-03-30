@@ -88,6 +88,7 @@ fun HomeScreen(
                     onNavigateToSettings = onNavigateToSettings
                 )
                 HomeTab.Picks -> PicksTopBar(
+                    scrollBehavior = scrollBehavior,
                     onNavigateToSettings = onNavigateToSettings
                 )
             }
@@ -211,9 +212,11 @@ private fun TrendingTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PicksTopBar(
+    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     onNavigateToSettings: () -> Unit
 ) {
     TopAppBar(
+        scrollBehavior = scrollBehavior,
         title = {
             Text(
                 text = "Picks",
