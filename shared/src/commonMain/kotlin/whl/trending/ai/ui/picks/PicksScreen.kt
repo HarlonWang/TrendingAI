@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,9 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import whl.trending.ai.core.DateTimeUtils
@@ -176,59 +182,83 @@ private fun SectionHeader(title: String, color: Color) {
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
-    Column(
+    OutlinedCard(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        // 标题行 + 源标签
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = item.title,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+            // 源标签
             SourceTag(source = item.source, label = item.sourceLabel)
-        }
 
-        // Analysis
-        item.analysis?.let { analysis ->
-            // Core
-            Text(
-                text = analysis.core,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // 标题 + 分数
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = item.title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = formatScore(item.source, item.score),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            // Why important
-            Text(
-                text = analysis.whyImportant,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Analysis
+            item.analysis?.let { analysis ->
+                // Core — 加粗
+                Text(
+                    text = analysis.core,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
 
-            // Community voice
-            CommunityVoiceRow(analysis)
+                // Why important
+                Text(
+                    text = analysis.whyImportant,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            // Action + Alternatives
-            ActionAlternativesRow(analysis)
+                // Action / Alternatives / Terms
+                val labels = buildList {
+                    analysis.action?.takeIf { it.isNotBlank() }?.let {
+                        add("适合场景" to it)
+                    }
+                    analysis.alternatives?.takeIf { it.isNotBlank() }?.let {
+                        add("类似产品" to it)
+                    }
+                    analysis.terms?.takeIf { it.isNotEmpty() }?.let {
+                        add("关键词" to it.joinToString("、"))
+                    }
+                }
+                if (labels.isNotEmpty()) {
+                    HorizontalDivider()
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        labels.forEach { (label, value) ->
+                            LabeledText(label = label, value = value)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -348,7 +378,7 @@ private fun CommunityVoiceRow(analysis: PickAnalysis) {
             text = "\uD83D\uDC4D ${analysis.communityVoice.positive}",
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF81C784),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -356,7 +386,7 @@ private fun CommunityVoiceRow(analysis: PickAnalysis) {
             text = "\uD83D\uDC4E ${analysis.communityVoice.negative}",
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFE57373),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -364,54 +394,31 @@ private fun CommunityVoiceRow(analysis: PickAnalysis) {
 }
 
 @Composable
-private fun ActionAlternativesRow(analysis: PickAnalysis) {
-    val action = analysis.action?.takeIf { it.isNotBlank() }
-    val alternatives = analysis.alternatives?.takeIf { it.isNotBlank() }
-    if (action == null && alternatives == null) return
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        if (action != null) {
-            TagChip(text = action, color = MaterialTheme.colorScheme.primary)
-        }
-        if (alternatives != null) {
-            TagChip(text = alternatives, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun TagChip(text: String, color: Color) {
+private fun LabeledText(label: String, value: String) {
     Text(
-        text = text,
-        modifier = Modifier
-            .background(
-                color = color.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+                append("$label: ")
+            }
+            append(value)
+        },
         style = MaterialTheme.typography.labelSmall,
-        color = color
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 
 @Composable
 private fun SourceTag(source: String, label: String) {
-    val (bgColor, textColor) = when (source) {
-        "github" -> Color(0xFF1B5E20) to Color(0xFFA5D6A7)
-        "hackernews" -> Color(0xFFE65100) to Color(0xFFFFCC80)
-        "producthunt" -> Color(0xFFDA552F) to Color.White
-        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-    }
     Text(
         text = label,
         modifier = Modifier
-            .background(color = bgColor, shape = RoundedCornerShape(12.dp))
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = RoundedCornerShape(12.dp)
+            )
             .padding(horizontal = 8.dp, vertical = 2.dp),
-        fontSize = 10.sp,
-        color = textColor
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 
