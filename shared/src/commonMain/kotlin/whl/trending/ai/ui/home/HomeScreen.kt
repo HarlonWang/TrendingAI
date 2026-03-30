@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -223,7 +224,7 @@ private fun PicksTopBar(
         navigationIcon = {
             IconButton(onClick = {}) {
                 Icon(
-                    imageVector = Icons.Default.Star,
+                    imageVector = Icons.Default.Newspaper,
                     contentDescription = "Picks",
                     modifier = Modifier.size(24.dp)
                 )
