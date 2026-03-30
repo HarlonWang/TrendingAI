@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
@@ -242,7 +243,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
 
 @Composable
 private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
-    OutlinedCard(
+    ElevatedCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
@@ -250,7 +251,7 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 标题 + 源标签
             Row(
@@ -262,7 +263,6 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
                     text = item.title,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -274,9 +274,8 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
                 Text(
                     text = analysis.core,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
+                    fontWeight = FontWeight.Bold
                 )
-                CommunityVoiceRow(analysis)
             }
         }
     }
@@ -331,30 +330,6 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun CommunityVoiceRow(analysis: PickAnalysis) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "\uD83D\uDC4D ${analysis.communityVoice.positive}",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = "\uD83D\uDC4E ${analysis.communityVoice.negative}",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
 
 @Composable
 private fun LabeledText(label: String, value: String) {
