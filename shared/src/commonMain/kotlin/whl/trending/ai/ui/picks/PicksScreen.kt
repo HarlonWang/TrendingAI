@@ -324,12 +324,8 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // 分数
-                Text(
-                    text = formatScore(item.source, item.score),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // 来源标签 + 分数
+                SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
             }
 
             // AI 总结
