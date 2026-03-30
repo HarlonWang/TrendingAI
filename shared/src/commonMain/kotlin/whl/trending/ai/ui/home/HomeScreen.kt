@@ -70,6 +70,7 @@ fun HomeScreen(
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
     val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
+    val picksUiState by picksViewModel.uiState.collectAsState()
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -88,6 +89,7 @@ fun HomeScreen(
                     onNavigateToSettings = onNavigateToSettings
                 )
                 HomeTab.Picks -> PicksTopBar(
+                    date = picksUiState.picks?.metadata?.date,
                     scrollBehavior = scrollBehavior,
                     onNavigateToSettings = onNavigateToSettings
                 )
@@ -212,16 +214,26 @@ private fun TrendingTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PicksTopBar(
+    date: String?,
     scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     onNavigateToSettings: () -> Unit
 ) {
     TopAppBar(
         scrollBehavior = scrollBehavior,
         title = {
-            Text(
-                text = "Picks",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Column {
+                Text(
+                    text = "Picks",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (!date.isNullOrBlank()) {
+                    Text(
+                        text = date,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         },
         actions = {
             IconButton(onClick = onNavigateToSettings) {
