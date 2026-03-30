@@ -160,7 +160,9 @@ private fun PicksList(
 @Composable
 private fun SectionDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        thickness = 2.dp,
+        color = MaterialTheme.colorScheme.outlineVariant
     )
 }
 
