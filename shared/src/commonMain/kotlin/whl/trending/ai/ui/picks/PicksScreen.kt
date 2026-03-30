@@ -242,28 +242,14 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
 
 @Composable
 private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
-    Row(
+    OutlinedCard(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        // 红色左边框
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height(80.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.error)
-        )
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
-                )
-                .padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // 标题 + 源标签
