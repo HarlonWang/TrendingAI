@@ -1,5 +1,6 @@
 package whl.trending.ai.data.remote
 
+import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.TrendingResponse
 
@@ -48,6 +49,11 @@ open class TrendingApi {
             }
         }
         return response.body<TrendingResponse>()
+    }
+
+    open suspend fun fetchPicks(): PicksResponse {
+        val response = client.get("$baseHost/api/picks")
+        return response.body<PicksResponse>()
     }
 
     open suspend fun fetchReadme(owner: String, repo: String): ReadmeResponse {

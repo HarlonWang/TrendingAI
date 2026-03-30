@@ -1,4 +1,4 @@
-package whl.trending.ai.ui.main
+package whl.trending.ai.ui.trending
 
 import whl.trending.ai.data.model.TrendingRepo
 import whl.trending.ai.data.repository.TrendingRepository
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class MainUiState(
+data class TrendingUiState(
     val repos: List<TrendingRepo> = emptyList(),
     val since: String = "",
     val capturedAt: String = "",
@@ -32,18 +32,18 @@ data class MainUiState(
     val error: String? = null
 )
 
-class MainViewModel(
+class TrendingViewModel(
     private val repository: TrendingRepository = TrendingRepository(),
     private val settingsManager: SettingsManager = globalSettingsManager
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(MainUiState())
-    val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(TrendingUiState())
+    val uiState: StateFlow<TrendingUiState> = _uiState.asStateFlow()
 
     private var fetchJob: Job? = null
 
     init {
         fetchData()
-        
+
         viewModelScope.launch {
             // drop(1) 丢弃首次初始化的当前值，只监听真正发生的设置修改，避免初始化时重复调用 fetchData
             settingsManager.appLanguage.drop(1).collect {
@@ -65,7 +65,7 @@ class MainViewModel(
             try {
                 val currentAppLanguage = settingsManager.appLanguage.first()
                 val summaryLang = currentAppLanguage.isoCode ?: getSystemLanguage()
-                
+
                 val response = repository.getTrending(
                     _uiState.value.selectedPeriod,
                     _uiState.value.selectedLanguage,
@@ -73,7 +73,7 @@ class MainViewModel(
                     _uiState.value.selectedDate,
                     _uiState.value.selectedBatch
                 )
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         repos = response.data,
                         since = response.metadata.since,
@@ -85,12 +85,12 @@ class MainViewModel(
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
-                        isLoading = false, 
-                        isRefreshing = false, 
+                        isLoading = false,
+                        isRefreshing = false,
                         error = e.message ?: "Unknown Error"
-                    ) 
+                    )
                 }
             }
         }
@@ -110,10 +110,10 @@ class MainViewModel(
     }
 
     fun updateHistoryFilter(date: String?, batch: String?) {
-        if (_uiState.value.selectedDate == date && 
+        if (_uiState.value.selectedDate == date &&
             _uiState.value.selectedBatch == batch) return
-        
-        _uiState.update { 
+
+        _uiState.update {
             it.copy(
                 selectedDate = date,
                 selectedBatch = batch
