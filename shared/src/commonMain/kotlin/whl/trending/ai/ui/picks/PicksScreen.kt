@@ -137,6 +137,7 @@ private fun PicksList(
 
         // Controversy
         if (controversy.isNotEmpty()) {
+            item { SectionDivider() }
             item { SectionHeader(title = "争议话题") }
             items(controversy, key = { "controversy_${it.rank}" }) { item ->
                 ControversyCard(item = item, onClick = { onItemClick(item) })
@@ -145,6 +146,7 @@ private fun PicksList(
 
         // Speed Read
         if (speedRead.isNotEmpty()) {
+            item { SectionDivider() }
             item { SectionHeader(title = "Top 5 速览") }
             items(speedRead, key = { "speed_${it.rank}" }) { item ->
                 SpeedReadItem(item = item, onClick = { onItemClick(item) })
@@ -153,6 +155,13 @@ private fun PicksList(
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
+}
+
+@Composable
+private fun SectionDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }
 
 @Composable
