@@ -32,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -128,12 +127,7 @@ private fun PicksList(
     ) {
         // Deep Dive
         if (deepDive.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "深度解读",
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            item { SectionHeader(title = "深度解读") }
             items(deepDive, key = { "deep_${it.rank}" }) { item ->
                 DeepDiveCard(item = item, onClick = { onItemClick(item) })
             }
@@ -141,12 +135,7 @@ private fun PicksList(
 
         // Controversy
         if (controversy.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "争议话题",
-                    color = Color(0xFFFF6B6B)
-                )
-            }
+            item { SectionHeader(title = "争议话题") }
             items(controversy, key = { "controversy_${it.rank}" }) { item ->
                 ControversyCard(item = item, onClick = { onItemClick(item) })
             }
@@ -154,12 +143,7 @@ private fun PicksList(
 
         // Speed Read
         if (speedRead.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "Top 5 速览",
-                    color = Color(0xFF03DAC6)
-                )
-            }
+            item { SectionHeader(title = "Top 5 速览") }
             items(speedRead, key = { "speed_${it.rank}" }) { item ->
                 SpeedReadItem(item = item, onClick = { onItemClick(item) })
             }
@@ -170,15 +154,14 @@ private fun PicksList(
 }
 
 @Composable
-private fun SectionHeader(title: String, color: Color) {
+private fun SectionHeader(title: String) {
     Text(
         text = title,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = color
+        fontWeight = FontWeight.Bold
     )
 }
 
@@ -277,7 +260,7 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
                 .width(3.dp)
                 .height(80.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Color(0xFFFF6B6B))
+                .background(MaterialTheme.colorScheme.error)
         )
         Column(
             modifier = Modifier
@@ -311,7 +294,7 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
                 Text(
                     text = analysis.core,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFFF6B6B)
+                    color = MaterialTheme.colorScheme.error
                 )
                 CommunityVoiceRow(analysis)
             }
@@ -335,7 +318,7 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(24.dp)
                     .background(
-                        color = Color(0xFF03DAC6),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -344,7 +327,7 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                     text = "${item.rank}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
 
