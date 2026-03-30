@@ -1,7 +1,7 @@
 package whl.trending.ai.core
 
 import whl.trending.ai.ui.detail.ReadmeScreen
-import whl.trending.ai.ui.main.MainScreen
+import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
@@ -44,13 +44,14 @@ fun App() {
             entryProvider = { key ->
                 when (key) {
                     is Main -> NavEntry(key) {
-                        MainScreen(
-                            onNavigateToSettings = {
-                                backStack.add(Settings)
-                            },
+                        TrendingScreen(
                             onNavigateToDetail = { owner, repo ->
                                 backStack.add(RepoDetail(owner, repo))
-                            }
+                            },
+                            showFilterSheet = false,
+                            onDismissFilterSheet = {},
+                            showHistorySheet = false,
+                            onDismissHistorySheet = {},
                         )
                     }
 

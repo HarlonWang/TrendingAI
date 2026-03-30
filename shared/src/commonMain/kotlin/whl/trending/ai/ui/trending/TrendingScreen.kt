@@ -1,4 +1,4 @@
-package whl.trending.ai.ui.main
+package whl.trending.ai.ui.trending
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,8 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -37,16 +35,12 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -62,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -70,11 +63,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import trendingai.shared.generated.resources.GitHub_Invertocat_Black
-import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_help
-import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
 import trendingai.shared.generated.resources.cancel
@@ -104,7 +94,6 @@ import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.retry
 import trendingai.shared.generated.resources.select_date
-import trendingai.shared.generated.resources.settings
 import trendingai.shared.generated.resources.stars_period
 import trendingai.shared.generated.resources.stars_total
 import trendingai.shared.generated.resources.update_info_content
@@ -121,44 +110,29 @@ import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun MainScreen(
-    onNavigateToSettings: () -> Unit,
+fun TrendingScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
-    viewModel: MainViewModel = viewModel { MainViewModel() }
+    showFilterSheet: Boolean,
+    onDismissFilterSheet: () -> Unit,
+    showHistorySheet: Boolean,
+    onDismissHistorySheet: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showFilterSheet by remember { mutableStateOf(false) }
-    var showHistorySheet by remember { mutableStateOf(false) }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TrendingTopBar(
-                selectedPeriod = uiState.selectedPeriod,
-                selectedLanguage = uiState.selectedLanguage,
-                selectedDate = uiState.selectedDate,
-                selectedBatch = uiState.selectedBatch,
-                scrollBehavior = scrollBehavior,
-                onTitleClick = { showFilterSheet = true },
-                onHistoryClick = { showHistorySheet = true },
-                onNavigateToSettings = onNavigateToSettings
-            )
-        },
-    ) { innerPadding ->
-        RepoList(
-            uiState = uiState,
-            modifier = Modifier.padding(innerPadding),
-            onRefresh = { viewModel.fetchData(isRefresh = true) },
-            onNavigateToDetail = onNavigateToDetail
-        )
-    }
+    RepoList(
+        uiState = uiState,
+        modifier = modifier,
+        onRefresh = { viewModel.fetchData(isRefresh = true) },
+        onNavigateToDetail = onNavigateToDetail
+    )
 
     if (showFilterSheet) {
         FilterBottomSheet(
             selectedPeriod = uiState.selectedPeriod,
             selectedLanguage = uiState.selectedLanguage,
-            onDismiss = { showFilterSheet = false },
+            onDismiss = onDismissFilterSheet,
             onConfirm = { period, language ->
                 trackEvent(
                     "filter_confirm",
@@ -168,7 +142,7 @@ fun MainScreen(
                     )
                 )
                 viewModel.updateFilter(period, language)
-                showFilterSheet = false
+                onDismissFilterSheet()
             }
         )
     }
@@ -177,7 +151,7 @@ fun MainScreen(
         HistoryBottomSheet(
             selectedDate = uiState.selectedDate,
             selectedBatch = uiState.selectedBatch,
-            onDismiss = { showHistorySheet = false },
+            onDismiss = onDismissHistorySheet,
             onConfirm = { date, batch ->
                 trackEvent(
                     "history_confirm",
@@ -187,102 +161,22 @@ fun MainScreen(
                     )
                 )
                 viewModel.updateHistoryFilter(date, batch)
-                showHistorySheet = false
+                onDismissHistorySheet()
             }
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TrendingTopBar(
-    selectedPeriod: String,
-    selectedLanguage: String,
-    selectedDate: String?,
-    selectedBatch: String?,
-    scrollBehavior: TopAppBarScrollBehavior,
-    onTitleClick: () -> Unit,
-    onHistoryClick: () -> Unit,
-    onNavigateToSettings: () -> Unit
-) {
-    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val periodLabel = when (selectedPeriod) {
-        "daily" -> stringResource(Res.string.period_daily)
-        "weekly" -> stringResource(Res.string.period_weekly)
-        "monthly" -> stringResource(Res.string.period_monthly)
-        else -> selectedPeriod
-    }
-
-    TopAppBar(
-        title = {
-            Column(
-                modifier = Modifier
-                    .clickable { onTitleClick() }
-                    .padding(vertical = 4.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp).padding(start = 4.dp)
-                    )
-                }
-                
-                val langLabel = selectedLanguage.replaceFirstChar { it.uppercase() }
-                val subTitle = buildString {
-                    append("$periodLabel · $langLabel")
-                    if (!selectedDate.isNullOrEmpty()) {
-                        val batchLabel = if (selectedBatch == "am") stringResource(Res.string.batch_am) else stringResource(Res.string.batch_pm)
-                        append(" · $selectedDate ($batchLabel)")
-                    }
-                }
-
-                Text(
-                    text = subTitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        scrollBehavior = scrollBehavior,
-        navigationIcon = {
-            IconButton(onClick = {}) {
-                Icon(
-                    painter = painterResource(
-                        if (isDarkTheme) Res.drawable.GitHub_Invertocat_White
-                        else Res.drawable.GitHub_Invertocat_Black
-                    ),
-                    contentDescription = "GitHub",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        },
-        actions = {
-            IconButton(onClick = onHistoryClick) {
-                Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
-            }
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
-            }
-        }
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun RepoList(
-    uiState: MainUiState,
+    uiState: TrendingUiState,
     modifier: Modifier = Modifier,
     onRefresh: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit
 ) {
     val state = rememberPullToRefreshState()
-    
+
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
         state = state,
@@ -485,7 +379,7 @@ private fun AiSummaryBox(aiSummary: TrendingAiSummary) {
             lineHeight = 20.sp,
             color = MaterialTheme.colorScheme.onSecondaryContainer
         )
-        
+
         val aiIcon = when (aiSummary.provider.lowercase()) {
             "chatgpt" -> if (isDarkTheme) Res.drawable.icon_openai_dark else Res.drawable.icon_openai_light
             "deepseek" -> if (isDarkTheme) Res.drawable.icon_deepseek_dark else Res.drawable.icon_deepseek_light
@@ -660,7 +554,7 @@ private fun HistoryBottomSheet(
     var tempBatch by remember { mutableStateOf(selectedBatch ?: "am") }
     var showHelpDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    
+
     val datePickerState = rememberDatePickerState()
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -783,10 +677,10 @@ private fun HistoryBottomSheet(
                 }
 
                 Button(
-                    onClick = { 
+                    onClick = {
                         val finalDate = tempDate.trim().takeIf { it.isNotEmpty() }
                         val finalBatch = if (finalDate != null) tempBatch else null
-                        onConfirm(finalDate, finalBatch) 
+                        onConfirm(finalDate, finalBatch)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
