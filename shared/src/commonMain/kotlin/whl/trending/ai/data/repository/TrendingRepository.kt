@@ -23,4 +23,8 @@ class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
     ): TrendingResponse {
         return api.fetchTrending(period, language, summaryLang, date, batch)
     }
+
+    suspend fun submitFeedback(content: String, email: String?): Result<Unit> {
+        return api.submitFeedback(content, email)
+    }
 }

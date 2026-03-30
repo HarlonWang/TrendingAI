@@ -1,17 +1,28 @@
 package whl.trending.ai.data.remote
 
+import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.TrendingResponse
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 open class TrendingApi {
     private val client = HttpClient {
@@ -25,6 +36,9 @@ open class TrendingApi {
             requestTimeoutMillis = 15000
             connectTimeoutMillis = 15000
             socketTimeoutMillis = 15000
+        }
+        install(DefaultRequest) {
+            header(HttpHeaders.UserAgent, getUserAgent())
         }
     }
 
@@ -62,5 +76,26 @@ open class TrendingApi {
             parameter("repo", repo)
         }
         return response.body<ReadmeResponse>()
+    }
+
+    open suspend fun submitFeedback(content: String, email: String?): Result<Unit> {
+        return try {
+            val response = client.post("$baseHost/api/feedback") {
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("content", content)
+                    if (!email.isNullOrBlank()) put("email", email)
+                })
+            }
+            if (response.status.value in 200..299) {
+                Result.success(Unit)
+            } else {
+                val body = response.bodyAsText()
+                Result.failure(Exception(body))
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
     }
 }

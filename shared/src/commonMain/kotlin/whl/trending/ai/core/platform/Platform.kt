@@ -17,3 +17,5 @@ expect fun isIosPlatform(): Boolean
 expect fun getSystemLanguage(): String
 
 expect fun trackEvent(name: String, props: Map<String, Any> = emptyMap())
+
+expect fun getUserAgent(): String

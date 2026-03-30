@@ -51,6 +51,14 @@
     <string name="history_info_content">系统记录了每日两个批次（上午/下午）的数据快照，您可以回溯并查看过往任何时段的趋势。</string>
     <string name="feedback">反馈建议</string>
     <string name="feedback_desc">提交反馈、问题或改进建议</string>
+    <string name="feedback_content_placeholder">描述你的反馈或建议…</string>
+    <string name="feedback_email_placeholder">邮箱（可选，方便我们回复你）</string>
+    <string name="feedback_submit">提交</string>
+    <string name="feedback_success">感谢你的反馈！</string>
+    <string name="feedback_rate_limit">提交过于频繁，请稍后再试</string>
+    <string name="feedback_email_invalid">邮箱格式不正确</string>
+    <string name="feedback_error">提交失败，请重试</string>
+    <string name="feedback_github_issues">也可前往 GitHub Issues 反馈</string>
     <string name="view_on_github">在 GitHub 中查看</string>
     <string name="readme_no_content">该仓库暂无 README 文件。</string>
     <string name="picks_title">Picks</string>

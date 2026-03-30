@@ -51,6 +51,14 @@
     <string name="history_info_content">The system records data snapshots for both morning (AM) and afternoon (PM) sessions daily, allowing you to trace project growth over time.</string>
     <string name="feedback">Feedback</string>
     <string name="feedback_desc">Report issues or suggest improvements</string>
+    <string name="feedback_content_placeholder">Describe your feedback or suggestion…</string>
+    <string name="feedback_email_placeholder">Email (optional, for follow-up)</string>
+    <string name="feedback_submit">Submit</string>
+    <string name="feedback_success">Thanks for your feedback!</string>
+    <string name="feedback_rate_limit">Too many submissions, please try later</string>
+    <string name="feedback_email_invalid">Invalid email format</string>
+    <string name="feedback_error">Submit failed, please try again</string>
+    <string name="feedback_github_issues">Or submit via GitHub Issues</string>
     <string name="view_on_github">View on GitHub</string>
     <string name="readme_no_content">No README found for this repository.</string>
     <string name="picks_title">Picks</string>
