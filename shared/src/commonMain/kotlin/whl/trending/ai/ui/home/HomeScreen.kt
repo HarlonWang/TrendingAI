@@ -30,6 +30,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -227,13 +231,18 @@ private fun PicksTopBar(
                     text = "Picks",
                     style = MaterialTheme.typography.titleMedium
                 )
+                val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
                 Text(
-                    text = buildString {
-                        append("GitHub · Hacker News · Product Hunt")
-                        if (!date.isNullOrBlank()) append(" · $date")
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = subtitleColor)) { append("GitHub · ") }
+                        withStyle(SpanStyle(color = Color(0xFFFF6600))) { append("Hacker News") }
+                        withStyle(SpanStyle(color = subtitleColor)) { append(" · ") }
+                        withStyle(SpanStyle(color = Color(0xFFDA552F))) { append("Product Hunt") }
+                        if (!date.isNullOrBlank()) {
+                            withStyle(SpanStyle(color = subtitleColor)) { append(" · $date") }
+                        }
                     },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         },
