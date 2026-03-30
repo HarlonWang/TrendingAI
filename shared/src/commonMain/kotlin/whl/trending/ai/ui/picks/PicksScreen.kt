@@ -358,7 +358,7 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                 Text(
                     text = item.summary,
                     modifier = Modifier.padding(start = 34.dp),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
