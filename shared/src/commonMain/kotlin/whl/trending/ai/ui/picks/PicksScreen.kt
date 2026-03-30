@@ -262,7 +262,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
 
 @Composable
 private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> Unit) {
-    ElevatedCard(
+    OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
