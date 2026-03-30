@@ -179,10 +179,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 源标签
-            SourceTag(source = item.source, label = item.sourceLabel)
-
-            // 标题 + 分数
+            // 标题 + 源标签
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -196,11 +193,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = formatScore(item.source, item.score),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
             }
 
             // Analysis
