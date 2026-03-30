@@ -44,6 +44,7 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.GitHub_Invertocat_Black
 import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
@@ -111,8 +112,8 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.Picks,
                     onClick = { selectedTabName = HomeTab.Picks.name },
-                    icon = { Icon(Icons.Default.Star, contentDescription = "Picks") },
-                    label = { Text("Picks") }
+                    icon = { Icon(Icons.Default.Star, contentDescription = stringResource(Res.string.picks_title)) },
+                    label = { Text(stringResource(Res.string.picks_title)) }
                 )
             }
         }
@@ -228,7 +229,7 @@ private fun PicksTopBar(
         title = {
             Column {
                 Text(
-                    text = "Picks",
+                    text = stringResource(Res.string.picks_title),
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(

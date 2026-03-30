@@ -42,6 +42,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
+import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.picks_label_action
+import trendingai.shared.generated.resources.picks_label_alternatives
+import trendingai.shared.generated.resources.picks_label_terms
+import trendingai.shared.generated.resources.picks_no_data
+import trendingai.shared.generated.resources.picks_section_controversy
+import trendingai.shared.generated.resources.picks_section_deep_dive
+import trendingai.shared.generated.resources.picks_section_speed_read
+import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.model.PickAnalysis
@@ -77,7 +87,7 @@ fun PicksScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = { viewModel.retry() }) {
-                    Text("重试")
+                    Text(stringResource(Res.string.retry))
                 }
             }
         }
@@ -86,7 +96,7 @@ fun PicksScreen(
             val picks = uiState.picks
             if (picks == null || (picks.deepDive.isEmpty() && picks.controversy.isEmpty() && picks.speedRead.isEmpty())) {
                 Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "暂无精选")
+                    Text(text = stringResource(Res.string.picks_no_data))
                 }
             } else {
                 PicksList(
@@ -129,7 +139,7 @@ private fun PicksList(
     ) {
         // Deep Dive
         if (deepDive.isNotEmpty()) {
-            item { SectionHeader(title = "深度解读") }
+            item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
             items(deepDive, key = { "deep_${it.rank}" }) { item ->
                 DeepDiveCard(item = item, onClick = { onItemClick(item) })
             }
@@ -138,7 +148,7 @@ private fun PicksList(
         // Controversy
         if (controversy.isNotEmpty()) {
             item { SectionDivider() }
-            item { SectionHeader(title = "争议话题") }
+            item { SectionHeader(title = stringResource(Res.string.picks_section_controversy)) }
             item {
                 ControversyGroup(
                     items = controversy,
@@ -150,7 +160,7 @@ private fun PicksList(
         // Speed Read
         if (speedRead.isNotEmpty()) {
             item { SectionDivider() }
-            item { SectionHeader(title = "Top 5 速览") }
+            item { SectionHeader(title = stringResource(Res.string.picks_section_speed_read)) }
             items(speedRead, key = { "speed_${it.rank}" }) { item ->
                 SpeedReadItem(item = item, onClick = { onItemClick(item) })
             }
@@ -233,15 +243,18 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                 )
 
                 // Action / Alternatives / Terms
+                val actionLabel = stringResource(Res.string.picks_label_action)
+                val alternativesLabel = stringResource(Res.string.picks_label_alternatives)
+                val termsLabel = stringResource(Res.string.picks_label_terms)
                 val labels = buildList {
                     analysis.action?.takeIf { it.isNotBlank() }?.let {
-                        add("适合场景" to it)
+                        add(actionLabel to it)
                     }
                     analysis.alternatives?.takeIf { it.isNotBlank() }?.let {
-                        add("类似产品" to it)
+                        add(alternativesLabel to it)
                     }
                     analysis.terms?.takeIf { it.isNotEmpty() }?.let {
-                        add("关键词" to it.joinToString("、"))
+                        add(termsLabel to it.joinToString("、"))
                     }
                 }
                 if (labels.isNotEmpty()) {

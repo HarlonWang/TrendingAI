@@ -5,6 +5,7 @@ import whl.trending.ai.data.repository.TrendingRepository
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,12 +24,15 @@ class PicksViewModel(
     private val _uiState = MutableStateFlow(PicksUiState())
     val uiState: StateFlow<PicksUiState> = _uiState.asStateFlow()
 
+    private var fetchJob: Job? = null
+
     init {
         fetchPicks()
     }
 
     private fun fetchPicks() {
-        viewModelScope.launch {
+        fetchJob?.cancel()
+        fetchJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val response = repository.getPicks()

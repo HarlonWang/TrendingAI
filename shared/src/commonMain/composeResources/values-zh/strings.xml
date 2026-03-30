@@ -53,4 +53,12 @@
     <string name="feedback_desc">提交反馈、问题或改进建议</string>
     <string name="view_on_github">在 GitHub 中查看</string>
     <string name="readme_no_content">该仓库暂无 README 文件。</string>
+    <string name="picks_title">Picks</string>
+    <string name="picks_no_data">暂无精选</string>
+    <string name="picks_section_deep_dive">深度解读</string>
+    <string name="picks_section_controversy">争议话题</string>
+    <string name="picks_section_speed_read">Top 5 速览</string>
+    <string name="picks_label_action">适合场景</string>
+    <string name="picks_label_alternatives">类似产品</string>
+    <string name="picks_label_terms">关键词</string>
 </resources>

@@ -53,4 +53,12 @@
     <string name="feedback_desc">Report issues or suggest improvements</string>
     <string name="view_on_github">View on GitHub</string>
     <string name="readme_no_content">No README found for this repository.</string>
+    <string name="picks_title">Picks</string>
+    <string name="picks_no_data">No picks available</string>
+    <string name="picks_section_deep_dive">Deep Dive</string>
+    <string name="picks_section_controversy">Controversy</string>
+    <string name="picks_section_speed_read">Top 5 Speed Read</string>
+    <string name="picks_label_action">Use case</string>
+    <string name="picks_label_alternatives">Alternatives</string>
+    <string name="picks_label_terms">Keywords</string>
 </resources>
