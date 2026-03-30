@@ -274,7 +274,8 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
                 Text(
                     text = analysis.core,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
         }
