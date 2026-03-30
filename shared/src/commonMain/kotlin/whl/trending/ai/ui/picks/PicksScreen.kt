@@ -285,47 +285,64 @@ private fun ControversyCard(item: PickItem, onClick: () -> Unit) {
 @Composable
 private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
     Column {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onClick() }
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // 序号
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // 序号
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${item.rank}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                // 标题
                 Text(
-                    text = "${item.rank}",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    text = item.title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // 分数
+                Text(
+                    text = formatScore(item.source, item.score),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // 标题
-            Text(
-                text = item.title,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // 分数
-            Text(
-                text = formatScore(item.source, item.score),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // AI 总结
+            if (!item.summary.isNullOrBlank()) {
+                Text(
+                    text = item.summary,
+                    modifier = Modifier.padding(start = 34.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     }
