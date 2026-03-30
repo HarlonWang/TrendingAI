@@ -24,6 +24,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+class ApiException(val statusCode: Int, message: String) : Exception(message)
+
 open class TrendingApi {
     private val client = HttpClient {
         install(ContentNegotiation) {
@@ -91,7 +93,7 @@ open class TrendingApi {
                 Result.success(Unit)
             } else {
                 val body = response.bodyAsText()
-                Result.failure(Exception(body))
+                Result.failure(ApiException(response.status.value, body))
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e

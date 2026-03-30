@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.feedback
 
+import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 
 import androidx.lifecycle.ViewModel
@@ -61,7 +62,7 @@ class FeedbackViewModel(
                 },
                 onFailure = { e ->
                     _uiState.update { it.copy(isSubmitting = false) }
-                    _events.send(FeedbackEvent.Error(isRateLimit = e.message?.contains("429") == true))
+                    _events.send(FeedbackEvent.Error(isRateLimit = (e as? ApiException)?.statusCode == 429))
                 }
             )
         }
