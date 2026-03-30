@@ -334,9 +334,7 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                     text = item.summary,
                     modifier = Modifier.padding(start = 34.dp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
