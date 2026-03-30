@@ -229,7 +229,7 @@ private fun PicksTopBar(
                 )
                 Text(
                     text = buildString {
-                        append("GitHub · HN · PH")
+                        append("GitHub · Hacker News · Product Hunt")
                         if (!date.isNullOrBlank()) append(" · $date")
                     },
                     style = MaterialTheme.typography.bodySmall,
