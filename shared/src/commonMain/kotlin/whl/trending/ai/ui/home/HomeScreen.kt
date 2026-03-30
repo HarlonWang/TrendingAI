@@ -101,8 +101,8 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.Picks,
                     onClick = { selectedTabName = HomeTab.Picks.name },
-                    icon = { Icon(Icons.Default.Star, contentDescription = "精选") },
-                    label = { Text("精选") }
+                    icon = { Icon(Icons.Default.Star, contentDescription = "Picks") },
+                    label = { Text("Picks") }
                 )
             }
         }
@@ -212,7 +212,7 @@ private fun PicksTopBar(
     TopAppBar(
         title = {
             Text(
-                text = "精选",
+                text = "Picks",
                 style = MaterialTheme.typography.titleMedium
             )
         },
