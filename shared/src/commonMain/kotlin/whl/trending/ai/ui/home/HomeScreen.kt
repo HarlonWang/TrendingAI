@@ -220,6 +220,15 @@ private fun PicksTopBar(
 ) {
     TopAppBar(
         scrollBehavior = scrollBehavior,
+        navigationIcon = {
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Picks",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
         title = {
             Column {
                 Text(
