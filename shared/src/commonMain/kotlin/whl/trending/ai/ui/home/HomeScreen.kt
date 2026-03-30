@@ -48,6 +48,7 @@ import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.settings
 import whl.trending.ai.ui.picks.PicksScreen
+import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
 
@@ -68,6 +69,7 @@ fun HomeScreen(
 
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
+    val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -118,7 +120,9 @@ fun HomeScreen(
                 viewModel = trendingViewModel
             )
             HomeTab.Picks -> PicksScreen(
-                modifier = Modifier.padding(innerPadding)
+                onNavigateToDetail = onNavigateToDetail,
+                modifier = Modifier.padding(innerPadding),
+                viewModel = picksViewModel
             )
         }
     }
