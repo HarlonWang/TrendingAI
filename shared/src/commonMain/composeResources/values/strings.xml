@@ -62,6 +62,10 @@
     <string name="view_on_github">View on GitHub</string>
     <string name="readme_no_content">No README found for this repository.</string>
     <string name="picks_title">Picks</string>
+    <string name="hackernews_title">Hacker News</string>
+    <string name="producthunt_title">Product Hunt</string>
+    <string name="hackernews_placeholder">Hacker News content coming soon</string>
+    <string name="producthunt_placeholder">Product Hunt content coming soon</string>
     <string name="picks_no_data">No picks available</string>
     <string name="picks_section_deep_dive">Deep Dive</string>
     <string name="picks_section_controversy">Controversy</string>

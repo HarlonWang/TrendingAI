@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +57,7 @@ import trendingai.shared.generated.resources.picks_section_deep_dive
 import trendingai.shared.generated.resources.picks_section_speed_read
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.model.PickAnalysis
 import whl.trending.ai.data.model.PickItem
@@ -385,11 +387,9 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
 
             // AI 总结
             if (!item.summary.isNullOrBlank()) {
-                Text(
-                    text = item.summary,
-                    modifier = Modifier.padding(start = 34.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                AiSummaryBox(
+                    summary = item.summary,
+                    modifier = Modifier.padding(start = 34.dp)
                 )
             }
         }

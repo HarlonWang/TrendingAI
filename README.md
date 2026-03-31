@@ -16,7 +16,7 @@
 
 ## 📸 界面预览
 
-<img width="300" alt="TrendingAI 界面预览" src="./assets/android_screenshot_zh.png" />
+<img width="300" alt="TrendingAI 界面预览" src="./assets/screenshot/zh/home_github_light.png" />
 
 目前处于早期预览阶段：
 

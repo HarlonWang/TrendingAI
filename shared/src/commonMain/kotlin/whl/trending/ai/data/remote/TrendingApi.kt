@@ -1,6 +1,7 @@
 package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
+import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.TrendingResponse
@@ -65,6 +66,14 @@ open class TrendingApi {
             }
         }
         return response.body<TrendingResponse>()
+    }
+
+    open suspend fun fetchFeed(source: String, summaryLang: String = "zh"): FeedResponse {
+        val response = client.get("$baseHost/api/feed") {
+            parameter("source", source)
+            parameter("summary_lang", summaryLang)
+        }
+        return response.body<FeedResponse>()
     }
 
     open suspend fun fetchPicks(): PicksResponse {

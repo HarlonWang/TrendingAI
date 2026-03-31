@@ -2,6 +2,7 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -31,9 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -45,7 +42,11 @@ import trendingai.shared.generated.resources.GitHub_Invertocat_Black
 import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_title
+import trendingai.shared.generated.resources.hackernews_title
+import trendingai.shared.generated.resources.producthunt_title
 import trendingai.shared.generated.resources.app_name
+import trendingai.shared.generated.resources.icon_producthunt_dark
+import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
 import trendingai.shared.generated.resources.history_trending
@@ -53,13 +54,15 @@ import trendingai.shared.generated.resources.period_daily
 import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.settings
+import whl.trending.ai.ui.feed.FeedScreen
+import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
 import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
 
 enum class HomeTab {
-    Trending, Picks
+    GitHub, HackerNews, ProductHunt, Picks
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,15 +71,19 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit
 ) {
-    var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.Trending.name) }
+    var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
     val selectedTab = HomeTab.valueOf(selectedTabName)
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     var showHistorySheet by rememberSaveable { mutableStateOf(false) }
 
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
-    val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
-    val picksUiState by picksViewModel.uiState.collectAsState()
+
+    // Picks tab 被选中时才创建 ViewModel，topBar 和 content 共享同一实例
+    val picksViewModel: PicksViewModel? = if (selectedTab == HomeTab.Picks) {
+        viewModel { PicksViewModel() }
+    } else null
+    val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -84,7 +91,7 @@ fun HomeScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             when (selectedTab) {
-                HomeTab.Trending -> TrendingTopBar(
+                HomeTab.GitHub -> TrendingTopBar(
                     selectedPeriod = trendingUiState.selectedPeriod,
                     selectedLanguage = trendingUiState.selectedLanguage,
                     selectedDate = trendingUiState.selectedDate,
@@ -95,19 +102,66 @@ fun HomeScreen(
                     onNavigateToSettings = onNavigateToSettings
                 )
                 HomeTab.Picks -> PicksTopBar(
-                    date = picksUiState.picks?.metadata?.date,
+                    date = picksUiState?.picks?.metadata?.date,
                     scrollBehavior = scrollBehavior,
                     onNavigateToSettings = onNavigateToSettings
                 )
+                HomeTab.HackerNews -> {
+                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    FeedTopBar(
+                        title = stringResource(Res.string.hackernews_title),
+                        navigationIcon = {
+                            Icon(
+                                imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
+                                contentDescription = "Hacker News",
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                        },
+                        scrollBehavior = scrollBehavior,
+                        onNavigateToSettings = onNavigateToSettings
+                    )
+                }
+                HomeTab.ProductHunt -> {
+                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    FeedTopBar(
+                        title = stringResource(Res.string.producthunt_title),
+                        navigationIcon = {
+                            Icon(
+                                painter = painterResource(
+                                    if (isDark) Res.drawable.icon_producthunt_dark
+                                    else Res.drawable.icon_producthunt_light
+                                ),
+                                contentDescription = "Product Hunt",
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                        },
+                        scrollBehavior = scrollBehavior,
+                        onNavigateToSettings = onNavigateToSettings
+                    )
+                }
             }
         },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = selectedTab == HomeTab.Trending,
-                    onClick = { selectedTabName = HomeTab.Trending.name },
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "Trending") },
-                    label = { Text("Trending") }
+                    selected = selectedTab == HomeTab.GitHub,
+                    onClick = { selectedTabName = HomeTab.GitHub.name },
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "GitHub") },
+                    label = { Text("GitHub") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == HomeTab.HackerNews,
+                    onClick = { selectedTabName = HomeTab.HackerNews.name },
+                    icon = { Icon(HackerNewsYIcon, contentDescription = stringResource(Res.string.hackernews_title)) },
+                    label = { Text("HN") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == HomeTab.ProductHunt,
+                    onClick = { selectedTabName = HomeTab.ProductHunt.name },
+                    icon = { Icon(ProductHuntPIcon, contentDescription = stringResource(Res.string.producthunt_title)) },
+                    label = { Text("PH") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.Picks,
@@ -119,7 +173,7 @@ fun HomeScreen(
         }
     ) { innerPadding ->
         when (selectedTab) {
-            HomeTab.Trending -> TrendingScreen(
+            HomeTab.GitHub -> TrendingScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 showFilterSheet = showFilterSheet,
                 onDismissFilterSheet = { showFilterSheet = false },
@@ -128,10 +182,24 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = trendingViewModel
             )
+            HomeTab.HackerNews -> {
+                val hnViewModel: FeedViewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") }
+                FeedScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    viewModel = hnViewModel
+                )
+            }
+            HomeTab.ProductHunt -> {
+                val phViewModel: FeedViewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") }
+                FeedScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    viewModel = phViewModel
+                )
+            }
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 modifier = Modifier.padding(innerPadding),
-                viewModel = picksViewModel
+                viewModel = picksViewModel!!
             )
         }
     }
@@ -195,7 +263,7 @@ private fun TrendingTopBar(
         },
         scrollBehavior = scrollBehavior,
         navigationIcon = {
-            IconButton(onClick = {}) {
+            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Icon(
                     painter = painterResource(
                         if (isDarkTheme) Res.drawable.GitHub_Invertocat_White
@@ -240,6 +308,35 @@ private fun PicksTopBar(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        },
+        actions = {
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedTopBar(
+    title: String,
+    navigationIcon: @Composable () -> Unit,
+    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
+    onNavigateToSettings: () -> Unit
+) {
+    TopAppBar(
+        scrollBehavior = scrollBehavior,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        navigationIcon = {
+            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                navigationIcon()
             }
         },
         actions = {
