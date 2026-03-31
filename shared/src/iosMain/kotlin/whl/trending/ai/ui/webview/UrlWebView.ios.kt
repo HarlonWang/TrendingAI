@@ -27,11 +27,9 @@ actual fun UrlWebView(url: String, onPageFinished: () -> Unit, modifier: Modifie
                         onPageFinished()
                     }
                 }
-            }
-        },
-        update = { webView ->
-            NSURL.URLWithString(url)?.let { nsUrl ->
-                webView.loadRequest(NSURLRequest.requestWithURL(nsUrl))
+                NSURL.URLWithString(url)?.let { nsUrl ->
+                    loadRequest(NSURLRequest.requestWithURL(nsUrl))
+                }
             }
         },
         modifier = modifier

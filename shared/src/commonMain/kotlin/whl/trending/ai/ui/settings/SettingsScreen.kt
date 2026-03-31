@@ -268,7 +268,7 @@ fun SettingsScreen(
                     headlineContent = { Text(privacyTitle) },
                     leadingContent = { Icon(Icons.Default.PrivacyTip, null) },
                     modifier = Modifier.clickable {
-                        onNavigateToWebPage("https://trendingai.cn/privacy/", privacyTitle)
+                        onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle)
                     }
                 )
             }

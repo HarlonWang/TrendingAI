@@ -17,10 +17,8 @@ actual fun UrlWebView(url: String, onPageFinished: () -> Unit, modifier: Modifie
                     }
                 }
                 settings.javaScriptEnabled = true
+                loadUrl(url)
             }
-        },
-        update = { webView ->
-            webView.loadUrl(url)
         },
         modifier = modifier
     )
