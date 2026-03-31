@@ -79,10 +79,6 @@ fun HomeScreen(
 
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
-    val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
-    val picksUiState by picksViewModel.uiState.collectAsState()
-    val hnViewModel: FeedViewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") }
-    val phViewModel: FeedViewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -100,11 +96,15 @@ fun HomeScreen(
                     onHistoryClick = { showHistorySheet = true },
                     onNavigateToSettings = onNavigateToSettings
                 )
-                HomeTab.Picks -> PicksTopBar(
-                    date = picksUiState.picks?.metadata?.date,
-                    scrollBehavior = scrollBehavior,
-                    onNavigateToSettings = onNavigateToSettings
-                )
+                HomeTab.Picks -> {
+                    val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
+                    val picksUiState by picksViewModel.uiState.collectAsState()
+                    PicksTopBar(
+                        date = picksUiState.picks?.metadata?.date,
+                        scrollBehavior = scrollBehavior,
+                        onNavigateToSettings = onNavigateToSettings
+                    )
+                }
                 HomeTab.HackerNews -> {
                     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
                     FeedTopBar(
@@ -181,19 +181,28 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = trendingViewModel
             )
-            HomeTab.HackerNews -> FeedScreen(
-                modifier = Modifier.padding(innerPadding),
-                viewModel = hnViewModel
-            )
-            HomeTab.ProductHunt -> FeedScreen(
-                modifier = Modifier.padding(innerPadding),
-                viewModel = phViewModel
-            )
-            HomeTab.Picks -> PicksScreen(
-                onNavigateToDetail = onNavigateToDetail,
-                modifier = Modifier.padding(innerPadding),
-                viewModel = picksViewModel
-            )
+            HomeTab.HackerNews -> {
+                val hnViewModel: FeedViewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") }
+                FeedScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    viewModel = hnViewModel
+                )
+            }
+            HomeTab.ProductHunt -> {
+                val phViewModel: FeedViewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") }
+                FeedScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    viewModel = phViewModel
+                )
+            }
+            HomeTab.Picks -> {
+                val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
+                PicksScreen(
+                    onNavigateToDetail = onNavigateToDetail,
+                    modifier = Modifier.padding(innerPadding),
+                    viewModel = picksViewModel
+                )
+            }
         }
     }
 }
