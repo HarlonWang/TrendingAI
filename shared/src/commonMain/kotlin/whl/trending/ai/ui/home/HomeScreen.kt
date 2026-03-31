@@ -2,13 +2,16 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -45,6 +48,10 @@ import trendingai.shared.generated.resources.GitHub_Invertocat_Black
 import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_title
+import trendingai.shared.generated.resources.hackernews_title
+import trendingai.shared.generated.resources.hackernews_placeholder
+import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.producthunt_placeholder
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
@@ -59,7 +66,7 @@ import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
 
 enum class HomeTab {
-    Trending, Picks
+    Trending, Picks, HackerNews, ProductHunt
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +106,9 @@ fun HomeScreen(
                     scrollBehavior = scrollBehavior,
                     onNavigateToSettings = onNavigateToSettings
                 )
+                HomeTab.HackerNews, HomeTab.ProductHunt -> {
+                    // 占位，第二步实现
+                }
             }
         },
         bottomBar = {
@@ -114,6 +124,18 @@ fun HomeScreen(
                     onClick = { selectedTabName = HomeTab.Picks.name },
                     icon = { Icon(Icons.Default.Star, contentDescription = stringResource(Res.string.picks_title)) },
                     label = { Text(stringResource(Res.string.picks_title)) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == HomeTab.HackerNews,
+                    onClick = { selectedTabName = HomeTab.HackerNews.name },
+                    icon = { Icon(Icons.Default.Newspaper, contentDescription = stringResource(Res.string.hackernews_title)) },
+                    label = { Text("HN") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == HomeTab.ProductHunt,
+                    onClick = { selectedTabName = HomeTab.ProductHunt.name },
+                    icon = { Icon(Icons.Default.LocalParking, contentDescription = stringResource(Res.string.producthunt_title)) },
+                    label = { Text("PH") }
                 )
             }
         }
@@ -133,6 +155,22 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = picksViewModel
             )
+            HomeTab.HackerNews -> {
+                Box(
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(stringResource(Res.string.hackernews_placeholder))
+                }
+            }
+            HomeTab.ProductHunt -> {
+                Box(
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(stringResource(Res.string.producthunt_placeholder))
+                }
+            }
         }
     }
 }

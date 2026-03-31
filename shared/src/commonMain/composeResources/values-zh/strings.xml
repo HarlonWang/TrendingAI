@@ -62,6 +62,10 @@
     <string name="view_on_github">在 GitHub 中查看</string>
     <string name="readme_no_content">该仓库暂无 README 文件。</string>
     <string name="picks_title">Picks</string>
+    <string name="hackernews_title">Hacker News</string>
+    <string name="producthunt_title">Product Hunt</string>
+    <string name="hackernews_placeholder">Hacker News 内容即将上线</string>
+    <string name="producthunt_placeholder">Product Hunt 内容即将上线</string>
     <string name="picks_no_data">暂无精选</string>
     <string name="picks_section_deep_dive">深度解读</string>
     <string name="picks_section_controversy">争议话题</string>
