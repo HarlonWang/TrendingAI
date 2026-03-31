@@ -1,6 +1,5 @@
 package whl.trending.ai.ui.feed
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +14,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,21 +30,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.icon_openai_dark
-import trendingai.shared.generated.resources.icon_openai_light
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.model.FeedItem
+import whl.trending.ai.ui.common.AiSummaryBox
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -160,39 +153,6 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
             }
             FeedItemMetadata(item = item)
         }
-    }
-}
-
-@Composable
-private fun AiSummaryBox(summary: String) {
-    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = summary,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            color = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-        Icon(
-            painter = painterResource(
-                if (isDarkTheme) Res.drawable.icon_openai_dark else Res.drawable.icon_openai_light
-            ),
-            contentDescription = "ChatGPT",
-            tint = Color.Unspecified,
-            modifier = Modifier
-                .size(14.dp)
-                .align(Alignment.End)
-        )
     }
 }
 

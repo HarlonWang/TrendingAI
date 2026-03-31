@@ -2,6 +2,7 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -78,6 +79,12 @@ fun HomeScreen(
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
 
+    // Picks tab 被选中时才创建 ViewModel，topBar 和 content 共享同一实例
+    val picksViewModel: PicksViewModel? = if (selectedTab == HomeTab.Picks) {
+        viewModel { PicksViewModel() }
+    } else null
+    val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
+
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
@@ -94,15 +101,11 @@ fun HomeScreen(
                     onHistoryClick = { showHistorySheet = true },
                     onNavigateToSettings = onNavigateToSettings
                 )
-                HomeTab.Picks -> {
-                    val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
-                    val picksUiState by picksViewModel.uiState.collectAsState()
-                    PicksTopBar(
-                        date = picksUiState.picks?.metadata?.date,
-                        scrollBehavior = scrollBehavior,
-                        onNavigateToSettings = onNavigateToSettings
-                    )
-                }
+                HomeTab.Picks -> PicksTopBar(
+                    date = picksUiState?.picks?.metadata?.date,
+                    scrollBehavior = scrollBehavior,
+                    onNavigateToSettings = onNavigateToSettings
+                )
                 HomeTab.HackerNews -> {
                     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
                     FeedTopBar(
@@ -193,14 +196,11 @@ fun HomeScreen(
                     viewModel = phViewModel
                 )
             }
-            HomeTab.Picks -> {
-                val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
-                PicksScreen(
-                    onNavigateToDetail = onNavigateToDetail,
-                    modifier = Modifier.padding(innerPadding),
-                    viewModel = picksViewModel
-                )
-            }
+            HomeTab.Picks -> PicksScreen(
+                onNavigateToDetail = onNavigateToDetail,
+                modifier = Modifier.padding(innerPadding),
+                viewModel = picksViewModel!!
+            )
         }
     }
 }
@@ -263,7 +263,7 @@ private fun TrendingTopBar(
         },
         scrollBehavior = scrollBehavior,
         navigationIcon = {
-            IconButton(onClick = {}) {
+            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Icon(
                     painter = painterResource(
                         if (isDarkTheme) Res.drawable.GitHub_Invertocat_White
@@ -335,7 +335,7 @@ private fun FeedTopBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = {}) {
+            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 navigationIcon()
             }
         },
