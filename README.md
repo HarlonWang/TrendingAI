@@ -6,8 +6,6 @@
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.10.1-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Material 3](https://img.shields.io/badge/Material_3-1.10.0--alpha05-673AB7?logo=materialdesign&logoColor=white)](https://m3.material.io/)
 
-> 🚧 **当前状态：项目积极开发中 (Work in Progress)**
-
 **用 AI 快速读懂 GitHub Trending 开源项目。**
 
 *帮你省去翻阅冗长 README 和源码的时间，高效过滤并定位高价值的开源项目。*
@@ -17,8 +15,6 @@
 ## 📸 界面预览
 
 <img width="300" alt="TrendingAI 界面预览" src="./assets/screenshot/zh/home_github_light.png" />
-
-目前处于早期预览阶段：
 
 | Android | iOS | Website |
 | --- | --- | --- |

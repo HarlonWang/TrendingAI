@@ -6,8 +6,6 @@
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.10.1-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Material 3](https://img.shields.io/badge/Material_3-1.10.0--alpha05-673AB7?logo=materialdesign&logoColor=white)](https://m3.material.io/)
 
-> 🚧 **Status: Under Active Development (Work in Progress)**
-
 **Understand GitHub Trending projects quickly with AI.**
 
 *Save time reading long READMEs and source code; efficiently filter and locate high-value open-source projects.*
@@ -17,8 +15,6 @@
 ## 📸 Preview
 
 <img width="300" alt="TrendingAI Preview" src="./assets/screenshot/en/home_github_light.png" />
-
-Currently in early preview:
 
 | Android | iOS | Website                                |
 | --- | --- |----------------------------------------|
