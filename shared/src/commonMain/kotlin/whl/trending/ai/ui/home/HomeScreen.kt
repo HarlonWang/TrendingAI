@@ -63,7 +63,7 @@ import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
 
 enum class HomeTab {
-    Trending, Picks, HackerNews, ProductHunt
+    GitHub, HackerNews, ProductHunt, Picks
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +72,7 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit
 ) {
-    var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.Trending.name) }
+    var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
     val selectedTab = HomeTab.valueOf(selectedTabName)
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     var showHistorySheet by rememberSaveable { mutableStateOf(false) }
@@ -90,7 +90,7 @@ fun HomeScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             when (selectedTab) {
-                HomeTab.Trending -> TrendingTopBar(
+                HomeTab.GitHub -> TrendingTopBar(
                     selectedPeriod = trendingUiState.selectedPeriod,
                     selectedLanguage = trendingUiState.selectedLanguage,
                     selectedDate = trendingUiState.selectedDate,
@@ -145,16 +145,10 @@ fun HomeScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = selectedTab == HomeTab.Trending,
-                    onClick = { selectedTabName = HomeTab.Trending.name },
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "Trending") },
-                    label = { Text("Trending") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == HomeTab.Picks,
-                    onClick = { selectedTabName = HomeTab.Picks.name },
-                    icon = { Icon(Icons.Default.Star, contentDescription = stringResource(Res.string.picks_title)) },
-                    label = { Text(stringResource(Res.string.picks_title)) }
+                    selected = selectedTab == HomeTab.GitHub,
+                    onClick = { selectedTabName = HomeTab.GitHub.name },
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "GitHub") },
+                    label = { Text("GitHub") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.HackerNews,
@@ -168,11 +162,17 @@ fun HomeScreen(
                     icon = { Icon(Icons.Default.LocalParking, contentDescription = stringResource(Res.string.producthunt_title)) },
                     label = { Text("PH") }
                 )
+                NavigationBarItem(
+                    selected = selectedTab == HomeTab.Picks,
+                    onClick = { selectedTabName = HomeTab.Picks.name },
+                    icon = { Icon(Icons.Default.Star, contentDescription = stringResource(Res.string.picks_title)) },
+                    label = { Text(stringResource(Res.string.picks_title)) }
+                )
             }
         }
     ) { innerPadding ->
         when (selectedTab) {
-            HomeTab.Trending -> TrendingScreen(
+            HomeTab.GitHub -> TrendingScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 showFilterSheet = showFilterSheet,
                 onDismissFilterSheet = { showFilterSheet = false },
@@ -181,11 +181,6 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = trendingViewModel
             )
-            HomeTab.Picks -> PicksScreen(
-                onNavigateToDetail = onNavigateToDetail,
-                modifier = Modifier.padding(innerPadding),
-                viewModel = picksViewModel
-            )
             HomeTab.HackerNews -> FeedScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = hnViewModel
@@ -193,6 +188,11 @@ fun HomeScreen(
             HomeTab.ProductHunt -> FeedScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = phViewModel
+            )
+            HomeTab.Picks -> PicksScreen(
+                onNavigateToDetail = onNavigateToDetail,
+                modifier = Modifier.padding(innerPadding),
+                viewModel = picksViewModel
             )
         }
     }
