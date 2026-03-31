@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.LocalParking
-import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -153,13 +151,13 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.HackerNews,
                     onClick = { selectedTabName = HomeTab.HackerNews.name },
-                    icon = { Icon(Icons.Default.Newspaper, contentDescription = stringResource(Res.string.hackernews_title)) },
+                    icon = { Icon(HackerNewsYIcon, contentDescription = stringResource(Res.string.hackernews_title)) },
                     label = { Text("HN") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.ProductHunt,
                     onClick = { selectedTabName = HomeTab.ProductHunt.name },
-                    icon = { Icon(Icons.Default.LocalParking, contentDescription = stringResource(Res.string.producthunt_title)) },
+                    icon = { Icon(ProductHuntPIcon, contentDescription = stringResource(Res.string.producthunt_title)) },
                     label = { Text("PH") }
                 )
                 NavigationBarItem(
