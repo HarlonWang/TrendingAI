@@ -34,10 +34,13 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
@@ -54,6 +58,8 @@ import trendingai.shared.generated.resources.picks_no_data
 import trendingai.shared.generated.resources.picks_section_controversy
 import trendingai.shared.generated.resources.picks_section_deep_dive
 import trendingai.shared.generated.resources.picks_section_speed_read
+import trendingai.shared.generated.resources.icon_openai_dark
+import trendingai.shared.generated.resources.icon_openai_light
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.openUrl
@@ -385,11 +391,9 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
 
             // AI 总结
             if (!item.summary.isNullOrBlank()) {
-                Text(
-                    text = item.summary,
-                    modifier = Modifier.padding(start = 34.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                AiSummaryBox(
+                    summary = item.summary,
+                    modifier = Modifier.padding(start = 34.dp)
                 )
             }
         }
@@ -433,6 +437,39 @@ private fun SourceTag(source: String, label: String) {
         style = MaterialTheme.typography.labelSmall,
         color = textColor
     )
+}
+
+@Composable
+private fun AiSummaryBox(summary: String, modifier: Modifier = Modifier) {
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = summary,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            color = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        Icon(
+            painter = painterResource(
+                if (isDarkTheme) Res.drawable.icon_openai_dark else Res.drawable.icon_openai_light
+            ),
+            contentDescription = "ChatGPT",
+            tint = Color.Unspecified,
+            modifier = Modifier
+                .size(14.dp)
+                .align(Alignment.End)
+        )
+    }
 }
 
 private fun formatScore(source: String, score: Int): String {
