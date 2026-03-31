@@ -4,6 +4,7 @@ import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.settings.SettingsScreen
+import whl.trending.ai.ui.webview.WebViewScreen
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 
@@ -24,6 +25,7 @@ data object Home
 data object Settings
 data object Feedback
 data class RepoDetail(val owner: String, val repo: String)
+data class WebPage(val url: String, val title: String)
 
 @Composable
 @Preview
@@ -63,6 +65,9 @@ fun App() {
                             },
                             onNavigateToFeedback = {
                                 backStack.add(Feedback)
+                            },
+                            onNavigateToWebPage = { url, title ->
+                                backStack.add(WebPage(url, title))
                             }
                         )
                     }
@@ -72,6 +77,14 @@ fun App() {
                             onBack = {
                                 backStack.removeLastOrNull()
                             }
+                        )
+                    }
+
+                    is WebPage -> NavEntry(key) {
+                        WebViewScreen(
+                            url = key.url,
+                            title = key.title,
+                            onBack = { backStack.removeLastOrNull() }
                         )
                     }
 

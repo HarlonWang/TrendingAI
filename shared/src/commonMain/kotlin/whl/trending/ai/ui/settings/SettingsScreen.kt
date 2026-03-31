@@ -23,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
@@ -73,11 +74,16 @@ import trendingai.shared.generated.resources.theme_light
 
 import trendingai.shared.generated.resources.feedback
 import trendingai.shared.generated.resources.feedback_desc
+import trendingai.shared.generated.resources.privacy_policy
 import trendingai.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onNavigateToFeedback: () -> Unit = {}) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onNavigateToFeedback: () -> Unit = {},
+    onNavigateToWebPage: (url: String, title: String) -> Unit = { _, _ -> }
+) {
     val isIos = isIosPlatform()
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
@@ -253,6 +259,16 @@ fun SettingsScreen(onBack: () -> Unit, onNavigateToFeedback: () -> Unit = {}) {
                     leadingContent = { Icon(Icons.Default.Info, null) },
                     modifier = Modifier.clickable {
                         openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                    }
+                )
+            }
+            item {
+                val privacyTitle = stringResource(Res.string.privacy_policy)
+                ListItem(
+                    headlineContent = { Text(privacyTitle) },
+                    leadingContent = { Icon(Icons.Default.PrivacyTip, null) },
+                    modifier = Modifier.clickable {
+                        onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle)
                     }
                 )
             }

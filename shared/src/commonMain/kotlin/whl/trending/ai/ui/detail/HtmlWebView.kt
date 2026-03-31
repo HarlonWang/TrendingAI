@@ -12,6 +12,13 @@ data class WebViewColors(
     val muted: String,
 )
 
+/**
+ * 加载 HTML 字符串的 WebView，支持通过 [WebViewColors] 注入主题色。
+ *
+ * 用于展示应用内生成的 HTML 内容（如 GitHub README），
+ * 通过 CSS 注入确保样式与当前主题一致。
+ * 如需加载远程 URL，使用 [whl.trending.ai.ui.webview.UrlWebView]。
+ */
 @Composable
 expect fun HtmlWebView(html: String, colors: WebViewColors, modifier: Modifier = Modifier)
 
