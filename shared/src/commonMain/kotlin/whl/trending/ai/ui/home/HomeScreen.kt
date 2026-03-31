@@ -34,9 +34,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -53,6 +50,8 @@ import trendingai.shared.generated.resources.hackernews_placeholder
 import trendingai.shared.generated.resources.producthunt_title
 import trendingai.shared.generated.resources.producthunt_placeholder
 import trendingai.shared.generated.resources.app_name
+import trendingai.shared.generated.resources.icon_producthunt_dark
+import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
 import trendingai.shared.generated.resources.history_trending
@@ -106,8 +105,40 @@ fun HomeScreen(
                     scrollBehavior = scrollBehavior,
                     onNavigateToSettings = onNavigateToSettings
                 )
-                HomeTab.HackerNews, HomeTab.ProductHunt -> {
-                    // 占位，第二步实现
+                HomeTab.HackerNews -> {
+                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    FeedTopBar(
+                        title = stringResource(Res.string.hackernews_title),
+                        navigationIcon = {
+                            Icon(
+                                imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
+                                contentDescription = "Hacker News",
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                        },
+                        scrollBehavior = scrollBehavior,
+                        onNavigateToSettings = onNavigateToSettings
+                    )
+                }
+                HomeTab.ProductHunt -> {
+                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    FeedTopBar(
+                        title = stringResource(Res.string.producthunt_title),
+                        navigationIcon = {
+                            Icon(
+                                painter = painterResource(
+                                    if (isDark) Res.drawable.icon_producthunt_dark
+                                    else Res.drawable.icon_producthunt_light
+                                ),
+                                contentDescription = "Product Hunt",
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                        },
+                        scrollBehavior = scrollBehavior,
+                        onNavigateToSettings = onNavigateToSettings
+                    )
                 }
             }
         },
@@ -278,6 +309,35 @@ private fun PicksTopBar(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        },
+        actions = {
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedTopBar(
+    title: String,
+    navigationIcon: @Composable () -> Unit,
+    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
+    onNavigateToSettings: () -> Unit
+) {
+    TopAppBar(
+        scrollBehavior = scrollBehavior,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = {}) {
+                navigationIcon()
             }
         },
         actions = {
