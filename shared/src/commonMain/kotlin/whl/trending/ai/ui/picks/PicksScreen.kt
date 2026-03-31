@@ -21,12 +21,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +60,7 @@ import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.model.PickAnalysis
 import whl.trending.ai.data.model.PickItem
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PicksScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
@@ -64,47 +68,61 @@ fun PicksScreen(
     viewModel: PicksViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
-    when {
-        uiState.isLoading -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator(modifier = Modifier.size(48.dp))
-            }
-        }
-
-        uiState.error != null -> {
-            Column(
-                modifier = modifier.fillMaxSize().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = uiState.error ?: "",
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.retry() }) {
-                    Text(stringResource(Res.string.retry))
+    PullToRefreshBox(
+        isRefreshing = uiState.isRefreshing,
+        state = pullToRefreshState,
+        onRefresh = { viewModel.refresh() },
+        indicator = {
+            PullToRefreshDefaults.LoadingIndicator(
+                state = pullToRefreshState,
+                isRefreshing = uiState.isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        },
+        modifier = modifier.fillMaxSize()
+    ) {
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    LoadingIndicator(modifier = Modifier.size(48.dp))
                 }
             }
-        }
 
-        else -> {
-            val picks = uiState.picks
-            if (picks == null || (picks.deepDive.isEmpty() && picks.controversy.isEmpty() && picks.speedRead.isEmpty())) {
-                Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = stringResource(Res.string.picks_no_data))
+            uiState.error != null -> {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = uiState.error ?: "",
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.retry() }) {
+                        Text(stringResource(Res.string.retry))
+                    }
                 }
-            } else {
-                PicksList(
-                    deepDive = picks.deepDive,
-                    controversy = picks.controversy,
-                    speedRead = picks.speedRead,
-                    onItemClick = { item -> handleItemClick(item, onNavigateToDetail) },
-                    modifier = modifier
-                )
+            }
+
+            else -> {
+                val picks = uiState.picks
+                if (picks == null || (picks.deepDive.isEmpty() && picks.controversy.isEmpty() && picks.speedRead.isEmpty())) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = stringResource(Res.string.picks_no_data))
+                    }
+                } else {
+                    PicksList(
+                        deepDive = picks.deepDive,
+                        controversy = picks.controversy,
+                        speedRead = picks.speedRead,
+                        onItemClick = { item -> handleItemClick(item, onNavigateToDetail) },
+                    )
+                }
             }
         }
     }
