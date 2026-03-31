@@ -234,7 +234,9 @@ private fun RepoList(
                         since = uiState.since,
                         onClick = { onNavigateToDetail(repo.author, repo.repoName) }
                     )
-                    HorizontalDivider(modifier = Modifier.fillMaxWidth())
+                    if (index < uiState.repos.lastIndex) {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
                 }
 
                 if (uiState.capturedAt.isNotEmpty()) {
