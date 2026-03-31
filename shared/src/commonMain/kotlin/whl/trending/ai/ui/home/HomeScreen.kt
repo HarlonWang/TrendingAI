@@ -2,10 +2,8 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -46,9 +44,7 @@ import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.hackernews_title
-import trendingai.shared.generated.resources.hackernews_placeholder
 import trendingai.shared.generated.resources.producthunt_title
-import trendingai.shared.generated.resources.producthunt_placeholder
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.icon_producthunt_dark
 import trendingai.shared.generated.resources.icon_producthunt_light
@@ -59,6 +55,8 @@ import trendingai.shared.generated.resources.period_daily
 import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.settings
+import whl.trending.ai.ui.feed.FeedScreen
+import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
 import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.ui.trending.TrendingScreen
@@ -83,6 +81,8 @@ fun HomeScreen(
     val trendingUiState by trendingViewModel.uiState.collectAsState()
     val picksViewModel: PicksViewModel = viewModel { PicksViewModel() }
     val picksUiState by picksViewModel.uiState.collectAsState()
+    val hnViewModel: FeedViewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") }
+    val phViewModel: FeedViewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -186,22 +186,14 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = picksViewModel
             )
-            HomeTab.HackerNews -> {
-                Box(
-                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(stringResource(Res.string.hackernews_placeholder))
-                }
-            }
-            HomeTab.ProductHunt -> {
-                Box(
-                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(stringResource(Res.string.producthunt_placeholder))
-                }
-            }
+            HomeTab.HackerNews -> FeedScreen(
+                modifier = Modifier.padding(innerPadding),
+                viewModel = hnViewModel
+            )
+            HomeTab.ProductHunt -> FeedScreen(
+                modifier = Modifier.padding(innerPadding),
+                viewModel = phViewModel
+            )
         }
     }
 }

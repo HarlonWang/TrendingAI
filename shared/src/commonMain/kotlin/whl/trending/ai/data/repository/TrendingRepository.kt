@@ -1,11 +1,16 @@
 package whl.trending.ai.data.repository
 
+import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.TrendingResponse
 import whl.trending.ai.data.remote.TrendingApi
 
 class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
+    suspend fun getFeed(source: String, summaryLang: String = "zh"): FeedResponse {
+        return api.fetchFeed(source, summaryLang)
+    }
+
     suspend fun getPicks(): PicksResponse {
         return api.fetchPicks()
     }
