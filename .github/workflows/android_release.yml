@@ -93,7 +93,7 @@ jobs:
           prompt = f"请根据以下 git commit 记录，生成一份面向用户的 Release Notes。\n要求：\n1. 忽略琐碎的构建或内部调整，总结出核心的新特性、优化和修复。\n2. 同时提供清晰的中文和英文版本（中文在上，英文在下）。\n3. 使用 Markdown 列表格式，不要输出过于啰碎的技术术语。\n\nCommits:\n{commits}"
           
           data = {
-              "model": "gpt-5.1",
+              "model": "gpt-5.4",
               "messages": [{"role": "user", "content": prompt}],
               "temperature": 0.7
           }
@@ -104,7 +104,7 @@ jobs:
           })
           
           try:
-              print("Calling ChatGPT API (model: gpt-5.1)...")
+              print("Calling ChatGPT API (model: gpt-5.4)...")
               with urllib.request.urlopen(req, timeout=30) as response:
                   res_data = json.loads(response.read().decode("utf-8"))
                   summary = res_data["choices"][0]["message"]["content"]
