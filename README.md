@@ -6,9 +6,9 @@
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.10.3-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Material 3](https://img.shields.io/badge/Material_3-1.10.0--alpha05-673AB7?logo=materialdesign&logoColor=white)](https://m3.material.io/)
 
-**用 AI 快速读懂 GitHub Trending 开源项目。**
+**全球技术热点，AI 精选速递。**
 
-*帮你省去翻阅冗长 README 和源码的时间，高效过滤并定位高价值的开源项目。*
+*聚合 GitHub Trending、Hacker News、Product Hunt，用 AI 精选和解读全网最值得关注的技术项目。*
 
 ---
 
@@ -24,14 +24,14 @@
 
 ## 📖 项目简介
 
-Trending AI 是一款使用 Kotlin Multiplatform (KMP) 构建的跨平台应用。它不仅能让你随时查看 GitHub 的每日、每周、每月热门仓库榜单，还会通过接入的大语言模型，自动为每个项目生成一句话精炼摘要。
+Trending AI 是一款使用 Kotlin Multiplatform (KMP) 构建的跨平台应用。聚合 GitHub Trending、Hacker News、Product Hunt 三大技术信息源，通过 AI 智能摘要和每日精选，帮你高效发现全网最值得关注的技术项目。
 
 ## ✨ 核心功能
 
-- 📈 **全方位趋势**：实时查看 GitHub 今日、本周、本月的热门项目榜单。
-- 🤖 **AI 智能摘要**：集成 ChatGPT / DeepSeek 模型，为每个仓库自动提炼核心功能与逻辑。
-- 📅 **历史回溯**：支持按日期与批次（早报/晚报）查询往期榜单数据。
-- 📱 **原生跨平台**：采用 Compose Multiplatform 构建，一套代码同时覆盖 Android 与 iOS。
+- 🌐 **多源聚合**：GitHub Trending、Hacker News、Product Hunt 一站浏览。
+- 🤖 **AI 智能摘要**：每个项目自动生成 AI 分析，快速了解核心价值。
+- ⭐ **每日精选**：AI 从全网筛选最值得关注的技术项目。
+- 📅 **历史回溯**：查看任意日期的趋势榜单，不错过每一天。
 
 ---
 
