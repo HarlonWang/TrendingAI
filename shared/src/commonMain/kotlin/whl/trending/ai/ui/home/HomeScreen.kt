@@ -58,6 +58,7 @@ import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
 import whl.trending.ai.ui.picks.PicksViewModel
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
 
@@ -144,28 +145,34 @@ fun HomeScreen(
             }
         },
         bottomBar = {
+            val switchTo = { tab: HomeTab ->
+                if (selectedTab != tab) {
+                    trackEvent("tab_switch", mapOf("tab" to tab.name.lowercase()))
+                    selectedTabName = tab.name
+                }
+            }
             NavigationBar {
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.GitHub,
-                    onClick = { selectedTabName = HomeTab.GitHub.name },
+                    onClick = { switchTo(HomeTab.GitHub) },
                     icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "GitHub") },
                     label = { Text("GitHub") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.HackerNews,
-                    onClick = { selectedTabName = HomeTab.HackerNews.name },
+                    onClick = { switchTo(HomeTab.HackerNews) },
                     icon = { Icon(HackerNewsYIcon, contentDescription = stringResource(Res.string.hackernews_title)) },
                     label = { Text("HN") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.ProductHunt,
-                    onClick = { selectedTabName = HomeTab.ProductHunt.name },
+                    onClick = { switchTo(HomeTab.ProductHunt) },
                     icon = { Icon(ProductHuntPIcon, contentDescription = stringResource(Res.string.producthunt_title)) },
                     label = { Text("PH") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.Picks,
-                    onClick = { selectedTabName = HomeTab.Picks.name },
+                    onClick = { switchTo(HomeTab.Picks) },
                     icon = { Icon(Icons.Default.Star, contentDescription = stringResource(Res.string.picks_title)) },
                     label = { Text(stringResource(Res.string.picks_title)) }
                 )
