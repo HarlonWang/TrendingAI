@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.trending
 
+import whl.trending.ai.ui.common.AiSummaryBox
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,13 +56,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_help
@@ -81,12 +80,6 @@ import trendingai.shared.generated.resources.history_date
 import trendingai.shared.generated.resources.history_info_content
 import trendingai.shared.generated.resources.history_info_title
 import trendingai.shared.generated.resources.history_trending
-import trendingai.shared.generated.resources.icon_deepseek_dark
-import trendingai.shared.generated.resources.icon_deepseek_light
-import trendingai.shared.generated.resources.icon_gemini_dark
-import trendingai.shared.generated.resources.icon_gemini_light
-import trendingai.shared.generated.resources.icon_openai_dark
-import trendingai.shared.generated.resources.icon_openai_light
 import trendingai.shared.generated.resources.last_updated
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.period_daily
@@ -300,7 +293,9 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
             if (repo.aiSummaries.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     repo.aiSummaries.forEach { summary ->
-                        AiSummaryBox(summary)
+                        if (summary.content.isNotEmpty()) {
+                            AiSummaryBox(summary.content)
+                        }
                     }
                 }
             }
@@ -368,44 +363,6 @@ private fun AvatarCircle(url: String, modifier: Modifier = Modifier) {
     )
 }
 
-@Composable
-private fun AiSummaryBox(aiSummary: TrendingAiSummary) {
-    if (aiSummary.content.isEmpty()) return
-    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = aiSummary.content,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            color = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-
-        val aiIcon = when (aiSummary.provider.lowercase()) {
-            "chatgpt" -> if (isDarkTheme) Res.drawable.icon_openai_dark else Res.drawable.icon_openai_light
-            "deepseek" -> if (isDarkTheme) Res.drawable.icon_deepseek_dark else Res.drawable.icon_deepseek_light
-            "gemini" -> if (isDarkTheme) Res.drawable.icon_gemini_dark else Res.drawable.icon_gemini_light
-            else -> if (isDarkTheme) Res.drawable.icon_gemini_dark else Res.drawable.icon_gemini_light
-        }
-        Icon(
-            painter = painterResource(aiIcon),
-            contentDescription = aiSummary.provider,
-            tint = Color.Unspecified,
-            modifier = Modifier
-                .size(14.dp)
-                .align(Alignment.End)
-        )
-    }
-}
 
 @Composable
 private fun RepoMetadata(repo: TrendingRepo, since: String) {
