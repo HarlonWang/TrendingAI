@@ -8,6 +8,7 @@ import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.Constants
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.update.globalUpdateChecker
 
 import androidx.compose.foundation.clickable
@@ -142,7 +143,10 @@ fun SettingsScreen(
                             }
                             SegmentedButton(
                                 selected = themeMode == mode,
-                                onClick = { globalSettingsManager.setThemeMode(mode) },
+                                onClick = {
+                                    trackEvent("settings_theme_change", mapOf("theme" to mode.name.lowercase()))
+                                    globalSettingsManager.setThemeMode(mode)
+                                },
                                 shape = SegmentedButtonDefaults.itemShape(
                                     index = index,
                                     count = ThemeMode.entries.size
@@ -196,6 +200,7 @@ fun SettingsScreen(
                                             text = { Text(languageOptionText(language)) },
                                             onClick = {
                                                 expanded = false
+                                                trackEvent("settings_language_change", mapOf("language" to language.name.lowercase()))
                                                 globalSettingsManager.setLanguage(language)
                                             }
                                         )
@@ -216,7 +221,10 @@ fun SettingsScreen(
                     headlineContent = { Text(stringResource(Res.string.feedback)) },
                     supportingContent = { Text(stringResource(Res.string.feedback_desc)) },
                     leadingContent = { Icon(Icons.Default.Feedback, null) },
-                    modifier = Modifier.clickable { onNavigateToFeedback() }
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_feedback")
+                        onNavigateToFeedback()
+                    }
                 )
             }
             // apk 渠道显示自建更新检查，iOS 跳转官网；play 渠道由商店管理更新，不显示
@@ -243,6 +251,7 @@ fun SettingsScreen(
                         },
                         leadingContent = { Icon(Icons.Default.Refresh, null) },
                         modifier = Modifier.clickable(enabled = !isChecking) {
+                            trackEvent("settings_check_update")
                             if (isIos) {
                                 openUrl(Constants.OFFICIAL_WEBSITE_URL)
                             } else {
