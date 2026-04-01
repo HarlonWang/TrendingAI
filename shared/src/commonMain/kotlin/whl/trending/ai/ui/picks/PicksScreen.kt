@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -36,9 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -59,7 +56,7 @@ import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.data.model.PickAnalysis
+import whl.trending.ai.core.trackItemClick
 import whl.trending.ai.data.model.PickItem
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -122,7 +119,7 @@ fun PicksScreen(
                         deepDive = picks.deepDive,
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
-                        onItemClick = { item -> handleItemClick(item, onNavigateToDetail) },
+                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail) },
                     )
                 }
             }
@@ -132,8 +129,15 @@ fun PicksScreen(
 
 private fun handleItemClick(
     item: PickItem,
+    section: String,
     onNavigateToDetail: (owner: String, repo: String) -> Unit
 ) {
+    trackItemClick(
+        source = item.source,
+        rank = item.rank,
+        title = item.title,
+        section = section
+    )
     if (item.source == "github") {
         val parts = item.url.removePrefix("https://github.com/").split("/")
         if (parts.size >= 2) {
@@ -149,7 +153,7 @@ private fun PicksList(
     deepDive: List<PickItem>,
     controversy: List<PickItem>,
     speedRead: List<PickItem>,
-    onItemClick: (PickItem) -> Unit,
+    onItemClick: (PickItem, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -160,7 +164,7 @@ private fun PicksList(
         if (deepDive.isNotEmpty()) {
             item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
             items(deepDive, key = { "deep_${it.rank}" }) { item ->
-                DeepDiveCard(item = item, onClick = { onItemClick(item) })
+                DeepDiveCard(item = item, onClick = { onItemClick(item, "deep_dive") })
             }
         }
 
@@ -171,7 +175,7 @@ private fun PicksList(
             item {
                 ControversyGroup(
                     items = controversy,
-                    onItemClick = onItemClick
+                    onItemClick = { item -> onItemClick(item, "controversy") }
                 )
             }
         }
@@ -181,7 +185,7 @@ private fun PicksList(
             item { SectionDivider() }
             item { SectionHeader(title = stringResource(Res.string.picks_section_speed_read)) }
             items(speedRead, key = { "speed_${it.rank}" }) { item ->
-                SpeedReadItem(item = item, onClick = { onItemClick(item) })
+                SpeedReadItem(item = item, onClick = { onItemClick(item, "speed_read") })
             }
             // 尾部间距
             item { Spacer(modifier = Modifier.height(16.dp)) }

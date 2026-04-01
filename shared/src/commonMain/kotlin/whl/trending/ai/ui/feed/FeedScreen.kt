@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +38,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.platform.openUrl
+import whl.trending.ai.core.trackItemClick
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.ui.common.AiSummaryBox
 
@@ -117,7 +117,14 @@ fun FeedScreen(
 private fun FeedItemCard(index: Int, item: FeedItem) {
     Row(
         modifier = Modifier
-            .clickable { openUrl(item.url) }
+            .clickable {
+                trackItemClick(
+                    source = item.source,
+                    rank = index + 1,
+                    title = item.title
+                )
+                openUrl(item.url)
+            }
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {

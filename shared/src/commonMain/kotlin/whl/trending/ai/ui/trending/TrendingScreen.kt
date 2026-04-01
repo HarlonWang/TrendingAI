@@ -100,6 +100,7 @@ import trendingai.shared.generated.resources.update_info_content
 import trendingai.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.trackItemClick
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
@@ -232,7 +233,14 @@ private fun RepoList(
                         index = index,
                         repo = repo,
                         since = uiState.since,
-                        onClick = { onNavigateToDetail(repo.author, repo.repoName) }
+                        onClick = {
+                            trackItemClick(
+                                source = "github",
+                                rank = index + 1,
+                                title = "${repo.author}/${repo.repoName}"
+                            )
+                            onNavigateToDetail(repo.author, repo.repoName)
+                        }
                     )
                     if (index < uiState.repos.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
