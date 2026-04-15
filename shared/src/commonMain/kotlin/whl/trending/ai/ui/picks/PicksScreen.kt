@@ -61,8 +61,8 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import kotlin.time.Clock
@@ -270,7 +270,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                     contentDescription = null,
                     tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                 )
@@ -380,7 +380,7 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = null,
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         )
@@ -468,7 +468,7 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
-                        imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                         contentDescription = null,
                         tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )

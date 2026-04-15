@@ -99,8 +99,8 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import kotlin.time.Clock
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -335,7 +335,7 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
             modifier = Modifier.size(32.dp)
         ) {
             Icon(
-                imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                 contentDescription = null,
                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
