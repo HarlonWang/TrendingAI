@@ -5,6 +5,8 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.picks.SourceTag
+import whl.trending.ai.core.platform.trackEvent
+import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -65,6 +67,10 @@ import trendingai.shared.generated.resources.favorites_removed
 fun FavoriteListScreen(onBack: () -> Unit) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    LaunchedEffect(Unit) {
+        trackEvent("favorite_list_view", mapOf("count" to favorites.size))
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
