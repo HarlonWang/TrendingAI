@@ -1,6 +1,5 @@
 package whl.trending.ai.ui.trending
 
-import whl.trending.ai.ui.common.AiSummaryBox
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,12 +54,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_help
@@ -94,13 +97,13 @@ import trendingai.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.trackItemClick
-import whl.trending.ai.data.model.TrendingAiSummary
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.zIndex
-import coil3.compose.AsyncImage
+import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.common.FavoriteActionMenu
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -216,7 +219,10 @@ private fun RepoList(
                 }
             }
 
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+            else -> {
+                val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
+                val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(
                     count = uiState.repos.size,
                     key = { index -> uiState.repos[index].url }
@@ -226,6 +232,23 @@ private fun RepoList(
                         index = index,
                         repo = repo,
                         since = uiState.since,
+                        isFavorite = repo.url in favoriteUrls,
+                        onToggleFavorite = {
+                            if (repo.url in favoriteUrls) {
+                                globalSettingsManager.removeFavorite(repo.url)
+                            } else {
+                                globalSettingsManager.addFavorite(
+                                    FavoriteItem(
+                                        url = repo.url,
+                                        title = "${repo.author}/${repo.repoName}",
+                                        source = "github",
+                                        description = repo.description.takeIf { it.isNotBlank() },
+                                        summary = repo.aiSummaries.firstOrNull()?.content,
+                                        savedAt = Clock.System.now().toEpochMilliseconds()
+                                    )
+                                )
+                            }
+                        },
                         onClick = {
                             trackItemClick(
                                 source = "github",
@@ -252,12 +275,13 @@ private fun RepoList(
                     }
                 }
             }
+            }
         }
     }
 }
 
 @Composable
-private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () -> Unit) {
+private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clickable { onClick() }
@@ -274,7 +298,9 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 Text(text = "${index + 1}", fontSize = 12.sp, fontWeight = FontWeight.W500)
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
                 text = "${repo.author}/${repo.repoName}",
                 fontSize = 16.sp,
@@ -304,7 +330,18 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 ContributorAvatars(contributors = repo.builtBy)
             }
 
-            RepoMetadata(repo = repo, since = since)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    RepoMetadata(repo = repo, since = since)
+                }
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
+            }
         }
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
@@ -73,6 +74,7 @@ import trendingai.shared.generated.resources.theme_dark
 import trendingai.shared.generated.resources.theme_follow_system
 import trendingai.shared.generated.resources.theme_light
 
+import trendingai.shared.generated.resources.favorites
 import trendingai.shared.generated.resources.feedback
 import trendingai.shared.generated.resources.feedback_desc
 import trendingai.shared.generated.resources.privacy_policy
@@ -82,6 +84,7 @@ import trendingai.shared.generated.resources.version_up_to_date
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToFavorites: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
     onNavigateToWebPage: (url: String, title: String) -> Unit = { _, _ -> }
 ) {
@@ -161,6 +164,17 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+            // 我的收藏
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.favorites)) },
+                    leadingContent = { Icon(Icons.Default.Favorite, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_favorites")
+                        onNavigateToFavorites()
+                    }
+                )
             }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 

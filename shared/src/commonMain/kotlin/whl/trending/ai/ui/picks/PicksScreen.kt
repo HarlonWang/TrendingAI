@@ -57,7 +57,12 @@ import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem
+import whl.trending.ai.ui.common.FavoriteActionMenu
+import androidx.compose.runtime.remember
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -115,10 +120,13 @@ fun PicksScreen(
                         Text(text = stringResource(Res.string.picks_no_data))
                     }
                 } else {
+                    val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
+                    val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
                     PicksList(
                         deepDive = picks.deepDive,
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
+                        favoriteUrls = favoriteUrls,
                         onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail) },
                     )
                 }
@@ -153,6 +161,7 @@ private fun PicksList(
     deepDive: List<PickItem>,
     controversy: List<PickItem>,
     speedRead: List<PickItem>,
+    favoriteUrls: Set<String>,
     onItemClick: (PickItem, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -164,7 +173,12 @@ private fun PicksList(
         if (deepDive.isNotEmpty()) {
             item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
             items(deepDive, key = { "deep_${it.rank}" }) { item ->
-                DeepDiveCard(item = item, onClick = { onItemClick(item, "deep_dive") })
+                DeepDiveCard(
+                    item = item,
+                    isFavorite = item.url in favoriteUrls,
+                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onClick = { onItemClick(item, "deep_dive") }
+                )
             }
         }
 
@@ -175,6 +189,7 @@ private fun PicksList(
             item {
                 ControversyGroup(
                     items = controversy,
+                    favoriteUrls = favoriteUrls,
                     onItemClick = { item -> onItemClick(item, "controversy") }
                 )
             }
@@ -185,7 +200,12 @@ private fun PicksList(
             item { SectionDivider() }
             item { SectionHeader(title = stringResource(Res.string.picks_section_speed_read)) }
             items(speedRead, key = { "speed_${it.rank}" }) { item ->
-                SpeedReadItem(item = item, onClick = { onItemClick(item, "speed_read") })
+                SpeedReadItem(
+                    item = item,
+                    isFavorite = item.url in favoriteUrls,
+                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onClick = { onItemClick(item, "speed_read") }
+                )
             }
             // 尾部间距
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -216,7 +236,7 @@ private fun SectionHeader(title: String) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
+private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
     OutlinedCard(
         onClick = onClick,
         modifier = Modifier
@@ -292,12 +312,23 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                     }
                 }
             }
+
+            // 底部三点菜单
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> Unit) {
+private fun ControversyGroup(items: List<PickItem>, favoriteUrls: Set<String>, onItemClick: (PickItem) -> Unit) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -335,6 +366,17 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
+
+                // 底部三点菜单
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    FavoriteActionMenu(
+                        isFavorite = item.url in favoriteUrls,
+                        onToggle = { togglePickFavorite(item, favoriteUrls) }
+                    )
+                }
             }
             if (index < items.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -344,7 +386,7 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
 }
 
 @Composable
-private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
+private fun SpeedReadItem(item: PickItem, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
     Column {
         Column(
             modifier = Modifier
@@ -396,8 +438,36 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                     modifier = Modifier.padding(start = 34.dp)
                 )
             }
+
+            // 底部三点菜单
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
+            }
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    }
+}
+
+private fun togglePickFavorite(item: PickItem, favoriteUrls: Set<String>) {
+    if (item.url in favoriteUrls) {
+        globalSettingsManager.removeFavorite(item.url)
+    } else {
+        globalSettingsManager.addFavorite(
+            FavoriteItem(
+                url = item.url,
+                title = item.title,
+                source = item.source,
+                description = item.analysis?.core ?: item.description,
+                summary = item.analysis?.whyImportant ?: item.summary,
+                savedAt = Clock.System.now().toEpochMilliseconds()
+            )
+        )
     }
 }
 
@@ -417,7 +487,7 @@ private fun LabeledText(label: String, value: String) {
 }
 
 @Composable
-private fun SourceTag(source: String, label: String) {
+internal fun SourceTag(source: String, label: String) {
     val bgColor = when (source) {
         "github" -> MaterialTheme.colorScheme.onSurface
         "hackernews" -> Color(0xFFFF6600)
@@ -439,7 +509,7 @@ private fun SourceTag(source: String, label: String) {
     )
 }
 
-private fun formatScore(source: String, score: Int): String {
+internal fun formatScore(source: String, score: Int): String {
     return when (source) {
         "github" -> "★ ${DateTimeUtils.formatNumber(score)}"
         else -> "▲ $score"

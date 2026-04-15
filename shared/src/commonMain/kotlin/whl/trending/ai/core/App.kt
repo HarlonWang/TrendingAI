@@ -1,6 +1,7 @@
 package whl.trending.ai.core
 
 import whl.trending.ai.ui.detail.ReadmeScreen
+import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.settings.SettingsScreen
@@ -26,6 +27,7 @@ data object Settings
 data object Feedback
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
+data object Favorites
 
 @Composable
 @Preview
@@ -63,6 +65,9 @@ fun App() {
                             onBack = {
                                 backStack.removeLastOrNull()
                             },
+                            onNavigateToFavorites = {
+                                backStack.add(Favorites)
+                            },
                             onNavigateToFeedback = {
                                 backStack.add(Feedback)
                             },
@@ -84,6 +89,12 @@ fun App() {
                         WebViewScreen(
                             url = key.url,
                             title = key.title,
+                            onBack = { backStack.removeLastOrNull() }
+                        )
+                    }
+
+                    is Favorites -> NavEntry(key) {
+                        FavoriteListScreen(
                             onBack = { backStack.removeLastOrNull() }
                         )
                     }
