@@ -94,9 +94,14 @@ import trendingai.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import kotlinx.datetime.Clock
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.zIndex
@@ -258,6 +263,7 @@ private fun RepoList(
 
 @Composable
 private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () -> Unit) {
+    val isFavorite by globalSettingsManager.isFavorite(repo.url).collectAsState(false)
     Row(
         modifier = Modifier
             .clickable { onClick() }
@@ -274,7 +280,10 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 Text(text = "${index + 1}", fontSize = 12.sp, fontWeight = FontWeight.W500)
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
                 text = "${repo.author}/${repo.repoName}",
                 fontSize = 16.sp,
@@ -305,6 +314,31 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
             }
 
             RepoMetadata(repo = repo, since = since)
+        }
+        IconButton(
+            onClick = {
+                if (isFavorite) {
+                    globalSettingsManager.removeFavorite(repo.url)
+                } else {
+                    globalSettingsManager.addFavorite(
+                        FavoriteItem(
+                            url = repo.url,
+                            title = "${repo.author}/${repo.repoName}",
+                            source = "github",
+                            description = repo.description.takeIf { it.isNotBlank() },
+                            summary = repo.aiSummaries.firstOrNull()?.content,
+                            savedAt = Clock.System.now().toEpochMilliseconds()
+                        )
+                    )
+                }
+            },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                contentDescription = null,
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
