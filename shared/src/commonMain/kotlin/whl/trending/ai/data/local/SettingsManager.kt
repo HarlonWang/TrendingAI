@@ -69,8 +69,6 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
     }
 
-    fun isFavorite(url: String): Flow<Boolean> = favorites.map { list -> list.any { it.url == url } }
-
     private fun getCurrentFavorites(): List<FavoriteItem> {
         val json = settings.getStringOrNull(FAVORITES_KEY) ?: return emptyList()
         return runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }

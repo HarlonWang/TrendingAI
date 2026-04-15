@@ -60,20 +60,9 @@ import whl.trending.ai.core.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.runtime.mutableStateOf
+import whl.trending.ai.ui.common.FavoriteActionMenu
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import kotlin.time.Clock
-import trendingai.shared.generated.resources.action_favorite
-import trendingai.shared.generated.resources.action_unfavorite
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -131,10 +120,13 @@ fun PicksScreen(
                         Text(text = stringResource(Res.string.picks_no_data))
                     }
                 } else {
+                    val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
+                    val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
                     PicksList(
                         deepDive = picks.deepDive,
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
+                        favoriteUrls = favoriteUrls,
                         onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail) },
                     )
                 }
@@ -169,6 +161,7 @@ private fun PicksList(
     deepDive: List<PickItem>,
     controversy: List<PickItem>,
     speedRead: List<PickItem>,
+    favoriteUrls: Set<String>,
     onItemClick: (PickItem, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -180,7 +173,12 @@ private fun PicksList(
         if (deepDive.isNotEmpty()) {
             item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
             items(deepDive, key = { "deep_${it.rank}" }) { item ->
-                DeepDiveCard(item = item, onClick = { onItemClick(item, "deep_dive") })
+                DeepDiveCard(
+                    item = item,
+                    isFavorite = item.url in favoriteUrls,
+                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onClick = { onItemClick(item, "deep_dive") }
+                )
             }
         }
 
@@ -191,6 +189,7 @@ private fun PicksList(
             item {
                 ControversyGroup(
                     items = controversy,
+                    favoriteUrls = favoriteUrls,
                     onItemClick = { item -> onItemClick(item, "controversy") }
                 )
             }
@@ -201,7 +200,12 @@ private fun PicksList(
             item { SectionDivider() }
             item { SectionHeader(title = stringResource(Res.string.picks_section_speed_read)) }
             items(speedRead, key = { "speed_${it.rank}" }) { item ->
-                SpeedReadItem(item = item, onClick = { onItemClick(item, "speed_read") })
+                SpeedReadItem(
+                    item = item,
+                    isFavorite = item.url in favoriteUrls,
+                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onClick = { onItemClick(item, "speed_read") }
+                )
             }
             // 尾部间距
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -232,9 +236,7 @@ private fun SectionHeader(title: String) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
-    val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
-    var expanded by remember { mutableStateOf(false) }
+private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
     OutlinedCard(
         onClick = onClick,
         modifier = Modifier
@@ -316,71 +318,23 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                Box {
-                    IconButton(
-                        onClick = { expanded = true },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MoreHoriz,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (isFavorite) Res.string.action_unfavorite
-                                        else Res.string.action_favorite
-                                    )
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = null
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                if (isFavorite) {
-                                    globalSettingsManager.removeFavorite(item.url)
-                                } else {
-                                    globalSettingsManager.addFavorite(
-                                        FavoriteItem(
-                                            url = item.url,
-                                            title = item.title,
-                                            source = item.source,
-                                            description = item.analysis?.core,
-                                            summary = item.analysis?.whyImportant,
-                                            savedAt = Clock.System.now().toEpochMilliseconds()
-                                        )
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> Unit) {
+private fun ControversyGroup(items: List<PickItem>, favoriteUrls: Set<String>, onItemClick: (PickItem) -> Unit) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         items.forEachIndexed { index, item ->
-            val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
-            var expanded by remember { mutableStateOf(false) }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -418,56 +372,10 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    Box {
-                        IconButton(
-                            onClick = { expanded = true },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.MoreHoriz,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(
-                                            if (isFavorite) Res.string.action_unfavorite
-                                            else Res.string.action_favorite
-                                        )
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    expanded = false
-                                    if (isFavorite) {
-                                        globalSettingsManager.removeFavorite(item.url)
-                                    } else {
-                                        globalSettingsManager.addFavorite(
-                                            FavoriteItem(
-                                                url = item.url,
-                                                title = item.title,
-                                                source = item.source,
-                                                description = item.analysis?.core,
-                                                summary = item.analysis?.whyImportant,
-                                                savedAt = Clock.System.now().toEpochMilliseconds()
-                                            )
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                    }
+                    FavoriteActionMenu(
+                        isFavorite = item.url in favoriteUrls,
+                        onToggle = { togglePickFavorite(item, favoriteUrls) }
+                    )
                 }
             }
             if (index < items.lastIndex) {
@@ -478,9 +386,7 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
 }
 
 @Composable
-private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
-    val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
-    var expanded by remember { mutableStateOf(false) }
+private fun SpeedReadItem(item: PickItem, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
     Column {
         Column(
             modifier = Modifier
@@ -538,59 +444,30 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                Box {
-                    IconButton(
-                        onClick = { expanded = true },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MoreHoriz,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (isFavorite) Res.string.action_unfavorite
-                                        else Res.string.action_favorite
-                                    )
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = null
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                if (isFavorite) {
-                                    globalSettingsManager.removeFavorite(item.url)
-                                } else {
-                                    globalSettingsManager.addFavorite(
-                                        FavoriteItem(
-                                            url = item.url,
-                                            title = item.title,
-                                            source = item.source,
-                                            description = item.description,
-                                            summary = item.summary,
-                                            savedAt = Clock.System.now().toEpochMilliseconds()
-                                        )
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
             }
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    }
+}
+
+private fun togglePickFavorite(item: PickItem, favoriteUrls: Set<String>) {
+    if (item.url in favoriteUrls) {
+        globalSettingsManager.removeFavorite(item.url)
+    } else {
+        globalSettingsManager.addFavorite(
+            FavoriteItem(
+                url = item.url,
+                title = item.title,
+                source = item.source,
+                description = item.analysis?.core ?: item.description,
+                summary = item.analysis?.whyImportant ?: item.summary,
+                savedAt = Clock.System.now().toEpochMilliseconds()
+            )
+        )
     }
 }
 

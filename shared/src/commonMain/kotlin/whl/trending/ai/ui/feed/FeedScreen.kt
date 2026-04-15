@@ -43,21 +43,10 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.ui.common.AiSummaryBox
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.runtime.mutableStateOf
+import whl.trending.ai.ui.common.FavoriteActionMenu
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxWidth
 import kotlin.time.Clock
-import trendingai.shared.generated.resources.action_favorite
-import trendingai.shared.generated.resources.action_unfavorite
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -114,12 +103,34 @@ fun FeedScreen(
             }
 
             else -> {
+                val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
+                val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(
                         uiState.items,
                         key = { _, item -> "${item.source}_${item.externalId}" }
                     ) { index, item ->
-                        FeedItemCard(index = index, item = item)
+                        FeedItemCard(
+                            index = index,
+                            item = item,
+                            isFavorite = item.url in favoriteUrls,
+                            onToggleFavorite = {
+                                if (item.url in favoriteUrls) {
+                                    globalSettingsManager.removeFavorite(item.url)
+                                } else {
+                                    globalSettingsManager.addFavorite(
+                                        FavoriteItem(
+                                            url = item.url,
+                                            title = item.title,
+                                            source = item.source,
+                                            description = item.description,
+                                            summary = item.summary,
+                                            savedAt = Clock.System.now().toEpochMilliseconds()
+                                        )
+                                    )
+                                }
+                            }
+                        )
                         if (index < uiState.items.lastIndex) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
@@ -131,9 +142,7 @@ fun FeedScreen(
 }
 
 @Composable
-private fun FeedItemCard(index: Int, item: FeedItem) {
-    val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
-    var expanded by remember { mutableStateOf(false) }
+private fun FeedItemCard(index: Int, item: FeedItem, isFavorite: Boolean, onToggleFavorite: () -> Unit) {
     Row(
         modifier = Modifier
             .clickable {
@@ -186,56 +195,10 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
                 Box(modifier = Modifier.weight(1f)) {
                     FeedItemMetadata(item = item)
                 }
-                Box {
-                    IconButton(
-                        onClick = { expanded = true },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MoreHoriz,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (isFavorite) Res.string.action_unfavorite
-                                        else Res.string.action_favorite
-                                    )
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = null
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                if (isFavorite) {
-                                    globalSettingsManager.removeFavorite(item.url)
-                                } else {
-                                    globalSettingsManager.addFavorite(
-                                        FavoriteItem(
-                                            url = item.url,
-                                            title = item.title,
-                                            source = item.source,
-                                            description = item.description,
-                                            summary = item.summary,
-                                            savedAt = Clock.System.now().toEpochMilliseconds()
-                                        )
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
             }
         }
     }

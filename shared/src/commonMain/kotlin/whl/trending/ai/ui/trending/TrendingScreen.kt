@@ -99,14 +99,8 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import whl.trending.ai.ui.common.FavoriteActionMenu
 import kotlin.time.Clock
-import trendingai.shared.generated.resources.action_favorite
-import trendingai.shared.generated.resources.action_unfavorite
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.zIndex
@@ -226,7 +220,10 @@ private fun RepoList(
                 }
             }
 
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+            else -> {
+                val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
+                val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(
                     count = uiState.repos.size,
                     key = { index -> uiState.repos[index].url }
@@ -236,6 +233,23 @@ private fun RepoList(
                         index = index,
                         repo = repo,
                         since = uiState.since,
+                        isFavorite = repo.url in favoriteUrls,
+                        onToggleFavorite = {
+                            if (repo.url in favoriteUrls) {
+                                globalSettingsManager.removeFavorite(repo.url)
+                            } else {
+                                globalSettingsManager.addFavorite(
+                                    FavoriteItem(
+                                        url = repo.url,
+                                        title = "${repo.author}/${repo.repoName}",
+                                        source = "github",
+                                        description = repo.description.takeIf { it.isNotBlank() },
+                                        summary = repo.aiSummaries.firstOrNull()?.content,
+                                        savedAt = Clock.System.now().toEpochMilliseconds()
+                                    )
+                                )
+                            }
+                        },
                         onClick = {
                             trackItemClick(
                                 source = "github",
@@ -262,14 +276,13 @@ private fun RepoList(
                     }
                 }
             }
+            }
         }
     }
 }
 
 @Composable
-private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () -> Unit) {
-    val isFavorite by globalSettingsManager.isFavorite(repo.url).collectAsState(false)
-    var expanded by remember { mutableStateOf(false) }
+private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clickable { onClick() }
@@ -325,56 +338,10 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 Box(modifier = Modifier.weight(1f)) {
                     RepoMetadata(repo = repo, since = since)
                 }
-                Box {
-                    IconButton(
-                        onClick = { expanded = true },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MoreHoriz,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (isFavorite) Res.string.action_unfavorite
-                                        else Res.string.action_favorite
-                                    )
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = null
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                if (isFavorite) {
-                                    globalSettingsManager.removeFavorite(repo.url)
-                                } else {
-                                    globalSettingsManager.addFavorite(
-                                        FavoriteItem(
-                                            url = repo.url,
-                                            title = "${repo.author}/${repo.repoName}",
-                                            source = "github",
-                                            description = repo.description.takeIf { it.isNotBlank() },
-                                            summary = repo.aiSummaries.firstOrNull()?.content,
-                                            savedAt = Clock.System.now().toEpochMilliseconds()
-                                        )
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
+                FavoriteActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite
+                )
             }
         }
     }
