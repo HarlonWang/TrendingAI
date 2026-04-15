@@ -21,7 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -177,7 +177,7 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
                 )
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
-                        Icons.Default.Delete,
+                        Icons.Outlined.Delete,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
