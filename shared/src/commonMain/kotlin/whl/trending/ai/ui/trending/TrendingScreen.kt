@@ -101,7 +101,7 @@ import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.zIndex

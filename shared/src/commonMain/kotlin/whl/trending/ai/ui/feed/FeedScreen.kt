@@ -48,7 +48,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
