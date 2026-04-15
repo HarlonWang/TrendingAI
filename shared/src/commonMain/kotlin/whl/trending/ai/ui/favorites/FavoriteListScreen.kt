@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -148,7 +149,7 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
                 .background(MaterialTheme.colorScheme.surface)
                 .clickable { openUrl(item.url) }
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 第一行：来源标签 + 时间
             Row(
@@ -167,8 +168,9 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
             // 标题
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.W500,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -177,7 +179,8 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
             if (!item.description.isNullOrBlank()) {
                 Text(
                     text = item.description,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
