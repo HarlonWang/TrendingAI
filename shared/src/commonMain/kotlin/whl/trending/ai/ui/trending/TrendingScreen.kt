@@ -99,9 +99,14 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import kotlin.time.Clock
+import trendingai.shared.generated.resources.action_favorite
+import trendingai.shared.generated.resources.action_unfavorite
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.zIndex
@@ -264,6 +269,7 @@ private fun RepoList(
 @Composable
 private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () -> Unit) {
     val isFavorite by globalSettingsManager.isFavorite(repo.url).collectAsState(false)
+    var expanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .clickable { onClick() }
@@ -281,7 +287,6 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
             }
         }
         Column(
-            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
@@ -313,32 +318,63 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 ContributorAvatars(contributors = repo.builtBy)
             }
 
-            RepoMetadata(repo = repo, since = since)
-        }
-        IconButton(
-            onClick = {
-                if (isFavorite) {
-                    globalSettingsManager.removeFavorite(repo.url)
-                } else {
-                    globalSettingsManager.addFavorite(
-                        FavoriteItem(
-                            url = repo.url,
-                            title = "${repo.author}/${repo.repoName}",
-                            source = "github",
-                            description = repo.description.takeIf { it.isNotBlank() },
-                            summary = repo.aiSummaries.firstOrNull()?.content,
-                            savedAt = Clock.System.now().toEpochMilliseconds()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RepoMetadata(repo = repo, since = since)
+                Spacer(modifier = Modifier.weight(1f))
+                Box {
+                    IconButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (isFavorite) Res.string.action_unfavorite
+                                        else Res.string.action_favorite
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                if (isFavorite) {
+                                    globalSettingsManager.removeFavorite(repo.url)
+                                } else {
+                                    globalSettingsManager.addFavorite(
+                                        FavoriteItem(
+                                            url = repo.url,
+                                            title = "${repo.author}/${repo.repoName}",
+                                            source = "github",
+                                            description = repo.description.takeIf { it.isNotBlank() },
+                                            summary = repo.aiSummaries.firstOrNull()?.content,
+                                            savedAt = Clock.System.now().toEpochMilliseconds()
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
                 }
-            },
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                contentDescription = null,
-                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-            )
+            }
         }
     }
 }

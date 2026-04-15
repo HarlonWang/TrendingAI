@@ -44,11 +44,20 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.ui.common.AiSummaryBox
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxWidth
 import kotlin.time.Clock
+import trendingai.shared.generated.resources.action_favorite
+import trendingai.shared.generated.resources.action_unfavorite
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -124,6 +133,7 @@ fun FeedScreen(
 @Composable
 private fun FeedItemCard(index: Int, item: FeedItem) {
     val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
+    var expanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .clickable {
@@ -148,7 +158,6 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
             }
         }
         Column(
-            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
@@ -170,32 +179,63 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
             if (!item.summary.isNullOrBlank()) {
                 AiSummaryBox(summary = item.summary)
             }
-            FeedItemMetadata(item = item)
-        }
-        IconButton(
-            onClick = {
-                if (isFavorite) {
-                    globalSettingsManager.removeFavorite(item.url)
-                } else {
-                    globalSettingsManager.addFavorite(
-                        FavoriteItem(
-                            url = item.url,
-                            title = item.title,
-                            source = item.source,
-                            description = item.description,
-                            summary = item.summary,
-                            savedAt = Clock.System.now().toEpochMilliseconds()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FeedItemMetadata(item = item)
+                Spacer(modifier = Modifier.weight(1f))
+                Box {
+                    IconButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (isFavorite) Res.string.action_unfavorite
+                                        else Res.string.action_favorite
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                if (isFavorite) {
+                                    globalSettingsManager.removeFavorite(item.url)
+                                } else {
+                                    globalSettingsManager.addFavorite(
+                                        FavoriteItem(
+                                            url = item.url,
+                                            title = item.title,
+                                            source = item.source,
+                                            description = item.description,
+                                            summary = item.summary,
+                                            savedAt = Clock.System.now().toEpochMilliseconds()
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
                 }
-            },
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                contentDescription = null,
-                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-            )
+            }
         }
     }
 }
