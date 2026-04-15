@@ -112,19 +112,6 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            // 我的收藏
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.favorites)) },
-                    leadingContent = { Icon(Icons.Default.Star, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_favorites")
-                        onNavigateToFavorites()
-                    }
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
             // 分组 1: 个性化
             item { SettingsHeader(stringResource(Res.string.personalization)) }
             item {
@@ -177,6 +164,17 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+            // 我的收藏
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.favorites)) },
+                    leadingContent = { Icon(Icons.Default.Star, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_favorites")
+                        onNavigateToFavorites()
+                    }
+                )
             }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 
