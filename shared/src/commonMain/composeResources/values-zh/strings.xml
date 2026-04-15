@@ -74,4 +74,8 @@
     <string name="picks_label_action">适合场景</string>
     <string name="picks_label_alternatives">类似产品</string>
     <string name="picks_label_terms">关键词</string>
+    <string name="favorites">我的收藏</string>
+    <string name="favorites_empty">暂无收藏</string>
+    <string name="favorites_empty_hint">点击任意内容的书签图标即可收藏</string>
+    <string name="favorites_removed">已取消收藏</string>
 </resources>
