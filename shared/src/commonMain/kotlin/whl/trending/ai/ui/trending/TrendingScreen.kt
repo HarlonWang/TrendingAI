@@ -99,7 +99,7 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.DropdownMenu
@@ -330,7 +330,7 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            Icons.Default.MoreVert,
+                            Icons.Default.MoreHoriz,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
