@@ -39,8 +39,16 @@ import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.ui.common.AiSummaryBox
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +123,7 @@ fun FeedScreen(
 
 @Composable
 private fun FeedItemCard(index: Int, item: FeedItem) {
+    val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
     Row(
         modifier = Modifier
             .clickable {
@@ -138,7 +147,10 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
                 Text(text = "${index + 1}", fontSize = 12.sp, fontWeight = FontWeight.W500)
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
                 text = item.title,
                 fontSize = 16.sp,
@@ -159,6 +171,31 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
                 AiSummaryBox(summary = item.summary)
             }
             FeedItemMetadata(item = item)
+        }
+        IconButton(
+            onClick = {
+                if (isFavorite) {
+                    globalSettingsManager.removeFavorite(item.url)
+                } else {
+                    globalSettingsManager.addFavorite(
+                        FavoriteItem(
+                            url = item.url,
+                            title = item.title,
+                            source = item.source,
+                            description = item.description,
+                            summary = item.summary,
+                            savedAt = Clock.System.now().toEpochMilliseconds()
+                        )
+                    )
+                }
+            },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                contentDescription = null,
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
