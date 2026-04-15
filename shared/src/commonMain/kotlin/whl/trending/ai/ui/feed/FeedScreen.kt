@@ -183,8 +183,9 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FeedItemMetadata(item = item)
-                Spacer(modifier = Modifier.weight(1f))
+                Box(modifier = Modifier.weight(1f)) {
+                    FeedItemMetadata(item = item)
+                }
                 Box {
                     IconButton(
                         onClick = { expanded = true },

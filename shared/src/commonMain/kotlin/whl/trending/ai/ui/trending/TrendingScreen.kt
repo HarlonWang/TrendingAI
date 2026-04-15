@@ -322,8 +322,9 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                RepoMetadata(repo = repo, since = since)
-                Spacer(modifier = Modifier.weight(1f))
+                Box(modifier = Modifier.weight(1f)) {
+                    RepoMetadata(repo = repo, since = since)
+                }
                 Box {
                     IconButton(
                         onClick = { expanded = true },
