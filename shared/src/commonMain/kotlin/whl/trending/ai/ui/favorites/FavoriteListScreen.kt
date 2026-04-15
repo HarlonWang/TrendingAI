@@ -7,6 +7,7 @@ import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.picks.SourceTag
 import whl.trending.ai.core.platform.trackEvent
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.first
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,7 +70,8 @@ fun FavoriteListScreen(onBack: () -> Unit) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     LaunchedEffect(Unit) {
-        trackEvent("favorite_list_view", mapOf("count" to favorites.size))
+        val items = globalSettingsManager.favorites.first()
+        trackEvent("favorite_list_view", mapOf("count" to items.size))
     }
 
     Scaffold(
