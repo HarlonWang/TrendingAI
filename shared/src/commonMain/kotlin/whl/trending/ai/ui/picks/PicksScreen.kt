@@ -62,8 +62,8 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -342,7 +342,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                             },
                             leadingIcon = {
                                 Icon(
-                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null
                                 )
                             },
@@ -444,7 +444,7 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                        if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                         contentDescription = null
                                     )
                                 },
@@ -564,7 +564,7 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                             },
                             leadingIcon = {
                                 Icon(
-                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null
                                 )
                             },

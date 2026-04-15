@@ -100,8 +100,8 @@ import whl.trending.ai.data.model.TrendingAiSummary
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import kotlin.time.Clock
@@ -351,7 +351,7 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, onClick: () 
                             },
                             leadingIcon = {
                                 Icon(
-                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null
                                 )
                             },

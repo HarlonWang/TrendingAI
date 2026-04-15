@@ -45,8 +45,8 @@ import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.ui.common.AiSummaryBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -212,7 +212,7 @@ private fun FeedItemCard(index: Int, item: FeedItem) {
                             },
                             leadingIcon = {
                                 Icon(
-                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null
                                 )
                             },
