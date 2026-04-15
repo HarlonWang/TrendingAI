@@ -195,5 +195,5 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
 private fun formatSavedAt(timestamp: Long): String {
     val instant = Instant.fromEpochMilliseconds(timestamp)
     val local = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-    return "${local.monthNumber}/${local.dayOfMonth}"
+    return "${local.year}/${local.monthNumber}/${local.dayOfMonth}"
 }
