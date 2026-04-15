@@ -417,7 +417,7 @@ private fun LabeledText(label: String, value: String) {
 }
 
 @Composable
-private fun SourceTag(source: String, label: String) {
+internal fun SourceTag(source: String, label: String) {
     val bgColor = when (source) {
         "github" -> MaterialTheme.colorScheme.onSurface
         "hackernews" -> Color(0xFFFF6600)
@@ -439,7 +439,7 @@ private fun SourceTag(source: String, label: String) {
     )
 }
 
-private fun formatScore(source: String, score: Int): String {
+internal fun formatScore(source: String, score: Int): String {
     return when (source) {
         "github" -> "★ ${DateTimeUtils.formatNumber(score)}"
         else -> "▲ $score"
