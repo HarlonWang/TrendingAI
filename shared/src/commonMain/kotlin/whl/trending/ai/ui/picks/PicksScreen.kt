@@ -246,7 +246,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -259,56 +259,6 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
-            Box {
-                IconButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        Icons.Default.MoreHoriz,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (isFavorite) Res.string.action_unfavorite
-                                    else Res.string.action_favorite
-                                )
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                                contentDescription = null
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            if (isFavorite) {
-                                globalSettingsManager.removeFavorite(item.url)
-                            } else {
-                                globalSettingsManager.addFavorite(
-                                    FavoriteItem(
-                                        url = item.url,
-                                        title = item.title,
-                                        source = item.source,
-                                        description = item.analysis?.core,
-                                        summary = item.analysis?.whyImportant,
-                                        savedAt = Clock.System.now().toEpochMilliseconds()
-                                    )
-                                )
-                            }
-                        }
-                    )
-                }
-            }
         }
 
         // 正文区域
@@ -360,6 +310,63 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
                     }
                 }
             }
+
+            // 底部三点菜单
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Box {
+                    IconButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MoreHoriz,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (isFavorite) Res.string.action_unfavorite
+                                        else Res.string.action_favorite
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                if (isFavorite) {
+                                    globalSettingsManager.removeFavorite(item.url)
+                                } else {
+                                    globalSettingsManager.addFavorite(
+                                        FavoriteItem(
+                                            url = item.url,
+                                            title = item.title,
+                                            source = item.source,
+                                            description = item.analysis?.core,
+                                            summary = item.analysis?.whyImportant,
+                                            savedAt = Clock.System.now().toEpochMilliseconds()
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -378,7 +385,7 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onItemClick(item) }
-                    .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
@@ -395,6 +402,22 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     SourceTag(source = item.source, label = item.sourceLabel)
+                }
+
+                item.analysis?.let { analysis ->
+                    Text(
+                        text = analysis.core,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
+                // 底部三点菜单
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
                     Box {
                         IconButton(
                             onClick = { expanded = true },
@@ -445,15 +468,6 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                             )
                         }
                     }
-                }
-
-                item.analysis?.let { analysis ->
-                    Text(
-                        text = analysis.core,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
                 }
             }
             if (index < items.lastIndex) {
@@ -509,6 +523,21 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
 
                 // 来源标签 + 分数
                 SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
+            }
+
+            // AI 总结
+            if (!item.summary.isNullOrBlank()) {
+                AiSummaryBox(
+                    summary = item.summary,
+                    modifier = Modifier.padding(start = 34.dp)
+                )
+            }
+
+            // 底部三点菜单
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
                 Box {
                     IconButton(
                         onClick = { expanded = true },
@@ -559,14 +588,6 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
                         )
                     }
                 }
-            }
-
-            // AI 总结
-            if (!item.summary.isNullOrBlank()) {
-                AiSummaryBox(
-                    summary = item.summary,
-                    modifier = Modifier.padding(start = 34.dp)
-                )
             }
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
