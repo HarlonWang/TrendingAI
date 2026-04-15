@@ -157,7 +157,13 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SourceTag(source = item.source, label = item.source)
+                val displayLabel = when (item.source) {
+                    "github" -> "GitHub"
+                    "hackernews" -> "Hacker News"
+                    "producthunt" -> "Product Hunt"
+                    else -> item.source
+                }
+                SourceTag(source = item.source, label = displayLabel)
                 Text(
                     text = formatSavedAt(item.savedAt),
                     style = MaterialTheme.typography.labelSmall,
