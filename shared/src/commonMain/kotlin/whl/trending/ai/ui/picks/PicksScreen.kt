@@ -57,7 +57,15 @@ import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -217,6 +225,7 @@ private fun SectionHeader(title: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
+    val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
     OutlinedCard(
         onClick = onClick,
         modifier = Modifier
@@ -228,7 +237,7 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(16.dp),
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -241,6 +250,31 @@ private fun DeepDiveCard(item: PickItem, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
+            IconButton(
+                onClick = {
+                    if (isFavorite) {
+                        globalSettingsManager.removeFavorite(item.url)
+                    } else {
+                        globalSettingsManager.addFavorite(
+                            FavoriteItem(
+                                url = item.url,
+                                title = item.title,
+                                source = item.source,
+                                description = item.analysis?.core,
+                                summary = item.analysis?.whyImportant,
+                                savedAt = Clock.System.now().toEpochMilliseconds()
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    contentDescription = null,
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                )
+            }
         }
 
         // 正文区域
@@ -304,11 +338,12 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         items.forEachIndexed { index, item ->
+            val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onItemClick(item) }
-                    .padding(16.dp),
+                    .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
@@ -325,6 +360,31 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     SourceTag(source = item.source, label = item.sourceLabel)
+                    IconButton(
+                        onClick = {
+                            if (isFavorite) {
+                                globalSettingsManager.removeFavorite(item.url)
+                            } else {
+                                globalSettingsManager.addFavorite(
+                                    FavoriteItem(
+                                        url = item.url,
+                                        title = item.title,
+                                        source = item.source,
+                                        description = item.analysis?.core,
+                                        summary = item.analysis?.whyImportant,
+                                        savedAt = Clock.System.now().toEpochMilliseconds()
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = null,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
 
                 item.analysis?.let { analysis ->
@@ -345,6 +405,7 @@ private fun ControversyGroup(items: List<PickItem>, onItemClick: (PickItem) -> U
 
 @Composable
 private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
+    val isFavorite by globalSettingsManager.isFavorite(item.url).collectAsState(false)
     Column {
         Column(
             modifier = Modifier
@@ -387,6 +448,31 @@ private fun SpeedReadItem(item: PickItem, onClick: () -> Unit) {
 
                 // 来源标签 + 分数
                 SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
+                IconButton(
+                    onClick = {
+                        if (isFavorite) {
+                            globalSettingsManager.removeFavorite(item.url)
+                        } else {
+                            globalSettingsManager.addFavorite(
+                                FavoriteItem(
+                                    url = item.url,
+                                    title = item.title,
+                                    source = item.source,
+                                    description = item.description,
+                                    summary = item.summary,
+                                    savedAt = Clock.System.now().toEpochMilliseconds()
+                                )
+                            )
+                        }
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    )
+                }
             }
 
             // AI 总结
