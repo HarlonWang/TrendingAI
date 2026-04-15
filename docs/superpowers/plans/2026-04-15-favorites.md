@@ -182,6 +182,7 @@ package whl.trending.ai.ui.favorites
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.core.platform.openUrl
+import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.picks.SourceTag
 
 import androidx.compose.animation.animateColorAsState
@@ -362,15 +363,9 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
                 )
             }
 
-            // AI 摘要
+            // AI 摘要（复用 AiSummaryBox 组件，保持样式一致）
             if (!item.summary.isNullOrBlank()) {
-                Text(
-                    text = item.summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
+                AiSummaryBox(summary = item.summary)
             }
         }
     }
