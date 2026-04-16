@@ -65,7 +65,10 @@ import trendingai.shared.generated.resources.favorites_removed
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoriteListScreen(onBack: () -> Unit) {
+fun FavoriteListScreen(
+    onBack: () -> Unit,
+    onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> }
+) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -117,6 +120,7 @@ fun FavoriteListScreen(onBack: () -> Unit) {
                 ) { index, item ->
                     FavoriteCard(
                         item = item,
+                        onClick = { handleFavoriteClick(item, onNavigateToDetail) },
                         onRemove = { globalSettingsManager.removeFavorite(item.url) }
                     )
                     if (index < favorites.lastIndex) {
@@ -128,8 +132,22 @@ fun FavoriteListScreen(onBack: () -> Unit) {
     }
 }
 
+private fun handleFavoriteClick(
+    item: FavoriteItem,
+    onNavigateToDetail: (owner: String, repo: String) -> Unit
+) {
+    if (item.source == "github") {
+        val parts = item.url.removePrefix("https://github.com/").split("/")
+        if (parts.size >= 2) {
+            onNavigateToDetail(parts[0], parts[1])
+            return
+        }
+    }
+    openUrl(item.url)
+}
+
 @Composable
-private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
+private fun FavoriteCard(item: FavoriteItem, onClick: () -> Unit, onRemove: () -> Unit) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -157,7 +175,7 @@ private fun FavoriteCard(item: FavoriteItem, onRemove: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .clickable { openUrl(item.url) }
+            .clickable { onClick() }
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {

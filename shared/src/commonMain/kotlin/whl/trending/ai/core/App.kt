@@ -95,7 +95,10 @@ fun App() {
 
                     is Favorites -> NavEntry(key) {
                         FavoriteListScreen(
-                            onBack = { backStack.removeLastOrNull() }
+                            onBack = { backStack.removeLastOrNull() },
+                            onNavigateToDetail = { owner, repo ->
+                                backStack.add(RepoDetail(owner, repo))
+                            }
                         )
                     }
 
