@@ -2,6 +2,9 @@
 
 [English](./README_EN.md)
 
+[![Release](https://img.shields.io/github/v/release/HarlonWang/TrendingAI?label=release&logo=android&logoColor=white&color=3DDC84)](https://github.com/HarlonWang/TrendingAI/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/HarlonWang/TrendingAI/total?label=downloads&logo=android&logoColor=white&color=3DDC84)](https://github.com/HarlonWang/TrendingAI/releases/latest)
+
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.10.3-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Material 3](https://img.shields.io/badge/Material_3-1.10.0--alpha05-673AB7?logo=materialdesign&logoColor=white)](https://m3.material.io/)
