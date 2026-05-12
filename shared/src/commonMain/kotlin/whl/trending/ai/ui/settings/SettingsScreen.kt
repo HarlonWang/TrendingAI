@@ -381,7 +381,7 @@ private fun ThemeSwatch(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val color = Color(seed.argb.toULong())
+    val color = Color(seed.argb)
     val name = stringResource(seed.nameRes)
     val border = if (selected) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.outline)

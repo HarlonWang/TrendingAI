@@ -26,7 +26,7 @@ fun TrendingTheme(content: @Composable () -> Unit) {
     }
 
     val state = rememberDynamicMaterialThemeState(
-        seedColor = Color(seedArgb.toULong()),
+        seedColor = Color(seedArgb),
         isDark = isDark,
         style = PaletteStyle.TonalSpot,
     )
