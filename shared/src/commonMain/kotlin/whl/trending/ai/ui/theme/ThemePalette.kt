@@ -22,13 +22,13 @@ data class ThemeSeed(
 
 val PRESET_PALETTE: List<ThemeSeed> = listOf(
     ThemeSeed("default", Res.string.theme_color_default, DEFAULT_SEED_ARGB),
-    ThemeSeed("crimson", Res.string.theme_color_crimson, 0xFFDC362EL),
-    ThemeSeed("orange",  Res.string.theme_color_orange,  0xFFF4511EL),
-    ThemeSeed("amber",   Res.string.theme_color_amber,   0xFFFFB300L),
-    ThemeSeed("green",   Res.string.theme_color_green,   0xFF2E7D32L),
-    ThemeSeed("teal",    Res.string.theme_color_teal,    0xFF00897BL),
-    ThemeSeed("cyan",    Res.string.theme_color_cyan,    0xFF0288D1L),
-    ThemeSeed("blue",    Res.string.theme_color_blue,    0xFF1976D2L),
-    ThemeSeed("indigo",  Res.string.theme_color_indigo,  0xFF3F51B5L),
-    ThemeSeed("pink",    Res.string.theme_color_pink,    0xFFC2185BL),
+    ThemeSeed("crimson", Res.string.theme_color_crimson, 0xFFDC362EL), // M3 baseline error red
+    ThemeSeed("orange",  Res.string.theme_color_orange,  0xFFF4511EL), // M2 Deep Orange 600
+    ThemeSeed("amber",   Res.string.theme_color_amber,   0xFFFFB300L), // M2 Amber 600
+    ThemeSeed("green",   Res.string.theme_color_green,   0xFF2E7D32L), // M2 Green 800
+    ThemeSeed("teal",    Res.string.theme_color_teal,    0xFF00897BL), // M2 Teal 600
+    ThemeSeed("cyan",    Res.string.theme_color_cyan,    0xFF0288D1L), // M2 Light Blue 700
+    ThemeSeed("blue",    Res.string.theme_color_blue,    0xFF1976D2L), // M2 Blue 700
+    ThemeSeed("indigo",  Res.string.theme_color_indigo,  0xFF3F51B5L), // M2 Indigo 500
+    ThemeSeed("pink",    Res.string.theme_color_pink,    0xFFC2185BL), // M2 Pink 700
 )
