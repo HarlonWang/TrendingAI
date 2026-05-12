@@ -81,4 +81,15 @@
     <string name="action_favorite">收藏</string>
     <string name="action_unfavorite">取消收藏</string>
     <string name="favorites_delete_confirm">确定从收藏中移除？</string>
+    <string name="theme_color">主题色</string>
+    <string name="theme_color_default">默认紫</string>
+    <string name="theme_color_crimson">朱砂</string>
+    <string name="theme_color_orange">橙</string>
+    <string name="theme_color_amber">琥珀</string>
+    <string name="theme_color_green">绿</string>
+    <string name="theme_color_teal">青绿</string>
+    <string name="theme_color_cyan">青蓝</string>
+    <string name="theme_color_blue">蓝</string>
+    <string name="theme_color_indigo">靛蓝</string>
+    <string name="theme_color_pink">粉</string>
 </resources>

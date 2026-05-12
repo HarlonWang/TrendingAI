@@ -131,20 +131,20 @@ data class ThemeSeed(
 )
 
 val PRESET_PALETTE: List<ThemeSeed> = listOf(
-    ThemeSeed("default", Res.string.theme_default, 0xFF6750A4),
-    ThemeSeed("crimson", Res.string.theme_crimson, 0xFFDC362E),
-    ThemeSeed("orange",  Res.string.theme_orange,  0xFFF4511E),
-    ThemeSeed("amber",   Res.string.theme_amber,   0xFFFFB300),
-    ThemeSeed("green",   Res.string.theme_green,   0xFF2E7D32),
-    ThemeSeed("teal",    Res.string.theme_teal,    0xFF00897B),
-    ThemeSeed("cyan",    Res.string.theme_cyan,    0xFF0288D1),
-    ThemeSeed("blue",    Res.string.theme_blue,    0xFF1976D2),
-    ThemeSeed("indigo",  Res.string.theme_indigo,  0xFF3F51B5),
-    ThemeSeed("pink",    Res.string.theme_pink,    0xFFC2185B),
+    ThemeSeed("default", Res.string.theme_color_default, DEFAULT_SEED_ARGB),
+    ThemeSeed("crimson", Res.string.theme_color_crimson, 0xFFDC362EL),
+    ThemeSeed("orange",  Res.string.theme_color_orange,  0xFFF4511EL),
+    ThemeSeed("amber",   Res.string.theme_color_amber,   0xFFFFB300L),
+    ThemeSeed("green",   Res.string.theme_color_green,   0xFF2E7D32L),
+    ThemeSeed("teal",    Res.string.theme_color_teal,    0xFF00897BL),
+    ThemeSeed("cyan",    Res.string.theme_color_cyan,    0xFF0288D1L),
+    ThemeSeed("blue",    Res.string.theme_color_blue,    0xFF1976D2L),
+    ThemeSeed("indigo",  Res.string.theme_color_indigo,  0xFF3F51B5L),
+    ThemeSeed("pink",    Res.string.theme_color_pink,    0xFFC2185BL),
 )
-
-const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
 ```
+
+`DEFAULT_SEED_ARGB` 作为顶层 `const val` 定义在 `data/local/SettingsManager.kt` 中（数据层），ThemePalette 与 SettingsManager 都引用它；避免 data 层反向依赖 UI 层。
 
 **选色逻辑**：HCT 色相均匀打散 0°–340°；亮度都在中段，避免过暗/过亮 seed 让 TonalSpot 生成的 primary 失真。
 
@@ -190,6 +190,10 @@ fun TrendingTheme(content: @Composable () -> Unit) {
 ### 5.4 `SettingsManager` 扩展
 
 ```kotlin
+// 顶层常量（data 层），ThemePalette 引用此值作为默认 seed
+const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
+
+// class SettingsManager 内部
 private val SEED_COLOR_KEY = "prefs_seed_color"
 
 val seedColor: Flow<Long> =
