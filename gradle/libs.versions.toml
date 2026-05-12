@@ -23,6 +23,7 @@ kotlinx-coroutines = "1.10.2"
 composeIcons = "1.7.3"
 aptabase = "0.0.8"
 coil = "3.4.0"
+material-kolor = "4.1.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -55,6 +56,7 @@ compose-icons-extended = { module = "org.jetbrains.compose.material:material-ico
 aptabase = { module = "com.github.aptabase:aptabase-kotlin", version.ref = "aptabase" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "material-kolor" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
