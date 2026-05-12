@@ -4,6 +4,7 @@ import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.coroutines.getIntFlow
+import com.russhwolf.settings.coroutines.getLongFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,6 +17,8 @@ enum class ThemeMode(val title: String) {
     DARK("深色")
 }
 
+const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
+
 enum class AppLanguage(val isoCode: String?) {
     FOLLOW_SYSTEM(null),
     CHINESE("zh"),
@@ -25,6 +28,7 @@ enum class AppLanguage(val isoCode: String?) {
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
+    private val SEED_COLOR_KEY = "prefs_seed_color"
     private val LANGUAGE_KEY = "prefs_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val FAVORITES_KEY = "prefs_favorites"
@@ -32,8 +36,21 @@ class SettingsManager(private val settings: ObservableSettings) {
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
 
+    fun getThemeModeSync(): ThemeMode =
+        ThemeMode.entries.getOrElse(
+            settings.getInt(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
+        ) { ThemeMode.FOLLOW_SYSTEM }
+
     fun setThemeMode(mode: ThemeMode) {
         settings.putInt(THEME_KEY, mode.ordinal)
+    }
+
+    val seedColor: Flow<Long> = settings.getLongFlow(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
+
+    fun getSeedColorSync(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
+
+    fun setSeedColor(argb: Long) {
+        settings.putLong(SEED_COLOR_KEY, argb)
     }
 
     val appLanguage: Flow<AppLanguage> = settings.getIntFlow(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)

@@ -62,6 +62,7 @@ kotlin {
             implementation(libs.multiplatform.settings.coroutines)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+            implementation(libs.material.kolor)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

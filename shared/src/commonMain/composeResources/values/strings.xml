@@ -81,4 +81,15 @@
     <string name="action_favorite">Favorite</string>
     <string name="action_unfavorite">Unfavorite</string>
     <string name="favorites_delete_confirm">Remove this item from favorites?</string>
+    <string name="theme_color">Accent Color</string>
+    <string name="theme_color_default">Default</string>
+    <string name="theme_color_crimson">Crimson</string>
+    <string name="theme_color_orange">Orange</string>
+    <string name="theme_color_amber">Amber</string>
+    <string name="theme_color_green">Green</string>
+    <string name="theme_color_teal">Teal</string>
+    <string name="theme_color_cyan">Cyan</string>
+    <string name="theme_color_blue">Blue</string>
+    <string name="theme_color_indigo">Indigo</string>
+    <string name="theme_color_pink">Pink</string>
 </resources>
