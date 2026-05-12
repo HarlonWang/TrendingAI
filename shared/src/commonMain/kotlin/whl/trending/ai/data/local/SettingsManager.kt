@@ -36,11 +36,18 @@ class SettingsManager(private val settings: ObservableSettings) {
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
 
+    fun getThemeModeSync(): ThemeMode =
+        ThemeMode.entries.getOrElse(
+            settings.getInt(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
+        ) { ThemeMode.FOLLOW_SYSTEM }
+
     fun setThemeMode(mode: ThemeMode) {
         settings.putInt(THEME_KEY, mode.ordinal)
     }
 
     val seedColor: Flow<Long> = settings.getLongFlow(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
+
+    fun getSeedColorSync(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
 
     fun setSeedColor(argb: Long) {
         settings.putLong(SEED_COLOR_KEY, argb)
