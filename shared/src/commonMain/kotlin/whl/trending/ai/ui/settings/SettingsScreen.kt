@@ -14,7 +14,6 @@ import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
@@ -379,6 +378,7 @@ private fun SwatchGrid(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemeSwatch(
     seed: ThemeSeed,
@@ -387,23 +387,17 @@ private fun ThemeSwatch(
 ) {
     val color = Color(seed.argb)
     val name = stringResource(seed.nameRes)
-    val border = if (selected) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
-    } else {
-        null
-    }
     Surface(
+        selected = selected,
+        onClick = onClick,
         shape = CircleShape,
         color = color,
-        border = border,
         modifier = Modifier
             .size(40.dp)
-            .selectable(
-                selected = selected,
-                role = Role.RadioButton,
-                onClick = onClick,
-            )
-            .semantics { contentDescription = name },
+            .semantics {
+                contentDescription = name
+                role = Role.RadioButton
+            },
     ) {
         if (selected) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
