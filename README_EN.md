@@ -19,9 +19,11 @@
 
 <img width="300" alt="TrendingAI Preview" src="./assets/screenshot/en/home_github_light.png" />
 
+<a href='https://play.google.com/store/apps/details?id=whl.trending.ai'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' width=200 height=77/></a>
+
 | Android | iOS | Website                                |
 | --- | --- |----------------------------------------|
-| [![Google Play](https://img.shields.io/badge/Google_Play-Download-414141?style=flat-square&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=whl.trending.ai) [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
+| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
 
 ---
 
