@@ -21,7 +21,7 @@
 
 | Android | iOS | Website |
 | --- | --- | --- |
-| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
+| [![Google Play](https://img.shields.io/badge/Google_Play-下载-414141?style=flat-square&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=whl.trending.ai) [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
 
 ---
 
