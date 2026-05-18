@@ -38,10 +38,10 @@ class SubscribeViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        SubscribeUiState(
-            email = settings.getSubscribedEmailSync().orEmpty(),
-            subscribedEmail = settings.getSubscribedEmailSync(),
-        )
+        run {
+            val saved = settings.getSubscribedEmailSync()
+            SubscribeUiState(email = saved.orEmpty(), subscribedEmail = saved)
+        }
     )
     val uiState: StateFlow<SubscribeUiState> = _uiState.asStateFlow()
 
