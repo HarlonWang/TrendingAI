@@ -4,6 +4,7 @@ import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
+import whl.trending.ai.data.model.SubscribeResponse
 import whl.trending.ai.data.model.TrendingResponse
 
 import io.ktor.client.HttpClient
@@ -103,6 +104,46 @@ open class TrendingApi {
             } else {
                 val body = response.bodyAsText()
                 Result.failure(ApiException(response.status.value, body))
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
+    open suspend fun submitSubscribe(email: String, source: String): Result<SubscribeResponse> {
+        return try {
+            val response = client.post("$baseHost/api/subscribe") {
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("email", email)
+                    put("source", source)
+                })
+            }
+            if (response.status.value in 200..299) {
+                Result.success(response.body<SubscribeResponse>())
+            } else {
+                Result.failure(ApiException(response.status.value, response.bodyAsText()))
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
+
+    open suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {
+        return try {
+            val response = client.post("$baseHost/api/subscribe") {
+                parameter("action", "cancel")
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("email", email)
+                })
+            }
+            if (response.status.value in 200..299) {
+                Result.success(response.body<SubscribeResponse>())
+            } else {
+                Result.failure(ApiException(response.status.value, response.bodyAsText()))
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e

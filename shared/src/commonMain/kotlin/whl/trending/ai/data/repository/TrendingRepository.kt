@@ -3,6 +3,7 @@ package whl.trending.ai.data.repository
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
+import whl.trending.ai.data.model.SubscribeResponse
 import whl.trending.ai.data.model.TrendingResponse
 import whl.trending.ai.data.remote.TrendingApi
 
@@ -31,5 +32,13 @@ class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
 
     suspend fun submitFeedback(content: String, email: String?): Result<Unit> {
         return api.submitFeedback(content, email)
+    }
+
+    suspend fun subscribe(email: String, source: String): Result<SubscribeResponse> {
+        return api.submitSubscribe(email, source)
+    }
+
+    suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {
+        return api.cancelSubscribe(email)
     }
 }
