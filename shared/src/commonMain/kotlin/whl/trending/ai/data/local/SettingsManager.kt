@@ -32,6 +32,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val LANGUAGE_KEY = "prefs_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val FAVORITES_KEY = "prefs_favorites"
+    private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
 
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
@@ -88,6 +89,18 @@ class SettingsManager(private val settings: ObservableSettings) {
     private fun getCurrentFavorites(): List<FavoriteItem> {
         val json = settings.getStringOrNull(FAVORITES_KEY) ?: return emptyList()
         return runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }
+    }
+
+    val subscribedEmail: Flow<String?> = settings.getStringOrNullFlow(SUBSCRIBED_EMAIL_KEY)
+
+    fun getSubscribedEmailSync(): String? = settings.getStringOrNull(SUBSCRIBED_EMAIL_KEY)
+
+    fun setSubscribedEmail(email: String?) {
+        if (email.isNullOrBlank()) {
+            settings.remove(SUBSCRIBED_EMAIL_KEY)
+        } else {
+            settings.putString(SUBSCRIBED_EMAIL_KEY, email)
+        }
     }
 }
 

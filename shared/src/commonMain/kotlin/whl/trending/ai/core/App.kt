@@ -5,6 +5,7 @@ import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.settings.SettingsScreen
+import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
 
@@ -18,6 +19,7 @@ import androidx.navigation3.ui.NavDisplay
 data object Home
 data object Settings
 data object Feedback
+data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
@@ -55,6 +57,9 @@ fun App() {
                             onNavigateToFeedback = {
                                 backStack.add(Feedback)
                             },
+                            onNavigateToSubscribe = {
+                                backStack.add(Subscribe)
+                            },
                             onNavigateToWebPage = { url, title ->
                                 backStack.add(WebPage(url, title))
                             }
@@ -63,6 +68,14 @@ fun App() {
 
                     is Feedback -> NavEntry(key) {
                         FeedbackScreen(
+                            onBack = {
+                                backStack.removeLastOrNull()
+                            }
+                        )
+                    }
+
+                    is Subscribe -> NavEntry(key) {
+                        SubscribeScreen(
                             onBack = {
                                 backStack.removeLastOrNull()
                             }

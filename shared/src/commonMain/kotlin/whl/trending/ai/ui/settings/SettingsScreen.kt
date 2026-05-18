@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
@@ -98,6 +99,8 @@ import trendingai.shared.generated.resources.favorites
 import trendingai.shared.generated.resources.feedback
 import trendingai.shared.generated.resources.feedback_desc
 import trendingai.shared.generated.resources.privacy_policy
+import trendingai.shared.generated.resources.subscribe_title
+import trendingai.shared.generated.resources.subscribe_desc
 import trendingai.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,6 +109,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onNavigateToSubscribe: () -> Unit = {},
     onNavigateToWebPage: (url: String, title: String) -> Unit = { _, _ -> }
 ) {
     val isIos = isIosPlatform()
@@ -219,6 +223,18 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         trackEvent("settings_favorites")
                         onNavigateToFavorites()
+                    }
+                )
+            }
+            // 邮件订阅
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.subscribe_title)) },
+                    supportingContent = { Text(stringResource(Res.string.subscribe_desc)) },
+                    leadingContent = { Icon(Icons.Default.Email, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_subscribe")
+                        onNavigateToSubscribe()
                     }
                 )
             }

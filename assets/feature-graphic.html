@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1024px;
+    height: 500px;
+    overflow: hidden;
+    font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    color: #fff;
+    background:
+      radial-gradient(ellipse 60% 80% at 85% 110%, rgba(255,255,255,0.08), transparent 60%),
+      radial-gradient(ellipse 70% 90% at -10% -20%, rgba(255,255,255,0.10), transparent 55%),
+      linear-gradient(135deg, #7C66B8 0%, #6750A4 55%, #4F3B89 100%);
+    position: relative;
+  }
+  .grain::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 3px 3px;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 64px 0 60px;
+    box-sizing: border-box;
+  }
+
+  .device-wrap {
+    width: 300px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+  .device {
+    width: 230px;
+    display: block;
+    filter: drop-shadow(0 30px 40px rgba(0,0,0,0.35)) drop-shadow(0 10px 16px rgba(0,0,0,0.25));
+    border-radius: 24px;
+  }
+
+  .text-wrap {
+    flex: 1;
+    padding-left: 28px;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.18);
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    color: #F4EFFF;
+    margin-bottom: 18px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #B4FF7A;
+    box-shadow: 0 0 8px #B4FF7A;
+  }
+  h1 {
+    font-size: 78px;
+    font-weight: 800;
+    line-height: 1.0;
+    margin: 0 0 22px;
+    letter-spacing: -1.8px;
+  }
+  .tagline {
+    font-size: 22px;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.92);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    max-width: 560px;
+  }
+  .tagline b {
+    color: #FFE7A8;
+    font-weight: 800;
+    font-size: 26px;
+  }
+  .tag {
+    background: linear-gradient(90deg, #FFD479, #FF9ECF, #B0A6FF);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 14px;
+    color: #F2ECFF;
+    letter-spacing: 0.2px;
+  }
+  .sources {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .src {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.95);
+    color: #2A1F4A;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+  }
+  .src .ico {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+  }
+  .src.gh .ico { background: #24292F; }
+  .src.hn .ico { background: #FF6600; }
+  .src.ph .ico { background: #DA552F; }
+
+  .desc {
+    font-size: 16px;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.82);
+    max-width: 520px;
+    font-weight: 400;
+  }
+  .desc b { color: #FFE7A8; font-weight: 700; }
+
+  /* 顶部右上角装饰：上升箭头气泡 */
+  .badge-arrow {
+    position: absolute;
+    top: 36px; right: 56px;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.24);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  .badge-arrow svg { width: 30px; height: 30px; }
+</style>
+</head>
+<body class="grain">
+  <div class="container">
+    <div class="device-wrap">
+      <img class="device" src="screenshot/zh/home_github_light.png" alt="">
+    </div>
+    <div class="text-wrap">
+      <h1>Trending <span class="tag">AI</span></h1>
+      <div class="tagline">GitHub Trending · Hacker News · Product Hunt<br><b>AI 中文解读 · 每日精选</b></div>
+    </div>
+  </div>
+</body>
+</html>
