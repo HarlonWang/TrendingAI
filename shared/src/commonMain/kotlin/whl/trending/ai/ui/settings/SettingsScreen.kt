@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Feedback
@@ -101,6 +102,7 @@ import trendingai.shared.generated.resources.feedback_desc
 import trendingai.shared.generated.resources.privacy_policy
 import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscribe_desc
+import trendingai.shared.generated.resources.version
 import trendingai.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -309,20 +311,15 @@ fun SettingsScreen(
                     ListItem(
                         headlineContent = { Text(stringResource(Res.string.check_updates)) },
                         trailingContent = {
-                            if (isIos) {
-                                Text(appVersion, color = MaterialTheme.colorScheme.outline)
-                            } else {
-                                when {
-                                    isChecking -> CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    isUpToDate -> Text(
-                                        stringResource(Res.string.version_up_to_date),
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
-                                }
+                            when {
+                                !isIos && isChecking -> CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                !isIos && isUpToDate -> Text(
+                                    stringResource(Res.string.version_up_to_date),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         },
                         leadingContent = { Icon(Icons.Default.Refresh, null) },
@@ -355,6 +352,15 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle)
                     }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.version)) },
+                    trailingContent = {
+                        Text(appVersion, color = MaterialTheme.colorScheme.outline)
+                    },
+                    leadingContent = { Icon(Icons.Default.Numbers, null) }
                 )
             }
         }

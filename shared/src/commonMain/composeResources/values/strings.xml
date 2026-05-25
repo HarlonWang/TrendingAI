@@ -21,6 +21,7 @@
     <string name="about">About</string>
     <string name="check_updates">Version Update</string>
     <string name="version_up_to_date">Up to date</string>
+    <string name="version">Version</string>
     <string name="about_us">About Us</string>
     <string name="about_us_desc">Learn more about Trending AI</string>
     <string name="last_updated">Last updated at: %1$s</string>

@@ -21,6 +21,7 @@
     <string name="about">关于</string>
     <string name="check_updates">版本更新</string>
     <string name="version_up_to_date">已是最新</string>
+    <string name="version">版本</string>
     <string name="about_us">关于我们</string>
     <string name="about_us_desc">了解更多关于 Trending AI 的信息</string>
     <string name="last_updated">最后更新于: %1$s</string>
