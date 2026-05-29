@@ -6,4 +6,5 @@ object Constants {
     const val FEEDBACK_URL = "https://github.com/HarlonWang/TrendingAI/issues"
     const val RELEASES_URL = "https://github.com/HarlonWang/TrendingAI/releases/latest"
     const val PRIVACY_POLICY_URL = "https://trendingai.cn/privacy/"
+    const val ALIPAY_ACCOUNT = "15865268560@163.com"
 }

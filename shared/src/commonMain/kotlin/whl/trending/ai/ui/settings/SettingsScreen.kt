@@ -15,6 +15,7 @@ import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,8 @@ import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Feedback
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +61,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -79,6 +83,10 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.about_us_desc
+import trendingai.shared.generated.resources.confirm
+import trendingai.shared.generated.resources.donate
+import trendingai.shared.generated.resources.donate_alipay
+import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.check_updates
@@ -121,6 +129,28 @@ fun SettingsScreen(
     val appVersion = remember { getAppVersion() }
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
+    var showDonateDialog by remember { mutableStateOf(false) }
+
+    if (showDonateDialog) {
+        AlertDialog(
+            onDismissRequest = { showDonateDialog = false },
+            title = { Text(stringResource(Res.string.donate)) },
+            text = {
+                SelectionContainer {
+                    Column {
+                        Text(stringResource(Res.string.donate_message))
+                        Spacer(Modifier.height(16.dp))
+                        Text(stringResource(Res.string.donate_alipay, Constants.ALIPAY_ACCOUNT))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDonateDialog = false }) {
+                    Text(stringResource(Res.string.confirm))
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -341,6 +371,16 @@ fun SettingsScreen(
                     leadingContent = { Icon(Icons.Default.Info, null) },
                     modifier = Modifier.clickable {
                         openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                    }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.donate)) },
+                    leadingContent = { Icon(Icons.Default.VolunteerActivism, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_donate")
+                        showDonateDialog = true
                     }
                 )
             }

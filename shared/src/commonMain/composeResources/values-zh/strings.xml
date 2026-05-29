@@ -24,6 +24,9 @@
     <string name="version">版本</string>
     <string name="about_us">关于我们</string>
     <string name="about_us_desc">了解更多关于 Trending AI 的信息</string>
+    <string name="donate">捐助我们</string>
+    <string name="donate_message">我们利用有限的业余时间打造 Trending AI，希望帮你更高效地发现全球技术热点。\n如果它对你有帮助，欢迎捐赠支持我们。\n\n所有捐赠都将用于改善服务器与运营，让产品持续前行。</string>
+    <string name="donate_alipay">支付宝：%1$s</string>
     <string name="last_updated">最后更新于: %1$s</string>
     <string name="stars_total">Stars %1$s</string>
     <string name="stars_period">Stars (%1$s) %2$s</string>
