@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.AlertDialog
@@ -90,6 +91,7 @@ import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.check_updates
+import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.dark_mode
 import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.language_option_chinese
@@ -110,6 +112,10 @@ import trendingai.shared.generated.resources.feedback_desc
 import trendingai.shared.generated.resources.privacy_policy
 import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscribe_desc
+import trendingai.shared.generated.resources.summary_language
+import trendingai.shared.generated.resources.summary_language_desc
+import trendingai.shared.generated.resources.summary_language_feedback
+import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.version
 import trendingai.shared.generated.resources.version_up_to_date
 
@@ -130,6 +136,29 @@ fun SettingsScreen(
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
     var showDonateDialog by remember { mutableStateOf(false) }
+    var showSummaryLanguageDialog by remember { mutableStateOf(false) }
+
+    if (showSummaryLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showSummaryLanguageDialog = false },
+            title = { Text(stringResource(Res.string.summary_language)) },
+            text = { Text(stringResource(Res.string.summary_language_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSummaryLanguageDialog = false
+                    trackEvent("settings_summary_language_feedback")
+                    onNavigateToFeedback()
+                }) {
+                    Text(stringResource(Res.string.summary_language_feedback))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSummaryLanguageDialog = false }) {
+                    Text(stringResource(Res.string.close))
+                }
+            }
+        )
+    }
 
     if (showDonateDialog) {
         AlertDialog(
@@ -319,6 +348,18 @@ fun SettingsScreen(
                         leadingContent = { Icon(Icons.Default.Language, null) }
                     )
                 }
+            }
+            // 摘要语言说明
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.summary_language)) },
+                    supportingContent = { Text(stringResource(Res.string.summary_language_desc)) },
+                    leadingContent = { Icon(Icons.Default.Translate, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_summary_language")
+                        showSummaryLanguageDialog = true
+                    }
+                )
             }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 

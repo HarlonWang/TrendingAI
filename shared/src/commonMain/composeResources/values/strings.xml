@@ -16,6 +16,11 @@
     <string name="language_option_chinese">Chinese</string>
     <string name="language_option_english">English</string>
     <string name="open_system_settings">Open system settings</string>
+    <string name="summary_language">Summary Language</string>
+    <string name="summary_language_desc">GitHub in Chinese &amp; English, others Chinese only · Tap to learn more</string>
+    <string name="summary_language_message">GitHub summaries are available in both Chinese and English. Hacker News and Product Hunt are Chinese only for now.\n\nTrending AI started out helping Chinese developers keep up with global tech trends, so the other sources aren\'t localized yet. If you\'d like them in your language, let us know — we\'ll gauge how many people want it and decide.</string>
+    <string name="summary_language_feedback">Send Feedback</string>
+    <string name="close">Close</string>
     <string name="datasource_settings">Data Source</string>
     <string name="current_datasource">Current: Gemini API</string>
     <string name="about">About</string>

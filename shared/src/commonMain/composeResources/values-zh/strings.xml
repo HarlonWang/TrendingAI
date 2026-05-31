@@ -16,6 +16,11 @@
     <string name="language_option_chinese">中文</string>
     <string name="language_option_english">英文</string>
     <string name="open_system_settings">前往系统设置</string>
+    <string name="summary_language">摘要语言</string>
+    <string name="summary_language_desc">GitHub 支持中英文，其余暂仅中文 · 点击了解</string>
+    <string name="summary_language_message">目前 GitHub 的摘要支持中文和英文；Hacker News 和 Product Hunt 暂时只有中文。\n\nTrending AI 最初是为帮助中文开发者了解全球技术趋势而做的，所以其余来源还没做多语言。如果你希望它们也支持你的语言，欢迎反馈告诉我们，我们会根据需求情况评估。</string>
+    <string name="summary_language_feedback">去反馈</string>
+    <string name="close">关闭</string>
     <string name="datasource_settings">数据源设置</string>
     <string name="current_datasource">当前使用: Gemini API</string>
     <string name="about">关于</string>
