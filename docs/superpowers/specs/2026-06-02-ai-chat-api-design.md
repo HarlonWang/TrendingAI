@@ -42,6 +42,7 @@
 | 人设 | 技术情报助手（话题聚焦技术） | 通用助手 | 贴合产品定位，间接抑制滥用 |
 | 状态 | 后端无状态（客户端带全量历史） | D1 存会话 | 与"内存级单会话"一致，最简 |
 | 限流标识 | `X-Install-Id` 请求头 | IP / 登录态 | 客户端已有，维度准 |
+| 回复语言 | 客户端传 `lang`，prompt 按该语言书写 + 跟随用户 | 写死中文 / 纯跟随用户 | 写死中文会让英文用户收到中文回复；传 `lang` 默认确定 + 可自适应 |
 
 ## 5. 接口契约
 
@@ -53,6 +54,7 @@ Header: X-Install-Id: <uuid>
 Body:
 {
   "messages": [ { "role": "user" | "assistant", "content": "..." } ],
+  "lang":     "zh" | "en",                                              // 可选，默认 "zh"
   "context":  { "title": "...", "summary": "...", "sourceUrl": "..." }   // 可选
 }
 ```
@@ -75,7 +77,7 @@ Body:
 **`handleChat` 流程**
 1. OPTIONS 预检；非 POST → 405
 2. 取 `X-Install-Id`，缺失 → 400
-3. 解析校验 body：`messages` 非空且**末条为 user**；单条 `content` ≤ 4000 字符
+3. 解析校验 body：`messages` 非空且**末条为 user**；单条 `content` ≤ 4000 字符；`lang` 取 `"en"` 否则一律按 `"zh"`
 4. **限流（D1，UTC 当日）**
    - 设备日配额：`(install_id, day)` 的 `count` < `PER_DEVICE_DAILY = 5`
    - 全局日预算：当日 `SUM(count)` < `GLOBAL_DAILY = 100`
@@ -91,12 +93,26 @@ Body:
 
 > 计数放在调用成功后自增：失败的请求不计入用户配额。设备配额与全局预算各一次 D1 读，写一次 UPSERT。
 
-**system prompt（人设 B）**
+**system prompt（人设 B，按 `lang` 选用对应语言版本）**
+
+`lang = "zh"`：
 ```
-你是 TrendingAI 的技术情报助手，聚焦技术、开发、开源相关话题，
-用简洁中文回答并使用 Markdown 排版。当用户话题明显偏离技术时，礼貌地把话题引导回技术领域。
+你是 TrendingAI 的技术情报助手，聚焦技术、开发、开源相关话题，使用 Markdown 排版。
+默认用简洁中文回答；若用户明显使用其他语言，则跟随用户的语言。
+当用户话题明显偏离技术时，礼貌地把话题引导回技术领域。
 ```
-带 `context` 时追加：
+
+`lang = "en"`：
+```
+You are TrendingAI's tech-intelligence assistant, focused on technology, software
+development, and open source. Format answers in Markdown. Reply in English by default;
+if the user clearly writes in another language, follow the user's language.
+If the topic drifts well off technology, politely steer it back.
+```
+
+> 关键：**system prompt 用 `lang` 对应语言书写**（英文 persona 让英文输出更自然），并都带"默认 {lang}、用户切换则跟随"的子句——兼顾确定性与自适应。
+
+带 `context` 时按同语言追加（示例 zh）：
 ```
 用户正在查看以下条目：
 标题：{title}
@@ -104,6 +120,7 @@ Body:
 来源：{sourceUrl}
 请优先基于该条目作答。
 ```
+（`lang = "en"` 时用英文标签 Title/Summary/Source 追加同样内容。）
 
 **D1 迁移 `012_add_chat_usage.sql`**
 ```sql
@@ -133,6 +150,7 @@ const MAX_TOKENS       = 1024;  // 回复 token 上限
 
 `androidLibrary/chat/.../engine/ChatApi.kt` 调整：
 - 请求头加 `X-Install-Id`：`header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())`
+- body 加 `lang`：由 `AppLanguage` 解析——`CHINESE → "zh"`、`ENGLISH → "en"`、`FOLLOW_SYSTEM → ` 按当前系统 Locale（`zh*` → `"zh"`，否则 `"en"`）
 - 识别 `429`：抛可区分的配额异常，UI 把该条助手消息显示为"今日额度已用完"（区别于通用错误重试）
 - 端点保持 `https://api.trendingai.cn/api/chat`
 
@@ -156,7 +174,8 @@ const MAX_TOKENS       = 1024;  // 回复 token 上限
 - 本地：`wrangler dev` + curl 验证 200 / 400（缺 install_id）/ 429（超配额）/ 502（伪造 key）
 - 限流：同一 install_id 连发 6 次，第 6 次应 429；全局计数累加正确
 - 历史裁剪：超长历史只发最近 12 条
-- 客户端：真机/模拟器走真实接口，验证 install_id 透传与 429 文案
+- 语言：`lang=en` 用英文提问应得英文回复；`lang=zh` 用英文提问应跟随用户切到英文（验证"默认 + 跟随"子句）
+- 客户端：真机/模拟器走真实接口，验证 install_id 透传、`lang` 解析与 429 文案
 
 ## 10. 实施顺序
 
