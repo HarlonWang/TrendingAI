@@ -22,7 +22,9 @@ import whl.trending.chat.ui.ChatScreen
 class ChatDemoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { DemoTheme { DemoContent(onBack = ::finish) } }
+        // adb 传 `--ez real true` 用真实 ChatApi 连生产联调；否则示例 Demo（假引擎）
+        val real = intent.getBooleanExtra("real", false)
+        setContent { DemoTheme { DemoContent(real = real, onBack = ::finish) } }
     }
 }
 
@@ -36,11 +38,16 @@ private fun DemoTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun DemoContent(onBack: () -> Unit) {
-    ChatScreen(
-        initialContext = null,
-        onBack = onBack,
-        engine = androidx.compose.runtime.remember { FakeChatEngine() },
-        initialMessages = SampleData.messages,
-    )
+private fun DemoContent(real: Boolean, onBack: () -> Unit) {
+    if (real) {
+        // 真实引擎（ChatScreen 默认即 ChatApi），空会话连生产
+        ChatScreen(initialContext = null, onBack = onBack)
+    } else {
+        ChatScreen(
+            initialContext = null,
+            onBack = onBack,
+            engine = androidx.compose.runtime.remember { FakeChatEngine() },
+            initialMessages = SampleData.messages,
+        )
+    }
 }

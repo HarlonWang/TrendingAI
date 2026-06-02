@@ -65,17 +65,25 @@ private fun UserMessage(message: ChatMessage, modifier: Modifier) {
 @Composable
 private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier: Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
-        if (message.status == MessageStatus.ERROR) {
-            Text(
-                text = stringResource(R.string.chat_error_message),
+        when (message.status) {
+            MessageStatus.ERROR -> {
+                Text(
+                    text = stringResource(R.string.chat_error_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                TextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.chat_retry))
+                }
+            }
+
+            MessageStatus.QUOTA_EXCEEDED -> Text(
+                text = stringResource(R.string.chat_quota_exceeded),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
-            TextButton(onClick = onRetry) {
-                Text(stringResource(R.string.chat_retry))
-            }
-        } else {
-            SelectionContainer {
+
+            else -> SelectionContainer {
                 MarkdownText(
                     markdown = message.content,
                     textStyle = MaterialTheme.typography.bodyLarge,

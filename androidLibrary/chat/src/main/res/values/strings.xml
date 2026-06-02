@@ -6,4 +6,5 @@
     <string name="chat_send">Send</string>
     <string name="chat_error_message">Something went wrong. Please try again.</string>
     <string name="chat_retry">Retry</string>
+    <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
 </resources>

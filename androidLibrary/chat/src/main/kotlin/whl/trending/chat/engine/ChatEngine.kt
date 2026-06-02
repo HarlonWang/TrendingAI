@@ -13,6 +13,10 @@ interface ChatEngine {
      *
      * @param history 截至当前的完整消息历史（含本轮用户消息）
      * @param context 可选初始上下文
+     * @throws QuotaExceededException 超过每日配额（HTTP 429）
      */
     suspend fun send(history: List<ChatMessage>, context: ChatContext?): String
 }
+
+/** 超过每日配额（设备或全局），UI 应提示额度用完且不提供重试。 */
+class QuotaExceededException : Exception()
