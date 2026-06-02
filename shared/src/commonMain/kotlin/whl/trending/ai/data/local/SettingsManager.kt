@@ -38,16 +38,21 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val INSTALL_ID_KEY = "prefs_install_id"
 
     /**
-     * 安装级匿名标识：首次调用时生成并持久化，之后保持不变（卸载重装才会重新生成）。
+     * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
      * 用于跨天/跨会话的留存分析，弥补 Aptabase 每日轮换 user_id 无法追踪留存的缺陷。
+     *
+     * 用 lazy 缓存：每进程只生成一次，既消除 check-then-write 的并发竞态，
+     * 也避免每条事件都读一次 settings。
      */
     @OptIn(ExperimentalUuidApi::class)
-    fun getOrCreateInstallId(): String {
-        settings.getStringOrNull(INSTALL_ID_KEY)?.let { return it }
+    private val installId: String by lazy {
+        settings.getStringOrNull(INSTALL_ID_KEY)?.let { return@lazy it }
         val id = Uuid.random().toString()
         settings.putString(INSTALL_ID_KEY, id)
-        return id
+        id
     }
+
+    fun getOrCreateInstallId(): String = installId
 
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
