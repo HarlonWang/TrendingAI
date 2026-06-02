@@ -56,7 +56,7 @@ import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem

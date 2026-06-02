@@ -7,15 +7,39 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsManagerTest {
 
+    private lateinit var settings: MapSettings
     private lateinit var manager: SettingsManager
 
     @BeforeTest
     fun setUp() {
-        manager = SettingsManager(MapSettings())
+        settings = MapSettings()
+        manager = SettingsManager(settings)
+    }
+
+    @Test
+    fun getOrCreateInstallId_returns_non_blank_id() {
+        val id = manager.getOrCreateInstallId()
+        assertTrue(id.isNotBlank())
+    }
+
+    @Test
+    fun getOrCreateInstallId_is_idempotent() {
+        val first = manager.getOrCreateInstallId()
+        val second = manager.getOrCreateInstallId()
+        assertEquals(first, second)
+    }
+
+    @Test
+    fun installId_persists_across_manager_instances() {
+        val first = manager.getOrCreateInstallId()
+        // 模拟应用重启：同一份底层存储，新建 manager
+        val rebuilt = SettingsManager(settings)
+        assertEquals(first, rebuilt.getOrCreateInstallId())
     }
 
     @Test

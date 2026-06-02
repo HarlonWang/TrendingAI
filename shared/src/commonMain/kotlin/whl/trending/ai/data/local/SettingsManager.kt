@@ -9,6 +9,8 @@ import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import whl.trending.ai.data.model.FavoriteItem
 
 enum class ThemeMode(val title: String) {
@@ -33,6 +35,19 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val FAVORITES_KEY = "prefs_favorites"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
+    private val INSTALL_ID_KEY = "prefs_install_id"
+
+    /**
+     * 安装级匿名标识：首次调用时生成并持久化，之后保持不变（卸载重装才会重新生成）。
+     * 用于跨天/跨会话的留存分析，弥补 Aptabase 每日轮换 user_id 无法追踪留存的缺陷。
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    fun getOrCreateInstallId(): String {
+        settings.getStringOrNull(INSTALL_ID_KEY)?.let { return it }
+        val id = Uuid.random().toString()
+        settings.putString(INSTALL_ID_KEY, id)
+        return id
+    }
 
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }

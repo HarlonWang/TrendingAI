@@ -38,7 +38,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
