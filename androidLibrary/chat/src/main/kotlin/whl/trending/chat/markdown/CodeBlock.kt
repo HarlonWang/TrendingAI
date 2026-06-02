@@ -17,11 +17,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -29,6 +31,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.ClipData
+import kotlinx.coroutines.launch
 
 /**
  * 代码块：等宽字体 + 横向滚动 + 语言标签 + 复制按钮 + 轻量语法高亮。
@@ -39,7 +43,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun CodeBlock(code: String, language: String) {
     val colors = MaterialTheme.colorScheme
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val highlighted = remember(code, language) {
         SyntaxHighlighter.highlight(
             code = code,
@@ -67,7 +72,11 @@ fun CodeBlock(code: String, language: String) {
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.onSurfaceVariant,
             )
-            IconButton(onClick = { clipboard.setText(AnnotatedString(code)) }) {
+            IconButton(onClick = {
+                scope.launch {
+                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("code", code)))
+                }
+            }) {
                 Icon(
                     imageVector = Icons.Filled.ContentCopy,
                     contentDescription = "Copy code",
