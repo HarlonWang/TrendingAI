@@ -10,11 +10,14 @@ import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.chat.globalChatScreen
 
 data object Home
 data object Settings
@@ -23,6 +26,7 @@ data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
+data class Chat(val context: ChatContext?)
 
 @Composable
 @Preview
@@ -42,6 +46,9 @@ fun App() {
                             },
                             onNavigateToDetail = { owner, repo ->
                                 backStack.add(RepoDetail(owner, repo))
+                            },
+                            onNavigateToChat = {
+                                backStack.add(Chat(null))
                             }
                         )
                     }
@@ -103,8 +110,21 @@ fun App() {
                         ReadmeScreen(
                             owner = key.owner,
                             repo = key.repo,
-                            onBack = { backStack.removeLastOrNull() }
+                            onBack = { backStack.removeLastOrNull() },
+                            onNavigateToChat = { context ->
+                                backStack.add(Chat(context))
+                            }
                         )
+                    }
+
+                    is Chat -> NavEntry(key) {
+                        val screen = globalChatScreen
+                        if (screen != null) {
+                            screen(key.context) { backStack.removeLastOrNull() }
+                        } else {
+                            // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
+                            LaunchedEffect(Unit) { backStack.removeLastOrNull() }
+                        }
                     }
 
                     else -> {

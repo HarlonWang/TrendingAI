@@ -1,5 +1,7 @@
 package whl.trending.ai.ui.detail
 
+import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.openUrl
 
@@ -13,9 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -47,6 +51,7 @@ fun ReadmeScreen(
     owner: String,
     repo: String,
     onBack: () -> Unit,
+    onNavigateToChat: (ChatContext) -> Unit = {},
     viewModel: ReadmeViewModel = viewModel(key = "$owner/$repo") {
         ReadmeViewModel(owner, repo)
     }
@@ -93,6 +98,26 @@ fun ReadmeScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             )
+        },
+        floatingActionButton = {
+            if (globalChatScreen != null) {
+                FloatingActionButton(
+                    onClick = {
+                        onNavigateToChat(
+                            ChatContext(
+                                title = "$owner/$repo",
+                                summary = null,
+                                sourceUrl = repoUrl
+                            )
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "AI"
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         when {

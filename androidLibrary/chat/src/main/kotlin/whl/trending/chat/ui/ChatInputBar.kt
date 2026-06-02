@@ -1,8 +1,13 @@
 package whl.trending.chat.ui
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
@@ -30,7 +35,11 @@ fun ChatInputBar(
 ) {
     Surface(tonalElevation = 3.dp, modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            // 避让手势导航条与键盘（union 取两者较大值，避免双重叠加）；
+            // Surface 背景仍铺到屏幕底边，仅内容上移
+            modifier = Modifier.fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
