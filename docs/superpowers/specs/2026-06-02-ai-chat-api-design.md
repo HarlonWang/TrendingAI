@@ -54,7 +54,7 @@ Header: X-Install-Id: <uuid>
 Body:
 {
   "messages": [ { "role": "user" | "assistant", "content": "..." } ],
-  "lang":     "zh" | "en",                                              // 可选，默认 "zh"
+  "lang":     "zh" | "en",                                              // 可选，仅显式 "zh" 用中文，其余默认 "en"
   "context":  { "title": "...", "summary": "...", "sourceUrl": "..." }   // 可选
 }
 ```
@@ -78,7 +78,7 @@ Body:
 **`handleChat` 流程**
 1. OPTIONS 预检；非 POST → 405
 2. 取 `X-Install-Id`，缺失 → 400
-3. 解析校验 body：`messages` 非空且**末条为 user**；单条 `content` ≤ 4000 字符；`lang` 取 `"en"` 否则一律按 `"zh"`
+3. 解析校验 body：`messages` 非空且**末条为 user**；单条 `content` ≤ 4000 字符；`lang` 仅显式 `"zh"` 用中文，其余一律按 `"en"`
 4. **限流（D1，UTC 当日）**
    - 设备日配额：`(install_id, day)` 的 `count` < `PER_DEVICE_DAILY = 5`
    - 全局日预算：当日 `SUM(count)` < `GLOBAL_DAILY = 100`
