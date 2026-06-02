@@ -5,6 +5,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.aptabase.Aptabase
+import whl.trending.ai.core.platform.trackEvent
 
 class TrendingApplication : Application(), DefaultLifecycleObserver {
     private var sessionStartTime: Long = 0
@@ -14,8 +15,8 @@ class TrendingApplication : Application(), DefaultLifecycleObserver {
         // Initialize Aptabase with the provided App Key
         Aptabase.instance.initialize(this, "A-US-1808698868")
         
-        // Track app launch
-        Aptabase.instance.trackEvent("app_started")
+        // Track app launch（经 shared trackEvent 统一注入 install_id）
+        trackEvent("app_started")
 
         // Register lifecycle observer
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
@@ -33,7 +34,7 @@ class TrendingApplication : Application(), DefaultLifecycleObserver {
         if (sessionStartTime > 0) {
             val durationSeconds = (System.currentTimeMillis() - sessionStartTime) / 1000
             if (durationSeconds > 0) {
-                Aptabase.instance.trackEvent("app_session", mapOf(
+                trackEvent("app_session", mapOf(
                     "duration" to durationSeconds.toInt()
                 ))
             }

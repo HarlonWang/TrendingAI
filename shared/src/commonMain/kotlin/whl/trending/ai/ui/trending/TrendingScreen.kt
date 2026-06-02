@@ -96,7 +96,7 @@ import trendingai.shared.generated.resources.update_info_content
 import trendingai.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.core.trackItemClick
+import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor

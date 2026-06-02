@@ -49,7 +49,7 @@ actual fun getSystemLanguage(): String {
     return preferredLanguage.split("-").firstOrNull() ?: "en"
 }
 
-actual fun trackEvent(name: String, props: Map<String, Any>) {
+internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
     // iOS 暂不接入事件上报
 }
 
