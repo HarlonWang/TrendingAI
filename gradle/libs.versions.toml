@@ -24,6 +24,7 @@ composeIcons = "1.7.3"
 aptabase = "0.0.8"
 coil = "3.4.0"
 material-kolor = "4.1.1"
+commonmark = "0.24.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -57,6 +58,8 @@ aptabase = { module = "com.github.aptabase:aptabase-kotlin", version.ref = "apta
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "material-kolor" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

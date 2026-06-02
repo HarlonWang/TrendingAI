@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_assistant_title">AI Assistant</string>
+    <string name="chat_back">Back</string>
+    <string name="chat_input_hint">Ask anything…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_error_message">Something went wrong. Please try again.</string>
+    <string name="chat_retry">Retry</string>
+</resources>

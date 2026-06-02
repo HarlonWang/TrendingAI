@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_assistant_title">AI 助手</string>
+    <string name="chat_back">返回</string>
+    <string name="chat_input_hint">有什么想问的…</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_error_message">出错了，请重试。</string>
+    <string name="chat_retry">重试</string>
+</resources>
