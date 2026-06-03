@@ -39,4 +39,7 @@ dependencies {
     implementation(libs.commonmark.ext.gfm.tables)
 
     debugImplementation(libs.compose.uiTooling)
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
 }

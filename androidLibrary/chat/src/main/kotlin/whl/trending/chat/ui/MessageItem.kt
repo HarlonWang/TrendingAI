@@ -20,8 +20,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.R
 import whl.trending.chat.markdown.MarkdownText
+import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.MessageStatus
 import whl.trending.chat.model.Role
 
 /**
@@ -65,32 +65,37 @@ private fun UserMessage(message: ChatMessage, modifier: Modifier) {
 @Composable
 private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier: Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
-        when (message.status) {
-            MessageStatus.ERROR -> {
-                Text(
-                    text = stringResource(R.string.chat_error_message),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.chat_retry))
-                }
-            }
-
-            MessageStatus.QUOTA_EXCEEDED -> Text(
-                text = stringResource(R.string.chat_quota_exceeded),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
-
-            else -> SelectionContainer {
+        val error = message.error
+        if (error == null) {
+            SelectionContainer {
                 MarkdownText(
                     markdown = message.content,
                     textStyle = MaterialTheme.typography.bodyLarge,
                 )
             }
+        } else {
+            Text(
+                text = stringResource(errorMessageRes(error.category)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            if (error.category.retryable) {
+                TextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.chat_retry))
+                }
+            }
         }
     }
+}
+
+/** 分类 → 用户文案资源。 */
+private fun errorMessageRes(category: ChatErrorCategory): Int = when (category) {
+    ChatErrorCategory.NETWORK -> R.string.chat_error_network
+    ChatErrorCategory.TIMEOUT -> R.string.chat_error_timeout
+    ChatErrorCategory.SERVER -> R.string.chat_error_server
+    ChatErrorCategory.QUOTA -> R.string.chat_quota_exceeded
+    ChatErrorCategory.BAD_REQUEST -> R.string.chat_error_bad_request
+    ChatErrorCategory.UNKNOWN -> R.string.chat_error_message
 }
 
 @Preview(showBackground = true)

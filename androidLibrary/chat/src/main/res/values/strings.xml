@@ -5,6 +5,10 @@
     <string name="chat_input_hint">Ask anything…</string>
     <string name="chat_send">Send</string>
     <string name="chat_error_message">Something went wrong. Please try again.</string>
+    <string name="chat_error_network">No network connection. Please check and try again.</string>
+    <string name="chat_error_timeout">The response timed out. Please try again.</string>
+    <string name="chat_error_server">The service is temporarily unavailable. Please try again later.</string>
+    <string name="chat_error_bad_request">This message can\'t be processed. Try rephrasing or starting a new chat.</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
 </resources>

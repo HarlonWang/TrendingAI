@@ -9,10 +9,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
-import whl.trending.chat.engine.QuotaExceededException
+import whl.trending.chat.engine.ChatException
+import whl.trending.chat.model.ChatError
+import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.ChatUiState
-import whl.trending.chat.model.MessageStatus
 import whl.trending.chat.model.Role
 
 /**
@@ -44,9 +45,9 @@ class ChatViewModel(
         request()
     }
 
-    /** 对出错的助手消息重试：移除该错误条，按当前历史重新请求。 */
+    /** 对可重试的失败消息重试：移除该错误条，按当前历史重新请求。 */
     fun retry(message: ChatMessage) {
-        if (message.status != MessageStatus.ERROR) return
+        if (message.error?.category?.retryable != true) return
         _uiState.update {
             it.copy(messages = it.messages.filterNot { m -> m.id == message.id }, isSending = true)
         }
@@ -56,14 +57,11 @@ class ChatViewModel(
     private fun request() = viewModelScope.launch {
         val result = runCatching { engine.send(_uiState.value.messages, context) }
         val assistant = result.fold(
-            onSuccess = { ChatMessage(nextId(), Role.ASSISTANT, it, MessageStatus.DONE) },
+            onSuccess = { ChatMessage(nextId(), Role.ASSISTANT, it) },
             onFailure = { e ->
-                val status = if (e is QuotaExceededException) {
-                    MessageStatus.QUOTA_EXCEEDED
-                } else {
-                    MessageStatus.ERROR
-                }
-                ChatMessage(nextId(), Role.ASSISTANT, "", status)
+                val error = (e as? ChatException)?.error
+                    ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                ChatMessage(nextId(), Role.ASSISTANT, "", error = error)
             },
         )
         _uiState.update { it.copy(messages = it.messages + assistant, isSending = false) }

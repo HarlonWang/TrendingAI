@@ -1,7 +1,6 @@
 package whl.trending.chat.sample
 
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.MessageStatus
 import whl.trending.chat.model.Role
 
 /** 离线 Demo 用的示例数据：覆盖全部 Markdown 元素，用于重点验收渲染与交互效果。 */
@@ -53,7 +52,7 @@ object SampleData {
     /** Demo 打开即展示的初始会话。 */
     val messages: List<ChatMessage> = listOf(
         ChatMessage(1, Role.USER, "用一句话介绍 Kotlin 协程，并给个例子"),
-        ChatMessage(2, Role.ASSISTANT, richMarkdown, MessageStatus.DONE),
+        ChatMessage(2, Role.ASSISTANT, richMarkdown),
         ChatMessage(3, Role.USER, "和 JavaScript 的 async/await 有什么区别？"),
         ChatMessage(
             4, Role.ASSISTANT,
@@ -62,7 +61,6 @@ object SampleData {
                 "- JS 的 `Promise` 没有内建取消传播\n" +
                 "- 协程可切换调度器（`withContext`），JS 单线程事件循环\n\n" +
                 "简言之：协程更像*可取消、可调度*的 async/await。",
-            MessageStatus.DONE,
         ),
     )
 
