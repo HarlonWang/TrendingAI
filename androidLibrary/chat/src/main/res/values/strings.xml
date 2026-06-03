@@ -11,6 +11,8 @@
     <string name="chat_error_bad_request">This message can\'t be processed. Try rephrasing or starting a new chat.</string>
     <string name="chat_error_content_too_long">The message is too long and exceeds the length limit.</string>
     <string name="chat_error_quota_global">The service is busy today. Please come back tomorrow.</string>
+    <string name="chat_action_what_is_this">What is this project?</string>
+    <string name="chat_action_what_is_this_prompt">What does this project do? Briefly describe its purpose and core features.</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
 </resources>

@@ -11,6 +11,8 @@
     <string name="chat_error_bad_request">这条消息无法处理，可换个说法或开启新对话。</string>
     <string name="chat_error_content_too_long">消息内容过长，已超出长度上限。</string>
     <string name="chat_error_quota_global">服务今日繁忙，请明天再来。</string>
+    <string name="chat_action_what_is_this">这个项目是做什么的</string>
+    <string name="chat_action_what_is_this_prompt">这个项目是做什么的？请简要介绍它的用途和核心功能。</string>
     <string name="chat_retry">重试</string>
     <string name="chat_quota_exceeded">今日额度已用完，明天再来吧。</string>
 </resources>

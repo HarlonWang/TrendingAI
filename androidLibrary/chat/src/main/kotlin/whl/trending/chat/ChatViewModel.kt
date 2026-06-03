@@ -38,9 +38,17 @@ class ChatViewModel(
     fun send() {
         val state = _uiState.value
         if (!state.canSend) return
-        val userMessage = ChatMessage(nextId(), Role.USER, state.input.trim())
+        val text = state.input.trim()
+        _uiState.update { it.copy(input = "") }
+        sendText(text)
+    }
+
+    /** 发送一段指定文本（如快捷按钮的预设问题），不依赖输入框；发送中或空白则忽略。 */
+    fun sendText(text: String) {
+        if (_uiState.value.isSending || text.isBlank()) return
+        val userMessage = ChatMessage(nextId(), Role.USER, text)
         _uiState.update {
-            it.copy(messages = it.messages + userMessage, input = "", isSending = true)
+            it.copy(messages = it.messages + userMessage, isSending = true)
         }
         request()
     }

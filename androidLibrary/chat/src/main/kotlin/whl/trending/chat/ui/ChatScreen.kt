@@ -1,10 +1,13 @@
 package whl.trending.chat.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import whl.trending.ai.chat.ChatContext
 import whl.trending.chat.ChatViewModel
@@ -70,12 +74,26 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            ChatInputBar(
-                input = state.input,
-                canSend = state.canSend,
-                onInputChange = viewModel::updateInput,
-                onSend = viewModel::send,
-            )
+            Column {
+                // 仅 README 入口、且尚无对话时显示"这个项目是做什么的"快捷问。
+                // messages 非空即隐藏，天然覆盖"发送后隐藏"与"恢复历史会话不再显示"。
+                if (initialContext?.sourceUrl != null && state.messages.isEmpty()) {
+                    val prompt = stringResource(R.string.chat_action_what_is_this_prompt)
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        AssistChip(
+                            onClick = { viewModel.sendText(prompt) },
+                            enabled = !state.isSending,
+                            label = { Text(stringResource(R.string.chat_action_what_is_this)) },
+                        )
+                    }
+                }
+                ChatInputBar(
+                    input = state.input,
+                    canSend = state.canSend,
+                    onInputChange = viewModel::updateInput,
+                    onSend = viewModel::send,
+                )
+            }
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
