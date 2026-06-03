@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +72,8 @@ enum class HomeTab {
 @Composable
 fun HomeScreen(
     onNavigateToSettings: () -> Unit,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit
+    onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onNavigateToChat: () -> Unit = {}
 ) {
     var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
     val selectedTab = HomeTab.valueOf(selectedTabName)
@@ -140,6 +143,16 @@ fun HomeScreen(
                         },
                         scrollBehavior = scrollBehavior,
                         onNavigateToSettings = onNavigateToSettings
+                    )
+                }
+            }
+        },
+        floatingActionButton = {
+            if (whl.trending.ai.chat.globalChatScreen != null) {
+                FloatingActionButton(onClick = onNavigateToChat) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "AI Assistant"
                     )
                 }
             }

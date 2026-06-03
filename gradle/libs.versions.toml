@@ -13,20 +13,22 @@ androidx-lifecycle = "2.10.0"
 
 multiplatform-nav3-ui = "1.1.1"
 multiplatform-settings = "1.3.0"
-composeMultiplatform = "1.10.3"
+composeMultiplatform = "1.11.0"
 kotlin = "2.3.21"
 material3 = "1.10.0-alpha05"
-ktor = "3.4.3"
+ktor = "3.5.0"
 kotlinx-serialization = "1.11.0"
-kotlinx-datetime = "0.7.1"
-kotlinx-coroutines = "1.10.2"
+kotlinx-datetime = "0.8.0"
+kotlinx-coroutines = "1.11.0"
 composeIcons = "1.7.3"
 aptabase = "0.0.8"
 coil = "3.4.0"
 material-kolor = "4.1.1"
+commonmark = "0.28.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -57,6 +59,8 @@ aptabase = { module = "com.github.aptabase:aptabase-kotlin", version.ref = "apta
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "material-kolor" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

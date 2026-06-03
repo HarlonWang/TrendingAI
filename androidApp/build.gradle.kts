@@ -97,6 +97,7 @@ android {
 
 dependencies {
     "apkImplementation"(project(":androidLibrary:updater"))
+    implementation(project(":androidLibrary:chat"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
     debugImplementation(libs.compose.uiTooling)

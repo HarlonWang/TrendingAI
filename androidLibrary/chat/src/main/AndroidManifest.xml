@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!--
+            离线 Demo 入口。不带 LAUNCHER intent-filter（避免给正式包多一个图标），
+            通过 adb 启动：
+            adb shell am start -n whl.trending.ai.debug/whl.trending.chat.ChatDemoActivity
+            debug 包另在 androidApp/src/debug 下用 activity-alias 提供桌面图标。
+        -->
+        <activity
+            android:name="whl.trending.chat.ChatDemoActivity"
+            android:exported="true"
+            android:label="Chat Demo"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+
+</manifest>

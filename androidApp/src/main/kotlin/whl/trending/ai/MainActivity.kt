@@ -16,16 +16,23 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.App
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.chat.ui.ChatScreen
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         whl.trending.ai.core.platform.AndroidContextHolder.initialize(this)
+
+        // 注册 Android-only 的 ChatScreen 到 CMP 导航 slot（仿 UpdateWrapper 的依赖反转）
+        globalChatScreen = { context, onBack ->
+            ChatScreen(initialContext = context, onBack = onBack)
+        }
 
         lifecycleScope.launch {
             globalSettingsManager.appLanguage

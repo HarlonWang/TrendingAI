@@ -32,3 +32,4 @@ dependencyResolutionManagement {
 include(":shared")
 include(":androidApp")
 include(":androidLibrary:updater")
+include(":androidLibrary:chat")

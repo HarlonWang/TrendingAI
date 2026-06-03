@@ -1,5 +1,7 @@
 package whl.trending.ai.ui.detail
 
+import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.openUrl
 
@@ -13,9 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -47,6 +51,7 @@ fun ReadmeScreen(
     owner: String,
     repo: String,
     onBack: () -> Unit,
+    onNavigateToChat: (ChatContext) -> Unit = {},
     viewModel: ReadmeViewModel = viewModel(key = "$owner/$repo") {
         ReadmeViewModel(owner, repo)
     }
@@ -93,6 +98,28 @@ fun ReadmeScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             )
+        },
+        floatingActionButton = {
+            if (globalChatScreen != null) {
+                FloatingActionButton(
+                    onClick = {
+                        onNavigateToChat(
+                            ChatContext(
+                                title = "$owner/$repo",
+                                // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；
+                                // README 未加载完则为 null，退化为仅 title + url
+                                summary = readmeExcerpt(uiState.html),
+                                sourceUrl = repoUrl
+                            )
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "AI"
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         when {
@@ -156,4 +183,23 @@ private fun Color.toHex(): String {
     val g = (green * 255 + 0.5f).toInt().coerceIn(0, 255)
     val b = (blue * 255 + 0.5f).toInt().coerceIn(0, 255)
     return "#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}"
+}
+
+/**
+ * 从 README 的 HTML 中提取纯文本摘录，作为进入 chat 的 [ChatContext.summary] 依据，
+ * 让 AI 也能介绍冷门项目。去标签 + 解码常见实体 + 压空白，截断到 [maxChars]；空则返回 null。
+ */
+private fun readmeExcerpt(html: String, maxChars: Int = 900): String? {
+    if (html.isBlank()) return null
+    val text = html
+        .replace(Regex("<[^>]+>"), " ")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+    return text.take(maxChars).ifBlank { null }
 }
