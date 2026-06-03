@@ -45,7 +45,14 @@ fun CodeBlock(code: String, language: String) {
     val colors = MaterialTheme.colorScheme
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val highlighted = remember(code, language) {
+    val highlighted = remember(
+        code,
+        language,
+        colors.primary,
+        colors.tertiary,
+        colors.secondary,
+        colors.outline,
+    ) {
         SyntaxHighlighter.highlight(
             code = code,
             language = language,
