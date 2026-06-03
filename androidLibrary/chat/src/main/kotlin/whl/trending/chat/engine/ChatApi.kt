@@ -124,7 +124,8 @@ class ChatApi(
     private fun logFailure(error: ChatError) {
         Log.w(
             TAG,
-            "send failed: category=${error.category} status=${error.httpStatus} detail=${error.detail}",
+            "send failed: category=${error.category} code=${error.code} " +
+                "status=${error.httpStatus} detail=${error.detail}",
         )
     }
 
