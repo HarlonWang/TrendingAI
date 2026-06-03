@@ -16,12 +16,14 @@ enum class ChatErrorCategory(val retryable: Boolean) {
 /**
  * 一次聊天失败的结构化信息。
  *
- * @param category 分类，驱动 UI 文案与是否可重试
+ * @param category 分类，驱动是否可重试与兜底文案
+ * @param code 服务端机器可读错误码（如 `content_too_long`/`quota_global`），优先据此选具体文案
  * @param httpStatus 有 HTTP 响应时的状态码
  * @param detail 服务端 error 文案或异常摘要，仅用于日志/调试，不直接展示给用户
  */
 data class ChatError(
     val category: ChatErrorCategory,
+    val code: String? = null,
     val httpStatus: Int? = null,
     val detail: String? = null,
 )

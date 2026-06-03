@@ -61,7 +61,7 @@ class ChatApi(
     private data class ChatResponse(val content: String)
 
     @Serializable
-    private data class ErrorResponse(val error: String? = null)
+    private data class ErrorResponse(val error: String? = null, val code: String? = null)
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -103,12 +103,11 @@ class ChatApi(
                 return response.body<ChatResponse>().content
             }
 
-            // 非 2xx：取服务端 error 文案，按状态码分类
+            // 非 2xx：取服务端 error 文案 + 机器码，按状态码分类
             val raw = runCatching { response.bodyAsText() }.getOrNull()
-            val bodyError = raw
-                ?.let { runCatching { json.decodeFromString<ErrorResponse>(it).error }.getOrNull() }
-                ?: raw
-            throw ChatException(ChatErrors.forStatus(response.status.value, bodyError))
+            val parsed = raw?.let { runCatching { json.decodeFromString<ErrorResponse>(it) }.getOrNull() }
+            val bodyError = parsed?.error ?: raw
+            throw ChatException(ChatErrors.forStatus(response.status.value, parsed?.code, bodyError))
         } catch (e: ChatException) {
             logFailure(e.error)
             throw e

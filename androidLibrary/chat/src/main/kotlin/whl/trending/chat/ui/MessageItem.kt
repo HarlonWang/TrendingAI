@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.R
 import whl.trending.chat.markdown.MarkdownText
+import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
@@ -75,7 +76,7 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
             }
         } else {
             Text(
-                text = stringResource(errorMessageRes(error.category)),
+                text = stringResource(errorMessageRes(error)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -88,14 +89,21 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
     }
 }
 
-/** 分类 → 用户文案资源。 */
-private fun errorMessageRes(category: ChatErrorCategory): Int = when (category) {
-    ChatErrorCategory.NETWORK -> R.string.chat_error_network
-    ChatErrorCategory.TIMEOUT -> R.string.chat_error_timeout
-    ChatErrorCategory.SERVER -> R.string.chat_error_server
-    ChatErrorCategory.QUOTA -> R.string.chat_quota_exceeded
-    ChatErrorCategory.BAD_REQUEST -> R.string.chat_error_bad_request
-    ChatErrorCategory.UNKNOWN -> R.string.chat_error_message
+/** 选具体文案：优先服务端 [ChatError.code]，未知则回落到 [ChatError.category]。 */
+private fun errorMessageRes(error: ChatError): Int = when (error.code) {
+    "content_too_long" -> R.string.chat_error_content_too_long
+    "quota_global" -> R.string.chat_error_quota_global
+    "quota_device" -> R.string.chat_quota_exceeded
+    "upstream_timeout" -> R.string.chat_error_timeout
+    "upstream_error" -> R.string.chat_error_server
+    else -> when (error.category) {
+        ChatErrorCategory.NETWORK -> R.string.chat_error_network
+        ChatErrorCategory.TIMEOUT -> R.string.chat_error_timeout
+        ChatErrorCategory.SERVER -> R.string.chat_error_server
+        ChatErrorCategory.QUOTA -> R.string.chat_quota_exceeded
+        ChatErrorCategory.BAD_REQUEST -> R.string.chat_error_bad_request
+        ChatErrorCategory.UNKNOWN -> R.string.chat_error_message
+    }
 }
 
 @Preview(showBackground = true)

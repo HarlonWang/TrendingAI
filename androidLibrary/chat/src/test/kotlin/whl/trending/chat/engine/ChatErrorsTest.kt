@@ -13,26 +13,32 @@ import kotlin.test.assertTrue
 class ChatErrorsTest {
 
     @Test
-    fun status_429_is_quota_with_status_and_detail() {
-        val e = ChatErrors.forStatus(429, "limit reached")
+    fun status_429_is_quota_with_status_code_and_detail() {
+        val e = ChatErrors.forStatus(429, "quota_device", "limit reached")
         assertEquals(ChatErrorCategory.QUOTA, e.category)
         assertEquals(429, e.httpStatus)
+        assertEquals("quota_device", e.code)
         assertEquals("limit reached", e.detail)
     }
 
     @Test
     fun status_400_is_bad_request() {
-        assertEquals(ChatErrorCategory.BAD_REQUEST, ChatErrors.forStatus(400, null).category)
+        assertEquals(ChatErrorCategory.BAD_REQUEST, ChatErrors.forStatus(400, null, null).category)
     }
 
     @Test
     fun status_500_is_server() {
-        assertEquals(ChatErrorCategory.SERVER, ChatErrors.forStatus(500, null).category)
+        assertEquals(ChatErrorCategory.SERVER, ChatErrors.forStatus(500, null, null).category)
     }
 
     @Test
     fun status_502_is_server() {
-        assertEquals(ChatErrorCategory.SERVER, ChatErrors.forStatus(502, null).category)
+        assertEquals(ChatErrorCategory.SERVER, ChatErrors.forStatus(502, null, null).category)
+    }
+
+    @Test
+    fun status_carries_server_code() {
+        assertEquals("content_too_long", ChatErrors.forStatus(400, "content_too_long", null).code)
     }
 
     @Test
