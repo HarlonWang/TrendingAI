@@ -14,7 +14,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,7 +45,7 @@ private fun sessionKeyOf(context: ChatContext?): String =
 fun ChatScreen(
     initialContext: ChatContext?,
     onBack: () -> Unit,
-    engine: ChatEngine = remember { ChatApi() },
+    engine: ChatEngine = ChatApi.shared,
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
 ) {
     val sessionKey = sessionKeyOf(initialContext)

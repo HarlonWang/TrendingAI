@@ -40,6 +40,14 @@ class ChatApi(
     private val baseUrl: String = "https://api.trendingai.cn/api",
 ) : ChatEngine {
 
+    companion object {
+        /**
+         * App 级共享实例：全进程仅一个 HttpClient，常驻至进程结束，无需 close。
+         * 各会话线（keyed ChatViewModel）共用同一 engine，避免反复新建且从不关闭的泄漏。
+         */
+        val shared: ChatEngine by lazy { ChatApi() }
+    }
+
     @Serializable
     private data class WireMessage(val role: String, val content: String)
 
