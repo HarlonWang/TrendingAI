@@ -12,7 +12,8 @@
             android:name="whl.trending.chat.ChatDemoActivity"
             android:exported="true"
             android:label="Chat Demo"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
