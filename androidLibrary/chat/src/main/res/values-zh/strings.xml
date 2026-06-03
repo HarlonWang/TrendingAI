@@ -15,4 +15,6 @@
     <string name="chat_action_what_is_this_prompt">介绍一下这个项目，简要说明它的用途和核心功能。</string>
     <string name="chat_retry">重试</string>
     <string name="chat_quota_exceeded">今日额度已用完，明天再来吧。</string>
+    <string name="chat_beta_badge">Beta</string>
+    <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
 </resources>

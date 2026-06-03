@@ -15,4 +15,6 @@
     <string name="chat_action_what_is_this_prompt">Introduce this project, briefly explaining its purpose and core features.</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
+    <string name="chat_beta_badge">Beta</string>
+    <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
 </resources>

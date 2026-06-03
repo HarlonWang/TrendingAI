@@ -1,0 +1,81 @@
+package whl.trending.chat.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import whl.trending.chat.R
+
+/**
+ * 空状态欢迎区：仅在尚无任何对话（`messages` 为空）时显示，发出第一条后随消息列表替换而消失。
+ *
+ * - 通用助手入口（[hasContext] = false）：`✨` + 「AI 助手」标题 + 额度/实验性说明。
+ * - 上下文解读入口（[hasContext] = true）：标题与「介绍这个项目」快捷问已在别处呈现，
+ *   这里只保留额度/实验性说明一行，不喧宾夺主。
+ */
+@Composable
+fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        if (!hasContext) {
+            Text(text = "✨", style = MaterialTheme.typography.headlineLarge)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.chat_assistant_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(16.dp))
+        }
+        Text(
+            text = stringResource(R.string.chat_quota_notice),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** 标题旁的小号「Beta」徽标，标识 AI Chat 为实验性功能。 */
+@Composable
+fun BetaBadge(modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        shape = RoundedCornerShape(6.dp),
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.chat_beta_badge),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChatWelcomeGeneralPreview() {
+    MaterialTheme { ChatWelcome(hasContext = false) }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChatWelcomeContextPreview() {
+    MaterialTheme { ChatWelcome(hasContext = true) }
+}
