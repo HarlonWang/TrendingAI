@@ -2,7 +2,6 @@ package whl.trending.ai.ui.favorites
 
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.picks.SourceTag
 import whl.trending.ai.core.platform.trackEvent
@@ -67,7 +66,8 @@ import trendingai.shared.generated.resources.favorites_removed
 @Composable
 fun FavoriteListScreen(
     onBack: () -> Unit,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> }
+    onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> },
+    onOpenUrl: (url: String) -> Unit = {}
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -120,7 +120,7 @@ fun FavoriteListScreen(
                 ) { index, item ->
                     FavoriteCard(
                         item = item,
-                        onClick = { handleFavoriteClick(item, onNavigateToDetail) },
+                        onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl) },
                         onRemove = { globalSettingsManager.removeFavorite(item.url) }
                     )
                     if (index < favorites.lastIndex) {
@@ -134,7 +134,8 @@ fun FavoriteListScreen(
 
 private fun handleFavoriteClick(
     item: FavoriteItem,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit
+    onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onOpenUrl: (url: String) -> Unit
 ) {
     if (item.source == "github") {
         val parts = item.url.removePrefix("https://github.com/").split("/")
@@ -143,7 +144,7 @@ private fun handleFavoriteClick(
             return
         }
     }
-    openUrl(item.url)
+    onOpenUrl(item.url)
 }
 
 @Composable

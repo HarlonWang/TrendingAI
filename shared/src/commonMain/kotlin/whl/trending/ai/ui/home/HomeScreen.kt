@@ -73,7 +73,8 @@ enum class HomeTab {
 fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
-    onNavigateToChat: () -> Unit = {}
+    onNavigateToChat: () -> Unit = {},
+    onOpenUrl: (url: String) -> Unit = {}
 ) {
     var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
     val selectedTab = HomeTab.valueOf(selectedTabName)
@@ -206,18 +207,21 @@ fun HomeScreen(
                 val hnViewModel: FeedViewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") }
                 FeedScreen(
                     modifier = Modifier.padding(innerPadding),
-                    viewModel = hnViewModel
+                    viewModel = hnViewModel,
+                    onOpenUrl = onOpenUrl
                 )
             }
             HomeTab.ProductHunt -> {
                 val phViewModel: FeedViewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") }
                 FeedScreen(
                     modifier = Modifier.padding(innerPadding),
-                    viewModel = phViewModel
+                    viewModel = phViewModel,
+                    onOpenUrl = onOpenUrl
                 )
             }
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
+                onOpenUrl = onOpenUrl,
                 modifier = Modifier.padding(innerPadding),
                 viewModel = picksViewModel!!
             )

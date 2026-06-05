@@ -59,6 +59,9 @@ fun App() {
                             },
                             onNavigateToChat = {
                                 backStack.add(Chat(null))
+                            },
+                            onOpenUrl = { url ->
+                                backStack.add(WebPage(url, ""))
                             }
                         )
                     }
@@ -112,6 +115,9 @@ fun App() {
                             onBack = { backStack.safePop() },
                             onNavigateToDetail = { owner, repo ->
                                 backStack.add(RepoDetail(owner, repo))
+                            },
+                            onOpenUrl = { url ->
+                                backStack.add(WebPage(url, ""))
                             }
                         )
                     }

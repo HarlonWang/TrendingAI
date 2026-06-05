@@ -37,7 +37,6 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
@@ -52,7 +51,8 @@ import kotlin.time.Clock
 @Composable
 fun FeedScreen(
     modifier: Modifier = Modifier,
-    viewModel: FeedViewModel
+    viewModel: FeedViewModel,
+    onOpenUrl: (url: String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -114,6 +114,7 @@ fun FeedScreen(
                             index = index,
                             item = item,
                             isFavorite = item.url in favoriteUrls,
+                            onOpenUrl = onOpenUrl,
                             onToggleFavorite = {
                                 if (item.url in favoriteUrls) {
                                     globalSettingsManager.removeFavorite(item.url)
@@ -142,7 +143,13 @@ fun FeedScreen(
 }
 
 @Composable
-private fun FeedItemCard(index: Int, item: FeedItem, isFavorite: Boolean, onToggleFavorite: () -> Unit) {
+private fun FeedItemCard(
+    index: Int,
+    item: FeedItem,
+    isFavorite: Boolean,
+    onOpenUrl: (url: String) -> Unit,
+    onToggleFavorite: () -> Unit
+) {
     Row(
         modifier = Modifier
             .clickable {
@@ -151,7 +158,7 @@ private fun FeedItemCard(index: Int, item: FeedItem, isFavorite: Boolean, onTogg
                     rank = index + 1,
                     title = item.title
                 )
-                openUrl(item.url)
+                onOpenUrl(item.url)
             }
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)

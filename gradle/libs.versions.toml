@@ -25,6 +25,7 @@ aptabase = "0.0.8"
 coil = "3.4.0"
 material-kolor = "4.1.1"
 commonmark = "0.28.0"
+kmp-webview = "0.1.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -52,6 +53,7 @@ compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", v
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+compose-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "composeIcons" }
 compose-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeIcons" }
@@ -61,6 +63,7 @@ coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.re
 material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "material-kolor" }
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+kmp-webview = { module = "wang.harlon:kmp-webview", version.ref = "kmp-webview" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
