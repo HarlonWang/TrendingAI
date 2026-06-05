@@ -17,7 +17,7 @@ data class WebViewColors(
  *
  * 用于展示应用内生成的 HTML 内容（如 GitHub README），
  * 通过 CSS 注入确保样式与当前主题一致。
- * 如需加载远程 URL，使用 [whl.trending.ai.ui.webview.UrlWebView]。
+ * 如需加载远程 URL，使用 [whl.trending.ai.ui.webview.WebViewScreen]（基于 kmp-webview）。
  */
 @Composable
 expect fun HtmlWebView(html: String, colors: WebViewColors, modifier: Modifier = Modifier)

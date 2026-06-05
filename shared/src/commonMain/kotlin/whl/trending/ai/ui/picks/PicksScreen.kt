@@ -55,7 +55,6 @@ import trendingai.shared.generated.resources.picks_section_speed_read
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.AiSummaryBox
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
@@ -68,6 +67,7 @@ import kotlin.time.Clock
 @Composable
 fun PicksScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onOpenUrl: (url: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PicksViewModel
 ) {
@@ -127,7 +127,7 @@ fun PicksScreen(
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
                         favoriteUrls = favoriteUrls,
-                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail) },
+                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl) },
                     )
                 }
             }
@@ -138,7 +138,8 @@ fun PicksScreen(
 private fun handleItemClick(
     item: PickItem,
     section: String,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit
+    onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onOpenUrl: (url: String) -> Unit
 ) {
     trackItemClick(
         source = item.source,
@@ -153,7 +154,7 @@ private fun handleItemClick(
             return
         }
     }
-    openUrl(item.url)
+    onOpenUrl(item.url)
 }
 
 @Composable

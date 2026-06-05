@@ -1,68 +1,39 @@
 package whl.trending.ai.ui.webview
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.stringResource
-import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.back
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import wang.harlon.webview.core.WebViewConfig
+import wang.harlon.webview.core.rememberWebViewState
+import wang.harlon.webview.WebViewScreen as KmpWebViewScreen
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+/**
+ * 应用内网页浏览，基于 kmp-webview 库。
+ *
+ * @param title 非空时固定显示该标题；为空时跟随网页自身标题动态变化。
+ */
 @Composable
 fun WebViewScreen(url: String, title: String, onBack: () -> Unit) {
-    var isLoading by remember { mutableStateOf(true) }
+    val state = rememberWebViewState(url)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            UrlWebView(
-                url = url,
-                onPageFinished = { isLoading = false },
-                modifier = Modifier.fillMaxSize()
-            )
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LoadingIndicator(modifier = Modifier.size(48.dp))
-                }
-            }
-        }
-    }
+    // 系统返回键/手势：先回退网页历史，退到底再交给路由出栈。
+    // 与 NavDisplay 共用同一 NavigationEventDispatcher，组合中后注册的 enabled handler 优先。
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = state.canGoBack,
+        onBackCompleted = { state.goBack() },
+    )
+
+    KmpWebViewScreen(
+        state = state,
+        config = WebViewConfig(
+            titleOverride = title.takeIf { it.isNotBlank() },
+            // 纯内容浏览场景，关闭文件选择与音视频采集能力
+            allowFileChooser = false,
+            allowCameraCapture = false,
+            allowMediaCapture = false,
+        ),
+        onCloseRequest = onBack,
+    )
 }

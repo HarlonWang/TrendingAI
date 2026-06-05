@@ -63,6 +63,8 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
             implementation(libs.material.kolor)
+            implementation(libs.kmp.webview)
+            implementation(libs.jetbrains.navigationevent.compose)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
