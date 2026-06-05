@@ -17,8 +17,8 @@
     <string name="language_option_english">English</string>
     <string name="open_system_settings">Open system settings</string>
     <string name="summary_language">Summary Language</string>
-    <string name="summary_language_desc">GitHub in Chinese &amp; English, others Chinese only · Tap to learn more</string>
-    <string name="summary_language_message">GitHub summaries are available in both Chinese and English. Hacker News and Product Hunt are Chinese only for now.\n\nTrending AI started out helping Chinese developers keep up with global tech trends, so the other sources aren\'t localized yet. If you\'d like them in your language, let us know — we\'ll gauge how many people want it and decide.</string>
+    <string name="summary_language_desc">All sources in Chinese &amp; English, Picks Chinese only · Tap to learn more</string>
+    <string name="summary_language_message">Summary language follows the app language setting above: AI summaries for GitHub, Hacker News and Product Hunt are available in both Chinese and English, and refresh automatically when you switch languages.\n\nThe Picks page (daily picks &amp; deep dives) is Chinese only for now. If you\'d like Picks in English, let us know — we\'ll gauge demand and decide.</string>
     <string name="summary_language_feedback">Send Feedback</string>
     <string name="close">Close</string>
     <string name="datasource_settings">Data Source</string>
