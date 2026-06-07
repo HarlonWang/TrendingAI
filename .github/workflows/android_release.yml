@@ -41,6 +41,80 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release.jks
           echo "ANDROID_KEYSTORE_PATH=$(pwd)/release.jks" >> $GITHUB_ENV
 
+      # 构建前生成面向用户的双语 changelog，覆盖仓库里的占位文件后随 APK 打包，
+      # App 升级后首启据此弹「新版本更新说明」。生成失败不阻塞发布（保留占位文件 = 该版本不弹窗）。
+      - name: Generate What's New Changelog
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          # 获取 commit 记录（同时供后面 Release Notes 步骤复用）
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | grep -v "${{ github.ref_name }}" | head -n 1)
+          if [ -n "$PREVIOUS_TAG" ]; then
+            COMMIT_LOGS=$(git log "$PREVIOUS_TAG"..HEAD --no-merges --oneline)
+          else
+            COMMIT_LOGS=$(git log --no-merges --oneline -n 20)
+          fi
+          echo "$COMMIT_LOGS" > commit_logs.txt
+
+          python3 - <<'EOF'
+          import os
+          import json
+          import urllib.request
+
+          version = os.environ.get("VERSION_NAME", "")
+          target = "shared/src/commonMain/composeResources/files/whatsnew.json"
+
+          with open("commit_logs.txt", "r") as f:
+              commits = f.read().strip()
+
+          api_key = os.environ.get("OPENAI_API_KEY", "")
+          if not commits or not api_key or not version:
+              print("⚠️ Missing commits / OPENAI_API_KEY / VERSION_NAME, keep placeholder whatsnew.json")
+              exit(0)
+
+          prompt = (
+              "请根据以下 git commit 记录，为移动 App 生成面向普通用户的版本更新说明。\n"
+              "要求：\n"
+              "1. 过滤纯内部改动（构建、CI、重构、测试、文档），只保留用户可感知的新功能、优化和修复。\n"
+              "2. 每条一句话，简洁明了，不要堆砌技术术语；中文 3-6 条，英文为对应翻译。\n"
+              "3. 严格输出 JSON 对象：{\"zh\": [\"...\"], \"en\": [\"...\"]}，不要输出任何其他内容。\n\n"
+              f"Commits:\n{commits}"
+          )
+
+          data = {
+              "model": "gpt-5.4",
+              "messages": [{"role": "user", "content": prompt}],
+              "response_format": {"type": "json_object"},
+              "temperature": 0.7
+          }
+
+          req = urllib.request.Request(
+              "https://api.openai.com/v1/chat/completions",
+              data=json.dumps(data).encode("utf-8"),
+              headers={
+                  "Content-Type": "application/json",
+                  "Authorization": f"Bearer {api_key}"
+              }
+          )
+
+          try:
+              print("Calling ChatGPT API for whatsnew.json (model: gpt-5.4)...")
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  res_data = json.loads(response.read().decode("utf-8"))
+                  content = json.loads(res_data["choices"][0]["message"]["content"])
+                  zh = [x.strip() for x in content.get("zh", []) if isinstance(x, str) and x.strip()]
+                  en = [x.strip() for x in content.get("en", []) if isinstance(x, str) and x.strip()]
+                  if not zh and not en:
+                      print("⚠️ Empty changelog from model, keep placeholder")
+                      exit(0)
+                  # version 以 CI 环境变量为准，不信任模型输出
+                  with open(target, "w") as f:
+                      json.dump({"version": version, "zh": zh, "en": en}, f, ensure_ascii=False, indent=2)
+                  print(f"✅ whatsnew.json generated: zh={len(zh)} en={len(en)}")
+          except Exception as e:
+              print(f"⚠️ whatsnew.json generation failed, keep placeholder: {e}")
+          EOF
+
       - name: Build Release APK & AAB
         run: |
           ./gradlew :androidApp:assembleApkRelease :androidApp:bundlePlayRelease
@@ -49,75 +123,52 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+      # 复用上面生成的 whatsnew.json 拼装 Release Notes，保证 GitHub Release 与 App 内
+      # 更新说明内容一致；生成失败时退回原始 commit 记录。
       - name: Generate Release Notes
         run: |
-          # 获取 commit 记录
-          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | grep -v "${{ github.ref_name }}" | head -n 1)
-          if [ -n "$PREVIOUS_TAG" ]; then
-            COMMIT_LOGS=$(git log "$PREVIOUS_TAG"..HEAD --no-merges --oneline)
-          else
-            COMMIT_LOGS=$(git log --no-merges --oneline -n 20)
-          fi
-          
-          # 修复变量传递问题：直接将变量内容存入临时文件，供 Python 读取
-          echo "$COMMIT_LOGS" > commit_logs.txt
-          
           python3 - <<'EOF'
-          import os
           import json
-          import urllib.request
-          
-          # 从临时文件读取 commit 记录
+          import os
+
+          version = os.environ.get("VERSION_NAME", "")
+
+          commits = ""
           if os.path.exists("commit_logs.txt"):
               with open("commit_logs.txt", "r") as f:
                   commits = f.read().strip()
-          else:
-              commits = ""
-              
-          api_key = os.environ.get("OPENAI_API_KEY", "")
-          api_url = "https://api.openai.com/v1/chat/completions"
-          
-          fallback_text = "### 变更记录 (Changelog)\n\n" + commits
-          
-          if not commits:
-              with open("release_summary.md", "w") as f:
-                  f.write("* No specific changes.\n\n")
-              exit(0)
-              
-          if not api_key:
-              print("⚠️ OPENAI_API_KEY not found. Using fallback.")
-              with open("release_summary.md", "w") as f:
-                  f.write(fallback_text + "\n\n")
-              exit(0)
-              
-          prompt = f"请根据以下 git commit 记录，生成一份面向用户的 Release Notes。\n要求：\n1. 忽略琐碎的构建或内部调整，总结出核心的新特性、优化和修复。\n2. 同时提供清晰的中文和英文版本（中文在上，英文在下）。\n3. 使用 Markdown 列表格式，不要输出过于啰碎的技术术语。\n\nCommits:\n{commits}"
-          
-          data = {
-              "model": "gpt-5.4",
-              "messages": [{"role": "user", "content": prompt}],
-              "temperature": 0.7
-          }
-          
-          req = urllib.request.Request(api_url, data=json.dumps(data).encode("utf-8"), headers={
-              "Content-Type": "application/json",
-              "Authorization": f"Bearer {api_key}"
-          })
-          
+
+          whatsnew = {}
           try:
-              print("Calling ChatGPT API (model: gpt-5.4)...")
-              with urllib.request.urlopen(req, timeout=30) as response:
-                  res_data = json.loads(response.read().decode("utf-8"))
-                  summary = res_data["choices"][0]["message"]["content"]
-                  with open("release_summary.md", "w") as f:
-                      f.write(summary + "\n\n")
-                  print("✅ ChatGPT generated release notes successfully.")
+              with open("shared/src/commonMain/composeResources/files/whatsnew.json", "r") as f:
+                  whatsnew = json.load(f)
           except Exception as e:
-              print(f"⚠️ ChatGPT API call failed: {e}")
-              with open("release_summary.md", "w") as f:
-                  f.write(fallback_text + "\n\n")
+              print(f"⚠️ Failed to read whatsnew.json: {e}")
+
+          lines = []
+          if whatsnew.get("version") == version and (whatsnew.get("zh") or whatsnew.get("en")):
+              if whatsnew.get("zh"):
+                  lines.append("### ✨ 更新内容")
+                  lines += [f"- {x}" for x in whatsnew["zh"]]
+                  lines.append("")
+              if whatsnew.get("en"):
+                  lines.append("### ✨ What's New")
+                  lines += [f"- {x}" for x in whatsnew["en"]]
+                  lines.append("")
+              print("✅ Release notes assembled from whatsnew.json")
+          elif commits:
+              lines.append("### 变更记录 (Changelog)")
+              lines.append("")
+              lines.append(commits)
+              lines.append("")
+              print("⚠️ whatsnew.json unavailable, fallback to raw commit logs")
+          else:
+              lines.append("* No specific changes.")
+              lines.append("")
+
+          with open("release_summary.md", "w") as f:
+              f.write("\n".join(lines) + "\n")
           EOF
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Prepare APK Diff
         id: diffuse

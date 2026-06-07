@@ -33,6 +33,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val SEED_COLOR_KEY = "prefs_seed_color"
     private val LANGUAGE_KEY = "prefs_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
+    private val LAST_SEEN_WHATSNEW_KEY = "prefs_last_seen_whatsnew_version"
     private val FAVORITES_KEY = "prefs_favorites"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
@@ -86,6 +87,13 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setLastUpdateCheckTime(time: Long) =
         settings.putLong(LAST_UPDATE_CHECK_KEY, time)
+
+    /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */
+    fun getLastSeenWhatsNewVersion(): String? =
+        settings.getStringOrNull(LAST_SEEN_WHATSNEW_KEY)
+
+    fun setLastSeenWhatsNewVersion(version: String) =
+        settings.putString(LAST_SEEN_WHATSNEW_KEY, version)
 
     val favorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_KEY)
         .map { json ->
