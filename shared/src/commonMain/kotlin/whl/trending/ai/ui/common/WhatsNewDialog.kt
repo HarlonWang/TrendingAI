@@ -35,9 +35,9 @@ import whl.trending.ai.update.shouldShowWhatsNew
 @Composable
 fun WhatsNewHost() {
     var info by remember { mutableStateOf<WhatsNewInfo?>(null) }
+    val current = remember { getAppVersion() }
 
     LaunchedEffect(Unit) {
-        val current = getAppVersion()
         val lastSeen = globalSettingsManager.getLastSeenWhatsNewVersion()
         if (lastSeen == null) {
             // 首次安装：静默记录当前版本，不弹
@@ -71,7 +71,7 @@ fun WhatsNewHost() {
             version = whatsNew.version,
             items = items,
             onDismiss = {
-                globalSettingsManager.setLastSeenWhatsNewVersion(getAppVersion())
+                globalSettingsManager.setLastSeenWhatsNewVersion(current)
                 info = null
             },
         )

@@ -11,6 +11,9 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    env:
+      # App 内置更新说明文件，同时被「Generate What's New Changelog」和「Generate Release Notes」引用
+      WHATSNEW_PATH: shared/src/commonMain/composeResources/files/whatsnew.json
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,7 +65,7 @@ jobs:
           import urllib.request
 
           version = os.environ.get("VERSION_NAME", "")
-          target = "shared/src/commonMain/composeResources/files/whatsnew.json"
+          target = os.environ["WHATSNEW_PATH"]
 
           with open("commit_logs.txt", "r") as f:
               commits = f.read().strip()
@@ -140,7 +143,7 @@ jobs:
 
           whatsnew = {}
           try:
-              with open("shared/src/commonMain/composeResources/files/whatsnew.json", "r") as f:
+              with open(os.environ["WHATSNEW_PATH"], "r") as f:
                   whatsnew = json.load(f)
           except Exception as e:
               print(f"⚠️ Failed to read whatsnew.json: {e}")
