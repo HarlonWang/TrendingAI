@@ -19,4 +19,5 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 *.jks
-.superpowers/.claude/
+.superpowers/
+.claude/
