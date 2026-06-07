@@ -12,8 +12,8 @@ class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
         return api.fetchFeed(source, summaryLang)
     }
 
-    suspend fun getPicks(): PicksResponse {
-        return api.fetchPicks()
+    suspend fun getPicks(summaryLang: String = "zh"): PicksResponse {
+        return api.fetchPicks(summaryLang)
     }
 
     suspend fun getReadme(owner: String, repo: String): ReadmeResponse {

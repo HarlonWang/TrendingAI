@@ -17,8 +17,8 @@
     <string name="language_option_english">英文</string>
     <string name="open_system_settings">前往系统设置</string>
     <string name="summary_language">摘要语言</string>
-    <string name="summary_language_desc">三源摘要支持中英文，Picks 暂仅中文 · 点击了解</string>
-    <string name="summary_language_message">摘要语言跟随上方的语言设置：GitHub、Hacker News 和 Product Hunt 的 AI 摘要均支持中文和英文，切换语言后自动刷新。\n\nPicks 页的每日精选与深度解读暂时只有中文。如果你希望 Picks 也支持英文，欢迎反馈告诉我们，我们会根据需求情况评估。</string>
+    <string name="summary_language_desc">AI 摘要支持中英文 · 点击了解</string>
+    <string name="summary_language_message">摘要语言跟随应用语言设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换语言后自动刷新。\n\n希望支持你的语言？欢迎反馈告诉我们，我们会根据需求情况评估。</string>
     <string name="summary_language_feedback">去反馈</string>
     <string name="close">关闭</string>
     <string name="datasource_settings">数据源设置</string>
