@@ -20,3 +20,4 @@ captures
 node_modules/
 *.jks
 .superpowers/
+.claude/

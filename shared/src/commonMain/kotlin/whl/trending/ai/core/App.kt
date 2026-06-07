@@ -18,6 +18,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
+import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
 data object Settings
@@ -44,6 +45,7 @@ fun App() {
     val backStack = remember { mutableStateListOf<Any>(Home) }
 
     TrendingTheme {
+        WhatsNewHost()
         NavDisplay(
             backStack = backStack,
             onBack = { backStack.safePop() },

@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.update.UpdateChecker
+import whl.trending.ai.update.isWhatsNewPending
 
 class UpdateViewModel : ViewModel(), UpdateChecker {
 
@@ -34,6 +35,8 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
     }
 
     private fun autoCheck() {
+        // 升级后首启会弹 What's New，本次启动跳过自动检查，避免双弹窗叠加（下次启动恢复）
+        if (isWhatsNewPending()) return
         val lastCheck = globalSettingsManager.getLastUpdateCheckTime()
         if (System.currentTimeMillis() - lastCheck < CHECK_INTERVAL_MS) return
         doCheck()

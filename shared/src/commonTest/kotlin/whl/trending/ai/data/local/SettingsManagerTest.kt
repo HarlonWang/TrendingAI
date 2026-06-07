@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -52,6 +53,13 @@ class SettingsManagerTest {
     fun setSeedColor_updates_flow() = runTest {
         manager.setSeedColor(0xFF1976D2L)
         assertEquals(0xFF1976D2L, manager.seedColor.first())
+    }
+
+    @Test
+    fun lastSeenWhatsNewVersion_defaults_to_null_and_persists() {
+        assertNull(manager.getLastSeenWhatsNewVersion())
+        manager.setLastSeenWhatsNewVersion("0.9.0")
+        assertEquals("0.9.0", manager.getLastSeenWhatsNewVersion())
     }
 
     @Test

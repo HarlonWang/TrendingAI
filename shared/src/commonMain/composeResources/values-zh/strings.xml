@@ -115,4 +115,6 @@
     <string name="theme_color_blue">蓝</string>
     <string name="theme_color_indigo">靛蓝</string>
     <string name="theme_color_pink">粉</string>
+    <string name="whats_new_title">🎉 新版本 %1$s</string>
+    <string name="whats_new_got_it">知道了</string>
 </resources>

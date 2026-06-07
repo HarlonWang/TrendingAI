@@ -115,4 +115,6 @@
     <string name="theme_color_blue">Blue</string>
     <string name="theme_color_indigo">Indigo</string>
     <string name="theme_color_pink">Pink</string>
+    <string name="whats_new_title">🎉 What&apos;s New in %1$s</string>
+    <string name="whats_new_got_it">Got it</string>
 </resources>
