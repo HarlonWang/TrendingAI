@@ -77,8 +77,10 @@ open class TrendingApi {
         return response.body<FeedResponse>()
     }
 
-    open suspend fun fetchPicks(): PicksResponse {
-        val response = client.get("$baseHost/api/picks")
+    open suspend fun fetchPicks(summaryLang: String = "zh"): PicksResponse {
+        val response = client.get("$baseHost/api/picks") {
+            parameter("summary_lang", summaryLang)
+        }
         return response.body<PicksResponse>()
     }
 
