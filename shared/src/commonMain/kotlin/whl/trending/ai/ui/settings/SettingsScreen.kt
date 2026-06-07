@@ -114,6 +114,7 @@ import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscribe_desc
 import trendingai.shared.generated.resources.summary_language
 import trendingai.shared.generated.resources.summary_language_desc
+import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.version
 import trendingai.shared.generated.resources.version_up_to_date
@@ -143,6 +144,15 @@ fun SettingsScreen(
             title = { Text(stringResource(Res.string.summary_language)) },
             text = { Text(stringResource(Res.string.summary_language_message)) },
             confirmButton = {
+                TextButton(onClick = {
+                    showSummaryLanguageDialog = false
+                    trackEvent("settings_summary_language_feedback")
+                    onNavigateToFeedback()
+                }) {
+                    Text(stringResource(Res.string.summary_language_feedback))
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = { showSummaryLanguageDialog = false }) {
                     Text(stringResource(Res.string.close))
                 }
