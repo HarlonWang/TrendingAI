@@ -41,8 +41,11 @@ import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
+import whl.trending.ai.core.platform.shareText
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.common.AiSummaryBox
-import whl.trending.ai.ui.common.FavoriteActionMenu
+import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.common.aiShareText
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.fillMaxWidth
 import kotlin.time.Clock
@@ -202,9 +205,21 @@ private fun FeedItemCard(
                 Box(modifier = Modifier.weight(1f)) {
                     FeedItemMetadata(item = item)
                 }
-                FavoriteActionMenu(
+                val shareContent = aiShareText(item.title, item.summary, item.url)
+                ItemActionMenu(
                     isFavorite = isFavorite,
-                    onToggle = onToggleFavorite
+                    onToggle = onToggleFavorite,
+                    onShare = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf(
+                                "source" to item.source,
+                                "has_summary" to !item.summary.isNullOrBlank(),
+                                "from" to "list"
+                            )
+                        )
+                    }
                 )
             }
         }

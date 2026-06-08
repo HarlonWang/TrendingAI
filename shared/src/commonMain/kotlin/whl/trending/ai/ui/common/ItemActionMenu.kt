@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -23,11 +24,13 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_favorite
 import trendingai.shared.generated.resources.action_unfavorite
+import trendingai.shared.generated.resources.share_to_ai
 
 @Composable
-fun FavoriteActionMenu(
+fun ItemActionMenu(
     isFavorite: Boolean,
     onToggle: () -> Unit,
+    onShare: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -64,6 +67,16 @@ fun FavoriteActionMenu(
                 onClick = {
                     expanded = false
                     onToggle()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.share_to_ai)) },
+                leadingIcon = {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                },
+                onClick = {
+                    expanded = false
+                    onShare()
                 }
             )
         }

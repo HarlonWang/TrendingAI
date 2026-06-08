@@ -12,6 +12,9 @@ expect fun openAppSettings()
 
 expect fun openUrl(url: String, targetPackage: String? = null)
 
+/** 调起系统分享面板，把纯文本交给用户选择的目标 App（AI App / 笔记 / IM 等）。 */
+expect fun shareText(text: String)
+
 expect fun getAppVersion(): String
 
 expect fun isIosPlatform(): Boolean

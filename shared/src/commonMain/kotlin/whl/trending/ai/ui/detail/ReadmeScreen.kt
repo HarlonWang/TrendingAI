@@ -4,6 +4,8 @@ import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.openUrl
+import whl.trending.ai.core.platform.shareText
+import whl.trending.ai.core.platform.trackEvent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -31,6 +34,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +47,9 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
+import trendingai.shared.generated.resources.share_to_ai
 import trendingai.shared.generated.resources.view_on_github
+import whl.trending.ai.ui.common.aiShareText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -67,6 +73,8 @@ fun ReadmeScreen(
         muted  = colorScheme.onSurfaceVariant.toHex(),
     )
     val repoUrl = "https://github.com/$owner/$repo"
+    // README 摘录涉及多次正则替换，缓存结果避免每次重组重算（分享栏与 FAB 共用）
+    val summary = remember(uiState.html) { readmeExcerpt(uiState.html) }
 
     Scaffold(
         topBar = {
@@ -87,6 +95,23 @@ fun ReadmeScreen(
                     }
                 },
                 actions = {
+                    val shareContent = aiShareText("$owner/$repo", summary, repoUrl)
+                    IconButton(onClick = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf(
+                                "source" to "github",
+                                "has_summary" to !summary.isNullOrBlank(),
+                                "from" to "detail"
+                            )
+                        )
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(Res.string.share_to_ai)
+                        )
+                    }
                     IconButton(onClick = { openUrl(repoUrl, Constants.GITHUB_APP_PACKAGE) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
@@ -108,7 +133,7 @@ fun ReadmeScreen(
                                 title = "$owner/$repo",
                                 // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；
                                 // README 未加载完则为 null，退化为仅 title + url
-                                summary = readmeExcerpt(uiState.html),
+                                summary = summary,
                                 sourceUrl = repoUrl
                             )
                         )
