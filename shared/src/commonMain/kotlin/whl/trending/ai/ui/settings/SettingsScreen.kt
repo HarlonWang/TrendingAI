@@ -356,7 +356,7 @@ fun SettingsScreen(
                     supportingContent = { Text(stringResource(Res.string.summary_language_desc)) },
                     leadingContent = { Icon(Icons.Default.Translate, null) },
                     modifier = Modifier.clickable {
-                        trackEvent("settings_summary_language")
+                        trackEvent("settings_summary_language", mapOf("app_language" to appLanguage.name.lowercase()))
                         showSummaryLanguageDialog = true
                     }
                 )
