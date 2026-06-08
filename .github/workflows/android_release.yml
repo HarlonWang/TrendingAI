@@ -34,9 +34,8 @@ jobs:
 
       - name: Prepare Version Info
         run: |
-          # 直接使用 tag 名称 (例如 1.0.0)
+          # 仅传 tag 名；versionCode 由 build.gradle.kts 从 tag 推导（apk/play/fdroid 三渠道统一）
           echo "VERSION_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
-          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
 
       - name: Decode Keystore
         run: |
