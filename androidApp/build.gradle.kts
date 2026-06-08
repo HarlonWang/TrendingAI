@@ -132,8 +132,11 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
-            val releaseConfig = signingConfigs.getByName("release")
-            signingConfig = if (releaseConfig.storeFile?.exists() == true) {
+            // 用 findByName 而非 getByName：F-Droid 构建会剥离 signingConfigs 的 release 定义，
+            // 此时 findByName 返回 null（getByName 会抛 "SigningConfig 'release' not found" 致构建失败），
+            // 回落到 debug 占位签名（F-Droid 之后用自己的 key 重签）；CI / 本地有 release 配置时正常用它签名。
+            val releaseConfig = signingConfigs.findByName("release")
+            signingConfig = if (releaseConfig?.storeFile?.exists() == true) {
                 releaseConfig
             } else {
                 signingConfigs.getByName("debug")
