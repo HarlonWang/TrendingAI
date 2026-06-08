@@ -31,7 +31,13 @@ expect fun getUserAgent(): String
  * 留存/回访改以 install_id 为口径（安装日 = 该 install_id 首次出现的日期）。
  */
 fun trackEvent(name: String, props: Map<String, Any> = emptyMap()) {
-    platformTrackEvent(name, props + ("install_id" to globalSettingsManager.getOrCreateInstallId()))
+    platformTrackEvent(
+        name,
+        props + mapOf(
+            "install_id" to globalSettingsManager.getOrCreateInstallId(),
+            "channel" to ChannelHolder.get()
+        )
+    )
 }
 
 /** 平台真正的事件上报实现（Android 接 Aptabase，iOS 暂为空）。 */

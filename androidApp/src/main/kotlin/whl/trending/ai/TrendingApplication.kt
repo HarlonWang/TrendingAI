@@ -5,6 +5,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.aptabase.Aptabase
+import whl.trending.ai.core.platform.ChannelHolder
 import whl.trending.ai.core.platform.trackEvent
 
 class TrendingApplication : Application(), DefaultLifecycleObserver {
@@ -12,10 +13,13 @@ class TrendingApplication : Application(), DefaultLifecycleObserver {
 
     override fun onCreate() {
         super<Application>.onCreate()
+        // 写入分发渠道（须在任何 trackEvent / 网络请求之前），供 shared 埋点与 UA 统一打标
+        ChannelHolder.set(BuildConfig.CHANNEL)
+
         // Initialize Aptabase with the provided App Key
         Aptabase.instance.initialize(this, "A-US-1808698868")
-        
-        // Track app launch（经 shared trackEvent 统一注入 install_id）
+
+        // Track app launch（经 shared trackEvent 统一注入 install_id + channel）
         trackEvent("app_started")
 
         // Register lifecycle observer

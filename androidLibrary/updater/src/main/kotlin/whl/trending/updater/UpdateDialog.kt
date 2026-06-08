@@ -10,7 +10,7 @@ import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.openUrl
 
 @Composable
-fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
+fun UpdateDialog(updateInfo: UpdateInfo, downloadUrl: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -21,7 +21,7 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = {
-                openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                openUrl(downloadUrl)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.update_dialog_download))
