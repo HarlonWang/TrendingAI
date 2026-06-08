@@ -4,6 +4,8 @@ import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.openUrl
+import whl.trending.ai.core.platform.shareText
+import whl.trending.ai.core.platform.trackEvent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -43,6 +46,9 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
+import trendingai.shared.generated.resources.share_ai_text_brief
+import trendingai.shared.generated.resources.share_ai_text_full
+import trendingai.shared.generated.resources.share_to_ai
 import trendingai.shared.generated.resources.view_on_github
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -87,6 +93,23 @@ fun ReadmeScreen(
                     }
                 },
                 actions = {
+                    val summary = readmeExcerpt(uiState.html)
+                    val shareContent = if (summary.isNullOrBlank())
+                        stringResource(Res.string.share_ai_text_brief, "$owner/$repo", repoUrl)
+                    else
+                        stringResource(Res.string.share_ai_text_full, "$owner/$repo", summary, repoUrl)
+                    IconButton(onClick = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf("source" to "github", "has_summary" to !summary.isNullOrBlank())
+                        )
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(Res.string.share_to_ai)
+                        )
+                    }
                     IconButton(onClick = { openUrl(repoUrl, Constants.GITHUB_APP_PACKAGE) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,

@@ -2,6 +2,7 @@ package whl.trending.ai.core.platform
 
 import platform.UIKit.UIDevice
 import platform.UIKit.UIApplication
+import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.Foundation.NSURL
 import platform.Foundation.NSBundle
@@ -35,6 +36,17 @@ actual fun openUrl(url: String, targetPackage: String?) {
             completionHandler = { _ -> }
         )
     }
+}
+
+actual fun shareText(text: String) {
+    // 最小实现：iPhone 走全屏分享 sheet。
+    // TODO(iOS 真机验证): iPad 需为 popoverPresentationController 设置 sourceView/sourceRect 锚点，否则 present 会崩溃。
+    val rootVc = UIApplication.sharedApplication.keyWindow?.rootViewController ?: return
+    val activityVc = UIActivityViewController(
+        activityItems = listOf(text),
+        applicationActivities = null
+    )
+    rootVc.presentViewController(activityVc, animated = true, completion = null)
 }
 
 actual fun getAppVersion(): String {

@@ -52,6 +52,18 @@ actual fun openUrl(url: String, targetPackage: String?) {
     }
 }
 
+actual fun shareText(text: String) {
+    val context = AndroidContextHolder.get() ?: return
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    val chooser = Intent.createChooser(sendIntent, null).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(chooser)
+}
+
 actual fun getAppVersion(): String {
     val context = AndroidContextHolder.get() ?: return "1.0.0"
     return try {
