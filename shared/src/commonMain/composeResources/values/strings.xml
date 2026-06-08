@@ -18,7 +18,7 @@
     <string name="open_system_settings">Open system settings</string>
     <string name="summary_language">Summary Language</string>
     <string name="summary_language_desc">AI summaries in Chinese &amp; English · Tap to learn more</string>
-    <string name="summary_language_message">Summary language follows the app language setting: AI summaries for GitHub, Hacker News and Product Hunt, as well as Picks deep dives, are available in both Chinese and English, and refresh automatically when you switch languages.\n\nWant your language supported? Send us feedback — we\'ll consider it based on demand.</string>
+    <string name="summary_language_message">Summary language follows the app language setting: AI summaries for GitHub, Hacker News and Product Hunt, as well as Picks deep dives, are available in both Chinese and English, and refresh automatically when you switch languages.\n\nWant your language supported? Send us feedback — we&apos;ll consider it based on demand.</string>
     <string name="summary_language_feedback">Send Feedback</string>
     <string name="close">Close</string>
     <string name="datasource_settings">Data Source</string>
