@@ -86,5 +86,6 @@ actual fun getUserAgent(): String {
     val appVersion = getAppVersion()
     val osVersion = Build.VERSION.RELEASE
     val model = Build.MODEL
-    return "TrendingAI/$appVersion (Android $osVersion; $model)"
+    val channel = ChannelHolder.get()
+    return "TrendingAI/$appVersion (Android $osVersion; $model; channel=$channel)"
 }

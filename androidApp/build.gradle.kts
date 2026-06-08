@@ -91,19 +91,34 @@ android {
         }
     }
 
-    // apk:    独立分发（GitHub Release + R2），包含自建 updater
+    // 渠道埋点：每个 flavor 注入 BuildConfig.CHANNEL，Application 启动时写入 ChannelHolder，
+    // 供 shared 的埋点（trackEvent）与请求 UA（getUserAgent）统一打标。
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // github: GitHub Release 分发，含自建 updater，更新弹窗跳 GitHub Release（保持 channel 稳定）
+    // r2:     官网/R2 分发，含自建 updater，更新弹窗跳官网（保持 channel 稳定）
     // play:   Google Play 渠道，不含 updater（Play 自管更新）
     // fdroid: F-Droid 渠道，不含 updater（F-Droid 客户端统一管理更新）
+    // 四渠道仅 CHANNEL 不同，applicationId / versionCode / versionName / 签名完全一致，可互相覆盖升级。
     flavorDimensions += "distribution"
     productFlavors {
-        create("apk") {
+        create("github") {
             dimension = "distribution"
+            buildConfigField("String", "CHANNEL", "\"github\"")
+        }
+        create("r2") {
+            dimension = "distribution"
+            buildConfigField("String", "CHANNEL", "\"r2\"")
         }
         create("play") {
             dimension = "distribution"
+            buildConfigField("String", "CHANNEL", "\"play\"")
         }
         create("fdroid") {
             dimension = "distribution"
+            buildConfigField("String", "CHANNEL", "\"fdroid\"")
         }
     }
 
@@ -138,7 +153,9 @@ android {
 }
 
 dependencies {
-    "apkImplementation"(project(":androidLibrary:updater"))
+    // updater 仅 github / r2 两个独立分发渠道需要（play/fdroid 由各自商店管更新）
+    "githubImplementation"(project(":androidLibrary:updater"))
+    "r2Implementation"(project(":androidLibrary:updater"))
     implementation(project(":androidLibrary:chat"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
