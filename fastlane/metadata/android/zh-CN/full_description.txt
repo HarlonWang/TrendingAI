@@ -1,0 +1,15 @@
+全球技术热点，AI 精选速递。
+
+Trending AI 聚合 GitHub Trending、Hacker News、Product Hunt 三大技术信息源，通过 AI 智能摘要和每日精选，帮你在喧嚣中高效发现全网最值得关注的技术项目。
+
+核心功能
+
+- 多源聚合 —— GitHub Trending、Hacker News、Product Hunt 一站浏览。
+- AI 智能摘要 —— 每个项目自动生成 AI 分析，快速了解核心价值。
+- 每日精选 —— AI 从全网筛选每天最值得关注的技术项目。
+- 历史回溯 —— 查看任意日期的趋势榜单，不错过每一天。
+- 中英双语 —— 跟随应用语言设置，完整支持简体中文与英文。
+- 分享到 AI —— 一键把资讯发送到你常用的 AI App 深入解读。
+- Material 3 设计，支持浅色与深色主题。
+
+基于 Kotlin Multiplatform 与 Compose Multiplatform 构建。源码见 GitHub：HarlonWang/TrendingAI。

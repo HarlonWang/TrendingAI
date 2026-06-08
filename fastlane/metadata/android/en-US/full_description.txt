@@ -1,0 +1,15 @@
+Global tech trends, fast-picked by AI.
+
+Trending AI aggregates three major tech sources — GitHub Trending, Hacker News, and Product Hunt — into one place, with AI-powered summaries and daily picks so you can discover the most noteworthy projects across the web without the noise.
+
+FEATURES
+
+- Multi-source aggregation — browse GitHub Trending, Hacker News, and Product Hunt in a single app.
+- AI summaries — every project gets an automatic AI analysis so you grasp its core value at a glance.
+- Daily Picks — AI curates the most noteworthy tech projects from across the web, every day.
+- Historical records — jump to the trending list of any date and never miss a day.
+- Bilingual — full English and Simplified Chinese, following your app language setting.
+- Share to AI — send any item straight to your favorite AI app for deeper reading.
+- Material 3 design with light and dark themes.
+
+Built with Kotlin Multiplatform and Compose Multiplatform. Source on GitHub at HarlonWang/TrendingAI.
