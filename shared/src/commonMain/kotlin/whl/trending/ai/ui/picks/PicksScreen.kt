@@ -58,8 +58,11 @@ import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
+import whl.trending.ai.core.platform.shareText
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.PickItem
-import whl.trending.ai.ui.common.FavoriteActionMenu
+import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.common.aiShareText
 import androidx.compose.runtime.remember
 import kotlin.time.Clock
 
@@ -319,9 +322,21 @@ private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: 
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                FavoriteActionMenu(
+                val shareContent = aiShareText(item.title, item.summary, item.url)
+                ItemActionMenu(
                     isFavorite = isFavorite,
-                    onToggle = onToggleFavorite
+                    onToggle = onToggleFavorite,
+                    onShare = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf(
+                                "source" to item.source,
+                                "has_summary" to !item.summary.isNullOrBlank(),
+                                "from" to "list"
+                            )
+                        )
+                    }
                 )
             }
         }
@@ -373,9 +388,21 @@ private fun ControversyGroup(items: List<PickItem>, favoriteUrls: Set<String>, o
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    FavoriteActionMenu(
+                    val shareContent = aiShareText(item.title, item.summary, item.url)
+                    ItemActionMenu(
                         isFavorite = item.url in favoriteUrls,
-                        onToggle = { togglePickFavorite(item, favoriteUrls) }
+                        onToggle = { togglePickFavorite(item, favoriteUrls) },
+                        onShare = {
+                            shareText(shareContent)
+                            trackEvent(
+                                "share_to_ai",
+                                mapOf(
+                                    "source" to item.source,
+                                    "has_summary" to !item.summary.isNullOrBlank(),
+                                    "from" to "list"
+                                )
+                            )
+                        }
                     )
                 }
             }
@@ -445,9 +472,21 @@ private fun SpeedReadItem(item: PickItem, isFavorite: Boolean, onToggleFavorite:
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                FavoriteActionMenu(
+                val shareContent = aiShareText(item.title, item.summary, item.url)
+                ItemActionMenu(
                     isFavorite = isFavorite,
-                    onToggle = onToggleFavorite
+                    onToggle = onToggleFavorite,
+                    onShare = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf(
+                                "source" to item.source,
+                                "has_summary" to !item.summary.isNullOrBlank(),
+                                "from" to "list"
+                            )
+                        )
+                    }
                 )
             }
         }

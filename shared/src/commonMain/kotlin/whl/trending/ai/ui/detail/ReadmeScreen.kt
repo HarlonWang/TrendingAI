@@ -34,6 +34,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,10 +47,9 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
-import trendingai.shared.generated.resources.share_ai_text_brief
-import trendingai.shared.generated.resources.share_ai_text_full
 import trendingai.shared.generated.resources.share_to_ai
 import trendingai.shared.generated.resources.view_on_github
+import whl.trending.ai.ui.common.aiShareText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -73,6 +73,8 @@ fun ReadmeScreen(
         muted  = colorScheme.onSurfaceVariant.toHex(),
     )
     val repoUrl = "https://github.com/$owner/$repo"
+    // README 摘录涉及多次正则替换，缓存结果避免每次重组重算（分享栏与 FAB 共用）
+    val summary = remember(uiState.html) { readmeExcerpt(uiState.html) }
 
     Scaffold(
         topBar = {
@@ -93,16 +95,16 @@ fun ReadmeScreen(
                     }
                 },
                 actions = {
-                    val summary = readmeExcerpt(uiState.html)
-                    val shareContent = if (summary.isNullOrBlank())
-                        stringResource(Res.string.share_ai_text_brief, "$owner/$repo", repoUrl)
-                    else
-                        stringResource(Res.string.share_ai_text_full, "$owner/$repo", summary, repoUrl)
+                    val shareContent = aiShareText("$owner/$repo", summary, repoUrl)
                     IconButton(onClick = {
                         shareText(shareContent)
                         trackEvent(
                             "share_to_ai",
-                            mapOf("source" to "github", "has_summary" to !summary.isNullOrBlank())
+                            mapOf(
+                                "source" to "github",
+                                "has_summary" to !summary.isNullOrBlank(),
+                                "from" to "detail"
+                            )
                         )
                     }) {
                         Icon(
@@ -131,7 +133,7 @@ fun ReadmeScreen(
                                 title = "$owner/$repo",
                                 // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；
                                 // README 未加载完则为 null，退化为仅 title + url
-                                summary = readmeExcerpt(uiState.html),
+                                summary = summary,
                                 sourceUrl = repoUrl
                             )
                         )

@@ -95,6 +95,7 @@ import trendingai.shared.generated.resources.stars_total
 import trendingai.shared.generated.resources.update_info_content
 import trendingai.shared.generated.resources.update_info_title
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
@@ -102,7 +103,8 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
 import whl.trending.ai.ui.common.AiSummaryBox
-import whl.trending.ai.ui.common.FavoriteActionMenu
+import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.common.aiShareText
 import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -337,9 +339,22 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: 
                 Box(modifier = Modifier.weight(1f)) {
                     RepoMetadata(repo = repo, since = since)
                 }
-                FavoriteActionMenu(
+                val shareSummary = repo.aiSummaries.firstOrNull()?.content
+                val shareContent = aiShareText("${repo.author}/${repo.repoName}", shareSummary, repo.url)
+                ItemActionMenu(
                     isFavorite = isFavorite,
-                    onToggle = onToggleFavorite
+                    onToggle = onToggleFavorite,
+                    onShare = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf(
+                                "source" to "github",
+                                "has_summary" to !shareSummary.isNullOrBlank(),
+                                "from" to "list"
+                            )
+                        )
+                    }
                 )
             }
         }
