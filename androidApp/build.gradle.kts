@@ -127,6 +127,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // F-Droid 的 check apk 不接受 APK 内 AGP 的「Dependency metadata」签名块
+    // （会报 extra signing block）；仅 APK 禁用，AAB 保留供 Google Play Console 依赖洞察
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = true
+    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true

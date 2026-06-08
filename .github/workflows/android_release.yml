@@ -259,8 +259,15 @@ jobs:
             IS_PRERELEASE="--prerelease"
           fi
           
-          # 收集待上传的文件（github 渠道 APK + play 渠道 AAB）
-          FILES=(androidApp/build/outputs/apk/github/release/*.apk)
+          # 生成 version.json 供 F-Droid HTTP UpdateCheck 读取最新版本号（F-Droid 构建仍按 commit hash 锁定）
+          # versionCode 公式与 build.gradle.kts 一致：MAJOR*10000 + MINOR*100 + PATCH；10# 防止前导零被当八进制
+          IFS='.' read -r VMAJ VMIN VPAT <<< "${VERSION_NAME%%-*}"
+          VCODE=$((10#$VMAJ * 10000 + 10#$VMIN * 100 + 10#$VPAT))
+          printf '{"versionName": "%s", "versionCode": %d}\n' "$VERSION_NAME" "$VCODE" > version.json
+          cat version.json
+
+          # 收集待上传的文件（github 渠道 APK + play 渠道 AAB + version.json）
+          FILES=(androidApp/build/outputs/apk/github/release/*.apk version.json)
           for aab in androidApp/build/outputs/bundle/playRelease/*.aab; do
             [ -f "$aab" ] && FILES+=("$aab")
           done
