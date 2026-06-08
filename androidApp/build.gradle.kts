@@ -35,13 +35,16 @@ fun gitDescribe(vararg extra: String): String? =
         null
     }
 
-// 语义化版本 tag「MAJOR.MINOR.PATCH」→ versionCode = MAJOR*10000 + MINOR*100 + PATCH。
+// 语义化版本 tag「MAJOR.MINOR.PATCH[-prerelease]」→ versionCode = MAJOR*10000 + MINOR*100 + PATCH。
 // 每段预留 2 位十进制（MINOR / PATCH 取值 0–99）：0.14.0→1400，0.15.3→1503，1.0.0→10000。
-// 只要版本号按语义化递增，versionCode 即严格单调递增；无法解析时回落 1。
-// 护栏：minor/patch ≥ 100 会进位串到相邻版本，此时直接抛错让构建失败，
-// 而非静默产出与隔壁版本冲突的 versionCode（那在 Play 上是发版灾难）。
+// 用 matchEntire 锚定整串，并允许 -alpha/-beta/-rc 等预发布/构建后缀（与 CI 的 prerelease 发版一致，
+// 预发布与正式版同 versionCode、不同渠道分发）；拒绝 release-1.2.3 / v1.2.3 / foo1.2.3bar 这类畸形 tag，
+// 直接构建失败，避免旧的非锚定 find 从中截取子串、静默产出意外 versionCode。
+// 无 tag（全新 clone / 本地无 CI）回落 1；护栏：minor/patch ≥ 100 抛错，避免进位串到相邻版本。
 fun versionCodeFromTag(tag: String?): Int {
-    val match = tag?.let { Regex("""(\d+)\.(\d+)\.(\d+)""").find(it) } ?: return 1
+    val trimmed = tag?.trim().takeUnless { it.isNullOrEmpty() } ?: return 1
+    val match = Regex("""(\d+)\.(\d+)\.(\d+)(?:[-+].*)?""").matchEntire(trimmed)
+        ?: error("非法版本 tag，必须为 MAJOR.MINOR.PATCH[-后缀]，当前 tag=$tag")
     val (major, minor, patch) = match.destructured
     val mi = minor.toInt()
     val pa = patch.toInt()
@@ -52,7 +55,9 @@ fun versionCodeFromTag(tag: String?): Int {
 }
 
 // tag 名：CI 的 VERSION_NAME 优先，否则从 git 取（--abbrev=0 在 exact tag 上即纯 tag 名）
-val ciVersionName: String? = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() }
+// 用 providers.environmentVariable 而非 System.getenv，与 gitDescribe 的 providers.exec 一致，
+// 让 env 被登记为 configuration cache 输入（env 变化能正确使缓存失效）
+val ciVersionName: String? = providers.environmentVariable("VERSION_NAME").orNull?.takeIf { it.isNotBlank() }
 val appVersionCode: Int = versionCodeFromTag(ciVersionName ?: gitDescribe("--abbrev=0"))
 // versionName：CI / F-Droid 在 tag 上均为纯 tag 名；本地非 tag commit 回落带距离的 git describe
 val appVersionName: String = ciVersionName ?: gitDescribe() ?: "0.1.0-dev"
