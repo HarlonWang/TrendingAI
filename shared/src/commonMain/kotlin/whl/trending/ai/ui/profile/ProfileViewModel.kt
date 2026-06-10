@@ -2,6 +2,7 @@ package whl.trending.ai.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,8 +50,11 @@ class ProfileViewModel(
     private var nextFeedPage = 1
     /** 已消费的原始 events 总数（用于判断是否到达 GitHub 300 条硬上限） */
     private var consumedRawCount = 0
+    /** 进行中的 feed 拉取协程；切档/重载前先取消，避免旧档结果写回新档 state */
+    private var feedLoadJob: Job? = null
 
     fun load() {
+        feedLoadJob?.cancel()
         viewModelScope.launch {
             val highlightsOnly = settingsManager.getFeedHighlightsOnlySync()
             _uiState.value = ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly)
@@ -94,7 +98,7 @@ class ProfileViewModel(
         val state = _uiState.value
         if (state.isFeedLoading || state.feedEndReached || state.feedUnavailable) return
         val login = state.user?.githubLogin ?: return
-        viewModelScope.launch {
+        feedLoadJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isFeedLoading = true)
             val githubToken = tokenProvider.get()
             if (githubToken == null) {
@@ -106,6 +110,9 @@ class ProfileViewModel(
                 var pagesThisLoad = 0
                 var newItemsThisLoad = 0
                 var endReached = false
+                // 局部累积：进入循环时读一次 state，之后只在局部 merge，
+                // 每轮写回一次（渐进展示）；配合 Job 取消杜绝跨档交叉读写
+                var currentItems = _uiState.value.feedItems
 
                 // 循环拉页：精选档过滤后新增不足 10 条且未到底时继续拉
                 while (!endReached && pagesThisLoad < MAX_PAGES_PER_LOAD) {
@@ -118,15 +125,15 @@ class ProfileViewModel(
                         else items
                     }
 
-                    val existing = _uiState.value.feedItems
-                    val merged = (existing + filtered).distinctBy { it.id }
-                    newItemsThisLoad += merged.size - existing.size
+                    val merged = (currentItems + filtered).distinctBy { it.id }
+                    newItemsThisLoad += merged.size - currentItems.size
+                    currentItems = merged
 
                     endReached = events.size < FEED_PAGE_SIZE || consumedRawCount >= FEED_MAX_EVENTS
                     nextFeedPage++
 
                     _uiState.value = _uiState.value.copy(
-                        feedItems = merged,
+                        feedItems = currentItems,
                         feedEndReached = endReached,
                     )
 
@@ -136,6 +143,7 @@ class ProfileViewModel(
 
                 _uiState.value = _uiState.value.copy(isFeedLoading = false)
             } catch (e: Exception) {
+                // 取消时直接透传，不写 state——isFeedLoading 由取消方的状态重置兜底归 false
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.value = _uiState.value.copy(
                     isFeedLoading = false,
@@ -145,8 +153,9 @@ class ProfileViewModel(
         }
     }
 
-    /** 切换精选/全部档：持久化设置，重置 feed 状态并重新拉取第一页 */
+    /** 切换精选/全部档：取消进行中的拉取，持久化设置，重置 feed 状态并重新拉取第一页 */
     fun setFeedFilter(highlightsOnly: Boolean) {
+        feedLoadJob?.cancel()
         settingsManager.setFeedHighlightsOnly(highlightsOnly)
         nextFeedPage = 1
         consumedRawCount = 0
