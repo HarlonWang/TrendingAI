@@ -2,18 +2,21 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -26,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,10 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.GitHub_Invertocat_Black
@@ -56,6 +62,12 @@ import trendingai.shared.generated.resources.period_daily
 import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.settings
+import trendingai.shared.generated.resources.profile_title
+import trendingai.shared.generated.resources.sign_in
+import whl.trending.ai.auth.AuthState
+import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
@@ -74,7 +86,8 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onNavigateToChat: () -> Unit = {},
-    onOpenUrl: (url: String) -> Unit = {}
+    onOpenUrl: (url: String) -> Unit = {},
+    onNavigateToProfile: () -> Unit = {}
 ) {
     var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
     val selectedTab = HomeTab.valueOf(selectedTabName)
@@ -90,6 +103,18 @@ fun HomeScreen(
     } else null
     val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
 
+    val authManager = globalAuthManager
+    val authState by authManager.authState.collectAsState()
+    val userAvatarUrl by globalSettingsManager.userAvatarUrl.collectAsState(null)
+
+    // 应用启动且已登录：服务端建档/刷新 last_login_at + 同步头像（幂等，失败静默）
+    LaunchedEffect(authState) {
+        val state = authState
+        if (state is AuthState.LoggedIn) {
+            UserRepository().syncMe(authManager.getAccessToken())
+        }
+    }
+
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
@@ -104,7 +129,13 @@ fun HomeScreen(
                     scrollBehavior = scrollBehavior,
                     onTitleClick = { showFilterSheet = true },
                     onHistoryClick = { showHistorySheet = true },
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
+                    showAuthEntry = authManager.isSupported,
+                    authState = authState,
+                    userAvatarUrl = userAvatarUrl,
+                    onProfileClick = {
+                        if (authState is AuthState.LoggedIn) onNavigateToProfile() else authManager.signIn()
+                    },
                 )
                 HomeTab.Picks -> PicksTopBar(
                     date = picksUiState?.picks?.metadata?.date,
@@ -239,7 +270,11 @@ private fun TrendingTopBar(
     scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     onTitleClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    showAuthEntry: Boolean,
+    authState: AuthState,
+    userAvatarUrl: String?,
+    onProfileClick: () -> Unit,
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val periodLabel = when (selectedPeriod) {
@@ -299,6 +334,25 @@ private fun TrendingTopBar(
             }
         },
         actions = {
+            if (showAuthEntry) {
+                IconButton(onClick = onProfileClick, enabled = authState !is AuthState.LoggingIn) {
+                    when {
+                        authState is AuthState.LoggedIn && userAvatarUrl != null -> AsyncImage(
+                            model = userAvatarUrl,
+                            contentDescription = stringResource(Res.string.profile_title),
+                            modifier = Modifier.size(28.dp).clip(CircleShape)
+                        )
+                        authState is AuthState.LoggingIn -> CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        else -> Icon(
+                            Icons.Default.AccountCircle,
+                            contentDescription = stringResource(Res.string.sign_in)
+                        )
+                    }
+                }
+            }
             IconButton(onClick = onHistoryClick) {
                 Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
             }

@@ -2,6 +2,7 @@ package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.FeedResponse
+import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.SubscribeResponse
@@ -131,6 +132,16 @@ open class TrendingApi {
             if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
+    }
+
+    open suspend fun fetchMe(accessToken: String): MeResponse {
+        val response = client.get("$baseHost/api/me") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<MeResponse>()
     }
 
     open suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {

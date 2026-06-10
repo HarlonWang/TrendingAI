@@ -74,4 +74,12 @@ class SettingsManagerTest {
         assertEquals(0xFFC2185BL, manager.seedColor.first())
         assertEquals(ThemeMode.LIGHT, manager.themeMode.first())
     }
+
+    @Test
+    fun userAvatarUrl_set_and_clear() {
+        manager.setUserAvatarUrl("https://a.png")
+        assertEquals("https://a.png", settings.getStringOrNull("prefs_user_avatar_url"))
+        manager.setUserAvatarUrl(null)
+        assertEquals(null, settings.getStringOrNull("prefs_user_avatar_url"))
+    }
 }

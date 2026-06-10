@@ -120,4 +120,10 @@
     <string name="theme_color_pink">粉</string>
     <string name="whats_new_title">🎉 新版本 %1$s</string>
     <string name="whats_new_got_it">知道了</string>
+    <string name="profile_title">个人主页</string>
+    <string name="sign_in">登录</string>
+    <string name="sign_out">退出登录</string>
+    <string name="profile_open_github">在 GitHub 打开</string>
+    <string name="profile_load_failed">加载失败</string>
+    <string name="profile_retry">重试</string>
 </resources>

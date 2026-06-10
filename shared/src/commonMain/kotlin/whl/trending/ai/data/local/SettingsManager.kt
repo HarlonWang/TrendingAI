@@ -37,6 +37,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FAVORITES_KEY = "prefs_favorites"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
+    private val USER_AVATAR_KEY = "prefs_user_avatar_url"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -117,6 +118,17 @@ class SettingsManager(private val settings: ObservableSettings) {
     private fun getCurrentFavorites(): List<FavoriteItem> {
         val json = settings.getStringOrNull(FAVORITES_KEY) ?: return emptyList()
         return runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }
+    }
+
+    /** 已登录用户头像 URL 缓存：TopBar 入口同步展示用；登出时清空 */
+    val userAvatarUrl: Flow<String?> = settings.getStringOrNullFlow(USER_AVATAR_KEY)
+
+    fun setUserAvatarUrl(url: String?) {
+        if (url.isNullOrBlank()) {
+            settings.remove(USER_AVATAR_KEY)
+        } else {
+            settings.putString(USER_AVATAR_KEY, url)
+        }
     }
 
     val subscribedEmail: Flow<String?> = settings.getStringOrNullFlow(SUBSCRIBED_EMAIL_KEY)
