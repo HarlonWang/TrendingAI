@@ -124,6 +124,24 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 6. **（推荐）绑定自定义域名** `auth.trendingai.cn`：与 `api.trendingai.cn` 同走 Cloudflare 边缘，降低国内可达性风险
 7. ~~注册 API 资源~~（Free 档不可用，升 Pro 后再做）
 
+### 7.1.1 已完成的配置产出（2026-06-10 实操记录）
+
+§7.1 的控制台配置已全部完成，参数如下（均为客户端公开参数，secret 仅存于 Logto/GitHub 后台）：
+
+| 项 | 值 |
+|---|---|
+| Logto 租户 | `TrendingAI`（ID `28bniv`，US 区域，产品类型，Free 档） |
+| Logto Endpoint | `https://28bniv.logto.app` |
+| 应用（Native） | `TrendingAI-Android`，App ID `lasqslwwdjbim73vgkapj` |
+| Redirect URIs | `cn.trendingai://whl.trending.ai/callback`、`cn.trendingai://whl.trending.ai.debug/callback` |
+| GitHub 连接器 | ID `0xb17od4fhlnc4z1wmo8m`；Scope 留空（默认 `read:user`）；Store tokens ✅；每次登录同步资料 ✅ |
+| GitHub OAuth App | `TrendingAI`（HarlonWang 名下，应用 ID 3656545），Client ID `Ov23liJ06uldRD2ZUKce` |
+| 登录体验 | 仅 GitHub 社交登录（邮箱/密码注册与登录已移除） |
+| Account center | 已启用，"第三方访问令牌获取"已自动开启（Phase 2 取 GitHub token 的前提） |
+| 演示连接器 | Discord/GitHub/Google demo 已全部删除 |
+
+待办：自定义域名 `auth.trendingai.cn`（上线前绑定）；无代理国内真机实测可达性。
+
 ### 7.2 客户端（KMP / Android）
 
 - `androidApp` 接入 **Logto 官方 Android SDK**（`io.logto.sdk:android:1.1.3`，minSdk 24，满足现状）；用 `expect/actual` 或接口把"登录态 + 当前 access token + Account API 调用"暴露给 `shared`。iOS 后续接 Logto Swift SDK，`shared` 不变。
