@@ -82,4 +82,20 @@ class SettingsManagerTest {
         manager.setUserAvatarUrl(null)
         assertEquals(null, settings.getStringOrNull("prefs_user_avatar_url"))
     }
+
+    @Test
+    fun feedHighlightsOnly_defaults_true_and_persists() = runTest {
+        // 默认值
+        assertEquals(true, manager.getFeedHighlightsOnlySync())
+        assertEquals(true, manager.feedHighlightsOnly.first())
+
+        // 改为 false
+        manager.setFeedHighlightsOnly(false)
+        assertEquals(false, manager.getFeedHighlightsOnlySync())
+        assertEquals(false, manager.feedHighlightsOnly.first())
+
+        // 改回 true
+        manager.setFeedHighlightsOnly(true)
+        assertEquals(true, manager.getFeedHighlightsOnlySync())
+    }
 }
