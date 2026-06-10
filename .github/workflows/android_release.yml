@@ -261,10 +261,19 @@ jobs:
           
           # 生成 version_code.txt 供 F-Droid HTTP UpdateCheck 读取最新版本号（纯文本、无引号，
           # 规避 JSON 双引号在 fdroid rewritemeta 折叠长 UpdateCheckData 时的格式问题；格式参考 LibChecker）
-          # versionCode 公式与 build.gradle.kts 一致：MAJOR*10000 + MINOR*100 + PATCH；10# 防前导零当八进制
-          IFS='.' read -r VMAJ VMIN VPAT <<< "${VERSION_NAME%%-*}"
-          VCODE=$((10#$VMAJ * 10000 + 10#$VMIN * 100 + 10#$VPAT))
-          printf 'versionCode=%d\nversionName=%s\n' "$VCODE" "$VERSION_NAME" > version_code.txt
+          # versionCode/versionName 直接从构建产物 APK 读取（aapt dump badging），公式只在
+          # build.gradle.kts 一处维护，且保证 version_code.txt 描述的就是实际发布的 APK
+          APK_FOR_VERSION=$(find androidApp/build/outputs/apk/github/release -name "*.apk" | head -n 1)
+          AAPT=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt | sort -V | tail -n 1)
+          BADGING=$("$AAPT" dump badging "$APK_FOR_VERSION" | grep '^package:')
+          # 字段名前锚定空格，避免误匹配同行的 platformBuildVersionCode/Name
+          VCODE=$(sed -n "s/.* versionCode='\([0-9]\{1,\}\)'.*/\1/p" <<< "$BADGING")
+          VNAME=$(sed -n "s/.* versionName='\([^']\{1,\}\)'.*/\1/p" <<< "$BADGING")
+          if [ -z "$VCODE" ] || [ -z "$VNAME" ]; then
+            echo "❌ 无法从 APK 读取 versionCode/versionName: $BADGING"
+            exit 1
+          fi
+          printf 'versionCode=%d\nversionName=%s\n' "$VCODE" "$VNAME" > version_code.txt
           cat version_code.txt
 
           # 收集待上传的文件（github 渠道 APK + play 渠道 AAB + version_code.txt）
