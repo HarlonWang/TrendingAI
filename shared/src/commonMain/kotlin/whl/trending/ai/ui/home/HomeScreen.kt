@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -106,12 +107,13 @@ fun HomeScreen(
     val authManager = globalAuthManager
     val authState by authManager.authState.collectAsState()
     val userAvatarUrl by globalSettingsManager.userAvatarUrl.collectAsState(null)
+    val userRepository = remember { UserRepository() }
 
     // 应用启动且已登录：服务端建档/刷新 last_login_at + 同步头像（幂等，失败静默）
     LaunchedEffect(authState) {
         val state = authState
         if (state is AuthState.LoggedIn) {
-            UserRepository().syncMe(authManager.getAccessToken())
+            userRepository.syncMe(authManager.getAccessToken())
         }
     }
 
