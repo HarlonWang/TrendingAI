@@ -16,6 +16,17 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
 @Serializable
+data class GithubFollowing(
+    val login: String,
+    val type: String = "User",
+)
+
+@Serializable
+private data class GithubRepoDto(
+    @SerialName("full_name") val fullName: String,
+)
+
+@Serializable
 data class GithubUser(
     val login: String,
     val followers: Int = 0,
@@ -82,6 +93,53 @@ open class GithubApi {
             header(HttpHeaders.Accept, "application/vnd.github+json")
             parameter("per_page", perPage)
             parameter("page", page)
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<List<GithubEventDto>>()
+    }
+
+    open suspend fun fetchFollowing(
+        githubToken: String,
+        page: Int,
+        perPage: Int = 100,
+    ): List<GithubFollowing> {
+        val response = client.get("$baseHost/user/following") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            parameter("per_page", perPage)
+            parameter("page", page)
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<List<GithubFollowing>>()
+    }
+
+    open suspend fun fetchOwnRepos(githubToken: String): List<String> {
+        val response = client.get("$baseHost/user/repos") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            parameter("per_page", 100)
+            parameter("affiliation", "owner")
+            parameter("sort", "pushed")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<List<GithubRepoDto>>().map { it.fullName }
+    }
+
+    open suspend fun fetchRepoEvents(
+        githubToken: String,
+        fullName: String,
+        perPage: Int = 30,
+    ): List<GithubEventDto> {
+        val response = client.get("$baseHost/repos/$fullName/events") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            parameter("per_page", perPage)
         }
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())

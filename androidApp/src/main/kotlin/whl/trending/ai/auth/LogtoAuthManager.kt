@@ -55,6 +55,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         logtoClient.signOut { /* 本地凭证已清除即视为登出，远端失败不阻塞 */ }
         globalSettingsManager.setUserAvatarUrl(null)
         GithubTokenProvider.shared.clear()
+        FollowingProvider.shared.clear()
         _authState.value = AuthState.LoggedOut
         trackEvent("sign_out")
     }
