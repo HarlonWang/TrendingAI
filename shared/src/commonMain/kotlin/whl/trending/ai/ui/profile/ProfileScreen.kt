@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
@@ -50,6 +51,8 @@ import trendingai.shared.generated.resources.feed_created_repo
 import trendingai.shared.generated.resources.feed_created_tag
 import trendingai.shared.generated.resources.feed_empty
 import trendingai.shared.generated.resources.feed_end_notice
+import trendingai.shared.generated.resources.feed_filter_all
+import trendingai.shared.generated.resources.feed_filter_highlights
 import trendingai.shared.generated.resources.feed_forked
 import trendingai.shared.generated.resources.feed_issue_closed
 import trendingai.shared.generated.resources.feed_issue_commented
@@ -137,6 +140,23 @@ fun ProfileScreen(onBack: () -> Unit) {
                         onOpenGithub = { url -> uriHandler.openUri(url) },
                         onSignOut = { viewModel.signOut(); onBack() },
                     )
+                }
+                item(key = "feed_filter") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = uiState.highlightsOnly,
+                            onClick = { if (!uiState.highlightsOnly) viewModel.setFeedFilter(true) },
+                            label = { Text(stringResource(Res.string.feed_filter_highlights)) }
+                        )
+                        FilterChip(
+                            selected = !uiState.highlightsOnly,
+                            onClick = { if (uiState.highlightsOnly) viewModel.setFeedFilter(false) },
+                            label = { Text(stringResource(Res.string.feed_filter_all)) }
+                        )
+                    }
                 }
                 if (uiState.feedUnavailable && uiState.feedItems.isEmpty()) {
                     item(key = "feed_unavailable") {

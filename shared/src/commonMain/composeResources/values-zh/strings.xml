@@ -145,6 +145,8 @@
     <string name="feed_made_public">开源了 %1$s</string>
     <string name="feed_other">%1$s · %2$s</string>
     <string name="feed_empty">暂无动态</string>
-    <string name="feed_end_notice">仅展示最近 30 天的动态</string>
+    <string name="feed_end_notice">已加载全部动态</string>
+    <string name="feed_filter_highlights">精选</string>
+    <string name="feed_filter_all">全部</string>
     <string name="feed_unavailable">动态加载不可用</string>
 </resources>

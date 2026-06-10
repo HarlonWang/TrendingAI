@@ -145,6 +145,8 @@
     <string name="feed_made_public">Open sourced %1$s</string>
     <string name="feed_other">%1$s in %2$s</string>
     <string name="feed_empty">No recent activity</string>
-    <string name="feed_end_notice">Only activity from the last 30 days is shown</string>
+    <string name="feed_end_notice">All activity loaded</string>
+    <string name="feed_filter_highlights">Highlights</string>
+    <string name="feed_filter_all">All</string>
     <string name="feed_unavailable">Activity feed unavailable</string>
 </resources>
