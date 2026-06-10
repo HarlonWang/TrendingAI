@@ -77,6 +77,11 @@ import whl.trending.ai.core.DateTimeUtils
 fun ProfileScreen(onBack: () -> Unit) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
+    // nav3 默认无 per-entry VM 作用域，VM 是 Activity 级缓存；每次进入本页全量重载，
+    // 避免登出换账号串号 / feed 失败态永久残留
+    LaunchedEffect(Unit) {
+        viewModel.load()
+    }
     val uriHandler = LocalUriHandler.current
     val listState = rememberLazyListState()
 

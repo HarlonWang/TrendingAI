@@ -34,22 +34,18 @@ class ProfileViewModel(
     private val repository: UserRepository = UserRepository(),
     private val githubApi: GithubApi = GithubApi(),
     private val tokenProvider: GithubTokenProvider = GithubTokenProvider.shared,
-    private val authManager: AuthManager = globalAuthManager,
+    private val authManager: () -> AuthManager = { globalAuthManager },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     private var nextFeedPage = 1
 
-    init {
-        load()
-    }
-
     fun load() {
         viewModelScope.launch {
             _uiState.value = ProfileUiState(isLoading = true)
             nextFeedPage = 1
-            val token = authManager.getAccessToken()
+            val token = authManager().getAccessToken()
             if (token == null) {
                 _uiState.value = ProfileUiState(isLoading = false, isError = true)
                 return@launch
@@ -115,5 +111,5 @@ class ProfileViewModel(
         }
     }
 
-    fun signOut() = authManager.signOut()
+    fun signOut() = authManager().signOut()
 }
