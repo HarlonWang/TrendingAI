@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Email
@@ -85,6 +86,7 @@ import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.about_us_desc
 import trendingai.shared.generated.resources.confirm
+import trendingai.shared.generated.resources.contact_author
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_alipay
 import trendingai.shared.generated.resources.donate_message
@@ -413,6 +415,17 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         openUrl(Constants.OFFICIAL_WEBSITE_URL)
                     }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.contact_author)) },
+                    trailingContent = {
+                        SelectionContainer {
+                            Text(Constants.AUTHOR_EMAIL, color = MaterialTheme.colorScheme.outline)
+                        }
+                    },
+                    leadingContent = { Icon(Icons.Default.AlternateEmail, null) }
                 )
             }
             item {

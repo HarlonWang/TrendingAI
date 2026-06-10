@@ -29,6 +29,7 @@
     <string name="version">Version</string>
     <string name="about_us">About Us</string>
     <string name="about_us_desc">Learn more about Trending AI</string>
+    <string name="contact_author">Contact Author</string>
     <string name="donate">Donate</string>
     <string name="donate_message">We build Trending AI in our limited spare time, hoping to help you discover global tech trends more efficiently.\nIf you find it helpful, a donation would mean a lot to us.\n\nAll donations go toward improving our servers and operations to keep the product moving forward.</string>
     <string name="donate_alipay">Alipay: %1$s</string>
