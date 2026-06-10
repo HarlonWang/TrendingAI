@@ -1177,5 +1177,5 @@ EOF
 - 不做 ETag 304 轮询优化（首版直接分页拉取，5000 次/小时配额远够）
 - 不做 feed 本地缓存/离线
 - 不做下拉刷新（返回再进即重新加载；如验证后觉得必要再加）
-- 不做 iOS UI
+- 不做 iOS 登录接入（UI 为 CMP 共享代码本就跨端，iOS 缺的只是 AuthManager 的 Logto Swift SDK 实现；未接入前 `isSupported=false` 使登录入口自动隐藏，Profile/Feed 不可达。将来接入仅需：Swift SDK + AuthManager iOS 实现注入 + 控制台加 iOS redirect URI，shared 全部资产零改动复用）
 - Worker/后端零改动
