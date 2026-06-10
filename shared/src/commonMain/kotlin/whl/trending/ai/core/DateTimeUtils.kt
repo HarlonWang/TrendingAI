@@ -27,21 +27,22 @@ object DateTimeUtils {
 
     /**
      * 将 API 返回的 UTC 时间字符串转换为本地时区对应的日期时间字符串。
-     * API 格式: "2026-02-15 00:17:20"
+     * 支持两种格式：
+     * - "2026-02-15 00:17:20"（内部 API 格式）
+     * - "2026-06-09T12:47:28Z"（ISO 8601，GitHub events）
      */
     fun formatToLocalTime(utcString: String): String {
         if (utcString.isEmpty()) return ""
         return try {
-            // 1. 解析为无时区的 LocalDateTime
-            val utcLocalDateTime = LocalDateTime.parse(utcString, dateTimeFormat)
-            
-            // 2. 转换为 UTC 时区的 Instant
-            val instant = utcLocalDateTime.toInstant(TimeZone.UTC)
-            
-            // 3. 转换为本地时区的 LocalDateTime
+            // 优先尝试 ISO 8601（含 T 分隔符）
+            val instant = if (utcString.contains('T')) {
+                kotlin.time.Instant.parse(utcString)
+            } else {
+                // 内部 API 格式：yyyy-MM-dd HH:mm:ss
+                val utcLocalDateTime = LocalDateTime.parse(utcString, dateTimeFormat)
+                utcLocalDateTime.toInstant(TimeZone.UTC)
+            }
             val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-            
-            // 4. 格式化输出
             localDateTime.format(dateTimeFormat)
         } catch (e: Exception) {
             utcString
