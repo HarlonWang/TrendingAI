@@ -3,8 +3,6 @@ package whl.trending.ai.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +11,7 @@ import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.FollowingInfo
 import whl.trending.ai.auth.FollowingProvider
 import whl.trending.ai.auth.GithubTokenProvider
+import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
@@ -46,6 +45,7 @@ class ProfileViewModel(
     private val githubApi: GithubApi = GithubApi(),
     private val tokenProvider: GithubTokenProvider = GithubTokenProvider.shared,
     private val followingProvider: FollowingProvider = FollowingProvider.shared,
+    private val ownRepoEventsProvider: OwnRepoEventsProvider = OwnRepoEventsProvider.shared,
     private val authManager: () -> AuthManager = { globalAuthManager },
     private val settingsManager: SettingsManager = globalSettingsManager,
 ) : ViewModel() {
@@ -57,6 +57,8 @@ class ProfileViewModel(
     private var consumedRawCount = 0
     /** 进行中的 feed 拉取协程；切档/重载前先取消，避免旧档结果写回新档 state */
     private var feedLoadJob: Job? = null
+    /** 进行中的整页加载协程；重复进入页面时先取消，避免两个 load 并发交叉写 state 与分页游标 */
+    private var loadJob: Job? = null
 
     /** 缓存当次会话的关注列表（load() 时重置） */
     private var followingInfo: FollowingInfo? = null
@@ -64,8 +66,9 @@ class ProfileViewModel(
     private var ownRepoItems: List<GithubFeedItem> = emptyList()
 
     fun load() {
+        loadJob?.cancel()
         feedLoadJob?.cancel()
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             val highlightsOnly = settingsManager.getFeedHighlightsOnlySync()
             _uiState.value = ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly)
             nextFeedPage = 1
@@ -107,37 +110,23 @@ class ProfileViewModel(
         // 拉取关注列表（失败降级为 null，保留旧行为）
         followingInfo = followingProvider.get()
 
-        // 规则3：并发拉取自有仓库上别人的 star/fork
+        // 规则3：自有仓库上别人的 star/fork（会话级缓存，限最近活跃的前 N 个仓库）
         val loginLower = login.lowercase()
-        runCatching {
-            val repoNames = githubApi.fetchOwnRepos(githubToken)
-            val allEvents = coroutineScope {
-                repoNames.map { fullName ->
-                    async {
-                        runCatching { githubApi.fetchRepoEvents(githubToken, fullName) }
-                            .getOrElse { emptyList() }
-                    }
-                }.map { it.await() }.flatten()
+        ownRepoItems = ownRepoEventsProvider.get().orEmpty()
+            .map { it.toFeedItem() }
+            .filter { item ->
+                (item.kind == GithubFeedKind.STARRED || item.kind == GithubFeedKind.FORKED) &&
+                    item.actorLogin.lowercase() != loginLower
             }
-            ownRepoItems = allEvents
-                .map { it.toFeedItem() }
-                .filter { item ->
-                    (item.kind == GithubFeedKind.STARRED || item.kind == GithubFeedKind.FORKED) &&
-                        item.actorLogin.lowercase() != loginLower
-                }
-                .map { item ->
-                    item.copy(
-                        kind = if (item.kind == GithubFeedKind.STARRED)
-                            GithubFeedKind.STARRED_YOUR_REPO
-                        else
-                            GithubFeedKind.FORKED_YOUR_REPO
-                    )
-                }
-                .distinctBy { it.id }
-        }.onFailure { e ->
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            ownRepoItems = emptyList()
-        }
+            .map { item ->
+                item.copy(
+                    kind = if (item.kind == GithubFeedKind.STARRED)
+                        GithubFeedKind.STARRED_YOUR_REPO
+                    else
+                        GithubFeedKind.FORKED_YOUR_REPO
+                )
+            }
+            .distinctBy { it.id }
 
         loadMoreFeed()
     }

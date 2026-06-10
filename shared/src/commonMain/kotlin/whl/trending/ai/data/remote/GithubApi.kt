@@ -117,11 +117,11 @@ open class GithubApi {
         return response.body<List<GithubFollowing>>()
     }
 
-    open suspend fun fetchOwnRepos(githubToken: String): List<String> {
+    open suspend fun fetchOwnRepos(githubToken: String, perPage: Int = 100): List<String> {
         val response = client.get("$baseHost/user/repos") {
             header(HttpHeaders.Authorization, "Bearer $githubToken")
             header(HttpHeaders.Accept, "application/vnd.github+json")
-            parameter("per_page", 100)
+            parameter("per_page", perPage)
             parameter("affiliation", "owner")
             parameter("sort", "pushed")
         }

@@ -56,6 +56,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         globalSettingsManager.setUserAvatarUrl(null)
         GithubTokenProvider.shared.clear()
         FollowingProvider.shared.clear()
+        OwnRepoEventsProvider.shared.clear()
         _authState.value = AuthState.LoggedOut
         trackEvent("sign_out")
     }
