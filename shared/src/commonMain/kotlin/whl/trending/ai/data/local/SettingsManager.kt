@@ -3,6 +3,7 @@ package whl.trending.ai.data.local
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
+import com.russhwolf.settings.coroutines.getBooleanFlow
 import com.russhwolf.settings.coroutines.getIntFlow
 import com.russhwolf.settings.coroutines.getLongFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
@@ -38,6 +39,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
+    private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -141,6 +143,14 @@ class SettingsManager(private val settings: ObservableSettings) {
         } else {
             settings.putString(SUBSCRIBED_EMAIL_KEY, email)
         }
+    }
+
+    val feedHighlightsOnly: Flow<Boolean> = settings.getBooleanFlow(FEED_HIGHLIGHTS_ONLY_KEY, true)
+
+    fun getFeedHighlightsOnlySync(): Boolean = settings.getBoolean(FEED_HIGHLIGHTS_ONLY_KEY, true)
+
+    fun setFeedHighlightsOnly(value: Boolean) {
+        settings.putBoolean(FEED_HIGHLIGHTS_ONLY_KEY, value)
     }
 }
 

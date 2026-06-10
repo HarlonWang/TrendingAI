@@ -41,7 +41,7 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 
 ### 明确不做（Non-goals）
 - 不做 AI chat、订阅收费（仅留好挂载点：业务/会员按内部 `user_id` 挂在 D1，不依赖 Logto 付费特性）
-- 不做 iOS UI（KMP shared 层就绪，后续接）
+- 不做 iOS 登录接入（UI 为 CMP 共享代码本就跨端；iOS 缺的只是 AuthManager 的 Logto Swift SDK 实现，未接入前 `isSupported=false` 自动隐藏登录入口。后续接入仅需 Swift SDK + iOS 实现注入 + 控制台加 redirect URI，shared 资产零改动复用）
 - **不碰 Tono 或任何其他项目**
 - 不做密码登录（Logto 邮箱方式走 OTP）
 - 本次登录方式只启用 **GitHub**；邮箱 OTP 可在 Logto 控制台随时开启，无需改代码（但仅 GitHub 登录的用户有 feed，见 §6）
