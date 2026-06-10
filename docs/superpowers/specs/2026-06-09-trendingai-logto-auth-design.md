@@ -40,7 +40,7 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 - **Phase 2**：Feed 动态流（**纯客户端工作**，经 Account API 取 GitHub token 直调 GitHub）
 
 ### 明确不做（Non-goals）
-- 不做 AI chat、订阅收费（仅留好挂载点：业务/会员按 `logto_sub` 挂在 D1，不依赖 Logto 付费特性）
+- 不做 AI chat、订阅收费（仅留好挂载点：业务/会员按内部 `user_id` 挂在 D1，不依赖 Logto 付费特性）
 - 不做 iOS UI（KMP shared 层就绪，后续接）
 - **不碰 Tono 或任何其他项目**
 - 不做密码登录（Logto 邮箱方式走 OTP）
@@ -70,7 +70,7 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 
 **身份职责切分**：
 - **Logto** 拥有"你是谁"（identity、登录、token、GitHub 授权与 token 保管）
-- **TrendingAI Worker** 拥有"你在本 App 是什么"（按 `logto_sub` 挂的业务数据、未来会员）
+- **TrendingAI Worker** 拥有"你在本 App 是什么"（按内部 `user_id` 挂的业务数据、未来会员；`logto_sub`/`github_user_id` 仅是身份映射列）
 - **GitHub 数据（profile 计数、feed）由客户端直连 GitHub API**，Worker 不经手（原因见 §6）
 
 ## 五、登录与 Worker 校验（OIDC Authorization Code + PKCE）
@@ -129,6 +129,7 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 - `androidApp` 接入 **Logto 官方 Android SDK**（`io.logto.sdk:android:1.1.3`，minSdk 24，满足现状）；用 `expect/actual` 或接口把"登录态 + 当前 access token + Account API 调用"暴露给 `shared`。iOS 后续接 Logto Swift SDK，`shared` 不变。
 - **shared 层**（现在写好，跨平台）：
   - `AuthState`：LoggedOut / LoggingIn / LoggedIn（封装 SDK，业务页面只看状态）
+  - LogtoConfig 的 `scopes` 加 `identities`（让 userinfo 返回 GitHub 数字 user id，供建档落 `github_user_id`）
   - Ktor `ApiClient`：自动在请求头挂 Logto access token，调 `api.trendingai.cn`
   - `GithubClient`：持有经 Account API 取回的 GitHub token，直调 `api.github.com`（带 ETag 缓存）
   - `ProfileRepository`、`FeedRepository`（分页 + 事件归一化：type / actor / repo / 一句话摘要 / created_at / target_url）
@@ -154,19 +155,21 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 **新增迁移 `migrations/015_app_users.sql`**：
 ```sql
 CREATE TABLE IF NOT EXISTS app_users (
-  logto_sub    TEXT PRIMARY KEY,   -- Logto 用户 ID（身份锚点）
-  github_login TEXT,
-  display_name TEXT,
-  avatar_url   TEXT,
-  bio          TEXT,
-  html_url     TEXT,
-  raw_profile  TEXT,               -- 最近一次 profile 快照 JSON
-  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  last_login_at TEXT
-  -- 未来：订阅/会员 entitlement 按 logto_sub 挂（本表扩列或独立表）
+  user_id        TEXT PRIMARY KEY,          -- 内部用户 ID（UUID），业务数据的唯一锚点
+  logto_sub      TEXT NOT NULL UNIQUE,      -- Logto 用户 ID（当前 IdP 的映射，可整体替换）
+  github_user_id INTEGER UNIQUE,            -- GitHub 数字 ID（永不变，跨 IdP 对账的耐久锚点）
+  github_login   TEXT,                      -- GitHub login（可改名，仅展示用）
+  display_name   TEXT,
+  avatar_url     TEXT,
+  bio            TEXT,
+  html_url       TEXT,
+  raw_profile    TEXT,                      -- 最近一次 profile 快照 JSON
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  last_login_at  TEXT
+  -- 未来：订阅/会员 entitlement 一律挂内部 user_id（与 IdP 解耦），不挂 logto_sub
 );
 ```
-首次带 token 访问 `/api/me` 时 upsert（或后续接 Logto webhook 建档，Free 档含 1 个 webhook）。
+首次带 token 访问 `/api/me` 时 upsert（或后续接 Logto webhook 建档，Free 档含 1 个 webhook）。`github_user_id` 从 userinfo 的 `identities` claim 取（客户端登录 scope 需加 `identities`，见 7.2）。
 
 **改动现有文件**：
 - `src/index.js`：加 1 条路由 `if`（`/api/me`）
@@ -174,7 +177,25 @@ CREATE TABLE IF NOT EXISTS app_users (
 
 **初稿中已取消的部分**：~~`src/lib/logto-vault.js`~~、~~`src/api/github-proxy.js`~~（Secret Vault 后端取不到 token，GitHub 数据改由客户端直连，见 §6）
 
-### 7.4 相对 DIY 方案，后端被省掉的部分
+### 7.4 IdP 解耦与迁移路径（退出成本）
+
+本设计刻意把"迁离 Logto"的成本压到最低，三道隔离已内置：
+
+1. **数据层**：`app_users` 主键是内部 `user_id`，业务/订阅数据只挂它；`logto_sub` 仅是当前 IdP 的映射列，`github_user_id`（GitHub 数字 ID，永不变）是跨身份系统对账的耐久锚点
+2. **后端**：IdP 校验收敛在 `logto-auth.js` 单文件，换 IdP 只改它
+3. **客户端**：shared 层只看抽象 `AuthState`，换登录 SDK 不动业务
+
+**若日后迁移**（自建 Logto OSS / 其他 IdP / 完全自建），步骤为：
+
+1. Logto Management API 分页导出全部用户（profile + identities 含 GitHub user id）；Cloud→OSS 无自助整体迁移，必要时可联系官方导出
+2. 新系统导入用户并预绑定 GitHub identity（按 `github_user_id`）
+3. D1 把 `logto_sub` 列替换为新系统的 sub 映射（主键与业务外键不动）
+4. 换 `logto-auth.js` 实现 + 客户端换 SDK
+5. 用户下次打开 App 重新走一次 GitHub 登录，按 `github_user_id` 自动对回原账号（无密码可迁，社交登录用户无感）
+
+**唯一迁不走的**：Secret Vault 里的 GitHub token（加密不可导出）——用户重新登录时自动重建，无实际损失。
+
+### 7.5 相对 DIY 方案，后端被省掉的部分
 
 - ❌ OAuth start/callback/session/logout 端点
 - ❌ `sessions` / `login_sessions` 表与 session 轮换
@@ -210,7 +231,7 @@ CREATE TABLE IF NOT EXISTS app_users (
 
 - 用户体系：接入 Logto Cloud Free 档，不自建 ✅
 - Worker 校验方式：**opaque token + userinfo 在线校验（短缓存）**；升 Pro 后切 JWT 离线验签 ✅（2026-06-10 拍板）
-- 登录即在身份层建立用户（`logto_sub` 为锚点），后端 `app_users` 建档 ✅
+- 登录即在身份层建立用户，后端 `app_users` 建档；**主键用内部 `user_id`，`logto_sub` 仅作映射列，另存 `github_user_id` 作迁移锚点** ✅（2026-06-10 拍板）
 - 登录方式：本次仅 GitHub；邮箱 OTP 留作 Logto 侧可开关 ✅
 - GitHub 权限：默认 `read:user`（最小化）✅
 - 登录定位：可选加法，不拦截现有内容 ✅
@@ -236,5 +257,6 @@ CREATE TABLE IF NOT EXISTS app_users (
 | 3 | received_events 约 90 天窗口、仅公开事件 | **30 天**/300 条；本人 token 可见私有事件；延迟 30s~6h | UI 文案与分页到底逻辑按 30 天；feed 内容比预期更丰富 |
 | 4 | 回跳用 App Links | SDK 标准方案为自定义 scheme | 接入更简单，无需服务端 App Links 配置 |
 | 5 | GitHub token 需关注过期刷新 | GitHub OAuth App token **永不过期**（勿加 `offline_access`） | 客户端可长期缓存，仅需处理用户主动撤销 |
+| 6 | `logto_sub` 直接做 `app_users` 主键 | Cloud↔OSS 无自助迁移；Management API 可自助导出用户与 identities | 主键改内部 `user_id` + 增 `github_user_id` 锚点列，IdP 解耦（见 7.4） |
 
 主要依据：[Logto Pricing](https://logto.io/pricing)、[2025-09 调价公告](https://blog.logto.io/pricing-sep-2025)、[计费文档](https://docs.logto.io/logto-cloud/billing-and-pricing)、[Secret Vault / 第三方 token](https://docs.logto.io/secret-vault/federated-token-set)、[GitHub 连接器](https://docs.logto.io/integrations/github)、[Android SDK 快速入门](https://docs.logto.io/quick-starts/android)、[GitHub Events API](https://docs.github.com/en/rest/activity/events)
