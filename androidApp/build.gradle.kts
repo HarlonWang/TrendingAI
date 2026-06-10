@@ -169,5 +169,6 @@ dependencies {
     implementation(project(":androidLibrary:chat"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.logto.android)
     debugImplementation(libs.compose.uiTooling)
 }
