@@ -67,6 +67,7 @@ fun GithubEventDto.toFeedItem(): GithubFeedItem {
             if (pr != null && number != null) {
                 kind = when {
                     str(p, "action") == "opened" -> GithubFeedKind.PR_OPENED
+                    str(p, "action") == "merged" -> GithubFeedKind.PR_MERGED
                     str(p, "action") == "closed" &&
                         pr["merged"]?.jsonPrimitive?.booleanOrNull == true -> GithubFeedKind.PR_MERGED
                     str(p, "action") == "closed" -> GithubFeedKind.PR_CLOSED
@@ -117,3 +118,16 @@ fun GithubEventDto.toFeedItem(): GithubFeedItem {
         targetUrl = targetUrl,
     )
 }
+
+/** 精选档保留的高信号事件（与 GitHub 网页 Dashboard 风格对齐；issue/push/review 等不进） */
+val HighlightFeedKinds: Set<GithubFeedKind> = setOf(
+    GithubFeedKind.STARRED,
+    GithubFeedKind.FORKED,
+    GithubFeedKind.RELEASED,
+    GithubFeedKind.CREATED_REPO,
+    GithubFeedKind.MADE_PUBLIC,
+    GithubFeedKind.PR_OPENED,
+    GithubFeedKind.PR_MERGED,
+)
+
+fun GithubFeedItem.isBot(): Boolean = actorLogin.endsWith("[bot]")

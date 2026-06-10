@@ -123,4 +123,62 @@ class GithubFeedMapperTest {
         assertEquals(GithubFeedKind.OTHER, item.kind)
         assertEquals("https://github.com/owner/repo", item.targetUrl)
     }
+
+    @Test
+    fun pull_request_merged_action() {
+        val item = event(
+            "PullRequestEvent",
+            """{"action":"merged","number":15,"pull_request":{"html_url":"https://github.com/owner/repo/pull/15"}}"""
+        ).toFeedItem()
+        assertEquals(GithubFeedKind.PR_MERGED, item.kind)
+        assertEquals("15", item.primary)
+        assertEquals("https://github.com/owner/repo/pull/15", item.targetUrl)
+    }
+
+    @Test
+    fun pull_request_labeled_falls_to_other() {
+        val item = event(
+            "PullRequestEvent",
+            """{"action":"labeled","number":16,"pull_request":{"html_url":"https://github.com/owner/repo/pull/16"}}"""
+        ).toFeedItem()
+        assertEquals(GithubFeedKind.OTHER, item.kind)
+    }
+
+    @Test
+    fun highlight_kinds_membership() {
+        assertEquals(
+            setOf(
+                GithubFeedKind.STARRED,
+                GithubFeedKind.FORKED,
+                GithubFeedKind.RELEASED,
+                GithubFeedKind.CREATED_REPO,
+                GithubFeedKind.MADE_PUBLIC,
+                GithubFeedKind.PR_OPENED,
+                GithubFeedKind.PR_MERGED,
+            ),
+            HighlightFeedKinds
+        )
+    }
+
+    @Test
+    fun bot_actor_detected() {
+        val botEvent = GithubEventDto(
+            id = "2",
+            type = "WatchEvent",
+            actor = GithubEventActor(login = "cursor[bot]", avatarUrl = null),
+            repo = GithubEventRepo(name = "owner/repo"),
+            payload = null,
+            createdAt = "2026-06-09T12:47:28Z",
+        )
+        val humanEvent = GithubEventDto(
+            id = "3",
+            type = "WatchEvent",
+            actor = GithubEventActor(login = "octocat", avatarUrl = null),
+            repo = GithubEventRepo(name = "owner/repo"),
+            payload = null,
+            createdAt = "2026-06-09T12:47:28Z",
+        )
+        assertEquals(true, botEvent.toFeedItem().isBot())
+        assertEquals(false, humanEvent.toFeedItem().isBot())
+    }
 }
