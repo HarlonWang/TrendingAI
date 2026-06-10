@@ -16,8 +16,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -262,7 +263,7 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TrendingTopBar(
     selectedPeriod: String,
@@ -344,9 +345,8 @@ private fun TrendingTopBar(
                             contentDescription = stringResource(Res.string.profile_title),
                             modifier = Modifier.size(28.dp).clip(CircleShape)
                         )
-                        authState is AuthState.LoggingIn -> CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                        authState is AuthState.LoggingIn -> LoadingIndicator(
+                            modifier = Modifier.size(24.dp)
                         )
                         else -> Icon(
                             Icons.Default.AccountCircle,

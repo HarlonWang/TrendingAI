@@ -18,9 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,7 +73,7 @@ import trendingai.shared.generated.resources.profile_title
 import trendingai.shared.generated.resources.sign_out
 import whl.trending.ai.core.DateTimeUtils
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProfileScreen(onBack: () -> Unit) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
@@ -112,7 +113,7 @@ fun ProfileScreen(onBack: () -> Unit) {
             uiState.isLoading -> Box(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
+            ) { LoadingIndicator(modifier = Modifier.size(48.dp)) }
 
             uiState.isError -> Column(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
@@ -153,7 +154,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                 if (uiState.isFeedLoading) {
                     item(key = "feed_loading") {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                            LoadingIndicator(modifier = Modifier.size(32.dp))
                         }
                     }
                 }
