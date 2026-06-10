@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         whl.trending.ai.core.platform.AndroidContextHolder.initialize(this)
 
         // 注入 Logto 登录实现（仿 globalChatScreen 的依赖反转；配置变更重建时重新绑定 activity）
+        (whl.trending.ai.auth.globalAuthManager as? whl.trending.ai.auth.LogtoAuthManager)?.close()
         whl.trending.ai.auth.globalAuthManager = whl.trending.ai.auth.LogtoAuthManager(this)
 
         // 注册 Android-only 的 ChatScreen 到 CMP 导航 slot（仿 UpdateWrapper 的依赖反转）

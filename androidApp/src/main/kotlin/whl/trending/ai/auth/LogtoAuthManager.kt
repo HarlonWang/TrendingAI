@@ -8,6 +8,7 @@ import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,6 +73,11 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
                 cont.resume(accessToken?.token)
             }
         }
+
+    /** 实例被替换前调用（如配置变更重建 Activity），取消后台协程避免旧实例残留任务 */
+    fun close() {
+        scope.cancel()
+    }
 
     companion object {
         private const val LOGTO_ENDPOINT = "https://28bniv.logto.app"
