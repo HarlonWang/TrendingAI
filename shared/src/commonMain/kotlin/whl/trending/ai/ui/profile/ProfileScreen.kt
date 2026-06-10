@@ -75,6 +75,12 @@ fun ProfileScreen(onBack: () -> Unit) {
                     Button(onClick = { viewModel.load() }) {
                         Text(stringResource(Res.string.profile_retry))
                     }
+                    OutlinedButton(onClick = {
+                        viewModel.signOut()
+                        onBack()
+                    }) {
+                        Text(stringResource(Res.string.sign_out))
+                    }
                 }
 
                 else -> uiState.user?.let { user ->
