@@ -4,6 +4,7 @@ import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
+import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
@@ -27,6 +28,7 @@ data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
+data object Profile
 data class Chat(val context: ChatContext?)
 
 /**
@@ -64,7 +66,10 @@ fun App() {
                             },
                             onOpenUrl = { url ->
                                 backStack.add(WebPage(url, ""))
-                            }
+                            },
+                            onNavigateToProfile = {
+                                backStack.add(Profile)
+                            },
                         )
                     }
 
@@ -122,6 +127,10 @@ fun App() {
                                 backStack.add(WebPage(url, ""))
                             }
                         )
+                    }
+
+                    is Profile -> NavEntry(key) {
+                        ProfileScreen(onBack = { backStack.safePop() })
                     }
 
                     is RepoDetail -> NavEntry(key) {
