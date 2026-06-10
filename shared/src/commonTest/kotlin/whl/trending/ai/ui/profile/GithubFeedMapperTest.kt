@@ -2,11 +2,14 @@ package whl.trending.ai.ui.profile
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import whl.trending.ai.auth.FollowingInfo
 import whl.trending.ai.data.remote.GithubEventActor
 import whl.trending.ai.data.remote.GithubEventDto
 import whl.trending.ai.data.remote.GithubEventRepo
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class GithubFeedMapperTest {
     private fun event(type: String, payloadJson: String?): GithubEventDto = GithubEventDto(
@@ -158,6 +161,92 @@ class GithubFeedMapperTest {
             ),
             HighlightFeedKinds
         )
+    }
+
+    // =========================================================
+    // isHighlight 判定测试
+    // =========================================================
+
+    private fun feedItem(
+        actorLogin: String,
+        repoOwner: String,
+        kind: GithubFeedKind,
+    ) = GithubFeedItem(
+        id = "1",
+        actorLogin = actorLogin,
+        actorAvatarUrl = null,
+        repoName = "$repoOwner/repo",
+        kind = kind,
+        primary = null,
+        createdAt = "2026-06-09T12:47:28Z",
+        targetUrl = "https://github.com/$repoOwner/repo",
+    )
+
+    @Test
+    fun isHighlight_rule1_followed_user_with_highlight_kind() {
+        val following = FollowingInfo(users = setOf("octocat"), orgs = emptySet())
+        val item = feedItem("octocat", "someone", GithubFeedKind.STARRED)
+        assertTrue(item.isHighlight(following))
+    }
+
+    @Test
+    fun isHighlight_rule1_unknown_actor_not_highlight() {
+        val following = FollowingInfo(users = setOf("octocat"), orgs = emptySet())
+        val item = feedItem("stranger", "someone", GithubFeedKind.STARRED)
+        assertFalse(item.isHighlight(following))
+    }
+
+    @Test
+    fun isHighlight_rule2_org_release_is_highlight() {
+        val following = FollowingInfo(users = emptySet(), orgs = setOf("myorg"))
+        // actor is a random person, but repo owner is the org
+        val item = feedItem("randomuser", "myorg", GithubFeedKind.RELEASED)
+        assertTrue(item.isHighlight(following))
+    }
+
+    @Test
+    fun isHighlight_rule2_org_star_by_stranger_not_highlight() {
+        val following = FollowingInfo(users = emptySet(), orgs = setOf("myorg"))
+        val item = feedItem("randomuser", "myorg", GithubFeedKind.STARRED)
+        assertFalse(item.isHighlight(following))
+    }
+
+    @Test
+    fun isHighlight_null_following_fallback_to_kind_plus_not_bot() {
+        val humanItem = feedItem("octocat", "someone", GithubFeedKind.STARRED)
+        assertTrue(humanItem.isHighlight(null))
+
+        val botItem = feedItem("cursor[bot]", "someone", GithubFeedKind.STARRED)
+        assertFalse(botItem.isHighlight(null))
+
+        val lowSignalItem = feedItem("octocat", "someone", GithubFeedKind.PUSHED)
+        assertFalse(lowSignalItem.isHighlight(null))
+    }
+
+    @Test
+    fun isHighlight_rule1_bot_filtered_even_if_followed() {
+        val following = FollowingInfo(users = setOf("cursor[bot]"), orgs = emptySet())
+        val item = feedItem("cursor[bot]", "someone", GithubFeedKind.STARRED)
+        assertFalse(item.isHighlight(following))
+    }
+
+    @Test
+    fun isHighlight_rule2_bot_actor_not_filtered_for_org() {
+        // CI bot releasing for org should be included
+        val following = FollowingInfo(users = emptySet(), orgs = setOf("myorg"))
+        val item = feedItem("ci-bot[bot]", "myorg", GithubFeedKind.RELEASED)
+        assertTrue(item.isHighlight(following))
+    }
+
+    @Test
+    fun isHighlight_case_insensitive_login_comparison() {
+        val following = FollowingInfo(users = setOf("octocat"), orgs = setOf("myorg"))
+        // actor login in mixed case
+        val userItem = feedItem("OctoCat", "someone", GithubFeedKind.STARRED)
+        assertTrue(userItem.isHighlight(following))
+
+        val orgItem = feedItem("randomer", "MyOrg", GithubFeedKind.RELEASED)
+        assertTrue(orgItem.isHighlight(following))
     }
 
     @Test

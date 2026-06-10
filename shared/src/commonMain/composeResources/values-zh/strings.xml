@@ -143,6 +143,8 @@
     <string name="feed_issue_closed">在 %2$s 关闭了 issue #%1$s</string>
     <string name="feed_issue_commented">评论了 %2$s 的 #%1$s</string>
     <string name="feed_made_public">开源了 %1$s</string>
+    <string name="feed_starred_your_repo">Star 了你的仓库 %1$s</string>
+    <string name="feed_forked_your_repo">Fork 了你的仓库 %1$s</string>
     <string name="feed_other">%1$s · %2$s</string>
     <string name="feed_empty">暂无动态</string>
     <string name="feed_end_notice">已加载全部动态</string>

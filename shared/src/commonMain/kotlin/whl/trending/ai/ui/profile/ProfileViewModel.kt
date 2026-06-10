@@ -3,11 +3,15 @@ package whl.trending.ai.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthManager
+import whl.trending.ai.auth.FollowingInfo
+import whl.trending.ai.auth.FollowingProvider
 import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.local.SettingsManager
@@ -41,6 +45,7 @@ class ProfileViewModel(
     private val repository: UserRepository = UserRepository(),
     private val githubApi: GithubApi = GithubApi(),
     private val tokenProvider: GithubTokenProvider = GithubTokenProvider.shared,
+    private val followingProvider: FollowingProvider = FollowingProvider.shared,
     private val authManager: () -> AuthManager = { globalAuthManager },
     private val settingsManager: SettingsManager = globalSettingsManager,
 ) : ViewModel() {
@@ -53,6 +58,11 @@ class ProfileViewModel(
     /** 进行中的 feed 拉取协程；切档/重载前先取消，避免旧档结果写回新档 state */
     private var feedLoadJob: Job? = null
 
+    /** 缓存当次会话的关注列表（load() 时重置） */
+    private var followingInfo: FollowingInfo? = null
+    /** 规则3：我的仓库上别人的 star/fork（精选档合流，load() 时重置） */
+    private var ownRepoItems: List<GithubFeedItem> = emptyList()
+
     fun load() {
         feedLoadJob?.cancel()
         viewModelScope.launch {
@@ -60,6 +70,8 @@ class ProfileViewModel(
             _uiState.value = ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly)
             nextFeedPage = 1
             consumedRawCount = 0
+            followingInfo = null
+            ownRepoItems = emptyList()
             val token = authManager().getAccessToken()
             if (token == null) {
                 _uiState.value = ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly)
@@ -91,6 +103,42 @@ class ProfileViewModel(
             if (e is kotlinx.coroutines.CancellationException) throw e
             // 计数失败不致命，feed 继续尝试
         }
+
+        // 拉取关注列表（失败降级为 null，保留旧行为）
+        followingInfo = followingProvider.get()
+
+        // 规则3：并发拉取自有仓库上别人的 star/fork
+        val loginLower = login.lowercase()
+        runCatching {
+            val repoNames = githubApi.fetchOwnRepos(githubToken)
+            val allEvents = coroutineScope {
+                repoNames.map { fullName ->
+                    async {
+                        runCatching { githubApi.fetchRepoEvents(githubToken, fullName) }
+                            .getOrElse { emptyList() }
+                    }
+                }.map { it.await() }.flatten()
+            }
+            ownRepoItems = allEvents
+                .map { it.toFeedItem() }
+                .filter { item ->
+                    (item.kind == GithubFeedKind.STARRED || item.kind == GithubFeedKind.FORKED) &&
+                        item.actorLogin.lowercase() != loginLower
+                }
+                .map { item ->
+                    item.copy(
+                        kind = if (item.kind == GithubFeedKind.STARRED)
+                            GithubFeedKind.STARRED_YOUR_REPO
+                        else
+                            GithubFeedKind.FORKED_YOUR_REPO
+                    )
+                }
+                .distinctBy { it.id }
+        }.onFailure { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            ownRepoItems = emptyList()
+        }
+
         loadMoreFeed()
     }
 
@@ -121,7 +169,7 @@ class ProfileViewModel(
                     consumedRawCount += events.size
 
                     val filtered = events.map { it.toFeedItem() }.let { items ->
-                        if (highlightsOnly) items.filter { it.kind in HighlightFeedKinds && !it.isBot() }
+                        if (highlightsOnly) items.filter { it.isHighlight(followingInfo) }
                         else items
                     }
 
@@ -132,8 +180,17 @@ class ProfileViewModel(
                     endReached = events.size < FEED_PAGE_SIZE || consumedRawCount >= FEED_MAX_EVENTS
                     nextFeedPage++
 
+                    // 精选档合流 ownRepoItems（按时间倒序，去重）
+                    val display = if (highlightsOnly) {
+                        (currentItems + ownRepoItems)
+                            .sortedByDescending { it.createdAt }
+                            .distinctBy { it.id }
+                    } else {
+                        currentItems
+                    }
+
                     _uiState.value = _uiState.value.copy(
-                        feedItems = currentItems,
+                        feedItems = display,
                         feedEndReached = endReached,
                     )
 

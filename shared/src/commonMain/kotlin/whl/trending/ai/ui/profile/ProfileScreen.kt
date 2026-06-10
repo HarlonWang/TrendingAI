@@ -57,8 +57,10 @@ import trendingai.shared.generated.resources.feed_forked
 import trendingai.shared.generated.resources.feed_issue_closed
 import trendingai.shared.generated.resources.feed_issue_commented
 import trendingai.shared.generated.resources.feed_issue_opened
+import trendingai.shared.generated.resources.feed_forked_your_repo
 import trendingai.shared.generated.resources.feed_made_public
 import trendingai.shared.generated.resources.feed_other
+import trendingai.shared.generated.resources.feed_starred_your_repo
 import trendingai.shared.generated.resources.feed_pr_closed
 import trendingai.shared.generated.resources.feed_pr_merged
 import trendingai.shared.generated.resources.feed_pr_opened
@@ -275,6 +277,8 @@ private fun GithubFeedRow(item: GithubFeedItem, onClick: () -> Unit) {
         GithubFeedKind.ISSUE_CLOSED -> stringResource(Res.string.feed_issue_closed, item.primary.orEmpty(), item.repoName)
         GithubFeedKind.ISSUE_COMMENTED -> stringResource(Res.string.feed_issue_commented, item.primary.orEmpty(), item.repoName)
         GithubFeedKind.MADE_PUBLIC -> stringResource(Res.string.feed_made_public, item.repoName)
+        GithubFeedKind.STARRED_YOUR_REPO -> stringResource(Res.string.feed_starred_your_repo, item.repoName)
+        GithubFeedKind.FORKED_YOUR_REPO -> stringResource(Res.string.feed_forked_your_repo, item.repoName)
         GithubFeedKind.OTHER -> stringResource(Res.string.feed_other, item.primary.orEmpty(), item.repoName)
     }
     Row(

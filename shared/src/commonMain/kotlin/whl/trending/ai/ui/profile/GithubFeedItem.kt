@@ -5,12 +5,15 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import whl.trending.ai.auth.FollowingInfo
 import whl.trending.ai.data.remote.GithubEventDto
 
 enum class GithubFeedKind {
     STARRED, FORKED, CREATED_REPO, CREATED_BRANCH, CREATED_TAG, RELEASED,
     PUSHED, PR_OPENED, PR_MERGED, PR_CLOSED,
-    ISSUE_OPENED, ISSUE_CLOSED, ISSUE_COMMENTED, MADE_PUBLIC, OTHER,
+    ISSUE_OPENED, ISSUE_CLOSED, ISSUE_COMMENTED, MADE_PUBLIC,
+    STARRED_YOUR_REPO, FORKED_YOUR_REPO,
+    OTHER,
 }
 
 /**
@@ -130,4 +133,27 @@ val HighlightFeedKinds: Set<GithubFeedKind> = setOf(
     GithubFeedKind.PR_MERGED,
 )
 
+/** 组织产出型事件：关注的组织仓库上只保留这些（路人 star/fork 不算产出） */
+val OrgOutputFeedKinds: Set<GithubFeedKind> = setOf(
+    GithubFeedKind.RELEASED,
+    GithubFeedKind.CREATED_REPO,
+    GithubFeedKind.MADE_PUBLIC,
+)
+
 fun GithubFeedItem.isBot(): Boolean = actorLogin.endsWith("[bot]")
+
+/**
+ * 精选档判定：
+ * 规则1 关注的人的高信号动作（滤 bot）；规则2 关注的组织的产出（不滤 bot）。
+ * following 为 null（拉取失败降级）时退回"仅按类型 + 非 bot"的旧行为。
+ */
+fun GithubFeedItem.isHighlight(following: FollowingInfo?): Boolean {
+    if (following == null) return kind in HighlightFeedKinds && !isBot()
+    val actorLower = actorLogin.lowercase()
+    val repoOwnerLower = repoName.substringBefore('/').lowercase()
+    val byFollowedUser = actorLower in following.users &&
+        kind in HighlightFeedKinds && !isBot()
+    val byFollowedOrgOutput = repoOwnerLower in following.orgs &&
+        kind in OrgOutputFeedKinds
+    return byFollowedUser || byFollowedOrgOutput
+}
