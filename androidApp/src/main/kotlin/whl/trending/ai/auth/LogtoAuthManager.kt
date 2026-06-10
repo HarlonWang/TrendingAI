@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import whl.trending.ai.BuildConfig
+import whl.trending.ai.auth.LOGTO_ENDPOINT
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 
@@ -54,6 +55,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override fun signOut() {
         logtoClient.signOut { /* 本地凭证已清除即视为登出，远端失败不阻塞 */ }
         globalSettingsManager.setUserAvatarUrl(null)
+        GithubTokenProvider.shared.clear()
         _authState.value = AuthState.LoggedOut
         trackEvent("sign_out")
     }
@@ -66,7 +68,6 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         }
 
     companion object {
-        private const val LOGTO_ENDPOINT = "https://28bniv.logto.app"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
 
         /** release: cn.trendingai://whl.trending.ai/callback；debug 包名带 .debug，两条均已在 Logto 注册 */
