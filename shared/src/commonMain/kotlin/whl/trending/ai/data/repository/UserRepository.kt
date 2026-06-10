@@ -18,7 +18,8 @@ class UserRepository(private val api: TrendingApi = TrendingApi()) {
             val user = fetchMe(accessToken)
             globalSettingsManager.setUserAvatarUrl(user.avatarUrl)
             user
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             null
         }
     }

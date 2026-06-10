@@ -138,6 +138,9 @@ open class TrendingApi {
         val response = client.get("$baseHost/api/me") {
             header(HttpHeaders.Authorization, "Bearer $accessToken")
         }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
         return response.body<MeResponse>()
     }
 
