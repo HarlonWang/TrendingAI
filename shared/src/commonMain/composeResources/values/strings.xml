@@ -120,4 +120,10 @@
     <string name="theme_color_pink">Pink</string>
     <string name="whats_new_title">🎉 What&apos;s New in %1$s</string>
     <string name="whats_new_got_it">Got it</string>
+    <string name="profile_title">Profile</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_out">Sign out</string>
+    <string name="profile_open_github">Open on GitHub</string>
+    <string name="profile_load_failed">Failed to load profile</string>
+    <string name="profile_retry">Retry</string>
 </resources>
