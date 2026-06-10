@@ -90,15 +90,23 @@ fun ChatScreen(
         },
         bottomBar = {
             Column {
-                // 仅 README 入口、且尚无对话时显示"这个项目是做什么的"快捷问。
-                // messages 非空即隐藏，天然覆盖"发送后隐藏"与"恢复历史会话不再显示"。
-                if (initialContext?.sourceUrl != null && state.messages.isEmpty()) {
-                    val prompt = stringResource(R.string.chat_action_what_is_this_prompt)
+                // 尚无对话时在输入框上方显示入口对应的快捷问（label 资源 to prompt 资源）：
+                // 通用助手入口问能力，README 入口问项目介绍。messages 非空即隐藏，
+                // 天然覆盖"发送后隐藏"与"恢复历史会话不再显示"。
+                val quickAction = when {
+                    initialContext == null ->
+                        R.string.chat_action_what_can_you_do to R.string.chat_action_what_can_you_do_prompt
+                    initialContext.sourceUrl != null ->
+                        R.string.chat_action_what_is_this to R.string.chat_action_what_is_this_prompt
+                    else -> null
+                }
+                if (quickAction != null && state.messages.isEmpty()) {
+                    val prompt = stringResource(quickAction.second)
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
                         AssistChip(
                             onClick = { viewModel.sendText(prompt) },
                             enabled = !state.isSending,
-                            label = { Text(stringResource(R.string.chat_action_what_is_this)) },
+                            label = { Text(stringResource(quickAction.first)) },
                         )
                     }
                 }
