@@ -2,6 +2,7 @@ package whl.trending.ai.auth
 
 import android.app.Activity
 import android.content.Context
+import androidx.core.content.edit
 import io.logto.sdk.android.LogtoClient
 import io.logto.sdk.android.type.LogtoConfig
 import java.lang.ref.WeakReference
@@ -62,7 +63,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         _authState.value = AuthState.LoggingIn
         logtoClient.signIn(activity, REDIRECT_URI) { logtoException ->
             if (logtoException == null && logtoClient.isAuthenticated) {
-                prefs.edit().remove(KEY_SIGNED_OUT).apply()
+                prefs.edit { remove(KEY_SIGNED_OUT) }
                 _authState.value = AuthState.LoggedIn
                 trackEvent("sign_in_success")
             } else {
@@ -74,7 +75,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
 
     override fun signOut() {
         // 先持久化登出标记：即便随后被在途刷新复活，凭证也不再被采信（见构造的复活检测与 getAccessToken 守卫）
-        prefs.edit().putBoolean(KEY_SIGNED_OUT, true).apply()
+        prefs.edit { putBoolean(KEY_SIGNED_OUT, true) }
         logtoClient.signOut { /* 本地凭证已清除即视为登出，远端失败不阻塞 */ }
         globalSettingsManager.setUserAvatarUrl(null)
         GithubTokenProvider.shared.clear()
