@@ -139,8 +139,9 @@ TrendingAI 当前是一个无登录态的内容浏览产品（Daily Picks + 三�
 | 登录体验 | 仅 GitHub 社交登录（邮箱/密码注册与登录已移除） |
 | Account center | 已启用，"第三方访问令牌获取"已自动开启（Phase 2 取 GitHub token 的前提） |
 | 演示连接器 | Discord/GitHub/Google demo 已全部删除 |
+| 自定义域名 | `auth.trendingai.cn` 已绑定（2026-06-11）：Cloudflare CNAME → `domains.logto.app`（DNS only，不走代理）；GitHub OAuth App 回调已更新为 `https://auth.trendingai.cn/callback/0xb17od4fhlnc4z1wmo8m`；客户端与 Worker 的 endpoint 均已切换 |
 
-待办：自定义域名 `auth.trendingai.cn`（上线前绑定）；无代理国内真机实测可达性。
+待办：无代理国内真机实测可达性（自定义域名已于 2026-06-11 绑定完成，见上表）。
 
 ### 7.2 客户端（KMP / Android）
 

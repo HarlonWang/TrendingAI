@@ -32,5 +32,5 @@ object NoopAuthManager : AuthManager {
 /** 仿 globalChatScreen 的依赖反转：Android 在 MainActivity.onCreate 注入实现 */
 var globalAuthManager: AuthManager = NoopAuthManager
 
-/** Logto 租户端点：客户端 SDK 与 Account API 共用 */
-const val LOGTO_ENDPOINT = "https://28bniv.logto.app"
+/** Logto 租户端点（自定义域名，与 api.trendingai.cn 同走 Cloudflare 边缘）：客户端 SDK 与 Account API 共用 */
+const val LOGTO_ENDPOINT = "https://auth.trendingai.cn"
