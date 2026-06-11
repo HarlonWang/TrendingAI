@@ -85,8 +85,10 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     }
 
     override suspend fun getAccessToken(): String? {
-        // 登出态不触发刷新、也不交出可能被复活的 token：既缩小竞态源，又阻断复活凭证外泄
-        if (_authState.value !is AuthState.LoggedIn) return null
+        // 以持久化登出标记 + SDK 状态为准（与构造时登录态判定一致），不依赖可能过期的 _authState 快照：
+        // 多实例并存时旧实例的 _authState 可能仍为 LoggedIn，而 marker 已置位。
+        // 登出态既不触发刷新（缩小竞态源），也不交出可能被在途刷新复活的 token。
+        if (signedOut || !logtoClient.isAuthenticated) return null
         return suspendCancellableCoroutine { cont ->
             logtoClient.getAccessToken { _, accessToken ->
                 cont.resume(accessToken?.token)
