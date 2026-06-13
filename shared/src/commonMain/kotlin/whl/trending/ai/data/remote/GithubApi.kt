@@ -4,9 +4,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.put
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
@@ -212,6 +214,44 @@ open class GithubApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<List<GithubRepoDto>>().map { it.fullName }
+    }
+
+    /**
+     * 查询当前用户是否已 star 某仓库：GET /user/starred/{owner}/{repo}。
+     * 204=已 star，404=未 star。需 token 含 `public_repo` scope，否则 GitHub 同样以 404 兜底。
+     */
+    open suspend fun isStarred(githubToken: String, owner: String, repo: String): Boolean {
+        val response = client.get("$baseHost/user/starred/$owner/$repo") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+        }
+        return when (response.status.value) {
+            in 200..299 -> true
+            404 -> false
+            else -> throw ApiException(response.status.value, response.bodyAsText())
+        }
+    }
+
+    /** 给仓库 star：PUT /user/starred/{owner}/{repo}，204 成功。空 body 由 Ktor 自动带 Content-Length: 0。 */
+    open suspend fun starRepo(githubToken: String, owner: String, repo: String) {
+        val response = client.put("$baseHost/user/starred/$owner/$repo") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+    }
+
+    /** 取消 star：DELETE /user/starred/{owner}/{repo}，204 成功。 */
+    open suspend fun unstarRepo(githubToken: String, owner: String, repo: String) {
+        val response = client.delete("$baseHost/user/starred/$owner/$repo") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
     }
 
     open suspend fun fetchRepoEvents(

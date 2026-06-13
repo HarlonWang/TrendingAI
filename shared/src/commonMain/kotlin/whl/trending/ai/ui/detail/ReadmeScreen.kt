@@ -19,6 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -28,10 +30,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -44,11 +50,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.action_star
+import trendingai.shared.generated.resources.action_unstar
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
 import trendingai.shared.generated.resources.share_to_ai
+import trendingai.shared.generated.resources.sign_in
+import trendingai.shared.generated.resources.star_failed
+import trendingai.shared.generated.resources.star_need_login
+import trendingai.shared.generated.resources.star_success
+import trendingai.shared.generated.resources.unstar_success
 import trendingai.shared.generated.resources.view_on_github
+import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.ui.common.aiShareText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -76,7 +90,31 @@ fun ReadmeScreen(
     // README 摘录涉及多次正则替换，缓存结果避免每次重组重算（分享栏与 FAB 共用）
     val summary = remember(uiState.html) { readmeExcerpt(uiState.html) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val msgStarred = stringResource(Res.string.star_success)
+    val msgUnstarred = stringResource(Res.string.unstar_success)
+    val msgFailed = stringResource(Res.string.star_failed)
+    val msgNeedLogin = stringResource(Res.string.star_need_login)
+    val actionLogin = stringResource(Res.string.sign_in)
+    LaunchedEffect(Unit) {
+        viewModel.starEvents.collect { result ->
+            when (result) {
+                RepoStarService.Result.STARRED -> snackbarHostState.showSnackbar(msgStarred)
+                RepoStarService.Result.UNSTARRED -> snackbarHostState.showSnackbar(msgUnstarred)
+                RepoStarService.Result.FAILED -> snackbarHostState.showSnackbar(msgFailed)
+                RepoStarService.Result.NEED_LOGIN -> {
+                    val action = snackbarHostState.showSnackbar(
+                        message = msgNeedLogin,
+                        actionLabel = actionLogin,
+                    )
+                    if (action == SnackbarResult.ActionPerformed) viewModel.signIn()
+                }
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -95,6 +133,24 @@ fun ReadmeScreen(
                     }
                 },
                 actions = {
+                    if (uiState.starSupported) {
+                        IconButton(
+                            onClick = { viewModel.toggleStar() },
+                            enabled = !uiState.isStarLoading,
+                        ) {
+                            when {
+                                uiState.isStarLoading -> LoadingIndicator(modifier = Modifier.size(24.dp))
+                                uiState.isStarred == true -> Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = stringResource(Res.string.action_unstar),
+                                )
+                                else -> Icon(
+                                    imageVector = Icons.Outlined.StarBorder,
+                                    contentDescription = stringResource(Res.string.action_star),
+                                )
+                            }
+                        }
+                    }
                     val shareContent = aiShareText("$owner/$repo", summary, repoUrl)
                     IconButton(onClick = {
                         shareText(shareContent)
