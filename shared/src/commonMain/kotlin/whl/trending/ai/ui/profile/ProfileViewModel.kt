@@ -263,5 +263,16 @@ class ProfileViewModel(
         loadMoreFeed()
     }
 
+    /**
+     * 离开页面时调用：取消在途加载并把状态重置为初始加载态。
+     * VM 是 Activity 级缓存（复用同一实例），不清理会在重新进入页面时先闪出上次的旧数据，
+     * 之后才被 [load] 异步重置。离开时同步清掉，使下次进入的首帧即为初始 loading 态。
+     */
+    fun onLeave() {
+        loadJob?.cancel()
+        feedLoadJob?.cancel()
+        _uiState.value = ProfileUiState()
+    }
+
     fun signOut() = authManager().signOut()
 }
