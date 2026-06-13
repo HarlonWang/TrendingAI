@@ -1,10 +1,13 @@
 package whl.trending.ai.ui.profile
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -25,6 +29,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,7 +43,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +68,14 @@ import trendingai.shared.generated.resources.feed_empty
 import trendingai.shared.generated.resources.feed_end_notice
 import trendingai.shared.generated.resources.feed_filter_all
 import trendingai.shared.generated.resources.feed_filter_highlights
+import trendingai.shared.generated.resources.feed_rules_all_desc
+import trendingai.shared.generated.resources.feed_rules_all_title
+import trendingai.shared.generated.resources.feed_rules_highlights_desc
+import trendingai.shared.generated.resources.feed_rules_highlights_title
+import trendingai.shared.generated.resources.feed_rules_limits
+import trendingai.shared.generated.resources.feed_rules_title
+import trendingai.shared.generated.resources.feed_rules_vs_official_desc
+import trendingai.shared.generated.resources.feed_rules_vs_official_title
 import trendingai.shared.generated.resources.feed_forked
 import trendingai.shared.generated.resources.feed_issue_closed
 import trendingai.shared.generated.resources.feed_issue_commented
@@ -108,6 +123,7 @@ fun ProfileScreen(onBack: () -> Unit) {
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val onSignOut = { viewModel.signOut(); onBack() }
+    var showRulesSheet by remember { mutableStateOf(false) }
 
     // 滚动到底部附近时自动加载下一页
     val shouldLoadMore by remember {
@@ -190,7 +206,8 @@ fun ProfileScreen(onBack: () -> Unit) {
                 item(key = "feed_filter") {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         FilterChip(
                             selected = uiState.highlightsOnly,
@@ -202,6 +219,13 @@ fun ProfileScreen(onBack: () -> Unit) {
                             onClick = { if (uiState.highlightsOnly) viewModel.setFeedFilter(false) },
                             label = { Text(stringResource(Res.string.feed_filter_all)) }
                         )
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = { showRulesSheet = true }) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = stringResource(Res.string.feed_rules_title),
+                            )
+                        }
                     }
                 }
                 if (uiState.feedUnavailable && uiState.feedItems.isEmpty()) {
@@ -232,6 +256,58 @@ fun ProfileScreen(onBack: () -> Unit) {
             }
             }
         }
+    }
+
+    if (showRulesSheet) {
+        ModalBottomSheet(onDismissRequest = { showRulesSheet = false }) {
+            FeedRulesSheet()
+        }
+    }
+}
+
+@Composable
+private fun FeedRulesSheet() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            stringResource(Res.string.feed_rules_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        FeedRulesSection(
+            title = stringResource(Res.string.feed_rules_highlights_title),
+            body = stringResource(Res.string.feed_rules_highlights_desc),
+        )
+        FeedRulesSection(
+            title = stringResource(Res.string.feed_rules_all_title),
+            body = stringResource(Res.string.feed_rules_all_desc),
+        )
+        FeedRulesSection(
+            title = stringResource(Res.string.feed_rules_vs_official_title),
+            body = stringResource(Res.string.feed_rules_vs_official_desc),
+        )
+        Text(
+            stringResource(Res.string.feed_rules_limits),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun FeedRulesSection(title: String, body: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
