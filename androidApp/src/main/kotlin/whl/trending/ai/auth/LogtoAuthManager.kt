@@ -90,9 +90,9 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
 
         /**
          * release: cn.trendingai://whl.trending.ai/callback；debug 包名带 .debug，两条均已在 Logto 注册。
-         * 同时用作登录回跳与登出后回跳（post sign-out redirect URI）；scheme 须与 manifestPlaceholder
-         * `logtoRedirectScheme` 一致（见 androidApp/build.gradle.kts）。
+         * 同时用作登录回跳与登出后回跳（post sign-out redirect URI）。scheme 与 manifestPlaceholder
+         * `logtoRedirectScheme` 共用 BuildConfig.LOGTO_REDIRECT_SCHEME 单一来源（见 androidApp/build.gradle.kts）。
          */
-        private val REDIRECT_URI = "cn.trendingai://${BuildConfig.APPLICATION_ID}/callback"
+        private val REDIRECT_URI = "${BuildConfig.LOGTO_REDIRECT_SCHEME}://${BuildConfig.APPLICATION_ID}/callback"
     }
 }
