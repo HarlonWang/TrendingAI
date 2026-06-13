@@ -34,6 +34,28 @@ data class GithubUser(
     @SerialName("public_repos") val publicRepos: Int = 0,
 )
 
+/** followers / following 列表项：含头像与主页，供 Profile 下钻列表展示。 */
+@Serializable
+data class GithubUserSummary(
+    val login: String,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("html_url") val htmlUrl: String? = null,
+    val type: String = "User",
+)
+
+/** repos 列表项：供 Profile 仓库下钻列表展示。 */
+@Serializable
+data class GithubRepoSummary(
+    @SerialName("full_name") val fullName: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("stargazers_count") val stars: Int = 0,
+    val language: String? = null,
+    @SerialName("html_url") val htmlUrl: String? = null,
+    val fork: Boolean = false,
+    @SerialName("pushed_at") val pushedAt: String? = null,
+)
+
 @Serializable
 data class GithubEventActor(
     val login: String,
@@ -115,6 +137,67 @@ open class GithubApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<List<GithubFollowing>>()
+    }
+
+    /** 我的 followers 分页列表（含头像）。 */
+    open suspend fun fetchFollowers(
+        githubToken: String,
+        page: Int,
+        perPage: Int = 30,
+    ): List<GithubUserSummary> {
+        val response = client.get("$baseHost/user/followers") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            parameter("per_page", perPage)
+            parameter("page", page)
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<List<GithubUserSummary>>()
+    }
+
+    /** 我关注的 following 分页列表（含头像）。与 [fetchFollowing] 区分：后者仅供 feed 过滤取 login。 */
+    open suspend fun fetchFollowingUsers(
+        githubToken: String,
+        page: Int,
+        perPage: Int = 30,
+    ): List<GithubUserSummary> {
+        val response = client.get("$baseHost/user/following") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            parameter("per_page", perPage)
+            parameter("page", page)
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<List<GithubUserSummary>>()
+    }
+
+    /**
+     * 我的自有公开仓库分页列表（含 fork），按最近 push 倒序。
+     * 显式 visibility=public：与顶部 publicRepos 计数口径一致——否则默认会带回私有仓库，
+     * 导致列表条数大于头部计数。
+     */
+    open suspend fun fetchReposPage(
+        githubToken: String,
+        page: Int,
+        perPage: Int = 30,
+    ): List<GithubRepoSummary> {
+        val response = client.get("$baseHost/user/repos") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            parameter("per_page", perPage)
+            parameter("page", page)
+            parameter("affiliation", "owner")
+            parameter("visibility", "public")
+            parameter("sort", "pushed")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<List<GithubRepoSummary>>()
     }
 
     open suspend fun fetchOwnRepos(githubToken: String, perPage: Int = 100): List<String> {

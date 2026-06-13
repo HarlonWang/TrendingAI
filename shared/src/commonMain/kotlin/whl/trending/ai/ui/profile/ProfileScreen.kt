@@ -107,7 +107,12 @@ import whl.trending.ai.core.DateTimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ProfileScreen(onBack: () -> Unit) {
+fun ProfileScreen(
+    onBack: () -> Unit,
+    onOpenFollowers: () -> Unit,
+    onOpenFollowing: () -> Unit,
+    onOpenRepos: () -> Unit,
+) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
     // nav3 默认无 per-entry VM 作用域，VM 是 Activity 级缓存；每次进入本页全量重载，
@@ -201,7 +206,12 @@ fun ProfileScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item(key = "header") {
-                    ProfileHeader(uiState = uiState)
+                    ProfileHeader(
+                        uiState = uiState,
+                        onOpenFollowers = onOpenFollowers,
+                        onOpenFollowing = onOpenFollowing,
+                        onOpenRepos = onOpenRepos,
+                    )
                 }
                 item(key = "feed_filter") {
                     Row(
@@ -314,6 +324,9 @@ private fun FeedRulesSection(title: String, body: String) {
 @Composable
 private fun ProfileHeader(
     uiState: ProfileUiState,
+    onOpenFollowers: () -> Unit,
+    onOpenFollowing: () -> Unit,
+    onOpenRepos: () -> Unit,
 ) {
     val user = uiState.user ?: return
     Column(
@@ -339,17 +352,23 @@ private fun ProfileHeader(
         }
         uiState.githubUser?.let { gh ->
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                CountCell(gh.followers, stringResource(Res.string.profile_followers))
-                CountCell(gh.following, stringResource(Res.string.profile_following))
-                CountCell(gh.publicRepos, stringResource(Res.string.profile_repos))
+                CountCell(gh.followers, stringResource(Res.string.profile_followers), onClick = onOpenFollowers)
+                CountCell(gh.following, stringResource(Res.string.profile_following), onClick = onOpenFollowing)
+                CountCell(gh.publicRepos, stringResource(Res.string.profile_repos), onClick = onOpenRepos)
             }
         }
     }
 }
 
 @Composable
-private fun CountCell(count: Int, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun CountCell(count: Int, label: String, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
         Text(DateTimeUtils.formatNumber(count), style = MaterialTheme.typography.titleMedium)
         Text(
             label,

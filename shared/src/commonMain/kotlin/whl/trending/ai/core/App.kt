@@ -4,7 +4,10 @@ import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
+import whl.trending.ai.ui.profile.GithubUserListMode
+import whl.trending.ai.ui.profile.GithubUserListScreen
 import whl.trending.ai.ui.profile.ProfileScreen
+import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
@@ -29,6 +32,9 @@ data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
 data object Profile
+data object ProfileFollowers
+data object ProfileFollowing
+data object ProfileRepos
 data class Chat(val context: ChatContext?)
 
 /**
@@ -130,7 +136,35 @@ fun App() {
                     }
 
                     is Profile -> NavEntry(key) {
-                        ProfileScreen(onBack = { backStack.safePop() })
+                        ProfileScreen(
+                            onBack = { backStack.safePop() },
+                            onOpenFollowers = { backStack.add(ProfileFollowers) },
+                            onOpenFollowing = { backStack.add(ProfileFollowing) },
+                            onOpenRepos = { backStack.add(ProfileRepos) },
+                        )
+                    }
+
+                    is ProfileFollowers -> NavEntry(key) {
+                        GithubUserListScreen(
+                            mode = GithubUserListMode.FOLLOWERS,
+                            onBack = { backStack.safePop() },
+                        )
+                    }
+
+                    is ProfileFollowing -> NavEntry(key) {
+                        GithubUserListScreen(
+                            mode = GithubUserListMode.FOLLOWING,
+                            onBack = { backStack.safePop() },
+                        )
+                    }
+
+                    is ProfileRepos -> NavEntry(key) {
+                        RepoListScreen(
+                            onBack = { backStack.safePop() },
+                            onOpenRepo = { owner, repo ->
+                                backStack.add(RepoDetail(owner, repo))
+                            },
+                        )
                     }
 
                     is RepoDetail -> NavEntry(key) {
