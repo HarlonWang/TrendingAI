@@ -40,7 +40,16 @@ data class ProfileUiState(
     val feedUnavailable: Boolean = false,
     /** true = 精选档（默认），false = 全部档 */
     val highlightsOnly: Boolean = true,
-)
+) {
+    /**
+     * feed 是否应显示加载态。除「正在拉取」(isFeedLoading) 外，还覆盖
+     * load → loadGithubData（取计数/关注/自有仓库事件）→ loadMoreFeed 之间
+     * isFeedLoading 尚未置位的空窗：此时 feed 首个结果未产出（空且未到底、未不可用），
+     * 同样应显示 loading，避免进入页面后 feed 区先空白一会再冒出 loading。
+     */
+    val isFeedLoadingVisible: Boolean
+        get() = isFeedLoading || (feedItems.isEmpty() && !feedEndReached && !feedUnavailable)
+}
 
 class ProfileViewModel(
     private val repository: UserRepository = UserRepository(),

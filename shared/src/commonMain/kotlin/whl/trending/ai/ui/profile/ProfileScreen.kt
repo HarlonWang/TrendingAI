@@ -212,7 +212,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                     GithubFeedRow(item = item, onClick = { uriHandler.openUri(item.targetUrl) })
                     HorizontalDivider(thickness = 0.5.dp)
                 }
-                if (uiState.isFeedLoading) {
+                if (uiState.isFeedLoadingVisible) {
                     item(key = "feed_loading") {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                             LoadingIndicator(modifier = Modifier.size(32.dp))
