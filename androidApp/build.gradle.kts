@@ -76,6 +76,11 @@ android {
         versionName = appVersionName
 
         manifestPlaceholders["appName"] = "Trending AI"
+
+        // Logto v3 登录/登出走系统浏览器（Chrome Custom Tabs），回跳经 OS intent-filter，
+        // SDK 用该 scheme + ${applicationId} 注册接收 Activity；缺失会导致 manifest 合并失败。
+        // 须与传给 signIn/signOut 的 redirect URI scheme 一致（见 LogtoAuthManager.REDIRECT_URI）。
+        manifestPlaceholders["logtoRedirectScheme"] = "cn.trendingai"
     }
 
     // 签名配置：从环境变量读取加密存储的密钥信息
