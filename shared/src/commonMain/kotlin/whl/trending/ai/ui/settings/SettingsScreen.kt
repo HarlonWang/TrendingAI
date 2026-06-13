@@ -31,7 +31,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlternateEmail
@@ -121,7 +122,7 @@ import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.version
 import trendingai.shared.generated.resources.version_up_to_date
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -385,9 +386,8 @@ fun SettingsScreen(
                         headlineContent = { Text(stringResource(Res.string.check_updates)) },
                         trailingContent = {
                             when {
-                                !isIos && isChecking -> CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
+                                !isIos && isChecking -> LoadingIndicator(
+                                    modifier = Modifier.size(24.dp)
                                 )
                                 !isIos && isUpToDate -> Text(
                                     stringResource(Res.string.version_up_to_date),
