@@ -130,6 +130,11 @@
     <string name="profile_followers">粉丝</string>
     <string name="profile_following">关注</string>
     <string name="profile_repos">仓库</string>
+    <string name="list_load_failed">加载失败</string>
+    <string name="list_empty_followers">还没有粉丝</string>
+    <string name="list_empty_following">还没有关注任何人</string>
+    <string name="list_empty_repos">还没有仓库</string>
+    <string name="repo_fork_label">Fork</string>
     <string name="feed_starred">Star 了 %1$s</string>
     <string name="feed_forked">Fork 了 %1$s</string>
     <string name="feed_created_repo">创建了仓库 %1$s</string>
