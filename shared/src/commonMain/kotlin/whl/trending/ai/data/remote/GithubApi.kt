@@ -175,7 +175,11 @@ open class GithubApi {
         return response.body<List<GithubUserSummary>>()
     }
 
-    /** 我的自有仓库分页列表（含 fork），按最近 push 倒序——与顶部 publicRepos 计数口径一致。 */
+    /**
+     * 我的自有公开仓库分页列表（含 fork），按最近 push 倒序。
+     * 显式 visibility=public：与顶部 publicRepos 计数口径一致——否则默认会带回私有仓库，
+     * 导致列表条数大于头部计数。
+     */
     open suspend fun fetchReposPage(
         githubToken: String,
         page: Int,
@@ -187,6 +191,7 @@ open class GithubApi {
             parameter("per_page", perPage)
             parameter("page", page)
             parameter("affiliation", "owner")
+            parameter("visibility", "public")
             parameter("sort", "pushed")
         }
         if (response.status.value !in 200..299) {
