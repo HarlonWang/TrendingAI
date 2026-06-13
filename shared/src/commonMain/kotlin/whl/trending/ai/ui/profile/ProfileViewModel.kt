@@ -27,6 +27,8 @@ private const val MAX_PAGES_PER_LOAD = 5          // 单次调用最多连续拉
 
 data class ProfileUiState(
     val isLoading: Boolean = true,
+    /** 下拉刷新中：与首屏 [isLoading] 区分，刷新时保留旧内容、仅显示下拉指示器 */
+    val isRefreshing: Boolean = false,
     val user: MeUser? = null,
     val isError: Boolean = false,
     /** GitHub 实时计数；token 不可用或请求失败时为 null（UI 隐藏计数行） */
@@ -196,6 +198,43 @@ class ProfileViewModel(
                     feedUnavailable = _uiState.value.feedItems.isEmpty(),
                 )
             }
+        }
+    }
+
+    /**
+     * 下拉刷新：保留当前 header/feed 可见（不切首屏 loading），重置分页游标后整体重载。
+     * 与 [load] 共享取消语义，避免与在途加载交叉写 state。
+     */
+    fun refresh() {
+        loadJob?.cancel()
+        feedLoadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, isError = false)
+            nextFeedPage = 1
+            consumedRawCount = 0
+            followingInfo = null
+            ownRepoItems = emptyList()
+            val token = authManager().getAccessToken()
+            if (token == null) {
+                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
+                return@launch
+            }
+            val user = try {
+                repository.fetchMe(token)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
+                return@launch
+            }
+            // 旧内容保留到此刻才清空 feed，随后由 loadGithubData 重新填充，避免下拉时列表闪空
+            _uiState.value = _uiState.value.copy(
+                isRefreshing = false,
+                user = user,
+                feedItems = emptyList(),
+                feedEndReached = false,
+                feedUnavailable = false,
+            )
+            loadGithubData(user)
         }
     }
 

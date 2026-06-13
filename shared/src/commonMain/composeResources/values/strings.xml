@@ -152,4 +152,8 @@
     <string name="feed_filter_highlights">Highlights</string>
     <string name="feed_filter_all">All</string>
     <string name="feed_unavailable">Activity feed unavailable</string>
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%1$d min ago</string>
+    <string name="time_hours_ago">%1$d h ago</string>
+    <string name="time_days_ago">%1$d d ago</string>
 </resources>

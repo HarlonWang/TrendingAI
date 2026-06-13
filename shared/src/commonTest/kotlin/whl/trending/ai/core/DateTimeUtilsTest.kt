@@ -10,6 +10,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class DateTimeUtilsTest {
 
@@ -61,5 +66,36 @@ class DateTimeUtilsTest {
         // 解析失败走 catch 分支，原样返回
         val input = "not-a-date"
         assertEquals(input, DateTimeUtils.formatToLocalTime(input))
+    }
+
+    @Test
+    fun relative_time_buckets_are_classified() {
+        val now = Instant.parse("2026-06-13T12:00:00Z")
+        fun at(d: kotlin.time.Duration) = (now - d).toString()
+
+        assertEquals(DateTimeUtils.RelativeUnit.JUST_NOW, DateTimeUtils.relativeTime(at(30.seconds), now).unit)
+
+        val m = DateTimeUtils.relativeTime(at(5.minutes), now)
+        assertEquals(DateTimeUtils.RelativeUnit.MINUTES, m.unit)
+        assertEquals(5, m.value)
+
+        val h = DateTimeUtils.relativeTime(at(3.hours), now)
+        assertEquals(DateTimeUtils.RelativeUnit.HOURS, h.unit)
+        assertEquals(3, h.value)
+
+        val d = DateTimeUtils.relativeTime(at(2.days), now)
+        assertEquals(DateTimeUtils.RelativeUnit.DAYS, d.unit)
+        assertEquals(2, d.value)
+
+        // 超过 7 天回退到绝对时间
+        assertEquals(DateTimeUtils.RelativeUnit.ABSOLUTE, DateTimeUtils.relativeTime(at(10.days), now).unit)
+    }
+
+    @Test
+    fun relative_time_malformed_falls_back_to_absolute() {
+        val now = Instant.parse("2026-06-13T12:00:00Z")
+        val result = DateTimeUtils.relativeTime("not-a-date", now)
+        assertEquals(DateTimeUtils.RelativeUnit.ABSOLUTE, result.unit)
+        assertEquals("not-a-date", result.absolute)
     }
 }

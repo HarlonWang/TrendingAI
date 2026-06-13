@@ -152,4 +152,8 @@
     <string name="feed_filter_highlights">精选</string>
     <string name="feed_filter_all">全部</string>
     <string name="feed_unavailable">动态加载不可用</string>
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%1$d 分钟前</string>
+    <string name="time_hours_ago">%1$d 小时前</string>
+    <string name="time_days_ago">%1$d 天前</string>
 </resources>
