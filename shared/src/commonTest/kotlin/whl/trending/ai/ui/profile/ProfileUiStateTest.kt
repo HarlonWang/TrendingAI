@@ -27,6 +27,13 @@ class ProfileUiStateTest {
     }
 
     @Test
+    fun full_page_loading_does_not_show_feed_loading() {
+        // 整页 loading 阶段不渲染 feed spinner，避免与整页 loading 叠加
+        val state = ProfileUiState(isLoading = true)
+        assertFalse(state.isFeedLoadingVisible)
+    }
+
+    @Test
     fun actively_fetching_shows_loading() {
         val state = ProfileUiState(isLoading = false, isFeedLoading = true)
         assertTrue(state.isFeedLoadingVisible)

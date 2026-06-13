@@ -42,13 +42,13 @@ data class ProfileUiState(
     val highlightsOnly: Boolean = true,
 ) {
     /**
-     * feed 是否应显示加载态。除「正在拉取」(isFeedLoading) 外，还覆盖
-     * load → loadGithubData（取计数/关注/自有仓库事件）→ loadMoreFeed 之间
-     * isFeedLoading 尚未置位的空窗：此时 feed 首个结果未产出（空且未到底、未不可用），
-     * 同样应显示 loading，避免进入页面后 feed 区先空白一会再冒出 loading。
+     * feed 是否应显示加载态。语义：feed 首个结果尚未产出（空、且未到底、未不可用）即视为加载中，
+     * 而不仅是「正在发起网络请求」(isFeedLoading)——这样从页面内容出现到首批 feed 到达期间始终有
+     * loading，不会先空白。整页加载中 (isLoading) 时不计入，避免与整页 loading 叠加。
      */
     val isFeedLoadingVisible: Boolean
-        get() = isFeedLoading || (feedItems.isEmpty() && !feedEndReached && !feedUnavailable)
+        get() = !isLoading &&
+            (isFeedLoading || (feedItems.isEmpty() && !feedEndReached && !feedUnavailable))
 }
 
 class ProfileViewModel(
