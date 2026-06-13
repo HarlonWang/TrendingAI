@@ -38,6 +38,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,6 +50,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,10 +94,16 @@ import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.retry
 import trendingai.shared.generated.resources.select_date
+import trendingai.shared.generated.resources.sign_in
+import trendingai.shared.generated.resources.star_failed
+import trendingai.shared.generated.resources.star_need_login
+import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.stars_period
 import trendingai.shared.generated.resources.stars_total
 import trendingai.shared.generated.resources.update_info_content
 import trendingai.shared.generated.resources.update_info_title
+import whl.trending.ai.auth.RepoStarService
+import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
@@ -119,13 +129,44 @@ fun TrendingScreen(
     viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    // GitHub 登录不被支持的平台（如 iOS NoopAuthManager）隐藏 star 入口
+    val starEnabled = remember { globalAuthManager.isSupported }
 
-    RepoList(
-        uiState = uiState,
-        modifier = modifier,
-        onRefresh = { viewModel.fetchData(isRefresh = true) },
-        onNavigateToDetail = onNavigateToDetail
-    )
+    val msgStarred = stringResource(Res.string.star_success)
+    val msgFailed = stringResource(Res.string.star_failed)
+    val msgNeedLogin = stringResource(Res.string.star_need_login)
+    val actionLogin = stringResource(Res.string.sign_in)
+    LaunchedEffect(Unit) {
+        viewModel.starEvents.collect { result ->
+            when (result) {
+                RepoStarService.Result.STARRED -> snackbarHostState.showSnackbar(msgStarred)
+                RepoStarService.Result.FAILED -> snackbarHostState.showSnackbar(msgFailed)
+                RepoStarService.Result.NEED_LOGIN -> {
+                    val action = snackbarHostState.showSnackbar(
+                        message = msgNeedLogin,
+                        actionLabel = actionLogin,
+                    )
+                    if (action == SnackbarResult.ActionPerformed) globalAuthManager.signIn()
+                }
+                RepoStarService.Result.UNSTARRED -> Unit // 列表页只 star，不触发取消
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        RepoList(
+            uiState = uiState,
+            modifier = Modifier.fillMaxSize(),
+            onRefresh = { viewModel.fetchData(isRefresh = true) },
+            onNavigateToDetail = onNavigateToDetail,
+            onStarRepo = if (starEnabled) viewModel::starRepo else null,
+        )
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 
     if (showFilterSheet) {
         FilterBottomSheet(
@@ -172,7 +213,9 @@ private fun RepoList(
     uiState: TrendingUiState,
     modifier: Modifier = Modifier,
     onRefresh: () -> Unit,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit
+    onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    /** 非空时列表项菜单显示「Star 到 GitHub」，null（不支持登录的平台）则隐藏 */
+    onStarRepo: ((TrendingRepo) -> Unit)? = null,
 ) {
     val state = rememberPullToRefreshState()
 
@@ -235,6 +278,7 @@ private fun RepoList(
                         repo = repo,
                         since = uiState.since,
                         isFavorite = repo.url in favoriteUrls,
+                        onStar = onStarRepo?.let { star -> { star(repo) } },
                         onToggleFavorite = {
                             if (repo.url in favoriteUrls) {
                                 globalSettingsManager.removeFavorite(repo.url)
@@ -283,7 +327,7 @@ private fun RepoList(
 }
 
 @Composable
-private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
+private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit, onStar: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .clickable { onClick() }
@@ -354,7 +398,8 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: 
                                 "from" to "list"
                             )
                         )
-                    }
+                    },
+                    onStar = onStar,
                 )
             }
         }

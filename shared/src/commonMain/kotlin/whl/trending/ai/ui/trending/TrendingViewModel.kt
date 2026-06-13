@@ -1,8 +1,10 @@
 package whl.trending.ai.ui.trending
 
+import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.data.model.TrendingRepo
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.getSystemLanguage
@@ -11,8 +13,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
@@ -34,10 +39,15 @@ data class TrendingUiState(
 
 class TrendingViewModel(
     private val repository: TrendingRepository = TrendingRepository(),
-    private val settingsManager: SettingsManager = globalSettingsManager
+    private val settingsManager: SettingsManager = globalSettingsManager,
+    private val starService: RepoStarService = RepoStarService.shared,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrendingUiState())
     val uiState: StateFlow<TrendingUiState> = _uiState.asStateFlow()
+
+    /** star 操作结果一次性事件：UI 收到后弹 Snackbar（成功/失败/需登录） */
+    private val _starEvents = MutableSharedFlow<RepoStarService.Result>(extraBufferCapacity = 1)
+    val starEvents: SharedFlow<RepoStarService.Result> = _starEvents.asSharedFlow()
 
     private var fetchJob: Job? = null
 
@@ -92,6 +102,23 @@ class TrendingViewModel(
                         error = e.message ?: "Unknown Error"
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * 列表页 star：仅做「点 star」（不展示已 star 状态，避免逐项查询）。GitHub PUT 幂等，
+     * 已 star 再点也安全。结果通过 [starEvents] 通知 UI。
+     */
+    fun starRepo(repo: TrendingRepo) {
+        viewModelScope.launch {
+            val result = starService.star(repo.author, repo.repoName)
+            _starEvents.tryEmit(result)
+            if (result == RepoStarService.Result.STARRED) {
+                trackEvent(
+                    "repo_star",
+                    mapOf("source" to "github", "from" to "list")
+                )
             }
         }
     }

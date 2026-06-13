@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_favorite
+import trendingai.shared.generated.resources.action_star
 import trendingai.shared.generated.resources.action_unfavorite
 import trendingai.shared.generated.resources.share_to_ai
 
@@ -31,7 +33,9 @@ fun ItemActionMenu(
     isFavorite: Boolean,
     onToggle: () -> Unit,
     onShare: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 非空时在菜单中显示「Star 到 GitHub」项（仅 GitHub 仓库场景传入），null 则不显示 */
+    onStar: (() -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier) {
@@ -79,6 +83,18 @@ fun ItemActionMenu(
                     onShare()
                 }
             )
+            if (onStar != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(Res.string.action_star)) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.StarBorder, contentDescription = null)
+                    },
+                    onClick = {
+                        expanded = false
+                        onStar()
+                    }
+                )
+            }
         }
     }
 }
