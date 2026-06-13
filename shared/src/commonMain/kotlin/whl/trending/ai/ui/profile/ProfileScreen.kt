@@ -33,6 +33,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -98,6 +99,10 @@ fun ProfileScreen(onBack: () -> Unit) {
     // 避免登出换账号串号 / feed 失败态永久残留
     LaunchedEffect(Unit) {
         viewModel.load()
+    }
+    // 离开页面即清空缓存 VM 的状态，避免再次进入时首帧先闪出上次的旧数据
+    DisposableEffect(Unit) {
+        onDispose { viewModel.onLeave() }
     }
     val uriHandler = LocalUriHandler.current
     val listState = rememberLazyListState()
@@ -212,7 +217,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                     GithubFeedRow(item = item, onClick = { uriHandler.openUri(item.targetUrl) })
                     HorizontalDivider(thickness = 0.5.dp)
                 }
-                if (uiState.isFeedLoading) {
+                if (uiState.isFeedLoadingVisible) {
                     item(key = "feed_loading") {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                             LoadingIndicator(modifier = Modifier.size(32.dp))
