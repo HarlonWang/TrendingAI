@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,12 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
@@ -36,14 +30,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,7 +101,7 @@ fun ProfileScreen(onBack: () -> Unit) {
     }
     val uriHandler = LocalUriHandler.current
     val listState = rememberLazyListState()
-    var menuExpanded by remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
     val onSignOut = { viewModel.signOut(); onBack() }
 
     // 滚动到底部附近时自动加载下一页
@@ -131,14 +125,19 @@ fun ProfileScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.sign_out))
+                    // 两个操作平铺在右上角：打开 GitHub（仅在已拿到用户主页时显示）+ 登出
+                    uiState.user?.htmlUrl?.let { url ->
+                        IconButton(onClick = { uriHandler.openUri(url) }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = stringResource(Res.string.profile_open_github),
+                            )
+                        }
                     }
-                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(Res.string.sign_out)) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-                            onClick = { menuExpanded = false; onSignOut() },
+                    IconButton(onClick = onSignOut) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = stringResource(Res.string.sign_out),
                         )
                     }
                 }
@@ -163,7 +162,17 @@ fun ProfileScreen(onBack: () -> Unit) {
 
             else -> PullToRefreshBox(
                 isRefreshing = uiState.isRefreshing,
+                state = pullToRefreshState,
                 onRefresh = { viewModel.refresh() },
+                // 与 Picks/Feed/Trending 一致：用 M3 Expressive LoadingIndicator 风格的下拉指示器，
+                // 避免回落到默认 CircularProgressIndicator 造成全 app loading 样式不统一
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = pullToRefreshState,
+                        isRefreshing = uiState.isRefreshing,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                },
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
             LazyColumn(
@@ -171,10 +180,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item(key = "header") {
-                    ProfileHeader(
-                        uiState = uiState,
-                        onOpenGithub = { url -> uriHandler.openUri(url) },
-                    )
+                    ProfileHeader(uiState = uiState)
                 }
                 item(key = "feed_filter") {
                     Row(
@@ -227,7 +233,6 @@ fun ProfileScreen(onBack: () -> Unit) {
 @Composable
 private fun ProfileHeader(
     uiState: ProfileUiState,
-    onOpenGithub: (String) -> Unit,
 ) {
     val user = uiState.user ?: return
     Column(
@@ -256,20 +261,6 @@ private fun ProfileHeader(
                 CountCell(gh.followers, stringResource(Res.string.profile_followers))
                 CountCell(gh.following, stringResource(Res.string.profile_following))
                 CountCell(gh.publicRepos, stringResource(Res.string.profile_repos))
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-        // 「打开 GitHub」是外链跳转，降级为 tonal 次级按钮（不再抢占 filled primary 视觉权重）；
-        // 登出已上移至 TopAppBar ⋮ 菜单。
-        user.htmlUrl?.let { url ->
-            FilledTonalButton(onClick = { onOpenGithub(url) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(
-                    Icons.AutoMirrored.Filled.OpenInNew,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(stringResource(Res.string.profile_open_github))
             }
         }
     }
