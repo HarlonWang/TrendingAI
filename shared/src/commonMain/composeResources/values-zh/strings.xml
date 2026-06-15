@@ -130,7 +130,7 @@
     <string name="profile_title">个人主页</string>
     <string name="sign_in">登录</string>
     <string name="sign_out">退出登录</string>
-    <string name="profile_open_github">在 GitHub 打开</string>
+    <string name="sign_out_confirm">确定要退出登录吗？</string>
     <string name="profile_load_failed">加载失败</string>
     <string name="profile_retry">重试</string>
     <string name="profile_followers">粉丝</string>
@@ -169,10 +169,10 @@
     <string name="time_days_ago">%1$d 天前</string>
     <string name="feed_rules_title">动态筛选说明</string>
     <string name="feed_rules_highlights_title">精选</string>
-    <string name="feed_rules_highlights_desc">只保留关注对象的高信号动态：关注的人的 star、fork、release、新建或开源仓库、开 PR 或合 PR；关注组织的 release、新建或开源仓库；以及 star、fork 了你仓库的人。（不含 push、评论、机器人等。）</string>
+    <string name="feed_rules_highlights_desc">只保留高信号动态：关注对象的 star、fork、release、建/开源仓库、开/合 PR，以及 star、fork 你仓库的人。（不含 push、评论、机器人）</string>
     <string name="feed_rules_all_title">全部</string>
-    <string name="feed_rules_all_desc">关注对象的所有动态，原样不筛选。</string>
+    <string name="feed_rules_all_desc">关注对象的全部动态，不筛选。</string>
     <string name="feed_rules_vs_official_title">与 GitHub 官方动态的区别</string>
-    <string name="feed_rules_vs_official_desc">GitHub 未提供官方动态流（feed）接口，本页基于其公开的 received_events 接口聚合呈现。</string>
-    <string name="feed_rules_limits">仅最近 30 天、最多 300 条，且有 30 秒~6 小时延迟（GitHub 接口限制）。</string>
+    <string name="feed_rules_vs_official_desc">GitHub 无官方动态接口，本页基于其公开 received_events 接口聚合。</string>
+    <string name="feed_rules_limits">最近 30 天、最多 300 条，有 30 秒~6 小时延迟（GitHub 接口限制）。</string>
 </resources>

@@ -19,10 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
@@ -33,6 +33,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -61,6 +62,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.feed_created_branch
 import trendingai.shared.generated.resources.feed_created_repo
 import trendingai.shared.generated.resources.feed_created_tag
@@ -94,11 +96,11 @@ import trendingai.shared.generated.resources.feed_unavailable
 import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_following
 import trendingai.shared.generated.resources.profile_load_failed
-import trendingai.shared.generated.resources.profile_open_github
 import trendingai.shared.generated.resources.profile_repos
 import trendingai.shared.generated.resources.profile_retry
 import trendingai.shared.generated.resources.profile_title
 import trendingai.shared.generated.resources.sign_out
+import trendingai.shared.generated.resources.sign_out_confirm
 import trendingai.shared.generated.resources.time_days_ago
 import trendingai.shared.generated.resources.time_hours_ago
 import trendingai.shared.generated.resources.time_just_now
@@ -129,6 +131,7 @@ fun ProfileScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     val onSignOut = { viewModel.signOut(); onBack() }
     var showRulesSheet by remember { mutableStateOf(false) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
 
     // 滚动到底部附近时自动加载下一页
     val shouldLoadMore by remember {
@@ -151,16 +154,7 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    // 两个操作平铺在右上角：打开 GitHub（仅在已拿到用户主页时显示）+ 登出
-                    uiState.user?.htmlUrl?.let { url ->
-                        IconButton(onClick = { uriHandler.openUri(url) }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = stringResource(Res.string.profile_open_github),
-                            )
-                        }
-                    }
-                    IconButton(onClick = onSignOut) {
+                    IconButton(onClick = { showSignOutDialog = true }) {
                         Icon(
                             Icons.AutoMirrored.Filled.Logout,
                             contentDescription = stringResource(Res.string.sign_out),
@@ -272,6 +266,27 @@ fun ProfileScreen(
         ModalBottomSheet(onDismissRequest = { showRulesSheet = false }) {
             FeedRulesSheet()
         }
+    }
+
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text(stringResource(Res.string.sign_out)) },
+            text = { Text(stringResource(Res.string.sign_out_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutDialog = false
+                    onSignOut()
+                }) {
+                    Text(stringResource(Res.string.sign_out))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
     }
 }
 

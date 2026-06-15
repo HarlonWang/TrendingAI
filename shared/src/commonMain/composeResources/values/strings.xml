@@ -130,7 +130,7 @@
     <string name="profile_title">Profile</string>
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
-    <string name="profile_open_github">Open on GitHub</string>
+    <string name="sign_out_confirm">Are you sure you want to sign out?</string>
     <string name="profile_load_failed">Failed to load profile</string>
     <string name="profile_retry">Retry</string>
     <string name="profile_followers">Followers</string>
@@ -169,10 +169,10 @@
     <string name="time_days_ago">%1$d d ago</string>
     <string name="feed_rules_title">Activity feed filters</string>
     <string name="feed_rules_highlights_title">Highlights</string>
-    <string name="feed_rules_highlights_desc">Only high-signal activity from your network: people you follow starring, forking, releasing, creating or open-sourcing repos, opening or merging PRs; releases and new or open-sourced repos from orgs you follow; plus people who starred or forked your own repositories. (Pushes, comments and bots are not included.)</string>
+    <string name="feed_rules_highlights_desc">High-signal activity only: people and orgs you follow starring, forking, releasing, creating or open-sourcing repos and opening or merging PRs, plus people who starred or forked your repos. (No pushes, comments or bots.)</string>
     <string name="feed_rules_all_title">All</string>
     <string name="feed_rules_all_desc">Every activity from your network, unfiltered.</string>
     <string name="feed_rules_vs_official_title">vs. GitHub feed</string>
-    <string name="feed_rules_vs_official_desc">GitHub does not offer an official activity feed API; this page is aggregated from its public received_events endpoint.</string>
+    <string name="feed_rules_vs_official_desc">GitHub has no official feed API; this page is aggregated from its public received_events endpoint.</string>
     <string name="feed_rules_limits">Last 30 days, up to 300 events, with a 30s–6h delay (GitHub API limits).</string>
 </resources>
