@@ -21,6 +21,8 @@
 | --- | --- | --- |
 | [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
 
+> 想要自动更新?可用 [Obtainium](https://github.com/ImranR98/Obtainium) 直接追踪 GitHub Release,详见 [分发渠道说明](docs/DISTRIBUTION.md)。
+
 ---
 
 ## 📖 项目简介
@@ -46,6 +48,7 @@ Trending AI 是一款使用 Kotlin Multiplatform (KMP) 构建的跨平台应用�
 
 - [项目技术架构文档](docs/ARCHITECTURE.md)
 - [图标制作与适配指南](docs/ICON_GUIDE.md)
+- [分发渠道说明](docs/DISTRIBUTION.md)
 
 ---
 
