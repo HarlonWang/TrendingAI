@@ -21,7 +21,7 @@
 | --- | --- |----------------------------------------|
 | [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
 
-> Supports [Obtainium](https://github.com/ImranR98/Obtainium) for auto-updates — see [Distribution Channels](docs/DISTRIBUTION.md).
+> Supports [Obtainium](https://github.com/ImranR98/Obtainium) for auto-updates.
 
 ---
 
@@ -48,7 +48,6 @@ Trending AI is a cross-platform application built with Kotlin Multiplatform (KMP
 
 - [Project Architecture](docs/ARCHITECTURE.md)
 - [Icon Creation and Adaptation Guide](docs/ICON_GUIDE.md)
-- [Distribution Channels](docs/DISTRIBUTION.md)
 
 ---
 
