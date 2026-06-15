@@ -119,11 +119,63 @@ jobs:
 
       - name: Build Release APK & AAB
         run: |
-          ./gradlew :androidApp:assembleGithubRelease :androidApp:assembleR2Release :androidApp:bundlePlayRelease
+          # fdroid flavor 专供第三方 F-Droid 生态（IzzyOnDroid 机器人 / Obtainium）抓取：
+          # 不含自更新器、用本仓 keystore 签名，与 github/r2 仅 CHANNEL 不同、可互相覆盖升级。
+          ./gradlew :androidApp:assembleGithubRelease :androidApp:assembleR2Release :androidApp:assembleFdroidRelease :androidApp:bundlePlayRelease
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      # 把本次 whatsnew.json 落成 IzzyOnDroid 读取的 fastlane changelog（文件名为纯数字 versionCode），
+      # 提交回默认分支 main 供其下次扫描元数据时取用。整步 best-effort：失败仅告警、不阻塞发版。
+      # versionCode 直接从已构建的 github APK 读取（aapt），与 build.gradle.kts 单一公式保持一致。
+      - name: Publish Fastlane changelogs to main (for IzzyOnDroid)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          if [ ! -f "$WHATSNEW_PATH" ]; then
+            echo "⚠️ 无 whatsnew.json，跳过 changelog 提交"; exit 0
+          fi
+          APK_FOR_VERSION=$(find androidApp/build/outputs/apk/github/release -name "*.apk" | head -n 1)
+          AAPT=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt | sort -V | tail -n 1)
+          VCODE=$("$AAPT" dump badging "$APK_FOR_VERSION" 2>/dev/null | grep '^package:' | sed -n "s/.* versionCode='\([0-9]\{1,\}\)'.*/\1/p")
+          if [ -z "$VCODE" ]; then
+            echo "⚠️ 未能读取 versionCode，跳过 changelog 提交"; exit 0
+          fi
+
+          # 在 origin/main 的独立 worktree 上写文件并提交，避免污染当前 tag 构建树
+          git fetch origin main --depth=1 || { echo "⚠️ fetch main 失败，跳过"; exit 0; }
+          git worktree add /tmp/meta-wt origin/main || { echo "⚠️ worktree 创建失败，跳过"; exit 0; }
+
+          VCODE="$VCODE" python3 - <<'EOF'
+          import json, os
+          vcode = os.environ["VCODE"]
+          root = "/tmp/meta-wt"
+          with open(os.environ["WHATSNEW_PATH"]) as f:
+              data = json.load(f)
+          langs = {"zh-CN": data.get("zh", []), "en-US": data.get("en", [])}
+          for lang, lines in langs.items():
+              if not lines:
+                  continue
+              d = os.path.join(root, "fastlane/metadata/android", lang, "changelogs")
+              os.makedirs(d, exist_ok=True)
+              with open(os.path.join(d, f"{vcode}.txt"), "w") as f:
+                  f.write("\n".join(f"- {x}" for x in lines) + "\n")
+              print(f"✅ 写入 {lang}/changelogs/{vcode}.txt")
+          EOF
+
+          cd /tmp/meta-wt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fastlane/metadata/android/*/changelogs/${VCODE}.txt 2>/dev/null
+          if git diff --cached --quiet; then
+            echo "ℹ️ changelog 无变化，无需提交"
+          else
+            git commit -m "docs(changelog): ${VERSION_NAME} (vc ${VCODE}) [skip ci]"
+            git push origin HEAD:main && echo "✅ changelog 已提交至 main" || echo "⚠️ push main 失败（可能受分支保护），changelog 未入库，不影响本次发版"
+          fi
 
       # 复用上面生成的 whatsnew.json 拼装 Release Notes，保证 GitHub Release 与 App 内
       # 更新说明内容一致；生成失败时退回原始 commit 记录。
@@ -276,8 +328,9 @@ jobs:
           printf 'versionCode=%d\nversionName=%s\n' "$VCODE" "$VNAME" > version_code.txt
           cat version_code.txt
 
-          # 收集待上传的文件（github 渠道 APK + play 渠道 AAB + version_code.txt）
-          FILES=(androidApp/build/outputs/apk/github/release/*.apk version_code.txt)
+          # 收集待上传的文件（github 渠道 APK + fdroid 渠道 APK + play 渠道 AAB + version_code.txt）
+          # fdroid APK 供 IzzyOnDroid 机器人 / Obtainium 抓取（无自更新器的干净包）
+          FILES=(androidApp/build/outputs/apk/github/release/*.apk androidApp/build/outputs/apk/fdroid/release/*.apk version_code.txt)
           for aab in androidApp/build/outputs/bundle/playRelease/*.aab; do
             [ -f "$aab" ] && FILES+=("$aab")
           done
