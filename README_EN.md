@@ -21,7 +21,7 @@
 | --- | --- |----------------------------------------|
 | [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
 
-> Want auto-updates? Use [Obtainium](https://github.com/ImranR98/Obtainium) to track GitHub Releases directly — see [Distribution Channels](docs/DISTRIBUTION.md).
+> Supports [Obtainium](https://github.com/ImranR98/Obtainium) for auto-updates — see [Distribution Channels](docs/DISTRIBUTION.md).
 
 ---
 
