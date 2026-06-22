@@ -34,6 +34,8 @@ data class TrendingUiState(
     val selectedLanguage: String = "all",
     val selectedDate: String? = null,
     val selectedBatch: String? = null,
+    /** 「只看 New」开关：仅对 daily 全语言榜有效，开启时只展示 isNew 的项目 */
+    val newOnly: Boolean = false,
     val error: String? = null
 )
 
@@ -127,13 +129,34 @@ class TrendingViewModel(
         if (_uiState.value.selectedPeriod == period &&
             _uiState.value.selectedLanguage == language) return
 
+        // New-only 仅 daily 全语言榜有效：切到其他视图时自动关掉
+        val keepNewOnly = _uiState.value.newOnly && period == "daily" && language == "all"
         _uiState.update {
             it.copy(
                 selectedPeriod = period,
-                selectedLanguage = language
+                selectedLanguage = language,
+                newOnly = keepNewOnly
             )
         }
         fetchData()
+    }
+
+    /**
+     * 切换「只看 New」。开启时把视图 snap 到 daily 全语言榜（isNew 仅此视图有效）；
+     * 已在该视图时仅改本地过滤状态，不触发网络请求。
+     */
+    fun toggleNewOnly() {
+        val turnOn = !_uiState.value.newOnly
+        val effPeriod = if (turnOn) "daily" else _uiState.value.selectedPeriod
+        val effLang = if (turnOn) "all" else _uiState.value.selectedLanguage
+        val needFetch = _uiState.value.selectedPeriod != effPeriod ||
+            _uiState.value.selectedLanguage != effLang
+
+        _uiState.update {
+            it.copy(selectedPeriod = effPeriod, selectedLanguage = effLang, newOnly = turnOn)
+        }
+        trackEvent("trending_new_only", mapOf("on" to turnOn))
+        if (needFetch) fetchData()
     }
 
     fun updateHistoryFilter(date: String?, batch: String?) {

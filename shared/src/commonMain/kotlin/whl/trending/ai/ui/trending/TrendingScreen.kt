@@ -89,6 +89,7 @@ import trendingai.shared.generated.resources.history_info_title
 import trendingai.shared.generated.resources.history_trending
 import trendingai.shared.generated.resources.last_updated
 import trendingai.shared.generated.resources.no_data
+import trendingai.shared.generated.resources.no_new_repos
 import trendingai.shared.generated.resources.period_daily
 import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
@@ -232,6 +233,8 @@ private fun RepoList(
         },
         modifier = modifier.fillMaxSize()
     ) {
+        // newOnly 时仅展示 isNew 的项目（客户端过滤，整张 daily 全语言榜已全量在端上）
+        val displayRepos = if (uiState.newOnly) uiState.repos.filter { it.isNew } else uiState.repos
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -258,9 +261,9 @@ private fun RepoList(
                 }
             }
 
-            uiState.repos.isEmpty() -> {
+            displayRepos.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = stringResource(Res.string.no_data))
+                    Text(text = stringResource(if (uiState.newOnly) Res.string.no_new_repos else Res.string.no_data))
                 }
             }
 
@@ -269,10 +272,10 @@ private fun RepoList(
                 val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(
-                    count = uiState.repos.size,
-                    key = { index -> uiState.repos[index].url }
+                    count = displayRepos.size,
+                    key = { index -> displayRepos[index].url }
                 ) { index ->
-                    val repo = uiState.repos[index]
+                    val repo = displayRepos[index]
                     RepoItem(
                         index = index,
                         repo = repo,
@@ -304,7 +307,7 @@ private fun RepoList(
                             onNavigateToDetail(repo.author, repo.repoName)
                         }
                     )
-                    if (index < uiState.repos.lastIndex) {
+                    if (index < displayRepos.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }

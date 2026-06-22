@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
@@ -22,7 +23,14 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RichTooltip
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -55,6 +63,8 @@ import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.hackernews_title
 import trendingai.shared.generated.resources.producthunt_title
 import trendingai.shared.generated.resources.app_name
+import trendingai.shared.generated.resources.filter_new_only
+import trendingai.shared.generated.resources.new_only_hint
 import trendingai.shared.generated.resources.icon_producthunt_dark
 import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.batch_am
@@ -129,6 +139,8 @@ fun HomeScreen(
                     selectedLanguage = trendingUiState.selectedLanguage,
                     selectedDate = trendingUiState.selectedDate,
                     selectedBatch = trendingUiState.selectedBatch,
+                    newOnly = trendingUiState.newOnly,
+                    onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
                     scrollBehavior = scrollBehavior,
                     onTitleClick = { showFilterSheet = true },
                     onHistoryClick = { showHistorySheet = true },
@@ -270,6 +282,8 @@ private fun TrendingTopBar(
     selectedLanguage: String,
     selectedDate: String?,
     selectedBatch: String?,
+    newOnly: Boolean,
+    onToggleNewOnly: () -> Unit,
     scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     onTitleClick: () -> Unit,
     onHistoryClick: () -> Unit,
@@ -337,6 +351,38 @@ private fun TrendingTopBar(
             }
         },
         actions = {
+            // 「只看 New」仅 daily 全语言榜有效，其他视图（按语言/周/月）隐藏该按钮
+            if (selectedPeriod == "daily" && selectedLanguage == "all") {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above
+                    ),
+                    tooltip = {
+                        RichTooltip(
+                            title = { Text(stringResource(Res.string.filter_new_only)) },
+                        ) {
+                            Text(stringResource(Res.string.new_only_hint))
+                        }
+                    },
+                    state = rememberTooltipState(),
+                ) {
+                    FilledIconToggleButton(
+                        checked = newOnly,
+                        onCheckedChange = { onToggleNewOnly() },
+                        colors = IconButtonDefaults.filledIconToggleButtonColors(
+                            containerColor = Color.Transparent,                        // 未选中：无底色，与其他图标一致
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            checkedContainerColor = MaterialTheme.colorScheme.primary,  // 选中：品牌紫实心
+                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    ) {
+                        Icon(
+                            Icons.Default.FiberNew,
+                            contentDescription = stringResource(Res.string.filter_new_only)
+                        )
+                    }
+                }
+            }
             if (showAuthEntry) {
                 IconButton(onClick = onProfileClick, enabled = authState !is AuthState.LoggingIn) {
                     when {

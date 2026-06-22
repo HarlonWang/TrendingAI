@@ -37,6 +37,9 @@
     <string name="stars_total">Stars %1$s</string>
     <string name="stars_period">Stars (%1$s) %2$s</string>
     <string name="no_data">No data available</string>
+    <string name="filter_new_only">New only</string>
+    <string name="no_new_repos">No new repos today</string>
+    <string name="new_only_hint">Projects new to the GitHub daily all-language trending board</string>
     <string name="retry">Retry</string>
     <string name="error_fetch">Failed to fetch data: %1$s</string>
     <string name="back">Back</string>
