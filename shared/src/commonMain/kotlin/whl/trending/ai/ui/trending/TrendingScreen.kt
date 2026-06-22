@@ -351,16 +351,16 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: 
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (repo.isNew) {
-                    NewBadge()
-                }
                 Text(
                     text = "${repo.author}/${repo.repoName}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.W500,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f)
                 )
+                if (repo.isNew) {
+                    NewBadge()
+                }
             }
             if (repo.description.isNotBlank()) {
                 Text(
@@ -473,15 +473,17 @@ private fun AvatarCircle(url: String, modifier: Modifier = Modifier) {
 @Composable
 private fun NewBadge() {
     Surface(
-        shape = MaterialTheme.shapes.extraSmall,
-        color = MaterialTheme.colorScheme.tertiary,
-        contentColor = MaterialTheme.colorScheme.onTertiary
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     ) {
         Text(
             text = "NEW",
-            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.W700
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.W700,
+            letterSpacing = 0.5.sp,
+            lineHeight = 11.sp
         )
     }
 }
