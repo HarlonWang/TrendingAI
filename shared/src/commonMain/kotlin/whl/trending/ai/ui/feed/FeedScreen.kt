@@ -161,7 +161,7 @@ private fun FeedItemCard(
                     rank = index + 1,
                     title = item.title
                 )
-                onOpenUrl(item.url)
+                onOpenUrl(item.openUrl)
             }
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
