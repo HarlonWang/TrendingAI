@@ -15,6 +15,8 @@ data class TrendingRepo(
     val stars: Int = 0,
     val forks: Int = 0,
     val currentPeriodStars: Int = 0,
+    // 新上榜标记：首登 daily 全语言榜 ≤ 3 天的项目（由后端 isNew 计算，仅 daily+all 视图为 true）
+    val isNew: Boolean = false,
     val builtBy: List<TrendingContributor> = emptyList(),
     val aiSummaries: List<TrendingAiSummary> = emptyList()
 )
