@@ -16,6 +16,7 @@
 <img width="300" alt="TrendingAI 界面预览" src="./assets/screenshot/zh/home_github_light.png" />
 
 <a href='https://play.google.com/store/apps/details?id=whl.trending.ai'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' width=200 height=77/></a>
+<a href='https://f-droid.org/packages/whl.trending.ai/'><img alt='Get it on F-Droid' src='https://fdroid.gitlab.io/artwork/badge/get-it-on.png' width=232 height=77/></a>
 
 | Android | iOS | Website |
 | --- | --- | --- |
