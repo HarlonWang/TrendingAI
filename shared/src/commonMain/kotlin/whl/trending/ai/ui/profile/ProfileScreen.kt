@@ -39,7 +39,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -117,17 +116,17 @@ fun ProfileScreen(
 ) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
-    // nav3 默认无 per-entry VM 作用域，VM 是 Activity 级缓存；每次进入本页全量重载，
-    // 避免登出换账号串号 / feed 失败态永久残留
+    // nav3 默认无 per-entry VM 作用域，VM 是 Activity 级缓存。load() 自身幂等：
+    // 首次进入加载，从 followers/following/repos 子页返回时跳过重拉（数据仍在 VM state 里）；
+    // 换账号串号由 VM 内 authState 监听兜底（登出即清空并复位）。
     LaunchedEffect(Unit) {
         viewModel.load()
     }
-    // 离开页面即清空缓存 VM 的状态，避免再次进入时首帧先闪出上次的旧数据
-    DisposableEffect(Unit) {
-        onDispose { viewModel.onLeave() }
-    }
     val uriHandler = LocalUriHandler.current
     val listState = rememberLazyListState()
+    // 贡献热力图横向滚动状态：持有在此（不随 LazyColumn item 回收销毁），
+    // 否则上下滚动时热力图位置会被重置到最左
+    val contributionScrollState = rememberScrollState()
     val pullToRefreshState = rememberPullToRefreshState()
     val onSignOut = { viewModel.signOut(); onBack() }
     var showRulesSheet by remember { mutableStateOf(false) }
@@ -206,6 +205,12 @@ fun ProfileScreen(
                         onOpenFollowing = onOpenFollowing,
                         onOpenRepos = onOpenRepos,
                     )
+                }
+                uiState.contributions?.let { calendar ->
+                    item(key = "contributions") {
+                        ContributionGraph(calendar, scrollState = contributionScrollState)
+                        HorizontalDivider(thickness = 0.5.dp)
+                    }
                 }
                 item(key = "feed_filter") {
                     Row(

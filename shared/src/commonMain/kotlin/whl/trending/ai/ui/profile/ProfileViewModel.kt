@@ -6,8 +6,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthManager
+import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.FollowingInfo
 import whl.trending.ai.auth.FollowingProvider
 import whl.trending.ai.auth.GithubTokenProvider
@@ -15,6 +17,7 @@ import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
 import whl.trending.ai.data.remote.GithubApi
 import whl.trending.ai.data.remote.GithubUser
@@ -33,6 +36,8 @@ data class ProfileUiState(
     val isError: Boolean = false,
     /** GitHub 实时计数；token 不可用或请求失败时为 null（UI 隐藏计数行） */
     val githubUser: GithubUser? = null,
+    /** 最近一年贡献日历；加载中或不可用时为 null（UI 隐藏热力图） */
+    val contributions: ContributionCalendar? = null,
     val feedItems: List<GithubFeedItem> = emptyList(),
     val isFeedLoading: Boolean = false,
     val feedEndReached: Boolean = false,
@@ -76,7 +81,31 @@ class ProfileViewModel(
     /** 规则3：我的仓库上别人的 star/fork（精选档合流，load() 时重置） */
     private var ownRepoItems: List<GithubFeedItem> = emptyList()
 
+    /**
+     * 是否已成功加载过当前账号的数据。VM 是 Activity 级缓存，下钻 followers/following/repos
+     * 子页再返回时 [load] 据此跳过重拉（数据仍在 state 里），避免无谓的整页重载。
+     * 登出（authState→LoggedOut）时复位，确保换账号后重新加载。
+     */
+    private var hasLoaded = false
+
+    init {
+        // 监听登出：清空缓存数据并复位 hasLoaded，兜底换账号串号
+        viewModelScope.launch {
+            authManager().authState.collect { state ->
+                if (state is AuthState.LoggedOut) {
+                    hasLoaded = false
+                    loadJob?.cancel()
+                    feedLoadJob?.cancel()
+                    _uiState.value = ProfileUiState()
+                }
+            }
+        }
+    }
+
     fun load() {
+        // 已加载过且数据健在（非错误态）则跳过：用于从子页返回时不重拉
+        val current = _uiState.value
+        if (hasLoaded && current.user != null && !current.isError) return
         loadJob?.cancel()
         feedLoadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -99,6 +128,7 @@ class ProfileViewModel(
                 return@launch
             }
             _uiState.value = ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly)
+            hasLoaded = true
             loadGithubData(user)
         }
     }
@@ -116,6 +146,16 @@ class ProfileViewModel(
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             // 计数失败不致命，feed 继续尝试
+        }
+
+        // 贡献热力图：与 feed 并行拉取，失败仅隐藏，不影响 feed
+        viewModelScope.launch {
+            try {
+                val calendar = githubApi.fetchContributionCalendar(githubToken, login)
+                _uiState.value = _uiState.value.copy(contributions = calendar)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+            }
         }
 
         // 拉取关注列表（失败降级为 null，保留旧行为）
@@ -242,6 +282,7 @@ class ProfileViewModel(
                 feedItems = emptyList(),
                 feedEndReached = false,
                 feedUnavailable = false,
+                contributions = null,
             )
             loadGithubData(user)
         }
@@ -261,17 +302,6 @@ class ProfileViewModel(
             highlightsOnly = highlightsOnly,
         )
         loadMoreFeed()
-    }
-
-    /**
-     * 离开页面时调用：取消在途加载并把状态重置为初始加载态。
-     * VM 是 Activity 级缓存（复用同一实例），不清理会在重新进入页面时先闪出上次的旧数据，
-     * 之后才被 [load] 异步重置。离开时同步清掉，使下次进入的首帧即为初始 loading 态。
-     */
-    fun onLeave() {
-        loadJob?.cancel()
-        feedLoadJob?.cancel()
-        _uiState.value = ProfileUiState()
     }
 
     fun signOut() = authManager().signOut()
