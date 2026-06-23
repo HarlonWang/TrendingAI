@@ -18,6 +18,7 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
@@ -145,6 +146,9 @@ open class GithubApi {
     }
 
     private val baseHost = "https://api.github.com"
+
+    /** GraphQL 错误路径需手动解码（只读一次 body），与 client 的 ContentNegotiation 共用同一解析策略 */
+    private val graphQlJson = Json { ignoreUnknownKeys = true }
 
     open suspend fun fetchUser(githubToken: String): GithubUser {
         val response = client.get("$baseHost/user") {
@@ -319,12 +323,14 @@ open class GithubApi {
                 put("variables", buildJsonObject { put("login", login) })
             })
         }
+        // Ktor 响应 body 一次性，只读一次 raw：非 2xx 与「2xx 但 calendar 缺失」两条错误路径复用同一份
+        val raw = response.bodyAsText()
         if (response.status.value !in 200..299) {
-            throw ApiException(response.status.value, response.bodyAsText())
+            throw ApiException(response.status.value, raw)
         }
-        val calendar = response.body<ContributionEnvelope>()
+        val calendar = graphQlJson.decodeFromString<ContributionEnvelope>(raw)
             .data?.user?.collection?.calendar
-            ?: throw ApiException(response.status.value, response.bodyAsText())
+            ?: throw ApiException(response.status.value, "GraphQL 响应缺少 contributionCalendar: ${raw.take(300)}")
         return ContributionCalendar(
             total = calendar.total,
             weeks = calendar.weeks.map { week ->

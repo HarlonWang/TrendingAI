@@ -39,6 +39,9 @@ import trendingai.shared.generated.resources.contrib_less
 import trendingai.shared.generated.resources.contrib_months
 import trendingai.shared.generated.resources.contrib_more
 import trendingai.shared.generated.resources.contrib_total
+import trendingai.shared.generated.resources.contrib_weekday_fri
+import trendingai.shared.generated.resources.contrib_weekday_mon
+import trendingai.shared.generated.resources.contrib_weekday_wed
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.ContributionLevel
@@ -134,7 +137,15 @@ fun ContributionGraph(
 @Composable
 private fun WeekdayLabels() {
     // 行序对齐 GitHub：0=Sun(空) 1=Mon 2=Tue(空) 3=Wed 4=Thu(空) 5=Fri 6=Sat(空)
-    val labels = listOf("", "Mon", "", "Wed", "", "Fri", "")
+    val labels = listOf(
+        "",
+        stringResource(Res.string.contrib_weekday_mon),
+        "",
+        stringResource(Res.string.contrib_weekday_wed),
+        "",
+        stringResource(Res.string.contrib_weekday_fri),
+        "",
+    )
     Column(
         modifier = Modifier.width(WeekdayLabelWidth).padding(top = MonthLabelHeight, end = 4.dp),
         verticalArrangement = Arrangement.spacedBy(CellGap),

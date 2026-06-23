@@ -143,6 +143,9 @@
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>
     <string name="contrib_months">Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec</string>
+    <string name="contrib_weekday_mon">Mon</string>
+    <string name="contrib_weekday_wed">Wed</string>
+    <string name="contrib_weekday_fri">Fri</string>
     <string name="list_load_failed">Failed to load</string>
     <string name="list_empty_followers">No followers yet</string>
     <string name="list_empty_following">Not following anyone yet</string>
