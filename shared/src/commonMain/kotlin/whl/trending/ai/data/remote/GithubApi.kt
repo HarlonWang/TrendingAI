@@ -8,14 +8,24 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
 import io.ktor.client.request.put
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import whl.trending.ai.data.model.ContributionCalendar
+import whl.trending.ai.data.model.ContributionDay
+import whl.trending.ai.data.model.ContributionLevel
+import whl.trending.ai.data.model.ContributionWeek
 
 @Serializable
 data class GithubFollowing(
@@ -79,6 +89,47 @@ data class GithubEventDto(
     val payload: JsonElement? = null,
     @SerialName("created_at") val createdAt: String,
 )
+
+// --- GraphQL: contribution calendar（REST 不暴露，仅 GraphQL 可取）---
+
+@Serializable
+private data class ContributionEnvelope(val data: ContributionData? = null)
+
+@Serializable
+private data class ContributionData(val user: ContributionUserDto? = null)
+
+@Serializable
+private data class ContributionUserDto(
+    @SerialName("contributionsCollection") val collection: ContributionCollectionDto? = null,
+)
+
+@Serializable
+private data class ContributionCollectionDto(
+    @SerialName("contributionCalendar") val calendar: ContributionCalendarDto? = null,
+)
+
+@Serializable
+private data class ContributionCalendarDto(
+    @SerialName("totalContributions") val total: Int = 0,
+    val weeks: List<ContributionWeekDto> = emptyList(),
+)
+
+@Serializable
+private data class ContributionWeekDto(
+    @SerialName("contributionDays") val days: List<ContributionDayDto> = emptyList(),
+)
+
+@Serializable
+private data class ContributionDayDto(
+    val date: String,
+    val weekday: Int = 0,
+    @SerialName("contributionCount") val count: Int = 0,
+    @SerialName("contributionLevel") val level: String = "NONE",
+)
+
+private const val CONTRIBUTION_QUERY =
+    "query(\$login:String!){user(login:\$login){contributionsCollection{contributionCalendar{" +
+        "totalContributions weeks{contributionDays{date weekday contributionCount contributionLevel}}}}}}"
 
 /** GitHub REST 直连：feed 与计数。token 来自 GithubTokenProvider（Secret Vault 取回）。 */
 open class GithubApi {
@@ -252,6 +303,43 @@ open class GithubApi {
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
+    }
+
+    /**
+     * 最近一年的贡献日历（绿色热力图）。GitHub REST 不暴露此数据，走 GraphQL。
+     * 不传时间范围即默认最近 365 天，对齐 GitHub 个人主页默认视图。
+     */
+    open suspend fun fetchContributionCalendar(githubToken: String, login: String): ContributionCalendar {
+        val response = client.post("$baseHost/graphql") {
+            header(HttpHeaders.Authorization, "Bearer $githubToken")
+            header(HttpHeaders.Accept, "application/vnd.github+json")
+            contentType(ContentType.Application.Json)
+            setBody(buildJsonObject {
+                put("query", CONTRIBUTION_QUERY)
+                put("variables", buildJsonObject { put("login", login) })
+            })
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        val calendar = response.body<ContributionEnvelope>()
+            .data?.user?.collection?.calendar
+            ?: throw ApiException(response.status.value, response.bodyAsText())
+        return ContributionCalendar(
+            total = calendar.total,
+            weeks = calendar.weeks.map { week ->
+                ContributionWeek(
+                    days = week.days.map { day ->
+                        ContributionDay(
+                            date = day.date,
+                            weekday = day.weekday,
+                            count = day.count,
+                            level = ContributionLevel.fromRaw(day.level),
+                        )
+                    },
+                )
+            },
+        )
     }
 
     open suspend fun fetchRepoEvents(

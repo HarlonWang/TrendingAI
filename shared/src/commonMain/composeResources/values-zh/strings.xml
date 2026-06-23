@@ -139,6 +139,10 @@
     <string name="profile_followers">粉丝</string>
     <string name="profile_following">关注</string>
     <string name="profile_repos">仓库</string>
+    <string name="contrib_total">最近一年 %1$s 次贡献</string>
+    <string name="contrib_less">少</string>
+    <string name="contrib_more">多</string>
+    <string name="contrib_months">1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月</string>
     <string name="list_load_failed">加载失败</string>
     <string name="list_empty_followers">还没有粉丝</string>
     <string name="list_empty_following">还没有关注任何人</string>
