@@ -1,7 +1,8 @@
 [versions]
-agp = "9.1.1"
-android-compileSdk = "36"
+agp = "9.2.1"
+android-compileSdk = "37"
 android-minSdk = "24"
+#noinspection OldTargetApi
 android-targetSdk = "36"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.7.1"
