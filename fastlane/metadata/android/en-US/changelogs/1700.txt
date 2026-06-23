@@ -1,0 +1,5 @@
+- Added a GitHub contribution heatmap to profile pages, making activity easier to view at a glance.
+- Added a “New only” filter to the Trending list, so you can quickly find newly trending projects.
+- Newly trending projects in the Trending list are now marked with a NEW badge for easier discovery.
+- Tapping an HN item now opens its discussion page directly, making it easier to read comments and join the conversation.
+- Added a confirmation step before signing out to help prevent accidental logouts.
