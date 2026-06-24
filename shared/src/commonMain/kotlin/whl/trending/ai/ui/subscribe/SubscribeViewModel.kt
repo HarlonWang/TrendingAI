@@ -4,7 +4,6 @@ import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.SubscribeStatus
-import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 
 import androidx.lifecycle.ViewModel
@@ -60,7 +59,9 @@ class SubscribeViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
-            val result = repository.subscribe(email, currentSource())
+            // 订阅语言跟随 App 当前语言设置（与摘要请求同口径），后端按 zh/en 决定邮件语言，非法值兜底英文
+            val lang = settings.currentContentLang()
+            val result = repository.subscribe(email, currentSource(), lang)
             result.fold(
                 onSuccess = { resp ->
                     val status = SubscribeStatus.from(resp.status)

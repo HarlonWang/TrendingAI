@@ -4,7 +4,6 @@ import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.getSystemLanguage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -55,8 +53,7 @@ class PicksViewModel(
                 _uiState.update { it.copy(isLoading = true, error = null) }
             }
             try {
-                val currentAppLanguage = settingsManager.appLanguage.first()
-                val summaryLang = currentAppLanguage.isoCode ?: getSystemLanguage()
+                val summaryLang = settingsManager.currentContentLang()
                 val response = repository.getPicks(summaryLang)
                 _uiState.update {
                     it.copy(

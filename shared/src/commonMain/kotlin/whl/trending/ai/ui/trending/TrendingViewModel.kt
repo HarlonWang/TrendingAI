@@ -7,7 +7,6 @@ import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.getSystemLanguage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -75,8 +73,7 @@ class TrendingViewModel(
             }
 
             try {
-                val currentAppLanguage = settingsManager.appLanguage.first()
-                val summaryLang = currentAppLanguage.isoCode ?: getSystemLanguage()
+                val summaryLang = settingsManager.currentContentLang()
 
                 val response = repository.getTrending(
                     _uiState.value.selectedPeriod,

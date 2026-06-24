@@ -8,10 +8,12 @@ import com.russhwolf.settings.coroutines.getIntFlow
 import com.russhwolf.settings.coroutines.getLongFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.model.FavoriteItem
 
 enum class ThemeMode(val title: String) {
@@ -80,6 +82,13 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     val appLanguage: Flow<AppLanguage> = settings.getIntFlow(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
         .map { AppLanguage.entries.getOrElse(it) { AppLanguage.FOLLOW_SYSTEM } }
+
+    /**
+     * 当前内容语言：跟随 App 语言设置，FOLLOW_SYSTEM 时回退系统语言。
+     * 供摘要请求与邮件订阅复用，避免各处各自推导导致口径分叉。
+     */
+    suspend fun currentContentLang(): String =
+        appLanguage.first().isoCode ?: getSystemLanguage()
 
     fun setLanguage(language: AppLanguage) {
         settings.putInt(LANGUAGE_KEY, language.ordinal)
