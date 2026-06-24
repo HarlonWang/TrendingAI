@@ -4,7 +4,6 @@ import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.SubscribeStatus
-import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 
 import androidx.lifecycle.ViewModel
