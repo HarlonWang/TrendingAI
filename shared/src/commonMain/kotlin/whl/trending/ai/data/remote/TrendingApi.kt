@@ -114,13 +114,14 @@ open class TrendingApi {
         }
     }
 
-    open suspend fun submitSubscribe(email: String, source: String): Result<SubscribeResponse> {
+    open suspend fun submitSubscribe(email: String, source: String, lang: String): Result<SubscribeResponse> {
         return try {
             val response = client.post("$baseHost/api/subscribe") {
                 contentType(ContentType.Application.Json)
                 setBody(buildJsonObject {
                     put("email", email)
                     put("source", source)
+                    put("lang", lang)
                 })
             }
             if (response.status.value in 200..299) {

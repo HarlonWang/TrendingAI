@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.subscribe
 
+import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
@@ -13,6 +14,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,7 +62,9 @@ class SubscribeViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
-            val result = repository.subscribe(email, currentSource())
+            // 订阅语言跟随 App 当前语言设置（与摘要请求口径一致），后端按 zh/en 决定邮件语言，非法值兜底英文
+            val lang = settings.appLanguage.first().isoCode ?: getSystemLanguage()
+            val result = repository.subscribe(email, currentSource(), lang)
             result.fold(
                 onSuccess = { resp ->
                     val status = SubscribeStatus.from(resp.status)
