@@ -28,3 +28,9 @@ data class ByokConfig(
     val isValid: Boolean
         get() = baseUrl.isNotBlank() && apiKey.isNotBlank() && model.isNotBlank()
 }
+
+/** 埋点用的低基数 provider 名（不泄露任何用户配置）。 */
+fun ByokProvider.analyticsName(): String = when (this) {
+    ByokProvider.OPENAI_COMPATIBLE -> "openai"
+    ByokProvider.ANTHROPIC -> "anthropic"
+}

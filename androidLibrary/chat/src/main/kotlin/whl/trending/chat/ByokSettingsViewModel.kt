@@ -8,11 +8,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.engine.byok.ByokChatEngine
 import whl.trending.chat.engine.byok.ByokConfig
 import whl.trending.chat.engine.byok.ByokConfigStore
 import whl.trending.chat.engine.byok.ByokProvider
+import whl.trending.chat.engine.byok.analyticsName
 import whl.trending.chat.model.ChatError
 
 /** “拉取模型”的状态机。 */
@@ -64,6 +66,7 @@ class ByokSettingsViewModel : ViewModel() {
     fun setEnabled(value: Boolean) {
         _uiState.update { it.copy(enabled = value) }
         ByokConfigStore.setEnabled(value)
+        trackEvent("byok_enabled_changed", mapOf("enabled" to value))
     }
 
     fun setProvider(provider: ByokProvider) {
@@ -103,6 +106,8 @@ class ByokSettingsViewModel : ViewModel() {
         val state = _uiState.value
         if (!state.canFetch) return
         _uiState.update { it.copy(fetch = FetchState.Loading) }
+        val providerName = state.provider.analyticsName()
+        trackEvent("byok_fetch_models", mapOf("provider" to providerName))
         viewModelScope.launch {
             try {
                 val cfg = ByokConfig(
@@ -120,11 +125,20 @@ class ByokSettingsViewModel : ViewModel() {
                         fetch = FetchState.Success(models.size),
                     )
                 }
+                trackEvent("byok_fetch_result", mapOf("provider" to providerName, "success" to true))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 val error = (e as? ChatException)?.error ?: ChatError(whl.trending.chat.model.ChatErrorCategory.UNKNOWN)
                 _uiState.update { it.copy(fetch = FetchState.Failed(error), manualModel = true) }
+                trackEvent(
+                    "byok_fetch_result",
+                    mapOf(
+                        "provider" to providerName,
+                        "success" to false,
+                        "error_category" to error.category.name.lowercase(),
+                    ),
+                )
             }
         }
     }

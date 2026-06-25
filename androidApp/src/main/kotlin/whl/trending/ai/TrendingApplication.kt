@@ -7,6 +7,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.aptabase.Aptabase
 import whl.trending.ai.core.platform.ChannelHolder
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.chat.engine.byok.SecureKeyStore
 
 class TrendingApplication : Application(), DefaultLifecycleObserver {
@@ -43,7 +44,9 @@ class TrendingApplication : Application(), DefaultLifecycleObserver {
             val durationSeconds = (System.currentTimeMillis() - sessionStartTime) / 1000
             if (durationSeconds > 0) {
                 trackEvent("app_session", mapOf(
-                    "duration" to durationSeconds.toInt()
+                    "duration" to durationSeconds.toInt(),
+                    // BYOK 留存分群维度：本次会话期间是否开启了自有 key
+                    "byok_enabled" to globalSettingsManager.getByokEnabledSync()
                 ))
             }
             sessionStartTime = 0

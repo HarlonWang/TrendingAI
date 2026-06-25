@@ -27,9 +27,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.R
 import whl.trending.chat.engine.ChatEngine
+import whl.trending.chat.engine.byok.ByokChatEngine
+import whl.trending.chat.engine.byok.ByokConfigStore
+import whl.trending.chat.engine.byok.analyticsName
 import whl.trending.chat.engine.byok.resolveChatEngine
 
 /**
@@ -43,6 +47,21 @@ import whl.trending.chat.engine.byok.resolveChatEngine
 private fun sessionKeyOf(context: ChatContext?): String =
     if (context == null) "chat:general"
     else "chat:" + (context.sourceUrl ?: context.title)
+
+/**
+ * 上报本次聊天实际命中的引擎（BYOK 采纳率核心指标）。
+ * 仅上报低基数枚举：`engine`（byok/backend）+ byok 时的 `provider`，绝不含 key/baseUrl/model。
+ */
+private fun reportEngineResolved(engine: ChatEngine) {
+    if (engine is ByokChatEngine) {
+        trackEvent(
+            "byok_chat_engine_resolved",
+            mapOf("engine" to "byok", "provider" to ByokConfigStore.current().provider.analyticsName()),
+        )
+    } else {
+        trackEvent("byok_chat_engine_resolved", mapOf("engine" to "backend"))
+    }
+}
 
 /**
  * 全屏聊天页。通用入口传 [initialContext] = null；带上下文入口传具体条目。
@@ -61,7 +80,9 @@ fun ChatScreen(
     val sessionKey = sessionKeyOf(initialContext)
     val viewModel: ChatViewModel =
         viewModel(key = sessionKey) {
-            ChatViewModel(engine ?: resolveChatEngine(), initialContext, initialMessages)
+            // 仅在真实解析（非 Demo 注入）时上报实际命中的引擎，统计 BYOK 采纳率
+            val resolved = engine ?: resolveChatEngine().also(::reportEngineResolved)
+            ChatViewModel(resolved, initialContext, initialMessages)
         }
     val state by viewModel.uiState.collectAsState()
 
