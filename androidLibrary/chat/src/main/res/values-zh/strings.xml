@@ -20,4 +20,22 @@
     <string name="chat_quota_exceeded">今日额度已用完，明天再来吧。</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
+
+    <string name="byok_title">自定义 AI 模型</string>
+    <string name="byok_enable">使用我自己的模型</string>
+    <string name="byok_enable_desc">开启后，聊天将用你的 API Key 和模型直连，不再走内置服务。</string>
+    <string name="byok_provider">服务商</string>
+    <string name="byok_provider_openai">OpenAI 兼容</string>
+    <string name="byok_provider_anthropic">Anthropic</string>
+    <string name="byok_base_url">Base URL</string>
+    <string name="byok_api_key">API Key</string>
+    <string name="byok_api_key_show">显示 API Key</string>
+    <string name="byok_api_key_hide">隐藏 API Key</string>
+    <string name="byok_model">模型</string>
+    <string name="byok_model_placeholder">选择或拉取模型</string>
+    <string name="byok_fetch_models">拉取模型</string>
+    <string name="byok_fetch_success">连接成功，%1$d 个模型</string>
+    <string name="byok_manual_model">手动输入模型名</string>
+    <string name="byok_manual_model_hint">如 gpt-4o / claude-opus-4-8</string>
+    <string name="byok_fill_first">请先填写 Base URL 和 API Key。</string>
 </resources>

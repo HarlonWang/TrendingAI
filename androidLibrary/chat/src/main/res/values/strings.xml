@@ -20,4 +20,22 @@
     <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
+
+    <string name="byok_title">Custom AI Model</string>
+    <string name="byok_enable">Use my own model</string>
+    <string name="byok_enable_desc">When on, chat uses your API key and model directly instead of the built-in service.</string>
+    <string name="byok_provider">Provider</string>
+    <string name="byok_provider_openai">OpenAI-compatible</string>
+    <string name="byok_provider_anthropic">Anthropic</string>
+    <string name="byok_base_url">Base URL</string>
+    <string name="byok_api_key">API Key</string>
+    <string name="byok_api_key_show">Show API key</string>
+    <string name="byok_api_key_hide">Hide API key</string>
+    <string name="byok_model">Model</string>
+    <string name="byok_model_placeholder">Pick or fetch a model</string>
+    <string name="byok_fetch_models">Fetch models</string>
+    <string name="byok_fetch_success">Connected — %1$d models</string>
+    <string name="byok_manual_model">Enter model name manually</string>
+    <string name="byok_manual_model_hint">e.g. gpt-4o / claude-opus-4-8</string>
+    <string name="byok_fill_first">Fill in Base URL and API Key first.</string>
 </resources>

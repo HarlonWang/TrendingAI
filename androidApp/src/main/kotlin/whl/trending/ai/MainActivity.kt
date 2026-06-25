@@ -16,11 +16,13 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import whl.trending.ai.chat.globalByokSettingsScreen
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.App
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.chat.ui.ByokSettingsScreen
 import whl.trending.chat.ui.ChatScreen
 
 class MainActivity : AppCompatActivity() {
@@ -35,6 +37,11 @@ class MainActivity : AppCompatActivity() {
         // 注册 Android-only 的 ChatScreen 到 CMP 导航 slot（仿 UpdateWrapper 的依赖反转）
         globalChatScreen = { context, onBack ->
             ChatScreen(initialContext = context, onBack = onBack)
+        }
+
+        // 注册 Android-only 的 BYOK 设置页到 CMP 导航 slot（同一依赖反转范式）
+        globalByokSettingsScreen = { onBack ->
+            ByokSettingsScreen(onBack = onBack)
         }
 
         lifecycleScope.launch {

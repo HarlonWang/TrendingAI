@@ -10,6 +10,7 @@ import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.chat.globalByokSettingsScreen
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.VolunteerActivism
@@ -93,6 +95,8 @@ import trendingai.shared.generated.resources.donate_alipay
 import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.byok_settings_desc
+import trendingai.shared.generated.resources.byok_settings_title
 import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.dark_mode
@@ -129,6 +133,7 @@ fun SettingsScreen(
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {},
+    onNavigateToByokSettings: () -> Unit = {},
     onNavigateToWebPage: (url: String, title: String) -> Unit = { _, _ -> }
 ) {
     val isIos = isIosPlatform()
@@ -363,6 +368,20 @@ fun SettingsScreen(
                         showSummaryLanguageDialog = true
                     }
                 )
+            }
+            // 自定义 AI 模型（BYOK）——仅 Android 注册了设置页 slot 时显示
+            if (globalByokSettingsScreen != null) {
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(Res.string.byok_settings_title)) },
+                        supportingContent = { Text(stringResource(Res.string.byok_settings_desc)) },
+                        leadingContent = { Icon(Icons.Default.SmartToy, null) },
+                        modifier = Modifier.clickable {
+                            trackEvent("settings_byok")
+                            onNavigateToByokSettings()
+                        }
+                    )
+                }
             }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 

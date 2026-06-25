@@ -1,0 +1,262 @@
+package whl.trending.chat.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import whl.trending.chat.ByokSettingsViewModel
+import whl.trending.chat.FetchState
+import whl.trending.chat.R
+import whl.trending.chat.engine.byok.ByokProvider
+import whl.trending.chat.model.ChatErrorCategory
+
+/** BYOK「自定义 AI 模型」设置页。字段改动即时持久化，退出即生效。 */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ByokSettingsScreen(
+    onBack: () -> Unit,
+    viewModel: ByokSettingsViewModel = viewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.byok_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.chat_back))
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // 启用开关
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.byok_enable), style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        stringResource(R.string.byok_enable_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = state.enabled, onCheckedChange = viewModel::setEnabled)
+            }
+
+            // Provider 选择
+            Text(stringResource(R.string.byok_provider), style = MaterialTheme.typography.labelLarge)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val providers = ByokProvider.entries
+                providers.forEachIndexed { index, p ->
+                    SegmentedButton(
+                        selected = state.provider == p,
+                        onClick = { viewModel.setProvider(p) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = providers.size),
+                        label = { Text(providerLabel(p)) },
+                    )
+                }
+            }
+
+            // Base URL
+            OutlinedTextField(
+                value = state.baseUrl,
+                onValueChange = viewModel::setBaseUrl,
+                label = { Text(stringResource(R.string.byok_base_url)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            // API Key（密码态 + 眼睛切换）
+            var keyVisible by remember { mutableStateOf(false) }
+            OutlinedTextField(
+                value = state.apiKey,
+                onValueChange = viewModel::setApiKey,
+                label = { Text(stringResource(R.string.byok_api_key)) },
+                singleLine = true,
+                visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { keyVisible = !keyVisible }) {
+                        Icon(
+                            imageVector = if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = stringResource(
+                                if (keyVisible) R.string.byok_api_key_hide else R.string.byok_api_key_show,
+                            ),
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            // 模型区
+            Text(stringResource(R.string.byok_model), style = MaterialTheme.typography.labelLarge)
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Button(onClick = viewModel::fetchModels, enabled = state.canFetch) {
+                    if (state.fetch == FetchState.Loading) {
+                        LoadingIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.byok_fetch_models))
+                    }
+                }
+                FetchStatus(state.fetch)
+            }
+
+            // 模型选择：下拉（拉取成功且非手动）或手动输入
+            if (state.manualModel || state.models.isEmpty()) {
+                OutlinedTextField(
+                    value = state.model,
+                    onValueChange = viewModel::setModel,
+                    label = { Text(stringResource(R.string.byok_manual_model)) },
+                    placeholder = { Text(stringResource(R.string.byok_manual_model_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                ModelDropdown(
+                    models = state.models,
+                    selected = state.model,
+                    onSelect = viewModel::setModel,
+                    onManual = { viewModel.toggleManualModel(true) },
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun FetchStatus(state: FetchState) {
+    when (state) {
+        is FetchState.Success -> Text(
+            text = stringResource(R.string.byok_fetch_success, state.count),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        is FetchState.Failed -> Text(
+            text = stringResource(fetchErrorRes(state.error.category)),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        else -> Unit
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModelDropdown(
+    models: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    onManual: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.byok_model)) },
+            placeholder = { Text(stringResource(R.string.byok_model_placeholder)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            models.forEach { m ->
+                DropdownMenuItem(
+                    text = { Text(m) },
+                    onClick = {
+                        onSelect(m)
+                        expanded = false
+                    },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.byok_manual_model)) },
+                onClick = {
+                    onManual()
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun providerLabel(provider: ByokProvider): String = when (provider) {
+    ByokProvider.OPENAI_COMPATIBLE -> stringResource(R.string.byok_provider_openai)
+    ByokProvider.ANTHROPIC -> stringResource(R.string.byok_provider_anthropic)
+}
+
+private fun fetchErrorRes(category: ChatErrorCategory): Int = when (category) {
+    ChatErrorCategory.AUTH -> R.string.chat_error_auth
+    ChatErrorCategory.NETWORK -> R.string.chat_error_network
+    ChatErrorCategory.TIMEOUT -> R.string.chat_error_timeout
+    ChatErrorCategory.SERVER -> R.string.chat_error_server
+    ChatErrorCategory.BAD_REQUEST -> R.string.chat_error_bad_request
+    ChatErrorCategory.QUOTA -> R.string.chat_quota_exceeded
+    ChatErrorCategory.UNKNOWN -> R.string.chat_error_message
+}

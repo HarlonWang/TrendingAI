@@ -17,3 +17,9 @@ data class ChatContext(
  * 未注册时为 null（等价 NoOp），与 [whl.trending.ai.update.UpdateChecker] 采用同一套依赖反转范式。
  */
 var globalChatScreen: (@Composable (context: ChatContext?, onBack: () -> Unit) -> Unit)? = null
+
+/**
+ * Android-only 的 BYOK「自定义 AI 模型」设置页注入 slot。
+ * 仅 Android 注册；为 null 时设置入口隐藏（iOS 等），与 [globalChatScreen] 同一范式。
+ */
+var globalByokSettingsScreen: (@Composable (onBack: () -> Unit) -> Unit)? = null

@@ -185,4 +185,6 @@
     <string name="feed_rules_vs_official_title">vs. GitHub feed</string>
     <string name="feed_rules_vs_official_desc">GitHub has no official feed API; this page is aggregated from its public received_events endpoint.</string>
     <string name="feed_rules_limits">Last 30 days, up to 300 events, with a 30s–6h delay (GitHub API limits).</string>
+    <string name="byok_settings_title">Custom AI Model</string>
+    <string name="byok_settings_desc">Use your own API key to chat with your own model</string>
 </resources>

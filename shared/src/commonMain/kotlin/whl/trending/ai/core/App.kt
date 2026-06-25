@@ -22,6 +22,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
+import whl.trending.ai.chat.globalByokSettingsScreen
 import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
@@ -36,6 +37,7 @@ data object ProfileFollowers
 data object ProfileFollowing
 data object ProfileRepos
 data class Chat(val context: ChatContext?)
+data object ByokSettings
 
 /**
  * 安全出栈：栈底（Home）永不弹出。
@@ -92,6 +94,9 @@ fun App() {
                             },
                             onNavigateToSubscribe = {
                                 backStack.add(Subscribe)
+                            },
+                            onNavigateToByokSettings = {
+                                backStack.add(ByokSettings)
                             },
                             onNavigateToWebPage = { url, title ->
                                 backStack.add(WebPage(url, title))
@@ -184,6 +189,15 @@ fun App() {
                             screen(key.context) { backStack.safePop() }
                         } else {
                             // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
+                            LaunchedEffect(Unit) { backStack.safePop() }
+                        }
+                    }
+
+                    is ByokSettings -> NavEntry(key) {
+                        val screen = globalByokSettingsScreen
+                        if (screen != null) {
+                            screen { backStack.safePop() }
+                        } else {
                             LaunchedEffect(Unit) { backStack.safePop() }
                         }
                     }

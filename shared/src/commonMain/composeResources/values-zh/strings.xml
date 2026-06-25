@@ -185,4 +185,6 @@
     <string name="feed_rules_vs_official_title">与 GitHub 官方动态的区别</string>
     <string name="feed_rules_vs_official_desc">GitHub 无官方动态接口，本页基于其公开 received_events 接口聚合。</string>
     <string name="feed_rules_limits">最近 30 天、最多 300 条，有 30 秒~6 小时延迟（GitHub 接口限制）。</string>
+    <string name="byok_settings_title">自定义 AI 模型</string>
+    <string name="byok_settings_desc">填入你自己的 API Key，调用你自己的模型</string>
 </resources>
