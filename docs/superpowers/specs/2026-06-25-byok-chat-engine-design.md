@@ -165,7 +165,28 @@ fun resolveChatEngine(): ChatEngine {
 
 ---
 
-## 5. 测试
+## 5. 依赖与技术选型说明
+
+### 5.1 新增依赖（统一走 version catalog `gradle/libs.versions.toml`）
+
+| 坐标 | 用途 | catalog 现状 |
+|---|---|---|
+| `androidx.security:security-crypto` | `EncryptedSharedPreferences` 加密存 apiKey | 当前无，需新增 `[versions]`/`[libraries]` |
+| SSE 流式读取 | 解析 `data:` 增量 | 现有 `ktor-client-okhttp` 已可用 `bodyAsChannel()` 手动逐行读；若用 Ktor SSE 插件则需补 `io.ktor:ktor-client-core` 的 SSE 能力。**倾向手动读 channel，不引新插件** |
+
+遵守项目规范：新增依赖必须同步更新 `[versions]`、`[libraries]` 两处，禁止在 `build.gradle.kts` 硬编码坐标字符串。
+
+### 5.2 EncryptedSharedPreferences 状态说明
+
+`androidx.security:security-crypto` 的 `EncryptedSharedPreferences` 已被 Google 标记 **deprecated**
+（仍可用，且官方暂无直接替代）。可选替代是直接用 Android Keystore 手动加解密后存普通 SharedPreferences。
+
+**本设计仍选用 `EncryptedSharedPreferences`**：简单、够用，apiKey 单字段场景手写 Keystore 加解密收益不大。
+封装在 `SecureKeyStore` 薄接口后，未来若需替换实现，调用方零改动。
+
+---
+
+## 6. 测试
 
 沿用模块现有 `kotlin.test` + JUnit，纯函数优先：
 
