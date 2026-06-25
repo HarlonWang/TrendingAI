@@ -38,4 +38,5 @@
     <string name="byok_manual_model">手动输入模型名</string>
     <string name="byok_manual_model_hint">如 gpt-4o / claude-opus-4-8</string>
     <string name="byok_fill_first">请先填写 Base URL 和 API Key。</string>
+    <string name="byok_privacy_note">你的 API Key 经加密仅保存在本机，绝不上传到我们的服务器；聊天请求由你的设备直连所配置的服务商，不经过 TrendingAI 后端。</string>
 </resources>

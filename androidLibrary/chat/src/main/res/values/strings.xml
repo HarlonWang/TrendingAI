@@ -38,4 +38,5 @@
     <string name="byok_manual_model">Enter model name manually</string>
     <string name="byok_manual_model_hint">e.g. gpt-4o / claude-opus-4-8</string>
     <string name="byok_fill_first">Fill in Base URL and API Key first.</string>
+    <string name="byok_privacy_note">Your API key is encrypted and stored only on this device — it is never uploaded to our servers. Chat requests go directly to the provider you configured, bypassing the TrendingAI backend.</string>
 </resources>
