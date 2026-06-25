@@ -9,6 +9,7 @@
     <string name="chat_error_timeout">响应超时，请重试。</string>
     <string name="chat_error_server">服务暂时不可用，请稍后再试。</string>
     <string name="chat_error_bad_request">这条消息无法处理，可换个说法或开启新对话。</string>
+    <string name="chat_error_auth">API Key 无效或无权限，请在设置中检查你的 API Key。</string>
     <string name="chat_error_content_too_long">消息内容过长，已超出长度上限。</string>
     <string name="chat_error_quota_global">服务今日繁忙，请明天再来。</string>
     <string name="chat_action_what_is_this">介绍一下这个项目</string>

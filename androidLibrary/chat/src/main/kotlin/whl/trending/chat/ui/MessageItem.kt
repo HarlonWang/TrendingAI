@@ -100,6 +100,7 @@ private fun errorMessageRes(error: ChatError): Int = when (error.code) {
         ChatErrorCategory.NETWORK -> R.string.chat_error_network
         ChatErrorCategory.TIMEOUT -> R.string.chat_error_timeout
         ChatErrorCategory.SERVER -> R.string.chat_error_server
+        ChatErrorCategory.AUTH -> R.string.chat_error_auth
         ChatErrorCategory.QUOTA -> R.string.chat_quota_exceeded
         ChatErrorCategory.BAD_REQUEST -> R.string.chat_error_bad_request
         ChatErrorCategory.UNKNOWN -> R.string.chat_error_message

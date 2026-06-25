@@ -2,6 +2,7 @@ package whl.trending.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,15 +64,46 @@ class ChatViewModel(
     }
 
     private fun request() = viewModelScope.launch {
-        val result = runCatching { engine.send(_uiState.value.messages, context) }
-        val assistant = result.fold(
-            onSuccess = { ChatMessage(nextId(), Role.ASSISTANT, it) },
-            onFailure = { e ->
-                val error = (e as? ChatException)?.error
-                    ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-                ChatMessage(nextId(), Role.ASSISTANT, "", error = error)
-            },
-        )
-        _uiState.update { it.copy(messages = it.messages + assistant, isSending = false) }
+        // 先插入一条空的流式占位 assistant 消息，随增量逐字刷新
+        val streamId = nextId()
+        _uiState.update {
+            it.copy(messages = it.messages + ChatMessage(streamId, Role.ASSISTANT, "", isStreaming = true))
+        }
+        try {
+            engine.send(historyForRequest(streamId), context).collect { delta ->
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.map { m ->
+                        if (m.id == streamId) m.copy(content = m.content + delta) else m
+                    })
+                }
+            }
+            // 正常收尾：去掉流式标记
+            _uiState.update { state ->
+                state.copy(
+                    messages = state.messages.map { m ->
+                        if (m.id == streamId) m.copy(isStreaming = false) else m
+                    },
+                    isSending = false,
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e // 不吞协程取消（用户退出/停止）
+        } catch (e: Throwable) {
+            val error = (e as? ChatException)?.error
+                ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+            // 占位消息替换为错误条（清空已累积内容，交给错误条展示 + 重试）
+            _uiState.update { state ->
+                state.copy(
+                    messages = state.messages.map { m ->
+                        if (m.id == streamId) m.copy(content = "", error = error, isStreaming = false) else m
+                    },
+                    isSending = false,
+                )
+            }
+        }
     }
+
+    /** 请求时携带的历史：剔除当前流式占位消息（它尚无内容，不应进 prompt）。 */
+    private fun historyForRequest(streamId: Long): List<ChatMessage> =
+        _uiState.value.messages.filterNot { it.id == streamId }
 }

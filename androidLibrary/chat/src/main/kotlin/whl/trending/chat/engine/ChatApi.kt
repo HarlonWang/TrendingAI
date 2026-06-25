@@ -16,7 +16,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.Locale
@@ -86,7 +88,12 @@ class ChatApi(
         }
     }
 
-    override suspend fun send(history: List<ChatMessage>, context: ChatContext?): String {
+    /** 非流式引擎：整段回复一次性 emit（详见 [ChatEngine.send] 约定）。 */
+    override fun send(history: List<ChatMessage>, context: ChatContext?): Flow<String> = flow {
+        emit(request(history, context))
+    }
+
+    private suspend fun request(history: List<ChatMessage>, context: ChatContext?): String {
         try {
             val response: HttpResponse = client.post("$baseUrl/chat") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())

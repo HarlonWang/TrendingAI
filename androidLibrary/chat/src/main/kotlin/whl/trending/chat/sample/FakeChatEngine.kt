@@ -1,6 +1,8 @@
 package whl.trending.chat.sample
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import whl.trending.ai.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.model.ChatMessage
@@ -20,10 +22,14 @@ class FakeChatEngine(
     )
     private var index = 0
 
-    override suspend fun send(history: List<ChatMessage>, context: ChatContext?): String {
+    /** 分片 emit 模拟打字机：先思考一段，再按词逐块吐出，演示流式渲染。 */
+    override fun send(history: List<ChatMessage>, context: ChatContext?): Flow<String> = flow {
         delay(delayMillis)
         val reply = replies[index % replies.size]
         index++
-        return reply
+        reply.chunked(8).forEach { chunk ->
+            emit(chunk)
+            delay(24L)
+        }
     }
 }

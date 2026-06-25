@@ -9,6 +9,7 @@
     <string name="chat_error_timeout">The response timed out. Please try again.</string>
     <string name="chat_error_server">The service is temporarily unavailable. Please try again later.</string>
     <string name="chat_error_bad_request">This message can\'t be processed. Try rephrasing or starting a new chat.</string>
+    <string name="chat_error_auth">Invalid API key or insufficient permissions. Check your API key in settings.</string>
     <string name="chat_error_content_too_long">The message is too long and exceeds the length limit.</string>
     <string name="chat_error_quota_global">The service is busy today. Please come back tomorrow.</string>
     <string name="chat_action_what_is_this">Introduce this project</string>

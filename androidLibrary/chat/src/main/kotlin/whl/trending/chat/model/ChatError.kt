@@ -7,6 +7,7 @@ package whl.trending.chat.model
 enum class ChatErrorCategory(val retryable: Boolean) {
     NETWORK(true),       // 断网 / DNS / 连接失败
     TIMEOUT(true),       // 读/请求超时
+    AUTH(false),         // 401/403，API Key 无效/无权限（BYOK 直连最高频），重试无用
     QUOTA(false),        // 429，今日额度用完
     SERVER(true),        // 5xx，服务端/上游错误，可重试
     BAD_REQUEST(false),  // 其它 4xx，客户端请求非法，重试无用

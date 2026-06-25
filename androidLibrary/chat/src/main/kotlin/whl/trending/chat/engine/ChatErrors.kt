@@ -21,6 +21,7 @@ object ChatErrors {
      */
     fun forStatus(status: Int, code: String?, bodyError: String?): ChatError {
         val category = when {
+            status == 401 || status == 403 -> ChatErrorCategory.AUTH
             status == 429 -> ChatErrorCategory.QUOTA
             status in 500..599 -> ChatErrorCategory.SERVER
             status in 400..499 -> ChatErrorCategory.BAD_REQUEST

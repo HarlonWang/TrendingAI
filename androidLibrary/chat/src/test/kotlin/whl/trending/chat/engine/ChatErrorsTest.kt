@@ -27,6 +27,24 @@ class ChatErrorsTest {
     }
 
     @Test
+    fun status_401_is_auth() {
+        val e = ChatErrors.forStatus(401, "invalid_api_key", "Incorrect API key")
+        assertEquals(ChatErrorCategory.AUTH, e.category)
+        assertEquals(401, e.httpStatus)
+        assertEquals("invalid_api_key", e.code)
+    }
+
+    @Test
+    fun status_403_is_auth() {
+        assertEquals(ChatErrorCategory.AUTH, ChatErrors.forStatus(403, null, null).category)
+    }
+
+    @Test
+    fun auth_is_not_retryable() {
+        assertFalse(ChatErrorCategory.AUTH.retryable)
+    }
+
+    @Test
     fun status_500_is_server() {
         assertEquals(ChatErrorCategory.SERVER, ChatErrors.forStatus(500, null, null).category)
     }
