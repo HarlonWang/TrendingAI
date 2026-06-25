@@ -75,22 +75,29 @@ data class ByokConfig(
 }
 ```
 
+> 模块归属：`ByokConfig` / `ByokProvider` 落在 chat 模块（androidLibrary）。`SettingsManager`
+> 在 shared/commonMain，不能反向依赖 chat 模块，因此 `SettingsManager` 只存非敏感原语字段，
+> 由 chat 模块的 `ByokConfigStore` 组装出完整 `ByokConfig`（见 2.3）。
+
 ### 2.2 存储分层（按敏感度分流）
 
-- **apiKey 单独加密**：新建 `SecureKeyStore`，基于 Android `EncryptedSharedPreferences`
-  （Keystore 托管的 MasterKey 加密），只存这一个字段。极薄接口 `get()/set(value)/clear()`，放 androidMain。
+- **apiKey 单独加密**：新建 `SecureKeyStore`（chat 模块，object + `init(context)`，App 启动时初始化），
+  基于 Android `EncryptedSharedPreferences`（Keystore 托管的 MasterKey 加密），只存这一个字段。
+  极薄接口 `getApiKey()/setApiKey(value)/clear()`。
 - **非敏感字段**（enabled / provider / baseUrl / model）继续用现有 `SettingsManager`，
-  新增对应 key，与主题/语言一致，方便用 `getXxxFlow` 观测开关变化。
+  新增对应 key，与主题/语言一致，方便用 `byokEnabled` Flow 观测开关变化。
 
 理由：`EncryptedSharedPreferences` 只装一个 key，逻辑简单、不污染 `SettingsManager`；
 非敏感配置复用既有明文存储，省一套加密读写。
 
 ### 2.3 读取聚合与降级
 
-- `SettingsManager` 新增 `byokConfig(): ByokConfig` 组装方法（apiKey 从 `SecureKeyStore` 取），
-  引擎和 UI 统一通过它拿完整配置。
+- chat 模块新增 `ByokConfigStore`（聚合点）：`current(): ByokConfig` 从 `globalSettingsManager`
+  读非敏感字段、从 `SecureKeyStore` 读 apiKey 组装；并提供 `setEnabled/setProvider/setBaseUrl/setModel/setApiKey`
+  分发写入。引擎选择与设置 UI 统一通过它读/写，避免各处各自拼装。
+  （设计初稿曾设想 `SettingsManager.byokConfig()`，但因上述模块边界改由 `ByokConfigStore` 承担。）
 - **降级安全**：`enabled=true` 但配置不全（`isValid=false`）时视为未启用，回落后端共享引擎，
-  不让聊天直接报错。
+  不让聊天直接报错（见 §4.1 `resolveChatEngine`）。
 
 ---
 
@@ -106,7 +113,7 @@ data class ByokConfig(
 2. **Provider 选择**：OpenAI 兼容 / Anthropic。切换带出对应 baseUrl 占位提示
    （OpenAI `https://api.openai.com/v1`，Anthropic `https://api.anthropic.com`）。
 3. **Base URL**：预填默认值，可改（兼容 OpenRouter / Ollama / 自建网关）。
-4. **API Key**：密码态（默认掩码 + 末 4 位可见的眼睛切换），`imeAction=Done`。
+4. **API Key**：密码态（`PasswordVisualTransformation` 掩码 + 眼睛图标整体显隐切换），密码键盘。
 5. **模型**："拉取模型"按钮 + 下拉。
 
 ### 3.3 /models 拉取（顺带充当连接测试）
@@ -127,7 +134,8 @@ data class ByokConfig(
 
 - 加载指示：拉取按钮内用 `LoadingIndicator(Modifier.size(24.dp), color = onPrimary)`
   （遵循项目规范，全 app 不用 `CircularProgressIndicator`）。
-- 保存时机：非敏感项改动即写；apiKey 失焦/保存时写 `SecureKeyStore`。退出即生效。
+- 保存时机：所有字段改动即时持久化（非敏感经 `ByokConfigStore` 写 `SettingsManager`，
+  apiKey 写 `SecureKeyStore`），退出即生效，无"保存"按钮。
 
 ---
 
@@ -135,16 +143,15 @@ data class ByokConfig(
 
 ### 4.1 引擎工厂
 
-`ChatScreen` 默认 `engine = ChatApi.shared` 改为进入聊天时按配置解析：
+`ChatScreen` 的 `engine` 改为可空：显式注入（Demo 传 FakeChatEngine）优先，否则按配置解析：
 
 ```kotlin
-fun resolveChatEngine(): ChatEngine {
-    val cfg = globalSettingsManager.byokConfig()
-    return if (cfg.enabled && cfg.isValid) ByokChatEngine(cfg) else ChatApi.shared
-}
+fun resolveChatEngine(config: ByokConfig = ByokConfigStore.current()): ChatEngine =
+    if (config.enabled && config.isValid) ByokChatEngine(config) else ChatApi.shared
 ```
 
-在 `ChatScreen` 组合时解析一次（VM 按 sessionKey 创建时注入）。
+在 `ChatScreen` 的 VM 工厂里解析一次（`viewModel(key = sessionKey) { ChatViewModel(engine ?: resolveChatEngine(), ...) }`），
+按 sessionKey 缓存，避免每次重组都新建引擎。`config` 形参便于单测注入。
 
 **已知限制**：会话进行中切换开关不会即时换引擎，需退出重进。v1 接受，避免引入"运行中热切换引擎"的复杂度。
 
