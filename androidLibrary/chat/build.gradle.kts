@@ -38,6 +38,8 @@ dependencies {
     implementation(libs.commonmark)
     implementation(libs.commonmark.ext.gfm.tables)
 
+    implementation(libs.androidx.security.crypto)
+
     debugImplementation(libs.compose.uiTooling)
 
     testImplementation(libs.kotlin.test)

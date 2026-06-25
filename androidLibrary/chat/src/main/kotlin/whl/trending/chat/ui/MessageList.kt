@@ -16,15 +16,15 @@ import whl.trending.chat.model.ChatMessage
 @Composable
 fun MessageList(
     messages: List<ChatMessage>,
-    isSending: Boolean,
     onRetry: (ChatMessage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size, isSending) {
-        val target = messages.size // 含末尾 typing 项时仍滚到底
-        if (target > 0) listState.animateScrollToItem(target)
+    // 新消息插入、以及流式内容增长时都滚到底（末条内容长度变化作为流式触发）
+    val lastLen = messages.lastOrNull()?.content?.length ?: 0
+    LaunchedEffect(messages.size, lastLen) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
     LazyColumn(
@@ -35,9 +35,6 @@ fun MessageList(
     ) {
         items(messages, key = { it.id }) { message ->
             MessageItem(message = message, onRetry = { onRetry(message) })
-        }
-        if (isSending) {
-            item(key = "typing") { TypingIndicator() }
         }
     }
 }

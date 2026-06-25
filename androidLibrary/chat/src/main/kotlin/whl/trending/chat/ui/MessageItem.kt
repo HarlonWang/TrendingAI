@@ -68,11 +68,16 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
     Column(modifier = modifier.fillMaxWidth()) {
         val error = message.error
         if (error == null) {
-            SelectionContainer {
-                MarkdownText(
-                    markdown = message.content,
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                )
+            if (message.isStreaming && message.content.isEmpty()) {
+                // 流式占位但尚无首字：显示思考指示
+                TypingIndicator()
+            } else {
+                SelectionContainer {
+                    MarkdownText(
+                        markdown = message.content,
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                    )
+                }
             }
         } else {
             Text(

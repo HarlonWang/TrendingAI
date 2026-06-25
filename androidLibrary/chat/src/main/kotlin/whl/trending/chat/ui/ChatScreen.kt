@@ -29,8 +29,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import whl.trending.ai.chat.ChatContext
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.R
-import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
+import whl.trending.chat.engine.byok.resolveChatEngine
 
 /**
  * 按入口计算稳定的会话 key，使 Activity 级 ViewModelStore 按会话线各自缓存一个
@@ -47,19 +47,22 @@ private fun sessionKeyOf(context: ChatContext?): String =
 /**
  * 全屏聊天页。通用入口传 [initialContext] = null；带上下文入口传具体条目。
  *
- * @param engine 默认正式引擎 [ChatApi]；Demo 可注入 FakeChatEngine。
+ * @param engine 显式注入的引擎（Demo 注入 FakeChatEngine）；为 null 时进入聊天按当前 BYOK 配置
+ *   解析（启用且完整→直连，否则后端共享），见 [resolveChatEngine]。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     initialContext: ChatContext?,
     onBack: () -> Unit,
-    engine: ChatEngine = ChatApi.shared,
+    engine: ChatEngine? = null,
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
 ) {
     val sessionKey = sessionKeyOf(initialContext)
     val viewModel: ChatViewModel =
-        viewModel(key = sessionKey) { ChatViewModel(engine, initialContext, initialMessages) }
+        viewModel(key = sessionKey) {
+            ChatViewModel(engine ?: resolveChatEngine(), initialContext, initialMessages)
+        }
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -127,7 +130,6 @@ fun ChatScreen(
             } else {
                 MessageList(
                     messages = state.messages,
-                    isSending = state.isSending,
                     onRetry = viewModel::retry,
                 )
             }

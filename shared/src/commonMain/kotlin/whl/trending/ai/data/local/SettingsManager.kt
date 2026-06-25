@@ -42,6 +42,10 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
+    private val BYOK_ENABLED_KEY = "prefs_byok_enabled"
+    private val BYOK_PROVIDER_KEY = "prefs_byok_provider"
+    private val BYOK_BASE_URL_KEY = "prefs_byok_base_url"
+    private val BYOK_MODEL_KEY = "prefs_byok_model"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -161,6 +165,28 @@ class SettingsManager(private val settings: ObservableSettings) {
     fun setFeedHighlightsOnly(value: Boolean) {
         settings.putBoolean(FEED_HIGHLIGHTS_ONLY_KEY, value)
     }
+
+    // ---- BYOK 自定义模型：非敏感字段（apiKey 由各平台加密存储单独管理）----
+
+    /** “使用我自己的模型”开关。观测用于聊天入口/引擎选择实时反应。 */
+    val byokEnabled: Flow<Boolean> = settings.getBooleanFlow(BYOK_ENABLED_KEY, false)
+
+    fun getByokEnabledSync(): Boolean = settings.getBoolean(BYOK_ENABLED_KEY, false)
+
+    fun setByokEnabled(value: Boolean) = settings.putBoolean(BYOK_ENABLED_KEY, value)
+
+    /** provider 以枚举 ordinal 存储；调用方负责与自身枚举映射。默认 0（OpenAI 兼容）。 */
+    fun getByokProviderOrdinal(): Int = settings.getInt(BYOK_PROVIDER_KEY, 0)
+
+    fun setByokProviderOrdinal(ordinal: Int) = settings.putInt(BYOK_PROVIDER_KEY, ordinal)
+
+    fun getByokBaseUrl(): String = settings.getString(BYOK_BASE_URL_KEY, "")
+
+    fun setByokBaseUrl(value: String) = settings.putString(BYOK_BASE_URL_KEY, value)
+
+    fun getByokModel(): String = settings.getString(BYOK_MODEL_KEY, "")
+
+    fun setByokModel(value: String) = settings.putString(BYOK_MODEL_KEY, value)
 }
 
 val globalSettings by lazy { Settings() as ObservableSettings }
