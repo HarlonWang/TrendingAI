@@ -4,6 +4,7 @@ import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
 import io.ktor.client.request.get
 import io.ktor.client.request.prepareRequest
@@ -36,6 +37,7 @@ import whl.trending.chat.model.Role
 private const val TAG = "ByokChatEngine"
 private const val ANTHROPIC_VERSION = "2023-06-01"
 private const val ANTHROPIC_MAX_TOKENS = 4096
+private const val MODELS_REQUEST_TIMEOUT_MS = 30_000L
 
 /**
  * BYOK 直连引擎：用用户自己的 key/baseUrl/model 直接请求 OpenAI 兼容或 Anthropic 端点，
@@ -55,7 +57,8 @@ class ByokChatEngine(private val config: ByokConfig) : ChatEngine {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            Log.w(TAG, "stream failed", e)
+            // 仅记类名/分类，不打印原始传输异常（BYOK 路径下避免异常信息潜在带出请求细节）
+            Log.w(TAG, "stream failed: ${e::class.simpleName} -> ${ChatErrors.forThrowable(e).category}")
             throw ChatException(ChatErrors.forThrowable(e))
         }
     }
@@ -179,6 +182,7 @@ class ByokChatEngine(private val config: ByokConfig) : ChatEngine {
                 when (config.provider) {
                     ByokProvider.OPENAI_COMPATIBLE -> {
                         val resp = client.get(ByokUrls.openAiModels(config.baseUrl)) {
+                            timeout { requestTimeoutMillis = MODELS_REQUEST_TIMEOUT_MS }
                             header("Authorization", "Bearer ${config.apiKey}")
                         }
                         if (!resp.status.isSuccess()) {
@@ -188,6 +192,7 @@ class ByokChatEngine(private val config: ByokConfig) : ChatEngine {
                     }
                     ByokProvider.ANTHROPIC -> {
                         val resp = client.get(ByokUrls.anthropicModels(config.baseUrl)) {
+                            timeout { requestTimeoutMillis = MODELS_REQUEST_TIMEOUT_MS }
                             header("x-api-key", config.apiKey)
                             header("anthropic-version", ANTHROPIC_VERSION)
                         }

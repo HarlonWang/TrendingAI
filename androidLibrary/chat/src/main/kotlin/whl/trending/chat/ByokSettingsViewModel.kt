@@ -35,7 +35,7 @@ data class ByokSettingsUiState(
     val manualModel: Boolean = false,
     val fetch: FetchState = FetchState.Idle,
 ) {
-    val canFetch: Boolean get() = baseUrl.isNotBlank() && apiKey.isNotBlank() && fetch != FetchState.Loading
+    val canFetch: Boolean get() = enabled && baseUrl.isNotBlank() && apiKey.isNotBlank() && fetch != FetchState.Loading
 }
 
 /**

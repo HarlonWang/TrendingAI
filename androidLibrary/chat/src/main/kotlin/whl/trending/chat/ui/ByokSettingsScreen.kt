@@ -100,6 +100,9 @@ fun ByokSettingsScreen(
                 Switch(checked = state.enabled, onCheckedChange = viewModel::setEnabled)
             }
 
+            // 关闭时下方表单整体灰掉但保留已填值（仍可见，便于再次开启）
+            val formEnabled = state.enabled
+
             // Provider 选择
             Text(stringResource(R.string.byok_provider), style = MaterialTheme.typography.labelLarge)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -108,6 +111,7 @@ fun ByokSettingsScreen(
                     SegmentedButton(
                         selected = state.provider == p,
                         onClick = { viewModel.setProvider(p) },
+                        enabled = formEnabled,
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = providers.size),
                         label = { Text(providerLabel(p)) },
                     )
@@ -120,6 +124,7 @@ fun ByokSettingsScreen(
                 onValueChange = viewModel::setBaseUrl,
                 label = { Text(stringResource(R.string.byok_base_url)) },
                 singleLine = true,
+                enabled = formEnabled,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -130,10 +135,11 @@ fun ByokSettingsScreen(
                 onValueChange = viewModel::setApiKey,
                 label = { Text(stringResource(R.string.byok_api_key)) },
                 singleLine = true,
+                enabled = formEnabled,
                 visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    IconButton(onClick = { keyVisible = !keyVisible }) {
+                    IconButton(onClick = { keyVisible = !keyVisible }, enabled = formEnabled) {
                         Icon(
                             imageVector = if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = stringResource(
@@ -165,6 +171,15 @@ fun ByokSettingsScreen(
                 FetchStatus(state.fetch)
             }
 
+            // 启用但 Base URL / Key 未填齐时，提示需先填写（拉取按钮此时不可用）
+            if (formEnabled && (state.baseUrl.isBlank() || state.apiKey.isBlank())) {
+                Text(
+                    text = stringResource(R.string.byok_fill_first),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             // 模型选择：下拉（拉取成功且非手动）或手动输入
             if (state.manualModel || state.models.isEmpty()) {
                 OutlinedTextField(
@@ -173,12 +188,14 @@ fun ByokSettingsScreen(
                     label = { Text(stringResource(R.string.byok_manual_model)) },
                     placeholder = { Text(stringResource(R.string.byok_manual_model_hint)) },
                     singleLine = true,
+                    enabled = formEnabled,
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 ModelDropdown(
                     models = state.models,
                     selected = state.model,
+                    enabled = formEnabled,
                     onSelect = viewModel::setModel,
                     onManual = { viewModel.toggleManualModel(true) },
                 )
@@ -238,15 +255,20 @@ private fun FetchStatus(state: FetchState) {
 private fun ModelDropdown(
     models: List<String>,
     selected: String,
+    enabled: Boolean,
     onSelect: (String) -> Unit,
     onManual: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    ExposedDropdownMenuBox(
+        expanded = expanded && enabled,
+        onExpandedChange = { if (enabled) expanded = it },
+    ) {
         OutlinedTextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(stringResource(R.string.byok_model)) },
             placeholder = { Text(stringResource(R.string.byok_model_placeholder)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },

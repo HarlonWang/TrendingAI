@@ -34,6 +34,24 @@ class ByokRequestTest {
         assertEquals("https://api.anthropic.com/v1/models", ByokUrls.anthropicModels("https://api.anthropic.com/"))
     }
 
+    @Test fun missing_scheme_defaults_to_https() {
+        assertEquals(
+            "https://api.openai.com/v1/chat/completions",
+            ByokUrls.chatCompletions("api.openai.com/v1"),
+        )
+    }
+
+    @Test fun whitespace_is_trimmed() {
+        assertEquals(
+            "https://api.openai.com/v1/models",
+            ByokUrls.openAiModels("  https://api.openai.com/v1  "),
+        )
+    }
+
+    @Test fun explicit_http_localhost_is_preserved() {
+        assertEquals("http://localhost:11434/models", ByokUrls.openAiModels("http://localhost:11434"))
+    }
+
     @Test fun system_prompt_includes_chinese_instruction() {
         val s = ByokPrompt.system(context = null, lang = "zh")
         assertTrue(s.contains("中文"), "zh 应要求用中文回复，实际: $s")

@@ -160,8 +160,8 @@ fun resolveChatEngine(config: ByokConfig = ByokConfigStore.current()): ChatEngin
 `ChatViewModel.request()` 由 `runCatching { engine.send(...) }` 拿整段改为：
 1. 先插入一条空 assistant 占位消息（`isStreaming=true`）。
 2. `engine.send(...).collect { delta -> 追加到该消息 content }`，逐字刷新 UI。
-3. 正常结束 → 该消息标 `isStreaming=false`。
-4. `catch ChatException` → 占位消息替换为带 `error` 的错误条（复用现有错误条 + 重试逻辑）。
+3. 正常结束 → 该消息标 `isStreaming=false`；若全程无任何增量（空响应）则按可重试 `UNKNOWN` 错误处理，避免留下空气泡。
+4. `catch ChatException` → 该消息标 `error` 并 `isStreaming=false`，**保留已累积内容**（长答中途失败不丢用户已看到的文字），错误条 + 重试展示在内容下方（`MessageItem` 在 `error != null` 且 `content` 非空时先渲染内容再渲染错误条）。
 
 配套：
 - `ChatMessage` 新增 `isStreaming: Boolean = false`，`MessageItem` 据此在末尾显示光标/`TypingIndicator`。
@@ -214,3 +214,13 @@ fun resolveChatEngine(config: ByokConfig = ByokConfigStore.current()): ChatEngin
 - 自定义 temperature / max_tokens / system prompt 等高级参数（v1 用合理默认）。
 - 运行中热切换引擎（需退出重进聊天）。
 - 本地用量 / 计费统计。
+
+---
+
+## 附：代码审查后修订（2026-06-29）
+
+- **baseUrl 归一化**：`ByokUrls.normalizeBaseUrl` 去首尾空白、缺协议补 `https://`（避免漏填协议导致 key 走明文），尾斜杠容错保持；显式 `http://localhost`（Ollama 等本机网关）原样保留。
+- **设置页表单随开关置灰**：关闭时 Provider/BaseURL/Key/模型选择整体 `enabled=false`（保留已填值），与 §3.2 一致；`canFetch` 同步要求 `enabled`。
+- **拉取模型超时收紧**：`/models` 连接测试用独立 30s `requestTimeoutMillis`，不复用流式 client 的 600s 上限。
+- **日志脱敏**：流式失败仅记异常类名 + 归类，不打印原始传输异常。
+- **填写提示**：启用但 BaseURL/Key 未填齐时展示 `byok_fill_first` 提示。

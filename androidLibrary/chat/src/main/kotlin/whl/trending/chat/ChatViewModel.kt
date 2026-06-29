@@ -77,11 +77,17 @@ class ChatViewModel(
                     })
                 }
             }
-            // 正常收尾：去掉流式标记
+            // 正常收尾：去掉流式标记。若全程无任何增量（空响应），按可重试错误处理，避免留下空气泡
             _uiState.update { state ->
                 state.copy(
                     messages = state.messages.map { m ->
-                        if (m.id == streamId) m.copy(isStreaming = false) else m
+                        if (m.id != streamId) {
+                            m
+                        } else if (m.content.isBlank()) {
+                            m.copy(isStreaming = false, error = ChatError(ChatErrorCategory.UNKNOWN))
+                        } else {
+                            m.copy(isStreaming = false)
+                        }
                     },
                     isSending = false,
                 )
@@ -91,11 +97,11 @@ class ChatViewModel(
         } catch (e: Throwable) {
             val error = (e as? ChatException)?.error
                 ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-            // 占位消息替换为错误条（清空已累积内容，交给错误条展示 + 重试）
+            // 保留已累积内容（长答中途失败时不丢用户已看到的文字），错误条 + 重试展示在其下方
             _uiState.update { state ->
                 state.copy(
                     messages = state.messages.map { m ->
-                        if (m.id == streamId) m.copy(content = "", error = error, isStreaming = false) else m
+                        if (m.id == streamId) m.copy(error = error, isStreaming = false) else m
                     },
                     isSending = false,
                 )

@@ -80,6 +80,15 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
                 }
             }
         } else {
+            // 中途失败但已有内容：先展示已累积的部分，再在其下方给错误条 + 重试
+            if (message.content.isNotEmpty()) {
+                SelectionContainer {
+                    MarkdownText(
+                        markdown = message.content,
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
             Text(
                 text = stringResource(errorMessageRes(error)),
                 style = MaterialTheme.typography.bodyMedium,
