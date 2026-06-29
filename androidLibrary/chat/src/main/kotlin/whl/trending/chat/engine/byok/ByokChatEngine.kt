@@ -45,6 +45,9 @@ private const val MODELS_REQUEST_TIMEOUT_MS = 30_000L
  */
 class ByokChatEngine(private val config: ByokConfig) : ChatEngine {
 
+    /** 当前直连的 provider，供 UI 标识"走的是哪家自有模型"。 */
+    val provider: ByokProvider get() = config.provider
+
     override fun send(history: List<ChatMessage>, context: ChatContext?): Flow<String> = flow {
         val lang = resolveLang()
         try {

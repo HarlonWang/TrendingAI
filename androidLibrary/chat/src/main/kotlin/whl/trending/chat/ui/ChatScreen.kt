@@ -14,6 +14,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -22,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,6 +35,7 @@ import whl.trending.chat.R
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.byok.ByokChatEngine
 import whl.trending.chat.engine.byok.ByokConfigStore
+import whl.trending.chat.engine.byok.ByokProvider
 import whl.trending.chat.engine.byok.analyticsName
 import whl.trending.chat.engine.byok.resolveChatEngine
 
@@ -64,6 +67,41 @@ private fun reportEngineResolved(engine: ChatEngine) {
 }
 
 /**
+ * 顶栏标题下的引擎来源标识，让用户一眼分辨当前对话走自有模型还是 TrendingAI 后端：
+ * - BYOK 生效 → 主色「自有模型 · <provider>」；
+ * - 走后端 → 低调「TrendingAI 默认助手」；
+ * - Demo/Fake 注入（[provider] 为 null 且非后端）→ 不显示。
+ */
+@Composable
+private fun EngineLabel(provider: ByokProvider?, isBackend: Boolean) {
+    val text: String
+    val color: Color
+    when {
+        provider != null -> {
+            text = stringResource(R.string.byok_engine_byok, stringResource(providerLabelRes(provider)))
+            color = MaterialTheme.colorScheme.primary
+        }
+        isBackend -> {
+            text = stringResource(R.string.byok_engine_backend)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        else -> return
+    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+private fun providerLabelRes(provider: ByokProvider): Int = when (provider) {
+    ByokProvider.OPENAI_COMPATIBLE -> R.string.byok_provider_openai
+    ByokProvider.ANTHROPIC -> R.string.byok_provider_anthropic
+}
+
+/**
  * 全屏聊天页。通用入口传 [initialContext] = null；带上下文入口传具体条目。
  *
  * @param engine 显式注入的引擎（Demo 注入 FakeChatEngine）；为 null 时进入聊天按当前 BYOK 配置
@@ -90,16 +128,22 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = initialContext?.title
-                                ?: stringResource(R.string.chat_assistant_title),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = initialContext?.title
+                                    ?: stringResource(R.string.chat_assistant_title),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            BetaBadge()
+                        }
+                        EngineLabel(
+                            provider = viewModel.engineProvider,
+                            isBackend = viewModel.isBackendEngine,
                         )
-                        Spacer(Modifier.width(8.dp))
-                        BetaBadge()
                     }
                 },
                 navigationIcon = {

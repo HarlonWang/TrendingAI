@@ -9,8 +9,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
+import whl.trending.chat.engine.byok.ByokChatEngine
+import whl.trending.chat.engine.byok.ByokProvider
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
@@ -28,6 +31,12 @@ class ChatViewModel(
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    /** 本会话实际命中的引擎来源，供顶栏标识。BYOK 时为对应 provider，否则为 null。 */
+    val engineProvider: ByokProvider? = (engine as? ByokChatEngine)?.provider
+
+    /** 是否走自有后端（TrendingAI 默认助手）。Demo/Fake 注入时两者皆否，不显示标识。 */
+    val isBackendEngine: Boolean = engine is ChatApi
 
     private var idSeq = initialMessages.maxOfOrNull { it.id } ?: 0L
     private fun nextId(): Long = ++idSeq

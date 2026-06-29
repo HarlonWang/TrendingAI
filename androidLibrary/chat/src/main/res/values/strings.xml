@@ -19,6 +19,8 @@
     <string name="chat_retry">Retry</string>
     <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
     <string name="chat_beta_badge">Beta</string>
+    <string name="byok_engine_byok">Your model · %1$s</string>
+    <string name="byok_engine_backend">TrendingAI default assistant</string>
     <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
 
     <string name="byok_title">Custom AI Model</string>

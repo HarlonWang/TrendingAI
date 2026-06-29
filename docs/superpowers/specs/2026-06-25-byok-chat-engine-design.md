@@ -170,6 +170,18 @@ fun resolveChatEngine(config: ByokConfig = ByokConfigStore.current()): ChatEngin
   `CancellationException` 不吞约定。
 - `FakeChatEngine` 同步改为 `flow { ... }`（整段或分片 emit 模拟打字），保证 demo 与单测可用。
 
+### 4.3 引擎来源标识（顶栏可见）
+
+§4.1 的「降级安全」会在配置不全时静默回落后端，用户因此无法分辨当前对话走的是自有模型还是 TrendingAI 后端。
+为消除该歧义，聊天页顶栏标题下增加一行引擎来源标识，数据源为 `ChatViewModel` 持有的实际引擎对象（单一真相，与真正发请求的引擎一致）：
+
+- `ChatViewModel` 暴露 `engineProvider: ByokProvider?`（`engine as? ByokChatEngine`）与 `isBackendEngine: Boolean`（`engine is ChatApi`）。
+- `ByokChatEngine` 暴露 `val provider`，供上述推断。
+- `ChatScreen` 顶栏 `title` 改为两行 Column：主行（标题 + Beta 徽标）不变，副行 `EngineLabel`——
+  BYOK 生效显示主色「自有模型 · <provider>」，走后端显示低调「TrendingAI 默认助手」，Demo/Fake 注入则不显示。
+
+> 注：这是 v1 设计的盲点补全；「降级安全」决策本身保留（仍静默回落，不报错），但回落结果对用户**可见**。
+
 ---
 
 ## 5. 依赖与技术选型说明
