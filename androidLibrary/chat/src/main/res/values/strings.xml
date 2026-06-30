@@ -16,6 +16,7 @@
     <string name="chat_action_what_can_you_do">What can you do</string>
     <string name="chat_action_what_can_you_do_prompt">What can you do? Briefly introduce your capabilities and typical use cases.</string>
     <string name="chat_retry">Retry</string>
+    <string name="chat_share">Share</string>
     <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
