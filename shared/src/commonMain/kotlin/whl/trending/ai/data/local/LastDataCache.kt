@@ -41,7 +41,9 @@ class LastDataCache(
 
     suspend inline fun <reified T> put(key: String, value: T) {
         withContext(dispatcher) {
+            // 序列化/IO 失败只降级为「本次不缓存」，不影响调用方；打日志保留可观测性
             runCatching { store.write(fileName(key), json.encodeToString(value)) }
+                .onFailure { println("LastDataCache: put($key) failed: $it") }
         }
     }
 

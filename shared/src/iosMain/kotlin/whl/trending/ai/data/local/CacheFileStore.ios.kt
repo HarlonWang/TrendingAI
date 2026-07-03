@@ -7,6 +7,7 @@ import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.create
 import platform.Foundation.stringWithContentsOfFile
 import platform.Foundation.writeToFile
 
@@ -35,8 +36,8 @@ private class IosCacheFileStore : CacheFileStore {
     override fun write(name: String, content: String) {
         val path = filePath(name) ?: return
         // atomically = true：NSString 自带先写临时文件再替换的原子语义
-        @Suppress("CAST_NEVER_SUCCEEDS")
-        (content as NSString).writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        NSString.create(string = content)
+            .writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
     }
 
     override fun delete(name: String) {
