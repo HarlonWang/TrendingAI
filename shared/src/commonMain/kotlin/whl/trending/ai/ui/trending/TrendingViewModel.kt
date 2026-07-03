@@ -2,10 +2,13 @@ package whl.trending.ai.ui.trending
 
 import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.data.model.TrendingRepo
+import whl.trending.ai.data.model.TrendingResponse
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
+import whl.trending.ai.data.local.globalLastDataCache
 import whl.trending.ai.data.local.globalSettingsManager
 
 import androidx.lifecycle.ViewModel
@@ -41,6 +44,7 @@ class TrendingViewModel(
     private val repository: TrendingRepository = TrendingRepository(),
     private val settingsManager: SettingsManager = globalSettingsManager,
     private val starService: RepoStarService = RepoStarService.shared,
+    private val cache: LastDataCache = globalLastDataCache,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrendingUiState())
     val uiState: StateFlow<TrendingUiState> = _uiState.asStateFlow()
@@ -52,7 +56,7 @@ class TrendingViewModel(
     private var fetchJob: Job? = null
 
     init {
-        fetchData()
+        loadWithCache()
 
         viewModelScope.launch {
             // drop(1) 丢弃首次初始化的当前值，只监听真正发生的设置修改，避免初始化时重复调用 fetchData
@@ -62,45 +66,78 @@ class TrendingViewModel(
         }
     }
 
+    private fun cacheKey(lang: String) = "trending_default_$lang"
+
+    /** 只缓存默认视图：daily + 全语言 + 无历史日期/批次（冷启动看到的就是它） */
+    private fun isDefaultView(period: String, language: String, date: String?, batch: String?): Boolean =
+        period == "daily" && language == "all" && date == null && batch == null
+
+    /** SWR：默认视图有缓存先展示 + 顶部指示器自动刷新（不加防闪烁延迟）；无缓存走骨架屏 */
+    private fun loadWithCache() {
+        fetchJob?.cancel()
+        fetchJob = viewModelScope.launch {
+            val cached = cache.get<TrendingResponse>(cacheKey(settingsManager.currentContentLang()))
+            if (cached != null) {
+                _uiState.update {
+                    it.copy(
+                        repos = cached.data,
+                        since = cached.metadata.since,
+                        capturedAt = DateTimeUtils.formatToLocalTime(cached.metadata.capturedAt),
+                        isLoading = false,
+                        isRefreshing = true,
+                    )
+                }
+            }
+            fetch()
+        }
+    }
+
     fun fetchData(isRefresh: Boolean = false) {
         fetchJob?.cancel()
         fetchJob = viewModelScope.launch {
             if (isRefresh) {
                 _uiState.update { it.copy(isRefreshing = true, error = null) }
+                // 防指示器闪烁延迟，仅手动下拉/设置变更触发的刷新需要
                 delay(500)
             } else {
                 _uiState.update { it.copy(isLoading = true, error = null) }
             }
+            fetch()
+        }
+    }
 
-            try {
-                val summaryLang = settingsManager.currentContentLang()
+    private suspend fun fetch() {
+        // 请求参数在发起时定格为局部值，成功后据此判断是否写缓存，避免请求期间切筛选造成错写
+        val period = _uiState.value.selectedPeriod
+        val language = _uiState.value.selectedLanguage
+        val date = _uiState.value.selectedDate
+        val batch = _uiState.value.selectedBatch
+        try {
+            val summaryLang = settingsManager.currentContentLang()
 
-                val response = repository.getTrending(
-                    _uiState.value.selectedPeriod,
-                    _uiState.value.selectedLanguage,
-                    summaryLang,
-                    _uiState.value.selectedDate,
-                    _uiState.value.selectedBatch
+            val response = repository.getTrending(period, language, summaryLang, date, batch)
+            if (isDefaultView(period, language, date, batch)) {
+                cache.put(cacheKey(summaryLang), response)
+            }
+            _uiState.update {
+                it.copy(
+                    repos = response.data,
+                    since = response.metadata.since,
+                    capturedAt = DateTimeUtils.formatToLocalTime(response.metadata.capturedAt),
+                    isLoading = false,
+                    isRefreshing = false,
+                    error = null
                 )
-                _uiState.update {
-                    it.copy(
-                        repos = response.data,
-                        since = response.metadata.since,
-                        capturedAt = DateTimeUtils.formatToLocalTime(response.metadata.capturedAt),
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = null
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = e.message ?: "Unknown Error"
-                    )
-                }
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    // 有内容（缓存或旧数据）时刷新失败静默保留，避免整页错误盖掉可用内容
+                    error = if (it.repos.isEmpty()) e.message ?: "Unknown Error" else null
+                )
             }
         }
     }
