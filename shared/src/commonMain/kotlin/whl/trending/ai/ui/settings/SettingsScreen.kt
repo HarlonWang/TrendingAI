@@ -105,6 +105,7 @@ import trendingai.shared.generated.resources.language_option_follow_system
 import trendingai.shared.generated.resources.language_system_follow
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
+import trendingai.shared.generated.resources.open_links_in_browser_message
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.settings
@@ -145,6 +146,20 @@ fun SettingsScreen(
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
     var showDonateDialog by remember { mutableStateOf(false) }
     var showSummaryLanguageDialog by remember { mutableStateOf(false) }
+    var showOpenLinksDialog by remember { mutableStateOf(false) }
+
+    if (showOpenLinksDialog) {
+        AlertDialog(
+            onDismissRequest = { showOpenLinksDialog = false },
+            title = { Text(stringResource(Res.string.open_links_in_browser)) },
+            text = { Text(stringResource(Res.string.open_links_in_browser_message)) },
+            confirmButton = {
+                TextButton(onClick = { showOpenLinksDialog = false }) {
+                    Text(stringResource(Res.string.close))
+                }
+            }
+        )
+    }
 
     if (showSummaryLanguageDialog) {
         AlertDialog(
@@ -383,6 +398,10 @@ fun SettingsScreen(
                                 globalSettingsManager.setOpenLinksInCustomTab(enabled)
                             }
                         )
+                    },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_open_links_detail")
+                        showOpenLinksDialog = true
                     }
                 )
             }

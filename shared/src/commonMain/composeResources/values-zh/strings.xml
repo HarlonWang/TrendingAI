@@ -21,7 +21,8 @@
     <string name="summary_language_message">摘要语言跟随应用语言设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换语言后自动刷新。\n\n希望支持你的语言？欢迎反馈告诉我们，我们会根据需求情况评估。</string>
     <string name="summary_language_feedback">去反馈</string>
     <string name="open_links_in_browser">用系统浏览器打开外链</string>
-    <string name="open_links_in_browser_desc">外部链接交给系统浏览器打开：可正常通过 Product Hunt 等网站的人机验证，并支持翻译、自动填充和已有登录态。GitHub README 阅读不受此设置影响。关闭后使用内置浏览器。</string>
+    <string name="open_links_in_browser_desc">关闭后改用内置浏览器 · 点击了解</string>
+    <string name="open_links_in_browser_message">外部链接交给系统浏览器打开，可正常通过 Product Hunt 等网站的人机验证，并支持翻译、自动填充和已有登录态。\n\n关闭后，外链改用内置浏览器打开。\n\nGitHub README 阅读不经外链流程，不受此设置影响。</string>
     <string name="close">关闭</string>
     <string name="datasource_settings">数据源设置</string>
     <string name="current_datasource">当前使用: Gemini API</string>
