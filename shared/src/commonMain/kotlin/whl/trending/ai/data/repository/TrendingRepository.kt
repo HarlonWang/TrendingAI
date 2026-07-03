@@ -7,12 +7,13 @@ import whl.trending.ai.data.model.SubscribeResponse
 import whl.trending.ai.data.model.TrendingResponse
 import whl.trending.ai.data.remote.TrendingApi
 
-class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
-    suspend fun getFeed(source: String, summaryLang: String = "zh"): FeedResponse {
+// open：便于测试以子类替身注入（保持手动 DI，不引入 mock 框架）
+open class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
+    open suspend fun getFeed(source: String, summaryLang: String = "zh"): FeedResponse {
         return api.fetchFeed(source, summaryLang)
     }
 
-    suspend fun getPicks(summaryLang: String = "zh"): PicksResponse {
+    open suspend fun getPicks(summaryLang: String = "zh"): PicksResponse {
         return api.fetchPicks(summaryLang)
     }
 
@@ -20,7 +21,7 @@ class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
         return api.fetchReadme(owner, repo)
     }
 
-    suspend fun getTrending(
+    open suspend fun getTrending(
         period: String,
         language: String,
         summaryLang: String,

@@ -15,7 +15,9 @@ import whl.trending.ai.auth.FollowingProvider
 import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
+import whl.trending.ai.data.local.globalLastDataCache
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
@@ -64,6 +66,7 @@ class ProfileViewModel(
     private val ownRepoEventsProvider: OwnRepoEventsProvider = OwnRepoEventsProvider.shared,
     private val authManager: () -> AuthManager = { globalAuthManager },
     private val settingsManager: SettingsManager = globalSettingsManager,
+    private val cache: LastDataCache = globalLastDataCache,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -97,9 +100,19 @@ class ProfileViewModel(
                     loadJob?.cancel()
                     feedLoadJob?.cancel()
                     _uiState.value = ProfileUiState()
+                    cache.remove(ProfileCache.KEY)
                 }
             }
         }
+    }
+
+    /**
+     * 落盘当前 state 快照（覆盖 + 只增不减，见 [ProfileCache.from]）。
+     * 调用时机：fetchMe 成功、contributions 到达、loadMoreFeed 每轮写回 state 后。
+     */
+    private suspend fun persistSnapshot() {
+        val snapshot = ProfileCache.from(_uiState.value, cache.get(ProfileCache.KEY)) ?: return
+        cache.put(ProfileCache.KEY, snapshot)
     }
 
     fun load() {
@@ -110,6 +123,24 @@ class ProfileViewModel(
         feedLoadJob?.cancel()
         loadJob = viewModelScope.launch {
             val highlightsOnly = settingsManager.getFeedHighlightsOnlySync()
+
+            // SWR：有缓存整页秒出（header/计数/热力图/feed）+ 顶部指示器自动刷新
+            val cached = cache.get<ProfileCache>(ProfileCache.KEY)
+            if (cached != null) {
+                _uiState.value = ProfileUiState(
+                    isLoading = false,
+                    user = cached.user,
+                    githubUser = cached.githubUser,
+                    contributions = cached.contributions,
+                    // feed 与档位绑定，档位不一致时不复用（只用 header 部分，feed 走加载态）
+                    feedItems = if (cached.highlightsOnly == highlightsOnly) cached.feedItems else emptyList(),
+                    highlightsOnly = highlightsOnly,
+                )
+                hasLoaded = true
+                refreshInternal()
+                return@launch
+            }
+
             _uiState.value = ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly)
             nextFeedPage = 1
             consumedRawCount = 0
@@ -129,6 +160,7 @@ class ProfileViewModel(
             }
             _uiState.value = ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly)
             hasLoaded = true
+            persistSnapshot()
             loadGithubData(user)
         }
     }
@@ -153,6 +185,7 @@ class ProfileViewModel(
             try {
                 val calendar = githubApi.fetchContributionCalendar(githubToken, login)
                 _uiState.value = _uiState.value.copy(contributions = calendar)
+                persistSnapshot()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
             }
@@ -239,6 +272,7 @@ class ProfileViewModel(
                 }
 
                 _uiState.value = _uiState.value.copy(isFeedLoading = false)
+                persistSnapshot()
             } catch (e: Exception) {
                 // 取消时直接透传，不写 state——isFeedLoading 由取消方的状态重置兜底归 false
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -258,34 +292,40 @@ class ProfileViewModel(
         loadJob?.cancel()
         feedLoadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isRefreshing = true, isError = false)
-            nextFeedPage = 1
-            consumedRawCount = 0
-            followingInfo = null
-            ownRepoItems = emptyList()
-            val token = authManager().getAccessToken()
-            if (token == null) {
-                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
-                return@launch
-            }
-            val user = try {
-                repository.fetchMe(token)
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
-                return@launch
-            }
-            // 旧内容保留到此刻才清空 feed，随后由 loadGithubData 重新填充，避免下拉时列表闪空
-            _uiState.value = _uiState.value.copy(
-                isRefreshing = false,
-                user = user,
-                feedItems = emptyList(),
-                feedEndReached = false,
-                feedUnavailable = false,
-                contributions = null,
-            )
-            loadGithubData(user)
+            refreshInternal()
         }
+    }
+
+    /** 刷新主体：手动下拉与缓存命中后的自动刷新（SWR）共用 */
+    private suspend fun refreshInternal() {
+        _uiState.value = _uiState.value.copy(isRefreshing = true, isError = false)
+        nextFeedPage = 1
+        consumedRawCount = 0
+        followingInfo = null
+        ownRepoItems = emptyList()
+        val token = authManager().getAccessToken()
+        if (token == null) {
+            _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
+            return
+        }
+        val user = try {
+            repository.fetchMe(token)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
+            return
+        }
+        // 旧内容保留到此刻才清空 feed，随后由 loadGithubData 重新填充，避免下拉时列表闪空
+        _uiState.value = _uiState.value.copy(
+            isRefreshing = false,
+            user = user,
+            feedItems = emptyList(),
+            feedEndReached = false,
+            feedUnavailable = false,
+            contributions = null,
+        )
+        persistSnapshot()
+        loadGithubData(user)
     }
 
     /** 切换精选/全部档：取消进行中的拉取，持久化设置，重置 feed 状态并重新拉取第一页 */

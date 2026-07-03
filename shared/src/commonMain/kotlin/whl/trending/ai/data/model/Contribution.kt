@@ -1,10 +1,14 @@
 package whl.trending.ai.data.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * GitHub 贡献日历（绿色热力图）的干净领域模型。
  * 数据仅来自 GitHub GraphQL API（REST 不暴露 contribution calendar），
  * UI 只依赖本模型，与 GraphQL 响应的深层嵌套结构解耦。
+ * @Serializable 供 Profile 上次数据缓存（ProfileCache）序列化落盘。
  */
+@Serializable
 data class ContributionCalendar(
     /** 最近一年的总贡献数 */
     val total: Int,
@@ -12,10 +16,12 @@ data class ContributionCalendar(
     val weeks: List<ContributionWeek>,
 )
 
+@Serializable
 data class ContributionWeek(
     val days: List<ContributionDay>,
 )
 
+@Serializable
 data class ContributionDay(
     /** ISO 日期，如 "2026-06-23" */
     val date: String,
