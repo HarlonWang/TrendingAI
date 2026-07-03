@@ -1,9 +1,11 @@
 package whl.trending.ai.core.platform
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.browser.customtabs.CustomTabsIntent
 import java.lang.ref.WeakReference
 
@@ -59,8 +61,9 @@ actual fun openInCustomTab(url: String) {
         val customTabsIntent = CustomTabsIntent.Builder().build()
         customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         customTabsIntent.launchUrl(context, Uri.parse(url))
-    } catch (e: Exception) {
+    } catch (e: ActivityNotFoundException) {
         // 设备上没有任何支持 Custom Tabs 的浏览器时，退回系统默认方式打开
+        Log.w("Platform", "Custom Tabs unavailable, falling back to openUrl", e)
         openUrl(url)
     }
 }
