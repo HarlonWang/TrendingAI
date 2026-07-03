@@ -22,6 +22,8 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
+import whl.trending.ai.core.platform.isCloudflareProtectedUrl
+import whl.trending.ai.core.platform.openInCustomTab
 import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
@@ -71,7 +73,11 @@ fun App() {
                                 backStack.add(Chat(null))
                             },
                             onOpenUrl = { url ->
-                                backStack.add(WebPage(url, ""))
+                                if (isCloudflareProtectedUrl(url)) {
+                                    openInCustomTab(url)
+                                } else {
+                                    backStack.add(WebPage(url, ""))
+                                }
                             },
                             onNavigateToProfile = {
                                 backStack.add(Profile)
@@ -130,7 +136,11 @@ fun App() {
                                 backStack.add(RepoDetail(owner, repo))
                             },
                             onOpenUrl = { url ->
-                                backStack.add(WebPage(url, ""))
+                                if (isCloudflareProtectedUrl(url)) {
+                                    openInCustomTab(url)
+                                } else {
+                                    backStack.add(WebPage(url, ""))
+                                }
                             }
                         )
                     }

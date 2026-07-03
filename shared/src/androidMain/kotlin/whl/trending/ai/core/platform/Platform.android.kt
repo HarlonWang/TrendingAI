@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.browser.customtabs.CustomTabsIntent
 import java.lang.ref.WeakReference
 
 object AndroidContextHolder {
@@ -49,6 +50,18 @@ actual fun openUrl(url: String, targetPackage: String?) {
             intent.setPackage(null)
             context.startActivity(intent)
         }
+    }
+}
+
+actual fun openInCustomTab(url: String) {
+    val context = AndroidContextHolder.get() ?: return
+    try {
+        val customTabsIntent = CustomTabsIntent.Builder().build()
+        customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        customTabsIntent.launchUrl(context, Uri.parse(url))
+    } catch (e: Exception) {
+        // 设备上没有任何支持 Custom Tabs 的浏览器时，退回系统默认方式打开
+        openUrl(url)
     }
 }
 

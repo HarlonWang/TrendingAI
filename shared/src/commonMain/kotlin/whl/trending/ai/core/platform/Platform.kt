@@ -12,6 +12,12 @@ expect fun openAppSettings()
 
 expect fun openUrl(url: String, targetPackage: String? = null)
 
+/**
+ * 在系统浏览器环境中打开链接（Android Custom Tabs / iOS SFSafariViewController），
+ * 用于应用内 WebView 无法通过 Cloudflare 人机验证的站点，见 [isCloudflareProtectedUrl]。
+ */
+expect fun openInCustomTab(url: String)
+
 /** 调起系统分享面板，把纯文本交给用户选择的目标 App（AI App / 笔记 / IM 等）。 */
 expect fun shareText(text: String)
 
