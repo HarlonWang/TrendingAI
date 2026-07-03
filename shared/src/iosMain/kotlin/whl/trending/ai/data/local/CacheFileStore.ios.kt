@@ -1,5 +1,6 @@
 package whl.trending.ai.data.local
 
+import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
@@ -11,6 +12,7 @@ import platform.Foundation.writeToFile
 
 actual fun platformCacheFileStore(): CacheFileStore = IosCacheFileStore()
 
+@OptIn(ExperimentalForeignApi::class)
 private class IosCacheFileStore : CacheFileStore {
     private fun filePath(name: String): String? {
         val caches = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)

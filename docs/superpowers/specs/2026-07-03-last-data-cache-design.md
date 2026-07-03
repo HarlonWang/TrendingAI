@@ -90,7 +90,7 @@ init:
 - 自动刷新复用 `isRefreshing`：`PullToRefreshBox` 顶部 `LoadingIndicator` 自然转起来，UI 零新增。
 - `delay(500)` 只保留给手动下拉（防指示器闪烁），SWR 自动刷新不加。
 - Trending 仅默认视图读写缓存：init 读缓存只在初始参数为默认时；fetch 成功只在当前参数为默认时 put。
-- 错误展示条件收紧：各 Screen 整页错误改为「`error != null` 且无内容」才显示；有内容时刷新失败静默保留。
+- 错误展示条件收紧：规则收敛在 VM 层——失败且已有内容时不置 `error`（静默保留），仅无内容时才置 `error` 触发整页错误。Screen 零改动，且规则可单测。
 - 语言切换监听不动：切换后 fetch 成功写入新语言 key，冷启动按当前语言读 key，天然隔离。
 
 ## 4. Profile（GitHub 个人主页）

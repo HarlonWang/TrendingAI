@@ -4,9 +4,10 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.MeUser
 import whl.trending.ai.data.remote.TrendingApi
 
-class UserRepository(private val api: TrendingApi = TrendingApi()) {
+// open：便于测试以子类替身注入（保持手动 DI，不引入 mock 框架）
+open class UserRepository(private val api: TrendingApi = TrendingApi()) {
 
-    suspend fun fetchMe(accessToken: String): MeUser = api.fetchMe(accessToken).user
+    open suspend fun fetchMe(accessToken: String): MeUser = api.fetchMe(accessToken).user
 
     /**
      * 登录成功/应用启动（已登录）时调用：服务端建档 + 刷新 last_login_at，并缓存头像。
