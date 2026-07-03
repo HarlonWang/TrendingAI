@@ -39,22 +39,21 @@ actual fun openUrl(url: String, targetPackage: String?) {
     }
 }
 
-actual fun openInCustomTab(url: String) {
-    // SFSafariViewController 仅支持 http/https，异常情况退回系统浏览器
-    val nsUrl = NSURL.URLWithString(url) ?: return
+actual fun openInCustomTab(url: String): Boolean {
+    // SFSafariViewController 仅支持 http/https，其余情况返回 false 交由调用方兜底
+    val nsUrl = NSURL.URLWithString(url) ?: return false
     if (nsUrl.scheme != "http" && nsUrl.scheme != "https") {
-        openUrl(url)
-        return
+        return false
     }
     var topVc = UIApplication.sharedApplication.keyWindow?.rootViewController
     while (topVc?.presentedViewController != null) {
         topVc = topVc.presentedViewController
     }
     if (topVc == null) {
-        openUrl(url)
-        return
+        return false
     }
     topVc.presentViewController(SFSafariViewController(uRL = nsUrl), animated = true, completion = null)
+    return true
 }
 
 actual fun shareText(text: String) {

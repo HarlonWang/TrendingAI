@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Translate
@@ -63,6 +64,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -101,6 +103,8 @@ import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
 import trendingai.shared.generated.resources.language_system_follow
+import trendingai.shared.generated.resources.open_links_in_browser
+import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.settings
@@ -135,6 +139,7 @@ fun SettingsScreen(
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val seedColor by globalSettingsManager.seedColor.collectAsState(DEFAULT_SEED_ARGB)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
+    val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
     val appVersion = remember { getAppVersion() }
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
@@ -361,6 +366,23 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         trackEvent("settings_summary_language", mapOf("app_language" to appLanguage.name.lowercase()))
                         showSummaryLanguageDialog = true
+                    }
+                )
+            }
+            // 外链打开方式
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.open_links_in_browser)) },
+                    supportingContent = { Text(stringResource(Res.string.open_links_in_browser_desc)) },
+                    leadingContent = { Icon(Icons.Default.OpenInBrowser, null) },
+                    trailingContent = {
+                        Switch(
+                            checked = openLinksInCustomTab,
+                            onCheckedChange = { enabled ->
+                                trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
+                                globalSettingsManager.setOpenLinksInCustomTab(enabled)
+                            }
+                        )
                     }
                 )
             }

@@ -55,16 +55,17 @@ actual fun openUrl(url: String, targetPackage: String?) {
     }
 }
 
-actual fun openInCustomTab(url: String) {
-    val context = AndroidContextHolder.get() ?: return
-    try {
+actual fun openInCustomTab(url: String): Boolean {
+    val context = AndroidContextHolder.get() ?: return false
+    return try {
         val customTabsIntent = CustomTabsIntent.Builder().build()
         customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         customTabsIntent.launchUrl(context, Uri.parse(url))
+        true
     } catch (e: ActivityNotFoundException) {
-        // 设备上没有任何支持 Custom Tabs 的浏览器时，退回系统默认方式打开
-        Log.w("Platform", "Custom Tabs unavailable, falling back to openUrl", e)
-        openUrl(url)
+        // 设备上没有任何浏览器可承接，返回 false 交由调用方兜底
+        Log.w("Platform", "Custom Tabs unavailable", e)
+        false
     }
 }
 

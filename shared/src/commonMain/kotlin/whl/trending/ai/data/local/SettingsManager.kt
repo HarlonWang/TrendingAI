@@ -42,6 +42,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
+    private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -160,6 +161,19 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setFeedHighlightsOnly(value: Boolean) {
         settings.putBoolean(FEED_HIGHLIGHTS_ONLY_KEY, value)
+    }
+
+    /**
+     * 外链打开方式：true 走系统浏览器（Custom Tabs / SFSafariViewController），
+     * false 走内置 WebView。默认 true——真实浏览器指纹可通过 Cloudflare 等人机验证，
+     * 且自带翻译/密码填充/登录态。GitHub README 阅读不经外链路由，不受此设置影响。
+     */
+    val openLinksInCustomTab: Flow<Boolean> = settings.getBooleanFlow(OPEN_LINKS_IN_CUSTOM_TAB_KEY, true)
+
+    fun getOpenLinksInCustomTabSync(): Boolean = settings.getBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, true)
+
+    fun setOpenLinksInCustomTab(value: Boolean) {
+        settings.putBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, value)
     }
 }
 

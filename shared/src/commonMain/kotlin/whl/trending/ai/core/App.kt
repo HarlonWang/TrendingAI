@@ -22,8 +22,8 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.platform.isCloudflareProtectedUrl
 import whl.trending.ai.core.platform.openInCustomTab
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
@@ -54,6 +54,16 @@ internal fun MutableList<Any>.safePop() {
 fun App() {
     val backStack = remember { mutableStateListOf<Any>(Home) }
 
+    // 外链统一出口：默认走系统浏览器（Custom Tabs / SFSafariViewController），
+    // 用户在设置中关闭、或设备无浏览器可承接时，兜底进应用内 WebView。
+    // GitHub README 阅读走 RepoDetail 路由，不经此处。
+    val openExternalUrl: (url: String, title: String) -> Unit = { url, title ->
+        val useCustomTab = globalSettingsManager.getOpenLinksInCustomTabSync()
+        if (!useCustomTab || !openInCustomTab(url)) {
+            backStack.add(WebPage(url, title))
+        }
+    }
+
     TrendingTheme {
         WhatsNewHost()
         NavDisplay(
@@ -73,11 +83,7 @@ fun App() {
                                 backStack.add(Chat(null))
                             },
                             onOpenUrl = { url ->
-                                if (isCloudflareProtectedUrl(url)) {
-                                    openInCustomTab(url)
-                                } else {
-                                    backStack.add(WebPage(url, ""))
-                                }
+                                openExternalUrl(url, "")
                             },
                             onNavigateToProfile = {
                                 backStack.add(Profile)
@@ -100,7 +106,7 @@ fun App() {
                                 backStack.add(Subscribe)
                             },
                             onNavigateToWebPage = { url, title ->
-                                backStack.add(WebPage(url, title))
+                                openExternalUrl(url, title)
                             }
                         )
                     }
@@ -136,11 +142,7 @@ fun App() {
                                 backStack.add(RepoDetail(owner, repo))
                             },
                             onOpenUrl = { url ->
-                                if (isCloudflareProtectedUrl(url)) {
-                                    openInCustomTab(url)
-                                } else {
-                                    backStack.add(WebPage(url, ""))
-                                }
+                                openExternalUrl(url, "")
                             }
                         )
                     }
