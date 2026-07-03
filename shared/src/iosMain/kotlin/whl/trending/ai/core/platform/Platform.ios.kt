@@ -8,6 +8,7 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSBundle
 import platform.Foundation.NSLocale
 import platform.Foundation.preferredLanguages
+import platform.SafariServices.SFSafariViewController
 
 class IOSPlatform: Platform {
     override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
@@ -36,6 +37,23 @@ actual fun openUrl(url: String, targetPackage: String?) {
             completionHandler = { _ -> }
         )
     }
+}
+
+actual fun openInCustomTab(url: String): Boolean {
+    // SFSafariViewController 仅支持 http/https，其余情况返回 false 交由调用方兜底
+    val nsUrl = NSURL.URLWithString(url) ?: return false
+    if (nsUrl.scheme != "http" && nsUrl.scheme != "https") {
+        return false
+    }
+    var topVc = UIApplication.sharedApplication.keyWindow?.rootViewController
+    while (topVc?.presentedViewController != null) {
+        topVc = topVc.presentedViewController
+    }
+    if (topVc == null) {
+        return false
+    }
+    topVc.presentViewController(SFSafariViewController(uRL = nsUrl), animated = true, completion = null)
+    return true
 }
 
 actual fun shareText(text: String) {

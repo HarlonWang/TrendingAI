@@ -98,4 +98,20 @@ class SettingsManagerTest {
         manager.setFeedHighlightsOnly(true)
         assertEquals(true, manager.getFeedHighlightsOnlySync())
     }
+
+    @Test
+    fun openLinksInCustomTab_defaults_true_and_persists() = runTest {
+        // 默认值：外链走系统浏览器（Custom Tabs）
+        assertEquals(true, manager.getOpenLinksInCustomTabSync())
+        assertEquals(true, manager.openLinksInCustomTab.first())
+
+        // 切到内置 WebView
+        manager.setOpenLinksInCustomTab(false)
+        assertEquals(false, manager.getOpenLinksInCustomTabSync())
+        assertEquals(false, manager.openLinksInCustomTab.first())
+
+        // 切回系统浏览器
+        manager.setOpenLinksInCustomTab(true)
+        assertEquals(true, manager.getOpenLinksInCustomTabSync())
+    }
 }

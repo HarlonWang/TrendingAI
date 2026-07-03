@@ -1,9 +1,12 @@
 package whl.trending.ai.core.platform
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
+import androidx.browser.customtabs.CustomTabsIntent
 import java.lang.ref.WeakReference
 
 object AndroidContextHolder {
@@ -49,6 +52,20 @@ actual fun openUrl(url: String, targetPackage: String?) {
             intent.setPackage(null)
             context.startActivity(intent)
         }
+    }
+}
+
+actual fun openInCustomTab(url: String): Boolean {
+    val context = AndroidContextHolder.get() ?: return false
+    return try {
+        val customTabsIntent = CustomTabsIntent.Builder().build()
+        customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        customTabsIntent.launchUrl(context, Uri.parse(url))
+        true
+    } catch (e: ActivityNotFoundException) {
+        // 设备上没有任何浏览器可承接，返回 false 交由调用方兜底
+        Log.w("Platform", "Custom Tabs unavailable", e)
+        false
     }
 }
 
