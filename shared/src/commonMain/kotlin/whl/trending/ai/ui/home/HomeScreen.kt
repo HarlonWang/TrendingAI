@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -87,6 +88,7 @@ import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
+import kotlin.time.Clock
 
 enum class HomeTab {
     GitHub, HackerNews, ProductHunt, Picks
@@ -114,6 +116,14 @@ fun HomeScreen(
         viewModel { PicksViewModel() }
     } else null
     val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
+
+    // HN / PH 同样按需创建；提升到这里是为了 bottomBar 双击刷新能拿到同一实例
+    val hnViewModel: FeedViewModel? = if (selectedTab == HomeTab.HackerNews) {
+        viewModel(key = "hackernews") { FeedViewModel("hackernews") }
+    } else null
+    val phViewModel: FeedViewModel? = if (selectedTab == HomeTab.ProductHunt) {
+        viewModel(key = "producthunt") { FeedViewModel("producthunt") }
+    } else null
 
     val authManager = globalAuthManager
     val authState by authManager.authState.collectAsState()
@@ -205,10 +215,32 @@ fun HomeScreen(
             }
         },
         bottomBar = {
+            // 双击当前 tab 触发下拉刷新（#38）：仅当两次点击都落在已选中的 tab 上才算，
+            // 双击未选中的 tab 只切换不刷新（切换会重置计时）
+            val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
+            var lastTapTime by remember { mutableStateOf(0L) }
+            val refreshCurrentTab = {
+                trackEvent("tab_double_tap_refresh", mapOf("tab" to selectedTab.name.lowercase()))
+                when (selectedTab) {
+                    HomeTab.GitHub -> trendingViewModel.fetchData(isRefresh = true)
+                    HomeTab.HackerNews -> hnViewModel?.refresh()
+                    HomeTab.ProductHunt -> phViewModel?.refresh()
+                    HomeTab.Picks -> picksViewModel?.refresh()
+                }
+            }
             val switchTo = { tab: HomeTab ->
                 if (selectedTab != tab) {
                     trackEvent("tab_switch", mapOf("tab" to tab.name.lowercase()))
                     selectedTabName = tab.name
+                    lastTapTime = 0L
+                } else {
+                    val now = Clock.System.now().toEpochMilliseconds()
+                    if (now - lastTapTime <= doubleTapMillis) {
+                        refreshCurrentTab()
+                        lastTapTime = 0L // 已触发一次，三连击不重复刷新
+                    } else {
+                        lastTapTime = now
+                    }
                 }
             }
             NavigationBar {
@@ -249,22 +281,16 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = trendingViewModel
             )
-            HomeTab.HackerNews -> {
-                val hnViewModel: FeedViewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") }
-                FeedScreen(
-                    modifier = Modifier.padding(innerPadding),
-                    viewModel = hnViewModel,
-                    onOpenUrl = onOpenUrl
-                )
-            }
-            HomeTab.ProductHunt -> {
-                val phViewModel: FeedViewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") }
-                FeedScreen(
-                    modifier = Modifier.padding(innerPadding),
-                    viewModel = phViewModel,
-                    onOpenUrl = onOpenUrl
-                )
-            }
+            HomeTab.HackerNews -> FeedScreen(
+                modifier = Modifier.padding(innerPadding),
+                viewModel = hnViewModel!!,
+                onOpenUrl = onOpenUrl
+            )
+            HomeTab.ProductHunt -> FeedScreen(
+                modifier = Modifier.padding(innerPadding),
+                viewModel = phViewModel!!,
+                onOpenUrl = onOpenUrl
+            )
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 onOpenUrl = onOpenUrl,
