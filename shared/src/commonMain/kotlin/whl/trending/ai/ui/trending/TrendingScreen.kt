@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -219,6 +220,12 @@ private fun RepoList(
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
 ) {
     val state = rememberPullToRefreshState()
+    val listState = rememberLazyListState()
+    // 切换「只看 New」时滚回顶部：LazyColumn 按 key 会保持可视位置，
+    // 关掉开关后画面几乎不变，用户容易以为切换没生效（#36）
+    LaunchedEffect(uiState.newOnly) {
+        listState.scrollToItem(0)
+    }
 
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
@@ -270,7 +277,7 @@ private fun RepoList(
             else -> {
                 val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
                 val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 items(
                     count = displayRepos.size,
                     key = { index -> displayRepos[index].url }
