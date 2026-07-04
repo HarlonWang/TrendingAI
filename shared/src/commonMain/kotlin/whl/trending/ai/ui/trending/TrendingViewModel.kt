@@ -56,6 +56,11 @@ class TrendingViewModel(
     private var fetchJob: Job? = null
 
     init {
+        // 「只看 New」初始值取自设置项（默认关）；页面内手动切换仅影响当前会话。
+        // 初始视图就是该过滤唯一有效的 daily 全语言榜，直接置位即可。
+        if (settingsManager.getTrendingNewOnlyDefaultSync()) {
+            _uiState.update { it.copy(newOnly = true) }
+        }
         loadWithCache()
 
         viewModelScope.launch {
