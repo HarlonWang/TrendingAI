@@ -17,6 +17,8 @@
     <string name="chat_action_what_can_you_do_prompt">你可以做什么？请简要介绍你的能力和适用场景。</string>
     <string name="chat_retry">重试</string>
     <string name="chat_share">分享</string>
+    <string name="chat_copy">复制</string>
+    <string name="chat_copied">已复制</string>
     <string name="chat_quota_exceeded">今日额度已用完，明天再来吧。</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
