@@ -43,6 +43,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
+    private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -174,6 +175,20 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setOpenLinksInCustomTab(value: Boolean) {
         settings.putBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, value)
+    }
+
+    /**
+     * GitHub 榜「只看 New」的默认状态：true 时进入 app 默认开启该过滤。
+     * 只决定初始值；榜单页手动切换仅影响当前会话，不回写此设置。
+     */
+    val trendingNewOnlyDefault: Flow<Boolean> =
+        settings.getBooleanFlow(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
+
+    fun getTrendingNewOnlyDefaultSync(): Boolean =
+        settings.getBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
+
+    fun setTrendingNewOnlyDefault(value: Boolean) {
+        settings.putBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, value)
     }
 }
 

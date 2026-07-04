@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
@@ -103,6 +104,8 @@ import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
 import trendingai.shared.generated.resources.language_system_follow
+import trendingai.shared.generated.resources.new_only_default
+import trendingai.shared.generated.resources.new_only_default_desc
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_links_in_browser_message
@@ -141,6 +144,7 @@ fun SettingsScreen(
     val seedColor by globalSettingsManager.seedColor.collectAsState(DEFAULT_SEED_ARGB)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
+    val trendingNewOnlyDefault by globalSettingsManager.trendingNewOnlyDefault.collectAsState(false)
     val appVersion = remember { getAppVersion() }
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
@@ -402,6 +406,23 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         trackEvent("settings_open_links_detail")
                         showOpenLinksDialog = true
+                    }
+                )
+            }
+            // 「只看 New」默认开关：只决定进入 app 时的初始状态，榜单页手动切换不回写
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.new_only_default)) },
+                    supportingContent = { Text(stringResource(Res.string.new_only_default_desc)) },
+                    leadingContent = { Icon(Icons.Default.FiberNew, null) },
+                    trailingContent = {
+                        Switch(
+                            checked = trendingNewOnlyDefault,
+                            onCheckedChange = { enabled ->
+                                trackEvent("settings_new_only_default", mapOf("enabled" to enabled.toString()))
+                                globalSettingsManager.setTrendingNewOnlyDefault(enabled)
+                            }
+                        )
                     }
                 )
             }
