@@ -28,4 +28,10 @@ data class ChatError(
     val httpStatus: Int? = null,
     val detail: String? = null,
     val tier: String? = null,
-)
+) {
+    companion object {
+        /** 服务端 429 响应 tier 字段的取值，与 Worker 端 chat.js 保持一致 */
+        const val TIER_ANONYMOUS = "anonymous"
+        const val TIER_USER = "user"
+    }
+}

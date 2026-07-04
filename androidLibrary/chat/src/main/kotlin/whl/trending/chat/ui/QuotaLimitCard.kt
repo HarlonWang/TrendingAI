@@ -47,7 +47,7 @@ internal fun QuotaLimitCard(
     onRetry: () -> Unit,
 ) {
     val authState by globalAuthManager.authState.collectAsState()
-    val isUserTier = error.tier == "user"
+    val isUserTier = error.tier == ChatError.TIER_USER
     var showWaitlistDialog by remember { mutableStateOf(false) }
 
     if (showWaitlistDialog) {
@@ -59,7 +59,7 @@ internal fun QuotaLimitCard(
             isUserTier -> {
                 QuotaText(R.string.chat_quota_user_exceeded)
                 TextButton(onClick = {
-                    trackEvent("chat_quota_waitlist_click", mapOf("tier" to "user"))
+                    trackEvent("chat_quota_waitlist_click", mapOf("tier" to ChatError.TIER_USER))
                     showWaitlistDialog = true
                 }) {
                     Text(stringResource(R.string.chat_quota_waitlist_cta))
@@ -83,7 +83,7 @@ internal fun QuotaLimitCard(
                     }
                 }
                 TextButton(onClick = {
-                    trackEvent("chat_quota_waitlist_click", mapOf("tier" to "anonymous"))
+                    trackEvent("chat_quota_waitlist_click", mapOf("tier" to ChatError.TIER_ANONYMOUS))
                     showWaitlistDialog = true
                 }) {
                     Text(stringResource(R.string.chat_quota_waitlist_cta))
@@ -134,7 +134,7 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(
-                enabled = !isSubmitting && email.contains('@'),
+                enabled = !isSubmitting && EMAIL_REGEX.matches(email.trim()),
                 onClick = {
                     isSubmitting = true
                     scope.launch {
@@ -160,6 +160,9 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
         },
     )
 }
+
+// 与服务端 subscribe.js 的 isValidEmail 同构；服务端仍做完整校验，这里只挡明显无效输入
+private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 
 private suspend fun resolveLang(): String {
     val appLang = globalSettingsManager.appLanguage.first()

@@ -74,7 +74,7 @@ class ChatViewModel(
                     ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
                 // 付费意愿漏斗第一级：个人配额触顶（在 VM 记一次，避免 UI 重组重复上报）
                 if (error.code == "quota_device") {
-                    trackEvent("chat_quota_hit", mapOf("tier" to (error.tier ?: "anonymous")))
+                    trackEvent("chat_quota_hit", mapOf("tier" to (error.tier ?: ChatError.TIER_ANONYMOUS)))
                 }
                 ChatMessage(nextId(), Role.ASSISTANT, "", error = error)
             },
