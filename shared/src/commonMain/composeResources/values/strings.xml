@@ -36,6 +36,7 @@
     <string name="donate">Donate</string>
     <string name="donate_message">We build Trending AI in our limited spare time, hoping to help you discover global tech trends more efficiently.\nIf you find it helpful, a donation would mean a lot to us.\n\nAll donations go toward improving our servers and operations to keep the product moving forward.</string>
     <string name="donate_alipay">Alipay: %1$s</string>
+    <string name="donate_github_desc">Sponsor via GitHub</string>
     <string name="last_updated">Last updated at: %1$s</string>
     <string name="stars_total">Stars %1$s</string>
     <string name="stars_period">Stars (%1$s) %2$s</string>

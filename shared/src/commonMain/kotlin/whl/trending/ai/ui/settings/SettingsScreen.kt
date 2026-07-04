@@ -84,7 +84,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import trendingai.shared.generated.resources.GitHub_Invertocat_Black
+import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.about_us
@@ -93,6 +96,7 @@ import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.contact_author
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_alipay
+import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
@@ -188,15 +192,61 @@ fun SettingsScreen(
     }
 
     if (showDonateDialog) {
+        val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
         AlertDialog(
             onDismissRequest = { showDonateDialog = false },
             title = { Text(stringResource(Res.string.donate)) },
             text = {
-                SelectionContainer {
-                    Column {
-                        Text(stringResource(Res.string.donate_message))
-                        Spacer(Modifier.height(16.dp))
-                        Text(stringResource(Res.string.donate_alipay, Constants.ALIPAY_ACCOUNT))
+                Column {
+                    Text(stringResource(Res.string.donate_message))
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                trackEvent("settings_donate_github")
+                                openUrl(Constants.GITHUB_SPONSORS_URL)
+                            }
+                            .padding(vertical = 12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (isDarkTheme) Res.drawable.GitHub_Invertocat_White
+                                else Res.drawable.GitHub_Invertocat_Black
+                            ),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text("GitHub Sponsors", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                text = stringResource(Res.string.donate_github_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    HorizontalDivider()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.VolunteerActivism,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        SelectionContainer(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = stringResource(Res.string.donate_alipay, Constants.ALIPAY_ACCOUNT),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
                     }
                 }
             },
