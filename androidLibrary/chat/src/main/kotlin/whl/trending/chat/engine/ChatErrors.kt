@@ -18,15 +18,16 @@ object ChatErrors {
      * 非 2xx 响应 → 分类。
      * @param code 服务端机器可读错误码（可空），透传给 UI 选具体文案
      * @param bodyError 服务端 error 文案（用于 detail）
+     * @param tier 429 响应体的配额档位（可空），透传给 UI 选触顶卡片形态
      */
-    fun forStatus(status: Int, code: String?, bodyError: String?): ChatError {
+    fun forStatus(status: Int, code: String?, bodyError: String?, tier: String? = null): ChatError {
         val category = when {
             status == 429 -> ChatErrorCategory.QUOTA
             status in 500..599 -> ChatErrorCategory.SERVER
             status in 400..499 -> ChatErrorCategory.BAD_REQUEST
             else -> ChatErrorCategory.UNKNOWN
         }
-        return ChatError(category, code = code, httpStatus = status, detail = bodyError)
+        return ChatError(category, code = code, httpStatus = status, detail = bodyError, tier = tier)
     }
 
     /** 传输/未知异常 → 分类。SocketTimeout 先于 IOException 判断（前者是后者子类）。 */

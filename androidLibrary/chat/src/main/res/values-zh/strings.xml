@@ -19,7 +19,18 @@
     <string name="chat_share">分享</string>
     <string name="chat_copy">复制</string>
     <string name="chat_copied">已复制</string>
-    <string name="chat_quota_exceeded">今日额度已用完，明天再来吧。</string>
+    <string name="chat_quota_exceeded">今日免费额度已用完，明天自动恢复。</string>
+    <string name="chat_quota_login_cta">登录解锁每日 10 条</string>
+    <string name="chat_quota_waitlist_cta">想要更多额度？上线时通知我</string>
+    <string name="chat_quota_user_exceeded">今日 10 条额度已用完，明天自动恢复。</string>
+    <string name="chat_quota_unlocked">已解锁每日 10 条，重新发送即可继续。</string>
+    <string name="chat_waitlist_title">上线时通知我</string>
+    <string name="chat_waitlist_message">留下邮箱，更高额度的版本上线时第一时间通知你；同时为你开通每日精选邮件，可随时退订。</string>
+    <string name="chat_waitlist_email_hint">邮箱</string>
+    <string name="chat_waitlist_submit">提交</string>
+    <string name="chat_waitlist_cancel">取消</string>
+    <string name="chat_waitlist_success">已登记，上线后会第一时间通知你。</string>
+    <string name="chat_waitlist_error">提交失败，请稍后重试。</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
 </resources>

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
@@ -53,9 +54,11 @@ class ChatViewModel(
         request()
     }
 
-    /** 对可重试的失败消息重试：移除该错误条，按当前历史重新请求。 */
+    /** 对可重试的失败消息重试：移除该错误条，按当前历史重新请求。
+     *  quota_device 例外放行：匿名触顶后完成登录，配额键已切换，重发即可续聊。 */
     fun retry(message: ChatMessage) {
-        if (message.error?.category?.retryable != true) return
+        val error = message.error ?: return
+        if (!error.category.retryable && error.code != "quota_device") return
         _uiState.update {
             it.copy(messages = it.messages.filterNot { m -> m.id == message.id }, isSending = true)
         }
@@ -69,6 +72,10 @@ class ChatViewModel(
             onFailure = { e ->
                 val error = (e as? ChatException)?.error
                     ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                // 付费意愿漏斗第一级：个人配额触顶（在 VM 记一次，避免 UI 重组重复上报）
+                if (error.code == "quota_device") {
+                    trackEvent("chat_quota_hit", mapOf("tier" to (error.tier ?: "anonymous")))
+                }
                 ChatMessage(nextId(), Role.ASSISTANT, "", error = error)
             },
         )

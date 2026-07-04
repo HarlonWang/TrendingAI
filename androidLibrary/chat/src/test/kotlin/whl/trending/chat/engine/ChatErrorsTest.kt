@@ -22,6 +22,19 @@ class ChatErrorsTest {
     }
 
     @Test
+    fun status_429_carries_tier_for_quota_card_selection() {
+        val anon = ChatErrors.forStatus(429, "quota_device", null, tier = "anonymous")
+        assertEquals("anonymous", anon.tier)
+        val user = ChatErrors.forStatus(429, "quota_device", null, tier = "user")
+        assertEquals("user", user.tier)
+    }
+
+    @Test
+    fun tier_defaults_to_null_when_absent() {
+        assertEquals(null, ChatErrors.forStatus(429, "quota_device", null).tier)
+    }
+
+    @Test
     fun status_400_is_bad_request() {
         assertEquals(ChatErrorCategory.BAD_REQUEST, ChatErrors.forStatus(400, null, null).category)
     }
