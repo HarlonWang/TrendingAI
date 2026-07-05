@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.ChatModelOption
-import whl.trending.ai.data.remote.TrendingApi
+import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
@@ -19,19 +19,17 @@ import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.Role
 
-/** 模型目录拉取默认走单例 TrendingApi——避免每个 keyed 会话 new 一个从不 close 的 HttpClient。 */
-private val sharedModelsApi by lazy { TrendingApi() }
-
 /**
  * 聊天 ViewModel：内存级单会话。通过 [engine] 注入实现 Demo / 正式切换。
  *
- * @param loadModels 模型目录拉取，注入点（便于测试替身）；默认复用单例 TrendingApi。
+ * @param loadModels 模型目录拉取，注入点（便于测试替身）；默认走 [ChatModelsProvider] 的进程级缓存，
+ *   避免每个会话都网络冷拉取导致选择器 chip 迟迟不出现（见冷首拉根因）。
  */
 class ChatViewModel(
     private val engine: ChatEngine,
     private val context: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
-    private val loadModels: suspend () -> List<ChatModelOption> = { sharedModelsApi.fetchChatModels() },
+    private val loadModels: suspend () -> List<ChatModelOption> = { ChatModelsProvider.get() },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
