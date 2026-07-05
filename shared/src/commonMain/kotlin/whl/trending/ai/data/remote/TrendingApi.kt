@@ -114,7 +114,13 @@ open class TrendingApi {
         }
     }
 
-    open suspend fun submitSubscribe(email: String, source: String, lang: String): Result<SubscribeResponse> {
+    /** [newsletter] 仅 waitlist 场景使用：显式 true 才开通每日邮件（服务端严格 opt-in），null 不传字段 */
+    open suspend fun submitSubscribe(
+        email: String,
+        source: String,
+        lang: String,
+        newsletter: Boolean? = null,
+    ): Result<SubscribeResponse> {
         return try {
             val response = client.post("$baseHost/api/subscribe") {
                 contentType(ContentType.Application.Json)
@@ -122,6 +128,7 @@ open class TrendingApi {
                     put("email", email)
                     put("source", source)
                     put("lang", lang)
+                    newsletter?.let { put("newsletter", it) }
                 })
             }
             if (response.status.value in 200..299) {

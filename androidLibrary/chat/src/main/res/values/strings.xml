@@ -25,7 +25,8 @@
     <string name="chat_quota_user_exceeded">You\'ve used all 10 chats for today. It resets tomorrow.</string>
     <string name="chat_quota_unlocked">Unlocked 10 chats a day — resend to continue.</string>
     <string name="chat_waitlist_title">Notify me at launch</string>
-    <string name="chat_waitlist_message">Leave your email and we\'ll notify you when higher quotas launch. You\'ll also get our daily picks newsletter — unsubscribe anytime.</string>
+    <string name="chat_waitlist_message">Leave your email and we\'ll notify you when higher quotas launch.</string>
+    <string name="chat_waitlist_newsletter_optin">Also subscribe to the daily picks newsletter (unsubscribe anytime)</string>
     <string name="chat_waitlist_email_hint">Email</string>
     <string name="chat_waitlist_submit">Submit</string>
     <string name="chat_waitlist_cancel">Cancel</string>

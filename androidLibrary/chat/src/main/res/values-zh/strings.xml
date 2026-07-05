@@ -25,7 +25,8 @@
     <string name="chat_quota_user_exceeded">今日 10 条额度已用完，明天自动恢复。</string>
     <string name="chat_quota_unlocked">已解锁每日 10 条，重新发送即可继续。</string>
     <string name="chat_waitlist_title">上线时通知我</string>
-    <string name="chat_waitlist_message">留下邮箱，更高额度的版本上线时第一时间通知你；同时为你开通每日精选邮件，可随时退订。</string>
+    <string name="chat_waitlist_message">留下邮箱，更高额度的版本上线时第一时间通知你。</string>
+    <string name="chat_waitlist_newsletter_optin">同时订阅每日精选邮件（可随时退订）</string>
     <string name="chat_waitlist_email_hint">邮箱</string>
     <string name="chat_waitlist_submit">提交</string>
     <string name="chat_waitlist_cancel">取消</string>
