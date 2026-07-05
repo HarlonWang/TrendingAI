@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.ai.data.remote.TrendingApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
@@ -28,6 +30,16 @@ class ChatViewModel(
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    // 可选模型目录（驱动模型选择器）。拉取失败保持空列表 → 选择器隐藏、退回默认模型。
+    private val _models = MutableStateFlow<List<ChatModelOption>>(emptyList())
+    val models: StateFlow<List<ChatModelOption>> = _models.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _models.value = runCatching { TrendingApi().fetchChatModels() }.getOrDefault(emptyList())
+        }
+    }
 
     private var idSeq = initialMessages.maxOfOrNull { it.id } ?: 0L
     private fun nextId(): Long = ++idSeq

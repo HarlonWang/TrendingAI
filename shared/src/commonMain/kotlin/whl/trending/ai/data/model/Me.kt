@@ -4,7 +4,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MeResponse(val user: MeUser)
+data class MeResponse(
+    val user: MeUser,
+    /** 当前用户是否有生效的 Pro 权益（后端按 github_user_id 查 pro_entitlements） */
+    val pro: Boolean = false,
+)
 
 @Serializable
 data class MeUser(

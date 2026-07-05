@@ -2,6 +2,8 @@ package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.FeedResponse
+import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
@@ -150,6 +152,15 @@ open class TrendingApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<MeResponse>()
+    }
+
+    /** 聊天可选模型目录（公开只读；后端从 OpenAI 动态取 + 缓存）。 */
+    open suspend fun fetchChatModels(): List<ChatModelOption> {
+        val response = client.get("$baseHost/api/chat/models")
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<ChatModelsResponse>().models
     }
 
     open suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {

@@ -121,6 +121,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             logtoClient.clearCredentials { /* 本地凭证已清除即视为登出 */ }
         }
         globalSettingsManager.setUserAvatarUrl(null)
+        globalSettingsManager.setIsPro(false)
         GithubTokenProvider.shared.clear()
         FollowingProvider.shared.clear()
         OwnRepoEventsProvider.shared.clear()
