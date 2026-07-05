@@ -2,8 +2,13 @@ package whl.trending.ai.auth
 
 import android.app.Activity
 import io.logto.sdk.android.LogtoClient
+import io.logto.sdk.android.exception.LogtoException
 import io.logto.sdk.android.type.LogtoConfig
+import java.io.IOException
 import java.lang.ref.WeakReference
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,8 +57,36 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
                 trackEvent("sign_in_success")
             } else {
                 _authState.value = AuthState.LoggedOut
-                if (logtoException != null) trackEvent("sign_in_failed")
+                if (logtoException != null) trackEvent("sign_in_failed", signInFailureProps(logtoException))
             }
+        }
+    }
+
+    /**
+     * 把 Logto 登录异常拆成可归因的埋点属性，用于登录漏斗排障：
+     * - `reason`：粗粒度失败类别（`user_canceled` / `timeout` / `network` / `no_browser` / `config` / `other`），做漏斗看板；
+     * - `logto_type`：Logto 原始异常类型名（`LogtoException.message` 即 `Type.name()`），保留细粒度；
+     * - `cause`：底层异常类名，尽力而为。
+     *
+     * 注意：Logto SDK 构造多数 `LogtoException` 时不透传底层 `Throwable`（如授权码换 token 失败直接传
+     * `null` cause），故「超时 vs 网络」通常只能落到同一 `network` 桶，只有 cause 恰好保留时才进一步区分为 `timeout`。
+     */
+    private fun signInFailureProps(exception: LogtoException): Map<String, Any> {
+        val logtoType = exception.message ?: LogtoException::class.java.simpleName
+        val causeChain = generateSequence(exception.cause) { it.cause }.toList()
+        val reason = when {
+            logtoType == LogtoException.Type.USER_CANCELED.name -> "user_canceled"
+            causeChain.any { it is SocketTimeoutException } -> "timeout"
+            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> "network"
+            logtoType in NETWORK_LOGTO_TYPES -> "network"
+            logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> "no_browser"
+            logtoType in CONFIG_LOGTO_TYPES -> "config"
+            else -> "other"
+        }
+        return buildMap {
+            put("reason", reason)
+            put("logto_type", logtoType)
+            causeChain.lastOrNull()?.let { put("cause", it::class.java.simpleName) }
         }
     }
 
@@ -87,6 +120,20 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
 
     companion object {
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
+
+        /** 远端拉取失败——网络不可达 / 服务端异常，归为 `network`。 */
+        private val NETWORK_LOGTO_TYPES = setOf(
+            LogtoException.Type.UNABLE_TO_FETCH_OIDC_CONFIG.name,
+            LogtoException.Type.UNABLE_TO_FETCH_TOKEN_BY_AUTHORIZATION_CODE.name,
+            LogtoException.Type.UNABLE_TO_FETCH_USER_INFO.name,
+            LogtoException.Type.UNABLE_TO_FETCH_JWKS_JSON.name,
+        )
+
+        /** 回跳 / 重定向配置错误，归为 `config`。 */
+        private val CONFIG_LOGTO_TYPES = setOf(
+            LogtoException.Type.INVALID_REDIRECT_URI.name,
+            LogtoException.Type.INVALID_CALLBACK_URI.name,
+        )
 
         /**
          * release: cn.trendingai://whl.trending.ai/callback；debug 包名带 .debug，两条均已在 Logto 注册。
