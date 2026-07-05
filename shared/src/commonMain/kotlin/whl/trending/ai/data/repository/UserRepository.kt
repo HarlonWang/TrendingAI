@@ -8,7 +8,8 @@ import whl.trending.ai.data.remote.TrendingApi
 // open：便于测试以子类替身注入（保持手动 DI，不引入 mock 框架）
 open class UserRepository(private val api: TrendingApi = TrendingApi()) {
 
-    // 测试注入点：子类覆写此方法即可同时影响 fetchMe 与 syncMe
+    // 真正的测试注入点：覆写此方法即可同时影响 fetchMe 与 syncMe（二者都经它取数）。
+    // 注意：只覆写下面的 fetchMe 不影响 syncMe——syncMe 直接调 fetchMeResponse，会打真网络。
     open suspend fun fetchMeResponse(accessToken: String): MeResponse = api.fetchMe(accessToken)
 
     open suspend fun fetchMe(accessToken: String): MeUser = fetchMeResponse(accessToken).user

@@ -69,11 +69,11 @@ internal fun QuotaLimitCard(
             isUserTier -> {
                 // 付费漏斗第一级（曝光）：登录触顶卡带 Pro CTA 渲染。去重靠 LaunchedEffect(Unit)。
                 LaunchedEffect(Unit) {
-                    trackEvent("pro_upsell_shown", mapOf("trigger" to TRIGGER_CHAT_QUOTA))
+                    trackEvent("pro_upsell_shown", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
                 }
                 QuotaText(R.string.chat_pro_upsell_message)
                 Button(onClick = {
-                    trackEvent("pro_upsell_clicked", mapOf("trigger" to TRIGGER_CHAT_QUOTA))
+                    trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
                     openUrl(context, Constants.GITHUB_SPONSORS_URL)
                 }) {
                     Text(stringResource(R.string.chat_pro_cta))
@@ -208,9 +208,12 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
     )
 }
 
-/** 付费漏斗 trigger：区分「配额触顶」入口与「模型锁定」入口 */
-internal const val TRIGGER_CHAT_QUOTA = "chat_quota"
-internal const val TRIGGER_MODEL_LOCKED = "model_locked"
+/** 付费漏斗事件维度 key：全 app 统一用 "source"（与 Picks/Feed/Trending 等 12 处对齐） */
+internal const val UPSELL_SOURCE_KEY = "source"
+
+/** 付费漏斗来源：区分「配额触顶」入口与「模型锁定」入口 */
+internal const val SOURCE_CHAT_QUOTA = "chat_quota"
+internal const val SOURCE_MODEL_LOCKED = "model_locked"
 
 /** 用系统浏览器打开外链（Sponsors 页）。失败静默——不阻塞。 */
 internal fun openUrl(context: Context, url: String) {

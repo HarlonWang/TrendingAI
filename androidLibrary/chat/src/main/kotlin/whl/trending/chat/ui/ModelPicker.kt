@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.core.Constants
+import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelOption
@@ -48,16 +50,30 @@ internal fun ModelPicker(
         .collectAsState(initial = globalSettingsManager.getSelectedChatModelSync())
     var expanded by remember { mutableStateOf(false) }
 
-    val current = models.firstOrNull { it.id == selectedId } ?: models.first()
+    // 自愈守卫：若持久化的选择对本用户已锁定（Pro 过期未登出、或上个 Pro 用户遗留），
+    // 复位到默认免费模型。一处同时修好「chip 显示」与「ChatApi 透传」的一致性。
+    LaunchedEffect(models, isPro) {
+        val sel = models.firstOrNull { it.id == selectedId }
+        if (models.isNotEmpty() && (sel == null || (sel.proOnly && !isPro))) {
+            globalSettingsManager.setSelectedChatModel(DEFAULT_CHAT_MODEL)
+        }
+    }
+
+    // 展示同样带 tier 守卫：锁定项永不显示为当前选择（覆盖自愈生效前的那一帧）
+    val current = models.firstOrNull { it.id == selectedId }?.takeIf { !(it.proOnly && !isPro) }
+        ?: models.firstOrNull { !it.proOnly }
+        ?: models.first()
     val hasLocked = models.any { it.proOnly && !isPro }
 
     Box(modifier) {
         AssistChip(
             onClick = {
                 expanded = true
-                // 打开选择器且存在锁定项 = 模型入口 upsell 曝光
+                // 模型入口 upsell 曝光：每次展开下拉、且存在锁定项，各算一次曝光（类广告 impression）。
+                // 语义与 chat_quota（LaunchedEffect(Unit) 每次挂载去重一次）不同——model_locked 是「每次看」，
+                // 对比 shown→clicked 漏斗时需按 source 分开看，勿直接横比。
                 if (hasLocked) {
-                    trackEvent("pro_upsell_shown", mapOf("trigger" to TRIGGER_MODEL_LOCKED))
+                    trackEvent("pro_upsell_shown", mapOf(UPSELL_SOURCE_KEY to SOURCE_MODEL_LOCKED))
                 }
             },
             label = { Text(current.name) },
@@ -83,7 +99,7 @@ internal fun ModelPicker(
                     onClick = {
                         expanded = false
                         if (locked) {
-                            trackEvent("pro_upsell_clicked", mapOf("trigger" to TRIGGER_MODEL_LOCKED))
+                            trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_MODEL_LOCKED))
                             Toast.makeText(
                                 context,
                                 context.getString(R.string.chat_model_pro_locked, model.name),

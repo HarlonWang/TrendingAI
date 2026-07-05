@@ -166,6 +166,11 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(SELECTED_CHAT_MODEL_KEY, id)
     }
 
+    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回落到默认 gpt-5.4）。 */
+    fun clearSelectedChatModel() {
+        settings.remove(SELECTED_CHAT_MODEL_KEY)
+    }
+
     val subscribedEmail: Flow<String?> = settings.getStringOrNullFlow(SUBSCRIBED_EMAIL_KEY)
 
     fun getSubscribedEmailSync(): String? = settings.getStringOrNull(SUBSCRIBED_EMAIL_KEY)

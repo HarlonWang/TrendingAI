@@ -19,13 +19,19 @@ import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.Role
 
+/** 模型目录拉取默认走单例 TrendingApi——避免每个 keyed 会话 new 一个从不 close 的 HttpClient。 */
+private val sharedModelsApi by lazy { TrendingApi() }
+
 /**
  * 聊天 ViewModel：内存级单会话。通过 [engine] 注入实现 Demo / 正式切换。
+ *
+ * @param loadModels 模型目录拉取，注入点（便于测试替身）；默认复用单例 TrendingApi。
  */
 class ChatViewModel(
     private val engine: ChatEngine,
     private val context: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
+    private val loadModels: suspend () -> List<ChatModelOption> = { sharedModelsApi.fetchChatModels() },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
@@ -37,7 +43,7 @@ class ChatViewModel(
 
     init {
         viewModelScope.launch {
-            _models.value = runCatching { TrendingApi().fetchChatModels() }.getOrDefault(emptyList())
+            _models.value = runCatching { loadModels() }.getOrDefault(emptyList())
         }
     }
 

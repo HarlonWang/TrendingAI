@@ -122,6 +122,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         }
         globalSettingsManager.setUserAvatarUrl(null)
         globalSettingsManager.setIsPro(false)
+        globalSettingsManager.clearSelectedChatModel()
         GithubTokenProvider.shared.clear()
         FollowingProvider.shared.clear()
         OwnRepoEventsProvider.shared.clear()
