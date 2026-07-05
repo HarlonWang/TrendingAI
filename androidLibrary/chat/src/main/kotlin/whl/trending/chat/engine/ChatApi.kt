@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.Locale
+import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
@@ -69,7 +70,11 @@ class ChatApi(
     private data class ChatResponse(val content: String)
 
     @Serializable
-    private data class ErrorResponse(val error: String? = null, val code: String? = null)
+    private data class ErrorResponse(
+        val error: String? = null,
+        val code: String? = null,
+        val tier: String? = null,
+    )
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -90,6 +95,8 @@ class ChatApi(
         try {
             val response: HttpResponse = client.post("$baseUrl/chat") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
+                // 已登录则带 token 走登录档配额（每日 10 条）；token 无效时服务端静默降级匿名档
+                globalAuthManager.getAccessToken()?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
                 setBody(
                     ChatRequest(
@@ -115,7 +122,9 @@ class ChatApi(
             val raw = runCatching { response.bodyAsText() }.getOrNull()
             val parsed = raw?.let { runCatching { json.decodeFromString<ErrorResponse>(it) }.getOrNull() }
             val bodyError = parsed?.error ?: raw
-            throw ChatException(ChatErrors.forStatus(response.status.value, parsed?.code, bodyError))
+            throw ChatException(
+                ChatErrors.forStatus(response.status.value, parsed?.code, bodyError, parsed?.tier),
+            )
         } catch (e: ChatException) {
             logFailure(e.error)
             throw e

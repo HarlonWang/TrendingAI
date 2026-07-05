@@ -20,10 +20,18 @@ enum class ChatErrorCategory(val retryable: Boolean) {
  * @param code 服务端机器可读错误码（如 `content_too_long`/`quota_global`），优先据此选具体文案
  * @param httpStatus 有 HTTP 响应时的状态码
  * @param detail 服务端 error 文案或异常摘要，仅用于日志/调试，不直接展示给用户
+ * @param tier 429 触顶时的配额档位（`anonymous`/`user`），驱动触顶卡片形态（登录 CTA vs waitlist CTA）
  */
 data class ChatError(
     val category: ChatErrorCategory,
     val code: String? = null,
     val httpStatus: Int? = null,
     val detail: String? = null,
-)
+    val tier: String? = null,
+) {
+    companion object {
+        /** 服务端 429 响应 tier 字段的取值，与 Worker 端 chat.js 保持一致 */
+        const val TIER_ANONYMOUS = "anonymous"
+        const val TIER_USER = "user"
+    }
+}

@@ -127,6 +127,9 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
                     )
                 }
             }
+        } else if (error.code == "quota_device") {
+            // 个人配额触顶走专属卡片（登录 CTA / waitlist），全局熔断仍走普通错误文案
+            QuotaLimitCard(error = error, onRetry = onRetry)
         } else {
             Text(
                 text = stringResource(errorMessageRes(error)),

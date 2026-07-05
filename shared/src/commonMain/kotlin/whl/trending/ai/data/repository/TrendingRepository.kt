@@ -35,8 +35,13 @@ open class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
         return api.submitFeedback(content, email)
     }
 
-    suspend fun subscribe(email: String, source: String, lang: String): Result<SubscribeResponse> {
-        return api.submitSubscribe(email, source, lang)
+    suspend fun subscribe(
+        email: String,
+        source: String,
+        lang: String,
+        newsletter: Boolean? = null,
+    ): Result<SubscribeResponse> {
+        return api.submitSubscribe(email, source, lang, newsletter)
     }
 
     suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {

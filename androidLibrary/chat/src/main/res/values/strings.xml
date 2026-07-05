@@ -19,7 +19,19 @@
     <string name="chat_share">Share</string>
     <string name="chat_copy">Copy</string>
     <string name="chat_copied">Copied</string>
-    <string name="chat_quota_exceeded">You\'ve reached today\'s limit. Please come back tomorrow.</string>
+    <string name="chat_quota_exceeded">You\'ve used up today\'s free quota. It resets tomorrow.</string>
+    <string name="chat_quota_login_cta">Sign in to unlock 10 chats a day</string>
+    <string name="chat_quota_waitlist_cta">Want more? Get notified at launch</string>
+    <string name="chat_quota_user_exceeded">You\'ve used all 10 chats for today. It resets tomorrow.</string>
+    <string name="chat_quota_unlocked">Unlocked 10 chats a day — resend to continue.</string>
+    <string name="chat_waitlist_title">Notify me at launch</string>
+    <string name="chat_waitlist_message">Leave your email and we\'ll notify you when higher quotas launch.</string>
+    <string name="chat_waitlist_newsletter_optin">Also subscribe to the daily picks newsletter (unsubscribe anytime)</string>
+    <string name="chat_waitlist_email_hint">Email</string>
+    <string name="chat_waitlist_submit">Submit</string>
+    <string name="chat_waitlist_cancel">Cancel</string>
+    <string name="chat_waitlist_success">You\'re on the list — we\'ll be in touch at launch.</string>
+    <string name="chat_waitlist_error">Submission failed. Please try again later.</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
 </resources>
