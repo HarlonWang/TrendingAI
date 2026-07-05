@@ -10,8 +10,11 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import kotlin.coroutines.resume
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import whl.trending.ai.BuildConfig
@@ -48,6 +51,11 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
     override val isSupported: Boolean = true
 
+    // extraBufferCapacity=1：即使此刻没有收集者（如提示宿主尚未组合），失败事件也不丢，
+    // 待收集者上线后仍能拿到最近一次。
+    private val _signInFailures = MutableSharedFlow<SignInFailureReason>(extraBufferCapacity = 1)
+    override val signInFailures: Flow<SignInFailureReason> = _signInFailures.asSharedFlow()
+
     override fun signIn() {
         val activity = activityRef.get() ?: return
         _authState.value = AuthState.LoggingIn
@@ -57,36 +65,48 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
                 trackEvent("sign_in_success")
             } else {
                 _authState.value = AuthState.LoggedOut
-                if (logtoException != null) trackEvent("sign_in_failed", signInFailureProps(logtoException))
+                if (logtoException != null) {
+                    val reason = classifySignInFailure(logtoException)
+                    trackEvent("sign_in_failed", signInFailureProps(logtoException, reason))
+                    _signInFailures.tryEmit(reason)
+                }
             }
         }
     }
 
     /**
-     * 把 Logto 登录异常拆成可归因的埋点属性，用于登录漏斗排障：
-     * - `reason`：粗粒度失败类别（`user_canceled` / `timeout` / `network` / `no_browser` / `config` / `other`），做漏斗看板；
-     * - `logto_type`：Logto 原始异常类型名（`LogtoException.message` 即 `Type.name()`），保留细粒度；
-     * - `cause`：底层异常类名，尽力而为。
+     * 把 Logto 登录异常归为粗粒度失败类别——单一事实来源，同时喂埋点 `reason` 与失败后的连通性提示。
      *
      * 注意：Logto SDK 构造多数 `LogtoException` 时不透传底层 `Throwable`（如授权码换 token 失败直接传
-     * `null` cause），故「超时 vs 网络」通常只能落到同一 `network` 桶，只有 cause 恰好保留时才进一步区分为 `timeout`。
+     * `null` cause），故「超时 vs 网络」通常只能落到同一 `NETWORK` 桶，只有 cause 恰好保留时才进一步区分为 `TIMEOUT`。
      */
-    private fun signInFailureProps(exception: LogtoException): Map<String, Any> {
+    private fun classifySignInFailure(exception: LogtoException): SignInFailureReason {
         val logtoType = exception.message ?: LogtoException::class.java.simpleName
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
-        val reason = when {
-            logtoType == LogtoException.Type.USER_CANCELED.name -> "user_canceled"
-            causeChain.any { it is SocketTimeoutException } -> "timeout"
-            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> "network"
-            logtoType in NETWORK_LOGTO_TYPES -> "network"
-            logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> "no_browser"
-            logtoType in CONFIG_LOGTO_TYPES -> "config"
-            else -> "other"
+        return when {
+            logtoType == LogtoException.Type.USER_CANCELED.name -> SignInFailureReason.USER_CANCELED
+            causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
+            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
+            logtoType in NETWORK_LOGTO_TYPES -> SignInFailureReason.NETWORK
+            logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> SignInFailureReason.NO_BROWSER
+            logtoType in CONFIG_LOGTO_TYPES -> SignInFailureReason.CONFIG
+            else -> SignInFailureReason.OTHER
         }
+    }
+
+    /**
+     * 登录失败埋点属性，用于登录漏斗排障：
+     * - `reason`：粗粒度失败类别（见 [classifySignInFailure]），做漏斗看板；
+     * - `logto_type`：Logto 原始异常类型名（`LogtoException.message` 即 `Type.name()`），保留细粒度；
+     * - `cause`：底层异常类名，尽力而为。
+     */
+    private fun signInFailureProps(exception: LogtoException, reason: SignInFailureReason): Map<String, Any> {
+        val logtoType = exception.message ?: LogtoException::class.java.simpleName
+        val rootCause = generateSequence(exception.cause) { it.cause }.lastOrNull()
         return buildMap {
-            put("reason", reason)
+            put("reason", reason.name.lowercase())
             put("logto_type", logtoType)
-            causeChain.lastOrNull()?.let { put("cause", it::class.java.simpleName) }
+            rootCause?.let { put("cause", it::class.java.simpleName) }
         }
     }
 

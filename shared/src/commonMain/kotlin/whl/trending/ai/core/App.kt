@@ -24,6 +24,7 @@ import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.openInCustomTab
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
@@ -66,6 +67,7 @@ fun App() {
 
     TrendingTheme {
         WhatsNewHost()
+        SignInHintHost()
         NavDisplay(
             backStack = backStack,
             onBack = { backStack.safePop() },

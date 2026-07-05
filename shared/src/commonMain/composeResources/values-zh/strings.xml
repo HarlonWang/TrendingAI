@@ -140,6 +140,9 @@
     <string name="sign_in">登录</string>
     <string name="sign_out">退出登录</string>
     <string name="sign_out_confirm">确定要退出登录吗？</string>
+    <string name="sign_in_hint_title">登录未完成</string>
+    <string name="sign_in_hint_connectivity">GitHub 登录需要能正常访问 github.com，请检查网络后重试。</string>
+    <string name="sign_in_hint_dismiss">知道了</string>
     <string name="profile_load_failed">加载失败</string>
     <string name="profile_retry">重试</string>
     <string name="profile_followers">粉丝</string>
