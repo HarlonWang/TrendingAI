@@ -23,7 +23,7 @@
     <string name="chat_quota_login_cta">Sign in to unlock 10 chats a day</string>
     <string name="chat_quota_waitlist_cta">Want more? Get notified at launch</string>
     <string name="chat_quota_user_exceeded">You\'ve used all 10 chats for today. It resets tomorrow.</string>
-    <string name="chat_pro_upsell_message">Need more than 10 a day? Pro gives you a much more generous daily allowance, plus stronger models like GPT-5.5.</string>
+    <string name="chat_pro_upsell_message">Need more than 10 a day? Pro gives you a much more generous daily allowance, plus access to newer, more capable models.</string>
     <string name="chat_quota_pro_exceeded">You\'ve been chatting a lot today — check back a bit later.</string>
     <string name="chat_pro_cta">Unlock Pro · $2/mo</string>
     <string name="chat_pro_activation_hint">After sponsoring, Pro usually activates within minutes. If not, we verify manually — just try again shortly.</string>
