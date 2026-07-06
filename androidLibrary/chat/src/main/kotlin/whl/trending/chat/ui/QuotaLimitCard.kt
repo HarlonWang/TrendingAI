@@ -1,5 +1,8 @@
 package whl.trending.chat.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +35,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.TrendingRepository
@@ -51,6 +56,8 @@ internal fun QuotaLimitCard(
     onRetry: () -> Unit,
 ) {
     val authState by globalAuthManager.authState.collectAsState()
+    val context = LocalContext.current
+    val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
     var showWaitlistDialog by remember { mutableStateOf(false) }
 
@@ -60,14 +67,31 @@ internal fun QuotaLimitCard(
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
+            isProTier -> {
+                // Pro 触顶（极罕见）：不透数字的软着陆，无 CTA（已是 Pro，明日恢复）
+                QuotaText(R.string.chat_quota_pro_exceeded)
+            }
             isUserTier -> {
-                QuotaText(R.string.chat_quota_user_exceeded)
+                // 付费漏斗第一级（曝光）：登录触顶卡带 Pro CTA 渲染。去重靠 LaunchedEffect(Unit)。
+                LaunchedEffect(Unit) {
+                    trackEvent("pro_upsell_shown", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
+                }
+                QuotaText(R.string.chat_pro_upsell_message)
+                Button(onClick = {
+                    trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
+                    openUrl(context, Constants.GITHUB_SPONSORS_URL)
+                }) {
+                    Text(stringResource(R.string.chat_pro_cta))
+                }
+                // 次按钮：付不了国际卡的人 → waitlist（捕获支付摩擦样本）
                 TextButton(onClick = {
                     trackEvent("chat_quota_waitlist_click", mapOf("tier" to ChatError.TIER_USER))
                     showWaitlistDialog = true
                 }) {
                     Text(stringResource(R.string.chat_quota_waitlist_cta))
                 }
+                // 激活延迟提示（人工兜底可能有延迟）
+                QuotaText(R.string.chat_pro_activation_hint)
             }
             authState == AuthState.LoggedIn -> {
                 // 匿名触顶后完成了登录：配额键已切换，重发即可继续
@@ -187,6 +211,22 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+/** 付费漏斗事件维度 key：全 app 统一用 "source"（与 Picks/Feed/Trending 等 12 处对齐） */
+internal const val UPSELL_SOURCE_KEY = "source"
+
+/** 付费漏斗来源：区分「配额触顶」入口与「模型锁定」入口 */
+internal const val SOURCE_CHAT_QUOTA = "chat_quota"
+internal const val SOURCE_MODEL_LOCKED = "model_locked"
+
+/** 用系统浏览器打开外链（Sponsors 页）。失败静默——不阻塞。 */
+internal fun openUrl(context: Context, url: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
 }
 
 // 与服务端 subscribe.js 的 isValidEmail 同构；服务端仍做完整校验，这里只挡明显无效输入

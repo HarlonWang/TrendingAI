@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
@@ -19,15 +21,29 @@ import whl.trending.chat.model.Role
 
 /**
  * 聊天 ViewModel：内存级单会话。通过 [engine] 注入实现 Demo / 正式切换。
+ *
+ * @param loadModels 模型目录拉取，注入点（便于测试替身）；默认走 [ChatModelsProvider] 的进程级缓存，
+ *   避免每个会话都网络冷拉取导致选择器 chip 迟迟不出现（见冷首拉根因）。
  */
 class ChatViewModel(
     private val engine: ChatEngine,
     private val context: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
+    private val loadModels: suspend () -> List<ChatModelOption> = { ChatModelsProvider.get() },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    // 可选模型目录（驱动模型选择器）。拉取失败保持空列表 → 选择器隐藏、退回默认模型。
+    private val _models = MutableStateFlow<List<ChatModelOption>>(emptyList())
+    val models: StateFlow<List<ChatModelOption>> = _models.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _models.value = runCatching { loadModels() }.getOrDefault(emptyList())
+        }
+    }
 
     private var idSeq = initialMessages.maxOfOrNull { it.id } ?: 0L
     private fun nextId(): Long = ++idSeq

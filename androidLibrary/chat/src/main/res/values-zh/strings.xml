@@ -23,6 +23,11 @@
     <string name="chat_quota_login_cta">登录解锁每日 10 条</string>
     <string name="chat_quota_waitlist_cta">想要更多额度？上线时通知我</string>
     <string name="chat_quota_user_exceeded">今日 10 条额度已用完，明天自动恢复。</string>
+    <string name="chat_pro_upsell_message">每天 10 条不够？Pro 提供更宽裕的每日额度，还能选用更强、更新的模型。</string>
+    <string name="chat_quota_pro_exceeded">今天聊得有点多，稍后再来～</string>
+    <string name="chat_pro_cta">解锁 Pro · $2/月</string>
+    <string name="chat_pro_activation_hint">赞助后 Pro 通常几分钟内自动生效；如未解锁，我们会人工核对，可能稍有延迟——稍后回来重试即可。</string>
+    <string name="chat_model_pro_locked">%1$s 需要 Pro，$2/月解锁。</string>
     <string name="chat_quota_unlocked">已解锁每日 10 条，重新发送即可继续。</string>
     <string name="chat_waitlist_title">上线时通知我</string>
     <string name="chat_waitlist_message">留下邮箱，更高额度的版本上线时第一时间通知你。</string>

@@ -57,6 +57,7 @@ class ChatApi(
         val messages: List<WireMessage>,
         val lang: String,
         val context: WireContext? = null,
+        val model: String? = null,
     )
 
     @Serializable
@@ -110,6 +111,8 @@ class ChatApi(
                         context = context?.let {
                             WireContext(it.title, it.summary, it.sourceUrl)
                         },
+                        // 透传所选模型；服务端仍按 tier 强制（免费越权自动回默认）
+                        model = globalSettingsManager.getSelectedChatModelSync(),
                     ),
                 )
             }

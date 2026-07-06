@@ -138,6 +138,13 @@ fun HomeScreen(
         }
     }
 
+    // 预热聊天模型目录：让选择器 chip 在用户首次进入 chat 前就绪，避免冷首拉导致 chip 迟迟不出现。
+    LaunchedEffect(Unit) {
+        if (whl.trending.ai.chat.globalChatScreen != null) {
+            runCatching { whl.trending.ai.data.repository.ChatModelsProvider.get() }
+        }
+    }
+
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(

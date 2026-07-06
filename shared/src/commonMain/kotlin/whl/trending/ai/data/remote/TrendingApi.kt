@@ -2,7 +2,10 @@ package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.FeedResponse
+import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.MeResponse
+import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.SubscribeResponse
@@ -150,6 +153,26 @@ open class TrendingApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<MeResponse>()
+    }
+
+    /** 即时激活/对账：后端权威核对赞助并 upsert，返回最新 Pro 态。用户从 Sponsors 返回时调用。 */
+    open suspend fun refreshPro(accessToken: String): Boolean {
+        val response = client.post("$baseHost/api/pro/refresh") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<ProRefreshResponse>().pro
+    }
+
+    /** 聊天可选模型目录（公开只读；后端从 OpenAI 动态取 + 缓存）。 */
+    open suspend fun fetchChatModels(): List<ChatModelOption> {
+        val response = client.get("$baseHost/api/chat/models")
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<ChatModelsResponse>().models
     }
 
     open suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {

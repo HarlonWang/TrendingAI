@@ -6,6 +6,7 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.coroutines.getBooleanFlow
 import com.russhwolf.settings.coroutines.getIntFlow
 import com.russhwolf.settings.coroutines.getLongFlow
+import com.russhwolf.settings.coroutines.getStringFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -14,6 +15,7 @@ import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
 import whl.trending.ai.data.model.FavoriteItem
 
 enum class ThemeMode(val title: String) {
@@ -42,6 +44,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
+    private val IS_PRO_KEY = "prefs_is_pro"
+    private val SELECTED_CHAT_MODEL_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
 
@@ -142,6 +146,29 @@ class SettingsManager(private val settings: ObservableSettings) {
         } else {
             settings.putString(USER_AVATAR_KEY, url)
         }
+    }
+
+    /** Pro 权益态缓存：登录后由 /api/me 写入、登出清除。UI 据此解锁模型切换、切换配额卡形态。 */
+    val isPro: Flow<Boolean> = settings.getBooleanFlow(IS_PRO_KEY, false)
+
+    fun getIsProSync(): Boolean = settings.getBoolean(IS_PRO_KEY, false)
+
+    fun setIsPro(value: Boolean) {
+        settings.putBoolean(IS_PRO_KEY, value)
+    }
+
+    /** 选中的聊天模型 id：发请求时透传（服务端仍按 tier 强制）。默认免费 gpt-5.4。 */
+    val selectedChatModel: Flow<String> = settings.getStringFlow(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
+
+    fun getSelectedChatModelSync(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
+
+    fun setSelectedChatModel(id: String) {
+        settings.putString(SELECTED_CHAT_MODEL_KEY, id)
+    }
+
+    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回落到默认 gpt-5.4）。 */
+    fun clearSelectedChatModel() {
+        settings.remove(SELECTED_CHAT_MODEL_KEY)
     }
 
     val subscribedEmail: Flow<String?> = settings.getStringOrNullFlow(SUBSCRIBED_EMAIL_KEY)

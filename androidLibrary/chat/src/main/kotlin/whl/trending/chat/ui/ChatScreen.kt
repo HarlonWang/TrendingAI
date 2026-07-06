@@ -110,6 +110,12 @@ fun ChatScreen(
                         )
                     }
                 }
+                // 常驻模型选择器（≤1 个模型时自动隐藏）
+                val models by viewModel.models.collectAsState()
+                ModelPicker(
+                    models = models,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
                 ChatInputBar(
                     input = state.input,
                     canSend = state.canSend,
