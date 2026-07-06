@@ -148,6 +148,8 @@
     <string name="profile_followers">Followers</string>
     <string name="profile_following">Following</string>
     <string name="profile_repos">Repos</string>
+    <string name="profile_pro_badge">PRO</string>
+    <string name="profile_pro_badge_desc">Pro member</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>

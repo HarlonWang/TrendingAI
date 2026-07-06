@@ -55,6 +55,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -105,6 +106,7 @@ import trendingai.shared.generated.resources.time_hours_ago
 import trendingai.shared.generated.resources.time_just_now
 import trendingai.shared.generated.resources.time_minutes_ago
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.data.local.globalSettingsManager
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -359,7 +361,23 @@ private fun ProfileHeader(
             contentDescription = null,
             modifier = Modifier.size(96.dp).clip(CircleShape)
         )
-        Text(user.displayName ?: user.githubLogin.orEmpty(), style = MaterialTheme.typography.titleLarge)
+        val isPro by globalSettingsManager.isPro.collectAsState(
+            initial = globalSettingsManager.getIsProSync()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
+            Text(
+                user.displayName ?: user.githubLogin.orEmpty(),
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (isPro) ProBadge()
+        }
         user.githubLogin?.let {
             Text(
                 "@$it",
