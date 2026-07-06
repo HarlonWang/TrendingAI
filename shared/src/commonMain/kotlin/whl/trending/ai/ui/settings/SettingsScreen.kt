@@ -98,6 +98,7 @@ import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_alipay
 import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
+import trendingai.shared.generated.resources.donate_pro_hint
 import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.check_updates
@@ -223,6 +224,11 @@ fun SettingsScreen(
                             Text("GitHub Sponsors", style = MaterialTheme.typography.bodyLarge)
                             Text(
                                 text = stringResource(Res.string.donate_github_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = stringResource(Res.string.donate_pro_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
