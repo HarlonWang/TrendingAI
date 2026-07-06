@@ -10,6 +10,10 @@ data class MeResponse(
     val pro: Boolean = false,
 )
 
+/** POST /api/pro/refresh 的响应：后端用维护者 PAT 权威核对赞助后返回的最新 Pro 态。 */
+@Serializable
+data class ProRefreshResponse(val pro: Boolean = false)
+
 @Serializable
 data class MeUser(
     @SerialName("user_id") val userId: String,

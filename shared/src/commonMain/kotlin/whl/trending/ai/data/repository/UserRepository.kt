@@ -30,4 +30,20 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
             null
         }
     }
+
+    /**
+     * 即时对账 Pro 权益：调 /api/pro/refresh（后端 PAT 权威核对赞助）并刷新本地 isPro 缓存。
+     * 用户从 Sponsors 页返回（ON_RESUME）时调用，实现「赞助完回来即生效」。失败静默返回 null。
+     */
+    suspend fun refreshPro(accessToken: String?): Boolean? {
+        if (accessToken == null) return null
+        return try {
+            val pro = api.refreshPro(accessToken)
+            globalSettingsManager.setIsPro(pro)
+            pro
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        }
+    }
 }

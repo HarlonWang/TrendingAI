@@ -78,6 +78,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    /**
+     * 回到前台时对账 Pro：仅「已登录且当前非 Pro」才查——正好覆盖「刚在浏览器完成赞助、返回 app」的路径，
+     * 让权益即时生效，不等 webhook。已 Pro / 未登录直接跳过，避免每次 resume 都打后端。
+     */
+    override fun onResume() {
+        super.onResume()
+        val loggedIn = whl.trending.ai.auth.globalAuthManager.authState.value is whl.trending.ai.auth.AuthState.LoggedIn
+        if (loggedIn && !globalSettingsManager.getIsProSync()) {
+            lifecycleScope.launch {
+                val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
+                whl.trending.ai.data.repository.UserRepository().refreshPro(token)
+            }
+        }
+    }
 }
 
 @Preview
