@@ -57,6 +57,7 @@ internal fun QuotaLimitCard(
 ) {
     val authState by globalAuthManager.authState.collectAsState()
     val context = LocalContext.current
+    val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
     var showWaitlistDialog by remember { mutableStateOf(false) }
 
@@ -66,6 +67,10 @@ internal fun QuotaLimitCard(
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
+            isProTier -> {
+                // Pro 触顶（极罕见）：不透数字的软着陆，无 CTA（已是 Pro，明日恢复）
+                QuotaText(R.string.chat_quota_pro_exceeded)
+            }
             isUserTier -> {
                 // 付费漏斗第一级（曝光）：登录触顶卡带 Pro CTA 渲染。去重靠 LaunchedEffect(Unit)。
                 LaunchedEffect(Unit) {
