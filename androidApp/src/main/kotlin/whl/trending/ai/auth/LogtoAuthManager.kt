@@ -10,11 +10,8 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import kotlin.coroutines.resume
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import whl.trending.ai.BuildConfig
@@ -51,11 +48,6 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
     override val isSupported: Boolean = true
 
-    // extraBufferCapacity=1：即使此刻没有收集者（如提示宿主尚未组合），失败事件也不丢，
-    // 待收集者上线后仍能拿到最近一次。
-    private val _signInFailures = MutableSharedFlow<SignInFailureReason>(extraBufferCapacity = 1)
-    override val signInFailures: Flow<SignInFailureReason> = _signInFailures.asSharedFlow()
-
     override fun signIn() {
         val activity = activityRef.get() ?: return
         _authState.value = AuthState.LoggingIn
@@ -66,24 +58,30 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             } else {
                 _authState.value = AuthState.LoggedOut
                 if (logtoException != null) {
-                    val reason = classifySignInFailure(logtoException)
-                    trackEvent("sign_in_failed", signInFailureProps(logtoException, reason))
-                    _signInFailures.tryEmit(reason)
+                    val (reason, props) = analyzeSignInFailure(logtoException)
+                    trackEvent("sign_in_failed", props)
+                    // 走进程级总线而非实例字段：配置变更重建 Activity 后回调可能落在旧实例上（见 SignInFailureBus）
+                    SignInFailureBus.emit(reason)
                 }
             }
         }
     }
 
     /**
-     * 把 Logto 登录异常归为粗粒度失败类别——单一事实来源，同时喂埋点 `reason` 与失败后的连通性提示。
+     * 把 Logto 登录异常归为粗粒度失败类别，并生成 sign_in_failed 埋点属性——logtoType 与 cause 链
+     * 只推导一次，归因与埋点保证同源。
      *
-     * 注意：Logto SDK 构造多数 `LogtoException` 时不透传底层 `Throwable`（如授权码换 token 失败直接传
-     * `null` cause），故「超时 vs 网络」通常只能落到同一 `NETWORK` 桶，只有 cause 恰好保留时才进一步区分为 `TIMEOUT`。
+     * 归因（`reason`，同时喂连通性提示）：Logto SDK 构造多数 `LogtoException` 时不透传底层
+     * `Throwable`（如授权码换 token 失败直接传 `null` cause），故「超时 vs 网络」通常只能落到同一
+     * `NETWORK` 桶，只有 cause 恰好保留时才进一步区分为 `TIMEOUT`。
+     *
+     * 埋点属性（用于登录漏斗排障）：`reason` 粗粒度类别做漏斗看板；`logto_type` 为 Logto 原始异常
+     * 类型名（`LogtoException.message` 即 `Type.name()`），保留细粒度；`cause` 底层异常类名，尽力而为。
      */
-    private fun classifySignInFailure(exception: LogtoException): SignInFailureReason {
+    private fun analyzeSignInFailure(exception: LogtoException): Pair<SignInFailureReason, Map<String, Any>> {
         val logtoType = exception.message ?: LogtoException::class.java.simpleName
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
-        return when {
+        val reason = when {
             logtoType == LogtoException.Type.USER_CANCELED.name -> SignInFailureReason.USER_CANCELED
             causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
             causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
@@ -92,22 +90,12 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             logtoType in CONFIG_LOGTO_TYPES -> SignInFailureReason.CONFIG
             else -> SignInFailureReason.OTHER
         }
-    }
-
-    /**
-     * 登录失败埋点属性，用于登录漏斗排障：
-     * - `reason`：粗粒度失败类别（见 [classifySignInFailure]），做漏斗看板；
-     * - `logto_type`：Logto 原始异常类型名（`LogtoException.message` 即 `Type.name()`），保留细粒度；
-     * - `cause`：底层异常类名，尽力而为。
-     */
-    private fun signInFailureProps(exception: LogtoException, reason: SignInFailureReason): Map<String, Any> {
-        val logtoType = exception.message ?: LogtoException::class.java.simpleName
-        val rootCause = generateSequence(exception.cause) { it.cause }.lastOrNull()
-        return buildMap {
+        val props = buildMap<String, Any> {
             put("reason", reason.name.lowercase())
             put("logto_type", logtoType)
-            rootCause?.let { put("cause", it::class.java.simpleName) }
+            causeChain.lastOrNull()?.let { put("cause", it::class.java.simpleName) }
         }
+        return reason to props
     }
 
     override fun signOut() {
@@ -121,6 +109,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             logtoClient.clearCredentials { /* 本地凭证已清除即视为登出 */ }
         }
         globalSettingsManager.setUserAvatarUrl(null)
+        globalSettingsManager.setGithubIdentity(null, null)
         globalSettingsManager.setIsPro(false)
         globalSettingsManager.clearSelectedChatModel()
         GithubTokenProvider.shared.clear()

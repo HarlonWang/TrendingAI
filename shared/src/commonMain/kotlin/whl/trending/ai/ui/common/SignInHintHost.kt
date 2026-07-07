@@ -14,11 +14,11 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.sign_in_hint_connectivity
 import trendingai.shared.generated.resources.sign_in_hint_dismiss
 import trendingai.shared.generated.resources.sign_in_hint_title
+import whl.trending.ai.auth.SignInFailureBus
 import whl.trending.ai.auth.SignInFailureReason
-import whl.trending.ai.auth.globalAuthManager
 
 /**
- * 全局登录失败提示宿主：收集 [globalAuthManager] 的失败事件，命中「连通性类」失败时弹一个轻量弹窗
+ * 全局登录失败提示宿主：收集 [SignInFailureBus] 的失败事件，命中「连通性类」失败时弹一个轻量弹窗
  * 引导用户检查网络。
  *
  * 用弹窗（独立窗口）而非 Snackbar：① 不占/不盖 app 布局；② 登录失败值得被明确看见，Snackbar 易被错过。
@@ -30,7 +30,9 @@ fun SignInHintHost() {
     var show by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        globalAuthManager.signInFailures.collect { reason ->
+        SignInFailureBus.events.collect { reason ->
+            // 收到即消费：清掉 replay 缓存，避免之后重建的收集者（旋转/主题切换）把旧失败再弹一遍
+            SignInFailureBus.consume()
             if (reason.shouldHintConnectivity()) show = true
         }
     }
