@@ -43,6 +43,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
+    private val USER_GITHUB_LOGIN_KEY = "prefs_user_github_login"
+    private val USER_GITHUB_USER_ID_KEY = "prefs_user_github_user_id"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
@@ -146,6 +148,27 @@ class SettingsManager(private val settings: ObservableSettings) {
             settings.remove(USER_AVATAR_KEY)
         } else {
             settings.putString(USER_AVATAR_KEY, url)
+        }
+    }
+
+    /**
+     * 已登录用户 GitHub 身份缓存（login + 数字 id）：syncMe 时随头像一起写入，登出清除。
+     * 供需要带身份的同步场景（如语言意图采集的反馈正文）直接读取，免去现场再拉一次 /api/me。
+     */
+    fun getGithubLoginSync(): String? = settings.getStringOrNull(USER_GITHUB_LOGIN_KEY)
+
+    fun getGithubUserIdSync(): Long? = settings.getLongOrNull(USER_GITHUB_USER_ID_KEY)
+
+    fun setGithubIdentity(login: String?, userId: Long?) {
+        if (login.isNullOrBlank()) {
+            settings.remove(USER_GITHUB_LOGIN_KEY)
+        } else {
+            settings.putString(USER_GITHUB_LOGIN_KEY, login)
+        }
+        if (userId == null) {
+            settings.remove(USER_GITHUB_USER_ID_KEY)
+        } else {
+            settings.putLong(USER_GITHUB_USER_ID_KEY, userId)
         }
     }
 

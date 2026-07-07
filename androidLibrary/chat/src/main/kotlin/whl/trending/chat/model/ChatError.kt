@@ -21,6 +21,8 @@ enum class ChatErrorCategory(val retryable: Boolean) {
  * @param httpStatus 有 HTTP 响应时的状态码
  * @param detail 服务端 error 文案或异常摘要，仅用于日志/调试，不直接展示给用户
  * @param tier 429 触顶时的配额档位（`anonymous`/`user`），驱动触顶卡片形态（登录 CTA vs waitlist CTA）
+ * @param authDegraded 发请求时 app 自认已登录、服务端却按匿名档处理（token 缺失或被拒后静默降级）。
+ *   驱动触顶卡片给「登录态未生效」的如实提示，而非「登录后已解锁、重发即可」的误导循环。
  */
 data class ChatError(
     val category: ChatErrorCategory,
@@ -28,6 +30,7 @@ data class ChatError(
     val httpStatus: Int? = null,
     val detail: String? = null,
     val tier: String? = null,
+    val authDegraded: Boolean = false,
 ) {
     companion object {
         /** 服务端 429 响应 tier 字段的取值，与 Worker 端 chat.js 保持一致 */

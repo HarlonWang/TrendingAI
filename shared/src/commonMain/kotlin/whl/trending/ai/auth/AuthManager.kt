@@ -1,9 +1,10 @@
 package whl.trending.ai.auth
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 sealed interface AuthState {
     data object LoggedOut : AuthState
@@ -20,18 +21,35 @@ enum class SignInFailureReason {
 }
 
 /**
+ * 进程级登录失败事件总线：每次失败 emit 一个归因，供 UI 弹连通性提示。
+ * 用一次性事件而非 authState，是因为「失败」与「未登录」的稳态都是 LoggedOut，无法区分。
+ *
+ * 不挂在 [AuthManager] 实例字段上：配置变更（旋转/深色切换）会重建 Activity 并替换
+ * [globalAuthManager] 实例，而 OAuth 回调可能仍落在旧实例——实例级流上的事件必然丢失。
+ * replay=1 让「先失败、后组合」的收集者也能拿到最近一次；收集侧处理后调 [consume]
+ * 清掉重放缓存，避免之后重建的收集者把旧失败再弹一遍。
+ */
+object SignInFailureBus {
+    private val _events = MutableSharedFlow<SignInFailureReason>(replay = 1, extraBufferCapacity = 1)
+    val events: Flow<SignInFailureReason> = _events.asSharedFlow()
+
+    fun emit(reason: SignInFailureReason) {
+        _events.tryEmit(reason)
+    }
+
+    fun consume() {
+        _events.resetReplayCache()
+    }
+}
+
+/**
  * 登录态抽象：shared/UI 只依赖本接口，Logto SDK 只存在于 androidApp。
  * iOS 未接入前使用 NoopAuthManager（isSupported=false，UI 隐藏登录入口）。
+ * 登录失败事件不经本接口，统一走 [SignInFailureBus]。
  */
 interface AuthManager {
     val isSupported: Boolean
     val authState: StateFlow<AuthState>
-
-    /**
-     * 登录失败的一次性事件流：每次失败 emit 一个归因，供 UI 弹连通性提示。
-     * 用一次性事件而非 authState，是因为「失败」与「未登录」的稳态都是 LoggedOut，无法区分。
-     */
-    val signInFailures: Flow<SignInFailureReason>
 
     fun signIn()
     fun signOut()
@@ -41,7 +59,6 @@ interface AuthManager {
 object NoopAuthManager : AuthManager {
     override val isSupported: Boolean = false
     override val authState: StateFlow<AuthState> = MutableStateFlow(AuthState.LoggedOut)
-    override val signInFailures: Flow<SignInFailureReason> = emptyFlow()
     override fun signIn() {}
     override fun signOut() {}
     override suspend fun getAccessToken(): String? = null

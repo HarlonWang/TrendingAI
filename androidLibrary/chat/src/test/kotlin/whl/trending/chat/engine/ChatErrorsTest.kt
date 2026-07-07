@@ -87,6 +87,24 @@ class ChatErrorsTest {
     }
 
     @Test
+    fun logged_in_but_anonymous_tier_is_marked_auth_degraded() {
+        val e = ChatErrors.forStatus(429, "quota_device", null, tier = "anonymous")
+        assertTrue(ChatErrors.markAuthDegraded(e, sentAsLoggedIn = true).authDegraded)
+    }
+
+    @Test
+    fun anonymous_tier_sent_while_logged_out_is_not_auth_degraded() {
+        val e = ChatErrors.forStatus(429, "quota_device", null, tier = "anonymous")
+        assertFalse(ChatErrors.markAuthDegraded(e, sentAsLoggedIn = false).authDegraded)
+    }
+
+    @Test
+    fun user_tier_quota_is_never_auth_degraded() {
+        val e = ChatErrors.forStatus(429, "quota_device", null, tier = "user")
+        assertFalse(ChatErrors.markAuthDegraded(e, sentAsLoggedIn = true).authDegraded)
+    }
+
+    @Test
     fun quota_and_bad_request_are_not_retryable() {
         assertFalse(ChatErrorCategory.QUOTA.retryable)
         assertFalse(ChatErrorCategory.BAD_REQUEST.retryable)

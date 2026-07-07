@@ -90,8 +90,14 @@ internal fun QuotaLimitCard(
                 QuotaText(R.string.chat_pro_activation_hint)
             }
             authState == AuthState.LoggedIn -> {
-                // 匿名触顶后完成了登录：配额键已切换，重发即可继续
-                QuotaText(R.string.chat_quota_unlocked)
+                if (error.authDegraded) {
+                    // 发请求时就自认已登录、却被按匿名档处理（token 刷新失败/被拒）：
+                    // 如实提示登录态未生效，不给「已解锁、重发即可」的死循环误导
+                    QuotaText(R.string.chat_quota_auth_degraded)
+                } else {
+                    // 匿名触顶后完成了登录：配额键已切换，重发即可继续
+                    QuotaText(R.string.chat_quota_unlocked)
+                }
                 TextButton(onClick = onRetry) {
                     Text(stringResource(R.string.chat_retry))
                 }
@@ -190,6 +196,10 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
                         isSubmitting = false
                         if (result.isSuccess) {
                             trackEvent("chat_quota_waitlist_submitted")
+                            // 顺带开通了 newsletter：同步本地订阅态，订阅页才能识别已订阅、给出退订入口
+                            if (wantsNewsletter) {
+                                globalSettingsManager.setSubscribedEmail(email.trim())
+                            }
                             Toast.makeText(context, successText, Toast.LENGTH_SHORT).show()
                             onDismiss()
                         } else {
