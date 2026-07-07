@@ -362,7 +362,7 @@ private fun ProfileHeader(
             modifier = Modifier.size(96.dp).clip(CircleShape)
         )
         val isPro by globalSettingsManager.isPro.collectAsState(
-            initial = globalSettingsManager.getIsProSync()
+            initial = globalSettingsManager.currentIsPro()
         )
         Row(
             modifier = Modifier.fillMaxWidth(),

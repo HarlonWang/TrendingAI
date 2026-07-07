@@ -42,9 +42,9 @@ internal fun ModelPicker(
 ) {
     if (models.size <= 1) return
 
-    val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.getIsProSync())
+    val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.currentIsPro())
     val selectedId by globalSettingsManager.selectedChatModel
-        .collectAsState(initial = globalSettingsManager.getSelectedChatModelSync())
+        .collectAsState(initial = globalSettingsManager.currentSelectedChatModel())
     var expanded by remember { mutableStateOf(false) }
     // 点锁定项弹说明页（个人自费背景 + 赞助解锁路径），确认后才外跳赞助——比直跳更不生硬，
     // 也让 pro_upsell_clicked 的语义从「误触锁定项」变成「看完说明后确认去赞助」

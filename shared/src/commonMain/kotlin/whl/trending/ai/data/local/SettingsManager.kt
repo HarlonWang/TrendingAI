@@ -72,7 +72,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     val themeMode: Flow<ThemeMode> = settings.getIntFlow(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         .map { ThemeMode.entries.getOrElse(it) { ThemeMode.FOLLOW_SYSTEM } }
 
-    fun getThemeModeSync(): ThemeMode =
+    fun currentThemeMode(): ThemeMode =
         ThemeMode.entries.getOrElse(
             settings.getInt(THEME_KEY, ThemeMode.FOLLOW_SYSTEM.ordinal)
         ) { ThemeMode.FOLLOW_SYSTEM }
@@ -83,7 +83,7 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     val seedColor: Flow<Long> = settings.getLongFlow(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
 
-    fun getSeedColorSync(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
+    fun currentSeedColor(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
 
     fun setSeedColor(argb: Long) {
         settings.putLong(SEED_COLOR_KEY, argb)
@@ -155,9 +155,9 @@ class SettingsManager(private val settings: ObservableSettings) {
      * 已登录用户 GitHub 身份缓存（login + 数字 id）：syncMe 时随头像一起写入，登出清除。
      * 供需要带身份的同步场景（如语言意图采集的反馈正文）直接读取，免去现场再拉一次 /api/me。
      */
-    fun getGithubLoginSync(): String? = settings.getStringOrNull(USER_GITHUB_LOGIN_KEY)
+    fun currentGithubLogin(): String? = settings.getStringOrNull(USER_GITHUB_LOGIN_KEY)
 
-    fun getGithubUserIdSync(): Long? = settings.getLongOrNull(USER_GITHUB_USER_ID_KEY)
+    fun currentGithubUserId(): Long? = settings.getLongOrNull(USER_GITHUB_USER_ID_KEY)
 
     fun setGithubIdentity(login: String?, userId: Long?) {
         if (login.isNullOrBlank()) {
@@ -175,14 +175,14 @@ class SettingsManager(private val settings: ObservableSettings) {
     /** Pro 权益态缓存：登录后由 /api/me 写入、登出清除。UI 据此解锁模型切换、切换配额卡形态。 */
     val isPro: Flow<Boolean> = settings.getBooleanFlow(IS_PRO_KEY, false)
 
-    fun getIsProSync(): Boolean = settings.getBoolean(IS_PRO_KEY, false)
+    fun currentIsPro(): Boolean = settings.getBoolean(IS_PRO_KEY, false)
 
     fun setIsPro(value: Boolean) {
         settings.putBoolean(IS_PRO_KEY, value)
     }
 
     /** 最近一次打开 GitHub Sponsors 赞助页的时间戳（epoch millis），0 表示无待对账的赞助意图。 */
-    fun getSponsorPageOpenedAtSync(): Long = settings.getLong(SPONSOR_PAGE_OPENED_AT_KEY, 0L)
+    fun currentSponsorPageOpenedAt(): Long = settings.getLong(SPONSOR_PAGE_OPENED_AT_KEY, 0L)
 
     fun setSponsorPageOpenedAt(time: Long) {
         settings.putLong(SPONSOR_PAGE_OPENED_AT_KEY, time)
@@ -195,7 +195,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     /** 选中的聊天模型 id：发请求时透传（服务端仍按 tier 强制）。默认免费 gpt-5.4。 */
     val selectedChatModel: Flow<String> = settings.getStringFlow(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
 
-    fun getSelectedChatModelSync(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
+    fun currentSelectedChatModel(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
 
     fun setSelectedChatModel(id: String) {
         settings.putString(SELECTED_CHAT_MODEL_KEY, id)
@@ -208,7 +208,7 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     val subscribedEmail: Flow<String?> = settings.getStringOrNullFlow(SUBSCRIBED_EMAIL_KEY)
 
-    fun getSubscribedEmailSync(): String? = settings.getStringOrNull(SUBSCRIBED_EMAIL_KEY)
+    fun currentSubscribedEmail(): String? = settings.getStringOrNull(SUBSCRIBED_EMAIL_KEY)
 
     fun setSubscribedEmail(email: String?) {
         if (email.isNullOrBlank()) {
@@ -220,7 +220,7 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     val feedHighlightsOnly: Flow<Boolean> = settings.getBooleanFlow(FEED_HIGHLIGHTS_ONLY_KEY, true)
 
-    fun getFeedHighlightsOnlySync(): Boolean = settings.getBoolean(FEED_HIGHLIGHTS_ONLY_KEY, true)
+    fun currentFeedHighlightsOnly(): Boolean = settings.getBoolean(FEED_HIGHLIGHTS_ONLY_KEY, true)
 
     fun setFeedHighlightsOnly(value: Boolean) {
         settings.putBoolean(FEED_HIGHLIGHTS_ONLY_KEY, value)
@@ -233,7 +233,7 @@ class SettingsManager(private val settings: ObservableSettings) {
      */
     val openLinksInCustomTab: Flow<Boolean> = settings.getBooleanFlow(OPEN_LINKS_IN_CUSTOM_TAB_KEY, true)
 
-    fun getOpenLinksInCustomTabSync(): Boolean = settings.getBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, true)
+    fun currentOpenLinksInCustomTab(): Boolean = settings.getBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, true)
 
     fun setOpenLinksInCustomTab(value: Boolean) {
         settings.putBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, value)
@@ -246,7 +246,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     val trendingNewOnlyDefault: Flow<Boolean> =
         settings.getBooleanFlow(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
 
-    fun getTrendingNewOnlyDefaultSync(): Boolean =
+    fun currentTrendingNewOnlyDefault(): Boolean =
         settings.getBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
 
     fun setTrendingNewOnlyDefault(value: Boolean) {

@@ -86,32 +86,32 @@ class SettingsManagerTest {
     @Test
     fun feedHighlightsOnly_defaults_true_and_persists() = runTest {
         // 默认值
-        assertEquals(true, manager.getFeedHighlightsOnlySync())
+        assertEquals(true, manager.currentFeedHighlightsOnly())
         assertEquals(true, manager.feedHighlightsOnly.first())
 
         // 改为 false
         manager.setFeedHighlightsOnly(false)
-        assertEquals(false, manager.getFeedHighlightsOnlySync())
+        assertEquals(false, manager.currentFeedHighlightsOnly())
         assertEquals(false, manager.feedHighlightsOnly.first())
 
         // 改回 true
         manager.setFeedHighlightsOnly(true)
-        assertEquals(true, manager.getFeedHighlightsOnlySync())
+        assertEquals(true, manager.currentFeedHighlightsOnly())
     }
 
     @Test
     fun openLinksInCustomTab_defaults_true_and_persists() = runTest {
         // 默认值：外链走系统浏览器（Custom Tabs）
-        assertEquals(true, manager.getOpenLinksInCustomTabSync())
+        assertEquals(true, manager.currentOpenLinksInCustomTab())
         assertEquals(true, manager.openLinksInCustomTab.first())
 
         // 切到内置 WebView
         manager.setOpenLinksInCustomTab(false)
-        assertEquals(false, manager.getOpenLinksInCustomTabSync())
+        assertEquals(false, manager.currentOpenLinksInCustomTab())
         assertEquals(false, manager.openLinksInCustomTab.first())
 
         // 切回系统浏览器
         manager.setOpenLinksInCustomTab(true)
-        assertEquals(true, manager.getOpenLinksInCustomTabSync())
+        assertEquals(true, manager.currentOpenLinksInCustomTab())
     }
 }

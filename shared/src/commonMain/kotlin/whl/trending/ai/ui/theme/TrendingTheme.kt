@@ -16,8 +16,8 @@ import whl.trending.ai.data.local.globalSettingsManager
 
 @Composable
 fun TrendingTheme(content: @Composable () -> Unit) {
-    val initialMode = remember { globalSettingsManager.getThemeModeSync() }
-    val initialSeed = remember { globalSettingsManager.getSeedColorSync() }
+    val initialMode = remember { globalSettingsManager.currentThemeMode() }
+    val initialSeed = remember { globalSettingsManager.currentSeedColor() }
     val themeMode by globalSettingsManager.themeMode.collectAsState(initialMode)
     val seedArgb by globalSettingsManager.seedColor.collectAsState(initialSeed)
 

@@ -120,8 +120,8 @@ class ChatApi(
                         // 把过期的 Pro 专属选择原样发出；目录未拉到则透传，服务端仍按 tier 强制兜底
                         model = resolveEffectiveChatModel(
                             ChatModelsProvider.cachedOrEmpty(),
-                            globalSettingsManager.getSelectedChatModelSync(),
-                            globalSettingsManager.getIsProSync(),
+                            globalSettingsManager.currentSelectedChatModel(),
+                            globalSettingsManager.currentIsPro(),
                         ),
                     ),
                 )

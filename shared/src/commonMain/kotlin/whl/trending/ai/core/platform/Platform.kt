@@ -34,7 +34,7 @@ fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
     // ignoreCase：scheme 大小写不敏感（RFC 3986）。大写 scheme 若被判非 web，会绕过
     // Custom Tab 与 WebView 兜底直落 ACTION_VIEW，而 intent filter 按小写匹配 → 点击静默无响应
     val isWeb = url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
-    if (isWeb && globalSettingsManager.getOpenLinksInCustomTabSync() && openInCustomTab(url)) {
+    if (isWeb && globalSettingsManager.currentOpenLinksInCustomTab() && openInCustomTab(url)) {
         return
     }
     if (isWeb && onInAppFallback != null) {

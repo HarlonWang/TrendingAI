@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val loggedIn = whl.trending.ai.auth.globalAuthManager.authState.value is whl.trending.ai.auth.AuthState.LoggedIn
-        if (loggedIn && !globalSettingsManager.getIsProSync() && ProSponsor.shouldReconcile()) {
+        if (loggedIn && !globalSettingsManager.currentIsPro() && ProSponsor.shouldReconcile()) {
             lifecycleScope.launch {
                 val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
                 if (whl.trending.ai.data.repository.UserRepository().refreshPro(token) == true) {

@@ -209,12 +209,18 @@ fun SettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showSummaryLanguageDialog = false
-                    trackEvent("settings_summary_language_feedback")
-                    onNavigateToFeedback()
-                }) {
-                    Text(stringResource(Res.string.summary_language_feedback))
+                Row {
+                    // 中性关闭按钮：只想看说明的用户有静默出口，不被迫进反馈/赞助流程
+                    TextButton(onClick = { showSummaryLanguageDialog = false }) {
+                        Text(stringResource(Res.string.close))
+                    }
+                    TextButton(onClick = {
+                        showSummaryLanguageDialog = false
+                        trackEvent("settings_summary_language_feedback")
+                        onNavigateToFeedback()
+                    }) {
+                        Text(stringResource(Res.string.summary_language_feedback))
+                    }
                 }
             }
         )
@@ -753,8 +759,8 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                         // 身份直接读 syncMe 落好的本地缓存：免一次串行 /api/me 往返；id 可能缺失（后端
                         // 兜底 username 建档时无数字 id），缺就只带 login，别写出「id null」污染赞助匹配
                         val identityLine = if (isLoggedIn) {
-                            val login = globalSettingsManager.getGithubLoginSync()
-                            val userId = globalSettingsManager.getGithubUserIdSync()
+                            val login = globalSettingsManager.currentGithubLogin()
+                            val userId = globalSettingsManager.currentGithubUserId()
                             when {
                                 login != null && userId != null -> "GitHub：@${login}（id ${userId}）"
                                 login != null -> "GitHub：@${login}"

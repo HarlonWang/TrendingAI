@@ -48,7 +48,7 @@ object ProSponsor {
 
     /** 是否处于「刚打开过赞助页」的对账窗口内。 */
     fun shouldReconcile(): Boolean {
-        val openedAt = globalSettingsManager.getSponsorPageOpenedAtSync()
+        val openedAt = globalSettingsManager.currentSponsorPageOpenedAt()
         return openedAt > 0 &&
             Clock.System.now().toEpochMilliseconds() - openedAt < RECONCILE_WINDOW.inWholeMilliseconds
     }

@@ -122,7 +122,7 @@ class ProfileViewModel(
         loadJob?.cancel()
         feedLoadJob?.cancel()
         loadJob = viewModelScope.launch {
-            val highlightsOnly = settingsManager.getFeedHighlightsOnlySync()
+            val highlightsOnly = settingsManager.currentFeedHighlightsOnly()
 
             // SWR：有缓存整页秒出（header/计数/热力图/feed）+ 顶部指示器自动刷新
             val cached = cache.get<ProfileCache>(ProfileCache.KEY)

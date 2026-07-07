@@ -140,7 +140,7 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var email by remember {
-        mutableStateOf(globalSettingsManager.getSubscribedEmailSync().orEmpty())
+        mutableStateOf(globalSettingsManager.currentSubscribedEmail().orEmpty())
     }
     // 每日邮件严格 opt-in：默认不勾选，登记 waitlist 不自动开通 newsletter
     var wantsNewsletter by remember { mutableStateOf(false) }

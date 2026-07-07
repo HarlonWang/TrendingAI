@@ -39,7 +39,7 @@ class SubscribeViewModel(
 
     private val _uiState = MutableStateFlow(
         run {
-            val saved = settings.getSubscribedEmailSync()
+            val saved = settings.currentSubscribedEmail()
             SubscribeUiState(email = saved.orEmpty(), subscribedEmail = saved)
         }
     )
