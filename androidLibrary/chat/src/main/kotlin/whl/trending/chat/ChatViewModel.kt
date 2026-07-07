@@ -74,7 +74,7 @@ class ChatViewModel(
      *  quota_device 例外放行：匿名触顶后完成登录，配额键已切换，重发即可续聊。 */
     fun retry(message: ChatMessage) {
         val error = message.error ?: return
-        if (!error.category.retryable && error.code != "quota_device") return
+        if (!error.category.retryable && error.code != ChatError.CODE_QUOTA_DEVICE) return
         _uiState.update {
             it.copy(messages = it.messages.filterNot { m -> m.id == message.id }, isSending = true)
         }
@@ -89,7 +89,7 @@ class ChatViewModel(
                 val error = (e as? ChatException)?.error
                     ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
                 // 付费意愿漏斗第一级：个人配额触顶（在 VM 记一次，避免 UI 重组重复上报）
-                if (error.code == "quota_device") {
+                if (error.code == ChatError.CODE_QUOTA_DEVICE) {
                     trackEvent("chat_quota_hit", mapOf("tier" to (error.tier ?: ChatError.TIER_ANONYMOUS)))
                 }
                 ChatMessage(nextId(), Role.ASSISTANT, "", error = error)

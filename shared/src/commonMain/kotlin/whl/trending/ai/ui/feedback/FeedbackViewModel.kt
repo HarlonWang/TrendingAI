@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.feedback
 
+import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 
@@ -26,7 +27,7 @@ data class FeedbackUiState(
 )
 
 class FeedbackViewModel(
-    private val repository: TrendingRepository = TrendingRepository()
+    private val repository: TrendingRepository = TrendingRepository.shared
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedbackUiState())
@@ -40,7 +41,7 @@ class FeedbackViewModel(
     }
 
     fun updateEmail(value: String) {
-        val valid = value.isBlank() || EMAIL_REGEX.matches(value.trim())
+        val valid = value.isBlank() || isValidEmail(value)
         _uiState.update { it.copy(email = value, isEmailValid = valid) }
     }
 
@@ -68,7 +69,4 @@ class FeedbackViewModel(
         }
     }
 
-    companion object {
-        private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
-    }
 }

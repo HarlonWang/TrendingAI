@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,12 +30,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import java.util.Locale
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.TrendingRepository
@@ -70,12 +72,11 @@ internal fun QuotaLimitCard(
             isUserTier -> {
                 // 付费漏斗第一级（曝光）：登录触顶卡带 Pro CTA 渲染。去重靠 LaunchedEffect(Unit)。
                 LaunchedEffect(Unit) {
-                    trackEvent("pro_upsell_shown", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
+                    ProSponsor.trackUpsellShown(ProSponsor.SOURCE_CHAT_QUOTA)
                 }
                 QuotaText(R.string.chat_pro_upsell_message)
                 Button(onClick = {
-                    trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
-                    ProSponsor.openSponsorPage()
+                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_CHAT_QUOTA)
                 }) {
                     Text(stringResource(R.string.chat_pro_cta))
                 }
@@ -133,11 +134,11 @@ private fun QuotaText(resId: Int) {
 }
 
 /** Pro waitlist 登记：邮箱写入 subscribers（source=pro_waitlist），复用邮件订阅通道。 */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun WaitlistDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val repository = remember { TrendingRepository() }
     var email by remember {
         mutableStateOf(globalSettingsManager.getSubscribedEmailSync().orEmpty())
     }
@@ -183,14 +184,15 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(
-                enabled = !isSubmitting && EMAIL_REGEX.matches(email.trim()),
+                enabled = !isSubmitting && isValidEmail(email),
                 onClick = {
                     isSubmitting = true
                     scope.launch {
-                        val result = repository.subscribe(
+                        val result = TrendingRepository.shared.subscribe(
                             email.trim(),
                             "pro_waitlist",
-                            resolveLang(),
+                            // 与 SubscribeViewModel 同口径：同一 subscribers 表不留两种 lang 推导
+                            globalSettingsManager.currentContentLang(),
                             newsletter = wantsNewsletter,
                         )
                         isSubmitting = false
@@ -208,7 +210,11 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
                     }
                 },
             ) {
-                Text(stringResource(R.string.chat_waitlist_submit))
+                if (isSubmitting) {
+                    LoadingIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text(stringResource(R.string.chat_waitlist_submit))
+                }
             }
         },
         dismissButton = {
@@ -219,18 +225,3 @@ private fun WaitlistDialog(onDismiss: () -> Unit) {
     )
 }
 
-/** 付费漏斗事件维度 key：全 app 统一用 "source"（与 Picks/Feed/Trending 等 12 处对齐） */
-internal const val UPSELL_SOURCE_KEY = "source"
-
-/** 付费漏斗来源：区分「配额触顶」入口与「模型锁定」入口 */
-internal const val SOURCE_CHAT_QUOTA = "chat_quota"
-internal const val SOURCE_MODEL_LOCKED = "model_locked"
-
-// 与服务端 subscribe.js 的 isValidEmail 同构；服务端仍做完整校验，这里只挡明显无效输入
-private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
-
-private suspend fun resolveLang(): String {
-    val appLang = globalSettingsManager.appLanguage.first()
-    return appLang.isoCode
-        ?: if (Locale.getDefault().language == "zh") "zh" else "en"
-}

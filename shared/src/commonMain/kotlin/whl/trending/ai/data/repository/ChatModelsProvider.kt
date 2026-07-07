@@ -43,9 +43,4 @@ object ChatModelsProvider {
     fun warmUp(scope: CoroutineScope) {
         scope.launch { runCatching { get() } }
     }
-
-    /** 仅测试用：重置缓存。 */
-    fun resetForTest() {
-        cache = null
-    }
 }

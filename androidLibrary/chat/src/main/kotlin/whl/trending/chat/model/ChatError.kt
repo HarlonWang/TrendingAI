@@ -37,5 +37,8 @@ data class ChatError(
         const val TIER_ANONYMOUS = "anonymous"
         const val TIER_USER = "user"
         const val TIER_PRO = "pro"
+
+        /** 个人配额触顶的机器码（服务端 chat.js quotaError）；重试放行与专属卡片选择都以它为判据 */
+        const val CODE_QUOTA_DEVICE = "quota_device"
     }
 }

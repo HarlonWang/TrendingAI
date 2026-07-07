@@ -127,7 +127,7 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
                     )
                 }
             }
-        } else if (error.code == "quota_device") {
+        } else if (error.code == ChatError.CODE_QUOTA_DEVICE) {
             // 个人配额触顶走专属卡片（登录 CTA / waitlist），全局熔断仍走普通错误文案
             QuotaLimitCard(error = error, onRetry = onRetry)
         } else {
@@ -149,7 +149,7 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
 private fun errorMessageRes(error: ChatError): Int = when (error.code) {
     "content_too_long" -> R.string.chat_error_content_too_long
     "quota_global" -> R.string.chat_error_quota_global
-    "quota_device" -> R.string.chat_quota_exceeded
+    ChatError.CODE_QUOTA_DEVICE -> R.string.chat_quota_exceeded
     "upstream_timeout" -> R.string.chat_error_timeout
     "upstream_error" -> R.string.chat_error_server
     else -> when (error.category) {

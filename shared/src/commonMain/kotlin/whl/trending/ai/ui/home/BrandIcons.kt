@@ -1,13 +1,30 @@
 package whl.trending.ai.ui.home
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
+import trendingai.shared.generated.resources.GitHub_Invertocat_Black
+import trendingai.shared.generated.resources.GitHub_Invertocat_White
+import trendingai.shared.generated.resources.Res
 
 val HackerNewsOrange = Color(0xFFFF6600)
+
+/** GitHub Invertocat 按当前主题深浅选黑/白版；首页顶栏与设置捐助弹窗共用，避免各处复制判定。 */
+@Composable
+fun githubLogoPainter(): Painter {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    return painterResource(
+        if (isDark) Res.drawable.GitHub_Invertocat_White else Res.drawable.GitHub_Invertocat_Black
+    )
+}
 
 /**
  * 纯 Y 字母图标，用于底部导航栏（颜色由 tint 控制）

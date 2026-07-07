@@ -9,6 +9,15 @@ import whl.trending.ai.data.remote.TrendingApi
 
 // open：便于测试以子类替身注入（保持手动 DI，不引入 mock 框架）
 open class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
+
+    companion object {
+        /**
+         * 进程级共享实例：TrendingApi 每个实例各建一个从不关闭的 HttpClient，组合树里随手 new
+         * 会积累引擎/连接池（仿 ChatApi.shared 的收敛方式）。无状态可安全共享；测试注入仍走构造参数。
+         */
+        val shared: TrendingRepository by lazy { TrendingRepository() }
+    }
+
     open suspend fun getFeed(source: String, summaryLang: String = "zh"): FeedResponse {
         return api.fetchFeed(source, summaryLang)
     }
