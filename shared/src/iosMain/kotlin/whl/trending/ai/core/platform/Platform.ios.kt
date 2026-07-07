@@ -8,6 +8,8 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSBundle
 import platform.Foundation.NSLocale
 import platform.Foundation.preferredLanguages
+import platform.Foundation.currentLocale
+import platform.Foundation.localizedStringForLanguageCode
 import platform.SafariServices.SFSafariViewController
 
 class IOSPlatform: Platform {
