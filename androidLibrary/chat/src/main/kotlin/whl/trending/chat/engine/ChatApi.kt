@@ -25,6 +25,8 @@ import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.resolveEffectiveChatModel
+import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
@@ -114,8 +116,13 @@ class ChatApi(
                         context = context?.let {
                             WireContext(it.title, it.summary, it.sourceUrl)
                         },
-                        // 透传所选模型；服务端仍按 tier 强制（免费越权自动回默认）
-                        model = globalSettingsManager.getSelectedChatModelSync(),
+                        // 发送前按目录缓存解析实际生效模型（与选择器同一套判定），避免选择器未挂载时
+                        // 把过期的 Pro 专属选择原样发出；目录未拉到则透传，服务端仍按 tier 强制兜底
+                        model = resolveEffectiveChatModel(
+                            ChatModelsProvider.cachedOrEmpty(),
+                            globalSettingsManager.getSelectedChatModelSync(),
+                            globalSettingsManager.getIsProSync(),
+                        ),
                     ),
                 )
             }

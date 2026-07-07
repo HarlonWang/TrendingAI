@@ -26,7 +26,7 @@ import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelOption
-import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
+import whl.trending.ai.data.model.resolveEffectiveChatModel
 import whl.trending.chat.R
 
 /**
@@ -49,11 +49,12 @@ internal fun ModelPicker(
     var expanded by remember { mutableStateOf(false) }
 
     // 自愈守卫：若持久化的选择对本用户已锁定（Pro 过期未登出、或上个 Pro 用户遗留），
-    // 复位到默认免费模型。一处同时修好「chip 显示」与「ChatApi 透传」的一致性。
+    // 复位到默认免费模型。判定与 ChatApi 发送共用 resolveEffectiveChatModel——
+    // 即使本组件未挂载，发送侧也会按同一规则兜底。
     LaunchedEffect(models, isPro) {
-        val sel = models.firstOrNull { it.id == selectedId }
-        if (models.isNotEmpty() && (sel == null || (sel.proOnly && !isPro))) {
-            globalSettingsManager.setSelectedChatModel(DEFAULT_CHAT_MODEL)
+        val effective = resolveEffectiveChatModel(models, selectedId, isPro)
+        if (effective != selectedId) {
+            globalSettingsManager.setSelectedChatModel(effective)
         }
     }
 
