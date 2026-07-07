@@ -29,6 +29,9 @@ expect fun isIosPlatform(): Boolean
 
 expect fun getSystemLanguage(): String
 
+/** 系统语言的本地化显示名（如「中文」「English」「Português」），用于展示给用户，而非语言代码。 */
+expect fun getSystemLanguageDisplayName(): String
+
 expect fun getUserAgent(): String
 
 /**

@@ -18,8 +18,12 @@
     <string name="open_system_settings">前往系统设置</string>
     <string name="summary_language">摘要语言</string>
     <string name="summary_language_desc">AI 摘要支持中英文 · 点击了解</string>
-    <string name="summary_language_message">摘要语言跟随应用语言设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换语言后自动刷新。\n\n希望支持你的语言？欢迎反馈告诉我们，我们会根据需求情况评估。</string>
+    <string name="summary_language_message">摘要语言跟随应用语言设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换语言后自动刷新。\n\n希望支持你的母语？赞助 Pro 支持我们持续投入，你的语言会进入优先排期，最快在下个版本上线。</string>
     <string name="summary_language_feedback">去反馈</string>
+    <string name="summary_language_sponsor">GitHub 赞助 Pro</string>
+    <string name="summary_lang_capture_title">你希望支持哪门语言？</string>
+    <string name="summary_lang_capture_message">已填入你的系统语言，可改成你希望支持的语言。提交后将带你前往赞助页。</string>
+    <string name="summary_lang_capture_label">语言</string>
     <string name="open_links_in_browser">用系统浏览器打开外链</string>
     <string name="open_links_in_browser_desc">关闭后改用内置浏览器 · 点击了解</string>
     <string name="open_links_in_browser_message">外部链接交给系统浏览器打开，可正常通过 Product Hunt 等网站的人机验证，并支持翻译、自动填充和已有登录态。\n\n关闭后，外链改用内置浏览器打开。\n\nGitHub README 阅读不经外链流程，不受此设置影响。</string>

@@ -8,8 +8,12 @@ import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
+import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.remote.ApiException
+import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
@@ -33,6 +37,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlternateEmail
@@ -73,6 +78,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -131,6 +138,13 @@ import trendingai.shared.generated.resources.summary_language
 import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
+import trendingai.shared.generated.resources.summary_language_sponsor
+import trendingai.shared.generated.resources.summary_lang_capture_title
+import trendingai.shared.generated.resources.summary_lang_capture_message
+import trendingai.shared.generated.resources.summary_lang_capture_label
+import trendingai.shared.generated.resources.cancel
+import trendingai.shared.generated.resources.feedback_error
+import trendingai.shared.generated.resources.feedback_rate_limit
 import trendingai.shared.generated.resources.version
 import trendingai.shared.generated.resources.version_up_to_date
 
@@ -155,6 +169,15 @@ fun SettingsScreen(
     var showDonateDialog by remember { mutableStateOf(false) }
     var showSummaryLanguageDialog by remember { mutableStateOf(false) }
     var showOpenLinksDialog by remember { mutableStateOf(false) }
+    // 语言采集流程：点「赞助 Pro」→ 采集期望语言（复用反馈接口提交）→ 成功后跳赞助页
+    var showLangCaptureDialog by remember { mutableStateOf(false) }
+    var langInput by remember { mutableStateOf("") }
+    var langSubmitting by remember { mutableStateOf(false) }
+    var langError by remember { mutableStateOf<String?>(null) }
+    val langScope = rememberCoroutineScope()
+    val feedbackRepository = remember { TrendingRepository() }
+    val langErrGeneric = stringResource(Res.string.feedback_error)
+    val langErrRate = stringResource(Res.string.feedback_rate_limit)
 
     if (showOpenLinksDialog) {
         AlertDialog(
@@ -177,15 +200,80 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showSummaryLanguageDialog = false
+                    langInput = getSystemLanguageDisplayName()
+                    langError = null
+                    showLangCaptureDialog = true
+                }) {
+                    Text(stringResource(Res.string.summary_language_sponsor))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showSummaryLanguageDialog = false
                     trackEvent("settings_summary_language_feedback")
                     onNavigateToFeedback()
                 }) {
                     Text(stringResource(Res.string.summary_language_feedback))
                 }
+            }
+        )
+    }
+
+    if (showLangCaptureDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!langSubmitting) showLangCaptureDialog = false },
+            title = { Text(stringResource(Res.string.summary_lang_capture_title)) },
+            text = {
+                Column {
+                    Text(stringResource(Res.string.summary_lang_capture_message))
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = langInput,
+                        onValueChange = { langInput = it; langError = null },
+                        label = { Text(stringResource(Res.string.summary_lang_capture_label)) },
+                        singleLine = true,
+                        isError = langError != null,
+                        enabled = !langSubmitting,
+                        supportingText = langError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = langInput.isNotBlank() && !langSubmitting,
+                    onClick = {
+                        val lang = langInput.trim()
+                        if (lang.isEmpty()) return@TextButton
+                        langSubmitting = true
+                        langError = null
+                        langScope.launch {
+                            val content = "【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLanguage()}"
+                            feedbackRepository.submitFeedback(content, null).fold(
+                                onSuccess = {
+                                    langSubmitting = false
+                                    showLangCaptureDialog = false
+                                    trackEvent("settings_summary_language_sponsor", mapOf("language" to lang))
+                                    openUrl(Constants.GITHUB_SPONSORS_URL)
+                                },
+                                onFailure = { e ->
+                                    langSubmitting = false
+                                    langError = if ((e as? ApiException)?.statusCode == 429) langErrRate else langErrGeneric
+                                },
+                            )
+                        }
+                    }
+                ) {
+                    if (langSubmitting) {
+                        LoadingIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(stringResource(Res.string.summary_language_sponsor))
+                    }
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showSummaryLanguageDialog = false }) {
-                    Text(stringResource(Res.string.close))
+                TextButton(enabled = !langSubmitting, onClick = { showLangCaptureDialog = false }) {
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         )

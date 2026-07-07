@@ -95,6 +95,11 @@ actual fun isIosPlatform(): Boolean = false
 
 actual fun getSystemLanguage(): String = java.util.Locale.getDefault().language
 
+actual fun getSystemLanguageDisplayName(): String {
+    val locale = java.util.Locale.getDefault()
+    return locale.getDisplayLanguage(locale).replaceFirstChar { it.uppercase() }
+}
+
 internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
     com.aptabase.Aptabase.instance.trackEvent(name, props)
 }

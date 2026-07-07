@@ -79,6 +79,12 @@ actual fun getSystemLanguage(): String {
     return preferredLanguage.split("-").firstOrNull() ?: "en"
 }
 
+actual fun getSystemLanguageDisplayName(): String {
+    val code = getSystemLanguage()
+    val name = NSLocale.currentLocale.localizedStringForLanguageCode(code)
+    return (name ?: code).replaceFirstChar { it.uppercase() }
+}
+
 internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
     // iOS 暂不接入事件上报
 }

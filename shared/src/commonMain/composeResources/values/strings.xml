@@ -18,8 +18,12 @@
     <string name="open_system_settings">Open system settings</string>
     <string name="summary_language">Summary Language</string>
     <string name="summary_language_desc">AI summaries in Chinese &amp; English · Tap to learn more</string>
-    <string name="summary_language_message">Summary language follows the app language setting: AI summaries for GitHub, Hacker News and Product Hunt, as well as Picks deep dives, are available in both Chinese and English, and refresh automatically when you switch languages.\n\nWant your language supported? Send us feedback — we&apos;ll consider it based on demand.</string>
+    <string name="summary_language_message">Summary language follows the app language setting: AI summaries for GitHub, Hacker News and Product Hunt, as well as Picks deep dives, are available in both Chinese and English, and refresh automatically when you switch languages.\n\nWant your own language? Sponsor Pro to support us — we&apos;ll put it on the priority list and ship it as early as the next release.</string>
     <string name="summary_language_feedback">Send Feedback</string>
+    <string name="summary_language_sponsor">Sponsor Pro on GitHub</string>
+    <string name="summary_lang_capture_title">Which language would you like?</string>
+    <string name="summary_lang_capture_message">We&apos;ve filled in your system language — change it if you&apos;d like a different one. You&apos;ll be taken to the sponsor page after submitting.</string>
+    <string name="summary_lang_capture_label">Language</string>
     <string name="open_links_in_browser">Open links in browser</string>
     <string name="open_links_in_browser_desc">Turn off to use the built-in browser · Tap to learn more</string>
     <string name="open_links_in_browser_message">External links open in the system browser, which passes human verification on sites like Product Hunt and supports translation, autofill and existing logins.\n\nWhen turned off, external links open in the built-in browser instead.\n\nGitHub README reading does not go through external link handling and is not affected by this setting.</string>
