@@ -36,6 +36,9 @@ object ChatModelsProvider {
         }
     }
 
+    /** 已缓存的目录（无网络副作用）；尚未拉到时为空列表。发送热路径用它，避免冷拉阻塞聊天请求。 */
+    fun cachedOrEmpty(): List<ChatModelOption> = cache ?: emptyList()
+
     /** 应用启动时预热（fire-and-forget），避免首个 chat 等冷拉取。 */
     fun warmUp(scope: CoroutineScope) {
         scope.launch { runCatching { get() } }
