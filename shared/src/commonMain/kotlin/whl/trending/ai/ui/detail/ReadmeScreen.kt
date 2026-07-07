@@ -2,8 +2,6 @@ package whl.trending.ai.ui.detail
 
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.Constants
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 
@@ -43,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,6 +86,7 @@ fun ReadmeScreen(
         muted  = colorScheme.onSurfaceVariant.toHex(),
     )
     val repoUrl = "https://github.com/$owner/$repo"
+    val uriHandler = LocalUriHandler.current
     // README 摘录涉及多次正则替换，缓存结果避免每次重组重算（分享栏与 FAB 共用）
     val summary = remember(uiState.html) { readmeExcerpt(uiState.html) }
 
@@ -168,7 +168,7 @@ fun ReadmeScreen(
                             contentDescription = stringResource(Res.string.share_to_ai)
                         )
                     }
-                    IconButton(onClick = { openUrl(repoUrl, Constants.GITHUB_APP_PACKAGE) }) {
+                    IconButton(onClick = { uriHandler.openUri(repoUrl) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
                             contentDescription = stringResource(Res.string.view_on_github)

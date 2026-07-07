@@ -10,15 +10,37 @@ expect fun getPlatform(): Platform
 
 expect fun openAppSettings()
 
-expect fun openUrl(url: String, targetPackage: String? = null)
+/** 底层原语：系统浏览器直跳外链（Android ACTION_VIEW / iOS openURL）。作为 [openUrl] 的最终兜底，勿直接调用。 */
+expect fun openInSystemBrowser(url: String)
 
 /**
- * 在系统浏览器环境中打开链接（Android Custom Tabs / iOS SFSafariViewController）。
+ * 底层原语：在系统浏览器环境中打开链接（Android Custom Tabs / iOS SFSafariViewController）。
  * 真实浏览器指纹可正常通过 Cloudflare 等人机验证，并自带翻译/密码填充/登录态。
+ * 供 [openUrl] 调用，勿直接调用。
  *
- * @return 是否成功调起；false 时由调用方兜底（进应用内 WebView）。
+ * @return 是否成功调起；false 时由 [openUrl] 兜底。
  */
 expect fun openInCustomTab(url: String): Boolean
+
+/**
+ * 外链统一出口。全 app 打开外链一律调这个，优先级：
+ * ① 非 http/https（mailto/tel 等）→ 交系统处理；
+ * ② 用户开启「用 Custom Tab」且成功调起 → [openInCustomTab]；
+ * ③ 传了 [onInAppFallback] → 应用内 WebView；否则 → [openInSystemBrowser]。
+ *
+ * @param onInAppFallback 应用内 WebView 兜底。组合树外（如更新弹窗）拿不到导航栈时传 null，退化为系统浏览器。
+ */
+fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
+    val isWeb = url.startsWith("http://") || url.startsWith("https://")
+    if (isWeb && globalSettingsManager.getOpenLinksInCustomTabSync() && openInCustomTab(url)) {
+        return
+    }
+    if (isWeb && onInAppFallback != null) {
+        onInAppFallback(url)
+        return
+    }
+    openInSystemBrowser(url)
+}
 
 /** 调起系统分享面板，把纯文本交给用户选择的目标 App（AI App / 笔记 / IM 等）。 */
 expect fun shareText(text: String)

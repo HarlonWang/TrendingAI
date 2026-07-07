@@ -30,7 +30,7 @@ actual fun openAppSettings() {
     }
 }
 
-actual fun openUrl(url: String, targetPackage: String?) {
+actual fun openInSystemBrowser(url: String) {
     val nsUrl = NSURL.URLWithString(url)
     if (nsUrl != null) {
         UIApplication.sharedApplication.openURL(

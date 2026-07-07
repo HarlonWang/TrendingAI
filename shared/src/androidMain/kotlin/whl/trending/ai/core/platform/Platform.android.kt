@@ -34,24 +34,16 @@ actual fun openAppSettings() {
     context.startActivity(intent)
 }
 
-actual fun openUrl(url: String, targetPackage: String?) {
+actual fun openInSystemBrowser(url: String) {
     val context = AndroidContextHolder.get() ?: return
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    
-    if (targetPackage != null) {
-        intent.setPackage(targetPackage)
-    }
-    
     try {
         context.startActivity(intent)
     } catch (e: Exception) {
-        // Fallback to system default (browser) if specified app is not installed or fails
-        if (targetPackage != null) {
-            intent.setPackage(null)
-            context.startActivity(intent)
-        }
+        // 设备无浏览器可承接，静默
+        Log.w("Platform", "openInSystemBrowser failed", e)
     }
 }
 
