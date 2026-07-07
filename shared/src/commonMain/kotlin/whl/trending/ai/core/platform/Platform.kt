@@ -47,6 +47,9 @@ fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
 /**
  * 文件直链下载统一出口（如 APK）：跳过 Custom Tab / 应用内 WebView，直接交系统浏览器接管下载。
  * 直链文件在 Custom Tab 里体验糟糕——Chrome 下载后留一个空白页挂在前台，其他 provider 行为不定。
+ *
+ * 约定仅用于 http(s) 直链；非 web scheme 请走 [openUrl]（两者对非 web 最终都是同一条
+ * [openInSystemBrowser] 路径，行为一致，此约定只为语义清晰）。
  */
 fun openDownloadUrl(url: String) {
     openInSystemBrowser(url)

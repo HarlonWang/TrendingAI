@@ -7,8 +7,8 @@ import kotlinx.serialization.json.Json
 /** 模型目录的解码容错与 [resolveEffectiveChatModel] 生效判定单测。 */
 class ChatModelOptionTest {
 
-    private val free = ChatModelOption(id = "gpt-5.4", name = "GPT-5.4", minTier = "user")
-    private val pro = ChatModelOption(id = "gpt-6", name = "GPT-6", minTier = "pro")
+    private val free = ChatModelOption(id = "gpt-5.4", name = "GPT-5.4", minTier = ChatModelOption.TIER_USER)
+    private val pro = ChatModelOption(id = "gpt-6", name = "GPT-6", minTier = ChatModelOption.TIER_PRO)
     private val catalog = listOf(free, pro)
 
     @Test
@@ -16,7 +16,7 @@ class ChatModelOptionTest {
         val parsed = Json.decodeFromString<ChatModelsResponse>("""{"models":[{"id":"m1"}]}""")
         val model = parsed.models.single()
         assertEquals("m1", model.name)
-        assertEquals("user", model.minTier)
+        assertEquals(ChatModelOption.TIER_USER, model.minTier)
         assertEquals(false, model.proOnly)
     }
 

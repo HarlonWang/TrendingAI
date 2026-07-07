@@ -17,10 +17,16 @@ const val DEFAULT_CHAT_MODEL = "gpt-5.4"
 data class ChatModelOption(
     val id: String,
     val name: String = id,
-    val minTier: String = "user",
+    val minTier: String = TIER_USER,
 ) {
     /** 是否 Pro 专属（免费用户看到但锁定） */
-    val proOnly: Boolean get() = minTier == "pro"
+    val proOnly: Boolean get() = minTier == TIER_PRO
+
+    companion object {
+        /** minTier 的取值词汇，与后端 models.js 契约对齐；集中定义避免逻辑与测试各写各的字面量。 */
+        const val TIER_USER = "user"
+        const val TIER_PRO = "pro"
+    }
 }
 
 @Serializable
