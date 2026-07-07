@@ -26,7 +26,10 @@
     <string name="chat_quota_pro_exceeded">今天聊得有点多，稍后再来～</string>
     <string name="chat_pro_cta">解锁 Pro · $2/月</string>
     <string name="chat_pro_activation_hint">赞助后 Pro 通常几分钟内自动生效；如未解锁，我们会人工核对，可能稍有延迟——稍后回来重试即可。</string>
-    <string name="chat_model_pro_locked">%1$s 需要 Pro，$2/月解锁。</string>
+    <string name="chat_model_unlock_title">解锁更强模型</string>
+    <string name="chat_model_unlock_message">「%1$s」是 Pro 专属模型。\n\nTrendingAI 的 AI 能力目前由我个人自费提供，默认模型对所有人免费开放。如果你希望用上更强的模型，可以通过 GitHub 赞助（Sponsors，$2/月）支持——赞助后用你的 GitHub 账号登录即可切换全部模型，并拥有更宽裕的每日额度。</string>
+    <string name="chat_model_unlock_confirm">去赞助</string>
+    <string name="chat_model_unlock_dismiss">暂不</string>
     <string name="chat_quota_unlocked">已解锁每日 10 条，重新发送即可继续。</string>
     <string name="chat_quota_auth_degraded">登录状态未生效，本次请求被按未登录处理——请检查网络后重试，必要时退出后重新登录。</string>
     <string name="chat_error_auth_invalid">登录状态已过期，请退出后重新登录再继续。</string>

@@ -26,7 +26,10 @@
     <string name="chat_quota_pro_exceeded">You\'ve been chatting a lot today — check back a bit later.</string>
     <string name="chat_pro_cta">Unlock Pro · $2/mo</string>
     <string name="chat_pro_activation_hint">After sponsoring, Pro usually activates within minutes. If not, we verify manually — just try again shortly.</string>
-    <string name="chat_model_pro_locked">%1$s needs Pro. Unlock for $2/mo.</string>
+    <string name="chat_model_unlock_title">Unlock stronger models</string>
+    <string name="chat_model_unlock_message">%1$s is a Pro-only model.\n\nThe AI features in TrendingAI are currently paid for out of my own pocket, and the default model stays free for everyone. If you would like the stronger models, you can support the project via GitHub Sponsors ($2/mo) — after sponsoring, sign in with your GitHub account to switch to any model with a more generous daily quota.</string>
+    <string name="chat_model_unlock_confirm">Sponsor</string>
+    <string name="chat_model_unlock_dismiss">Not now</string>
     <string name="chat_quota_unlocked">Unlocked 10 chats a day — resend to continue.</string>
     <string name="chat_quota_auth_degraded">Signed in, but this request was treated as signed out — check your network and retry, or sign out and sign in again.</string>
     <string name="chat_error_auth_invalid">Your session has expired — sign out and sign in again to continue.</string>

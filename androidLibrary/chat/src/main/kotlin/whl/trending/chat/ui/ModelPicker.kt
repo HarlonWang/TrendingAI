@@ -1,17 +1,18 @@
 package whl.trending.chat.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,10 +21,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.core.ProSponsor
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.model.resolveEffectiveChatModel
@@ -31,7 +31,7 @@ import whl.trending.chat.R
 
 /**
  * 常驻模型选择器（对所有用户透出）。默认显示免费 gpt-5.4；Pro 专属项对免费用户锁定，
- * 点锁定项 → 埋点 + 跳 Sponsors（第二个、更早的转化入口）。
+ * 点锁定项 → 说明弹窗（自费背景 + 赞助解锁路径）→ 确认后跳 Sponsors（第二个、更早的转化入口）。
  *
  * 只有一个可选模型时不渲染（无从选择、也无 Pro 项可 upsell）。
  */
@@ -42,11 +42,34 @@ internal fun ModelPicker(
 ) {
     if (models.size <= 1) return
 
-    val context = LocalContext.current
     val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.getIsProSync())
     val selectedId by globalSettingsManager.selectedChatModel
         .collectAsState(initial = globalSettingsManager.getSelectedChatModelSync())
     var expanded by remember { mutableStateOf(false) }
+    // 点锁定项弹说明页（个人自费背景 + 赞助解锁路径），确认后才外跳赞助——比直跳更不生硬，
+    // 也让 pro_upsell_clicked 的语义从「误触锁定项」变成「看完说明后确认去赞助」
+    var unlockDialogModel by remember { mutableStateOf<ChatModelOption?>(null) }
+
+    unlockDialogModel?.let { model ->
+        AlertDialog(
+            onDismissRequest = { unlockDialogModel = null },
+            title = { Text(stringResource(R.string.chat_model_unlock_title)) },
+            text = { Text(stringResource(R.string.chat_model_unlock_message, model.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    unlockDialogModel = null
+                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_MODEL_LOCKED)
+                }) {
+                    Text(stringResource(R.string.chat_model_unlock_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { unlockDialogModel = null }) {
+                    Text(stringResource(R.string.chat_model_unlock_dismiss))
+                }
+            },
+        )
+    }
 
     // 自愈守卫：若持久化的选择对本用户已锁定（Pro 过期未登出、或上个 Pro 用户遗留），
     // 复位到默认免费模型。判定与 ChatApi 发送共用 resolveEffectiveChatModel——
@@ -98,12 +121,7 @@ internal fun ModelPicker(
                     onClick = {
                         expanded = false
                         if (locked) {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.chat_model_pro_locked, model.name),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                            ProSponsor.openSponsorPage(ProSponsor.SOURCE_MODEL_LOCKED)
+                            unlockDialogModel = model
                         } else {
                             globalSettingsManager.setSelectedChatModel(model.id)
                         }
