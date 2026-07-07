@@ -5,8 +5,10 @@ import com.russhwolf.settings.ObservableSettings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,6 +27,7 @@ import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.FollowingProvider
 import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.OwnRepoEventsProvider
+import whl.trending.ai.auth.SignInFailureReason
 import whl.trending.ai.data.local.FakeCacheFileStore
 import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
@@ -42,6 +45,7 @@ class ProfileViewModelTest {
         val state = MutableStateFlow<AuthState>(AuthState.LoggedIn)
         override val isSupported: Boolean = true
         override val authState: StateFlow<AuthState> = state
+        override val signInFailures: Flow<SignInFailureReason> = emptyFlow()
         override fun signIn() {}
         override fun signOut() {}
         override suspend fun getAccessToken(): String? = "token"
