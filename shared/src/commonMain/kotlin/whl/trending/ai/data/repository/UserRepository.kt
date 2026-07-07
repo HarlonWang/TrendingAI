@@ -23,6 +23,7 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
         return try {
             val me = fetchMeResponse(accessToken)
             globalSettingsManager.setUserAvatarUrl(me.user.avatarUrl)
+            globalSettingsManager.setGithubIdentity(me.user.githubLogin, me.user.githubUserId)
             globalSettingsManager.setIsPro(me.pro)
             me.user
         } catch (e: Exception) {

@@ -16,7 +16,6 @@ import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
-import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
@@ -189,7 +188,6 @@ fun SettingsScreen(
     var langError by remember { mutableStateOf<String?>(null) }
     val langScope = rememberCoroutineScope()
     val feedbackRepository = remember { TrendingRepository() }
-    val userRepository = remember { UserRepository() }
     val emailRegex = remember { Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") }
     val langErrGeneric = stringResource(Res.string.feedback_error)
     val langErrRate = stringResource(Res.string.feedback_rate_limit)
@@ -293,12 +291,14 @@ fun SettingsScreen(
                         langSubmitting = true
                         langError = null
                         langScope.launch {
+                            // 身份直接读 syncMe 落好的本地缓存：免一次串行 /api/me 往返；id 可能缺失（后端
+                            // 兜底 username 建档时无数字 id），缺就只带 login，别写出「id null」污染赞助匹配
                             val identityLine = if (isLoggedIn) {
-                                val me = globalAuthManager.getAccessToken()?.let { token ->
-                                    runCatching { userRepository.fetchMeResponse(token).user }.getOrNull()
-                                }
+                                val login = globalSettingsManager.getGithubLoginSync()
+                                val userId = globalSettingsManager.getGithubUserIdSync()
                                 when {
-                                    me?.githubLogin != null -> "GitHub：@${me.githubLogin}（id ${me.githubUserId}）"
+                                    login != null && userId != null -> "GitHub：@${login}（id ${userId}）"
+                                    login != null -> "GitHub：@${login}"
                                     else -> "GitHub：已登录（未取到身份）"
                                 }
                             } else null
