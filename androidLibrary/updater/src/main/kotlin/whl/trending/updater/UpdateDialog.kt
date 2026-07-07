@@ -7,6 +7,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import whl.trending.ai.core.Constants
+import whl.trending.ai.core.platform.openDownloadUrl
 import whl.trending.ai.core.platform.openUrl
 
 @Composable
@@ -21,7 +22,8 @@ fun UpdateDialog(updateInfo: UpdateInfo, downloadUrl: String, onDismiss: () -> U
         },
         confirmButton = {
             TextButton(onClick = {
-                openUrl(downloadUrl)
+                // APK 直链走系统浏览器接管下载，不进 Custom Tab（见 openDownloadUrl）
+                openDownloadUrl(downloadUrl)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.update_dialog_download))

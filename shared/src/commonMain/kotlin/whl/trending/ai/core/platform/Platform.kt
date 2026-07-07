@@ -31,7 +31,9 @@ expect fun openInCustomTab(url: String): Boolean
  * @param onInAppFallback 应用内 WebView 兜底。组合树外（如更新弹窗）拿不到导航栈时传 null，退化为系统浏览器。
  */
 fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
-    val isWeb = url.startsWith("http://") || url.startsWith("https://")
+    // ignoreCase：scheme 大小写不敏感（RFC 3986）。大写 scheme 若被判非 web，会绕过
+    // Custom Tab 与 WebView 兜底直落 ACTION_VIEW，而 intent filter 按小写匹配 → 点击静默无响应
+    val isWeb = url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
     if (isWeb && globalSettingsManager.getOpenLinksInCustomTabSync() && openInCustomTab(url)) {
         return
     }
@@ -39,6 +41,14 @@ fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
         onInAppFallback(url)
         return
     }
+    openInSystemBrowser(url)
+}
+
+/**
+ * 文件直链下载统一出口（如 APK）：跳过 Custom Tab / 应用内 WebView，直接交系统浏览器接管下载。
+ * 直链文件在 Custom Tab 里体验糟糕——Chrome 下载后留一个空白页挂在前台，其他 provider 行为不定。
+ */
+fun openDownloadUrl(url: String) {
     openInSystemBrowser(url)
 }
 
