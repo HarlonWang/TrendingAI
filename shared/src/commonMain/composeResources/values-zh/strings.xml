@@ -24,6 +24,7 @@
     <string name="summary_lang_capture_title">你希望支持哪门语言？</string>
     <string name="summary_lang_capture_message">已填入你的系统语言，可改成你希望支持的语言。提交后将带你前往赞助页。</string>
     <string name="summary_lang_capture_label">语言</string>
+    <string name="summary_lang_capture_identity_note">提交时会带上你的 GitHub 身份，方便我们后续通知你。</string>
     <string name="open_links_in_browser">用系统浏览器打开外链</string>
     <string name="open_links_in_browser_desc">关闭后改用内置浏览器 · 点击了解</string>
     <string name="open_links_in_browser_message">外部链接交给系统浏览器打开，可正常通过 Product Hunt 等网站的人机验证，并支持翻译、自动填充和已有登录态。\n\n关闭后，外链改用内置浏览器打开。\n\nGitHub README 阅读不经外链流程，不受此设置影响。</string>

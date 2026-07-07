@@ -24,6 +24,7 @@
     <string name="summary_lang_capture_title">Which language would you like?</string>
     <string name="summary_lang_capture_message">We&apos;ve filled in your system language — change it if you&apos;d like a different one. You&apos;ll be taken to the sponsor page after submitting.</string>
     <string name="summary_lang_capture_label">Language</string>
+    <string name="summary_lang_capture_identity_note">We&apos;ll include your GitHub identity so we can follow up with you.</string>
     <string name="open_links_in_browser">Open links in browser</string>
     <string name="open_links_in_browser_desc">Turn off to use the built-in browser · Tap to learn more</string>
     <string name="open_links_in_browser_message">External links open in the system browser, which passes human verification on sites like Product Hunt and supports translation, autofill and existing logins.\n\nWhen turned off, external links open in the built-in browser instead.\n\nGitHub README reading does not go through external link handling and is not affected by this setting.</string>

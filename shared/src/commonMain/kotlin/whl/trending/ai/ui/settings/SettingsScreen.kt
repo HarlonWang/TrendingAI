@@ -12,8 +12,11 @@ import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.auth.AuthState
+import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
+import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
@@ -142,9 +145,12 @@ import trendingai.shared.generated.resources.summary_language_sponsor
 import trendingai.shared.generated.resources.summary_lang_capture_title
 import trendingai.shared.generated.resources.summary_lang_capture_message
 import trendingai.shared.generated.resources.summary_lang_capture_label
+import trendingai.shared.generated.resources.summary_lang_capture_identity_note
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.feedback_error
 import trendingai.shared.generated.resources.feedback_rate_limit
+import trendingai.shared.generated.resources.feedback_email_placeholder
+import trendingai.shared.generated.resources.feedback_email_invalid
 import trendingai.shared.generated.resources.version
 import trendingai.shared.generated.resources.version_up_to_date
 
@@ -170,12 +176,19 @@ fun SettingsScreen(
     var showSummaryLanguageDialog by remember { mutableStateOf(false) }
     var showOpenLinksDialog by remember { mutableStateOf(false) }
     // 语言采集流程：点「赞助 Pro」→ 采集期望语言（复用反馈接口提交）→ 成功后跳赞助页
+    // 登录用户带上 GitHub 身份（便于与赞助对齐 + 后续通知）；未登录则收邮箱
+    val authState by globalAuthManager.authState.collectAsState()
+    val isLoggedIn = authState is AuthState.LoggedIn
     var showLangCaptureDialog by remember { mutableStateOf(false) }
     var langInput by remember { mutableStateOf("") }
+    var langEmail by remember { mutableStateOf("") }
+    var langEmailInvalid by remember { mutableStateOf(false) }
     var langSubmitting by remember { mutableStateOf(false) }
     var langError by remember { mutableStateOf<String?>(null) }
     val langScope = rememberCoroutineScope()
     val feedbackRepository = remember { TrendingRepository() }
+    val userRepository = remember { UserRepository() }
+    val emailRegex = remember { Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") }
     val langErrGeneric = stringResource(Res.string.feedback_error)
     val langErrRate = stringResource(Res.string.feedback_rate_limit)
 
@@ -201,6 +214,8 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     showSummaryLanguageDialog = false
                     langInput = getSystemLanguageDisplayName()
+                    langEmail = ""
+                    langEmailInvalid = false
                     langError = null
                     showLangCaptureDialog = true
                 }) {
@@ -237,6 +252,28 @@ fun SettingsScreen(
                         supportingText = langError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (isLoggedIn) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(Res.string.summary_lang_capture_identity_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = langEmail,
+                            onValueChange = { langEmail = it; langEmailInvalid = false },
+                            label = { Text(stringResource(Res.string.feedback_email_placeholder)) },
+                            singleLine = true,
+                            isError = langEmailInvalid,
+                            enabled = !langSubmitting,
+                            supportingText = if (langEmailInvalid) {
+                                { Text(stringResource(Res.string.feedback_email_invalid), color = MaterialTheme.colorScheme.error) }
+                            } else null,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -245,11 +282,30 @@ fun SettingsScreen(
                     onClick = {
                         val lang = langInput.trim()
                         if (lang.isEmpty()) return@TextButton
+                        val email = langEmail.trim()
+                        // 未登录：邮箱选填，但填了就必须格式正确
+                        if (!isLoggedIn && email.isNotEmpty() && !emailRegex.matches(email)) {
+                            langEmailInvalid = true
+                            return@TextButton
+                        }
                         langSubmitting = true
                         langError = null
                         langScope.launch {
-                            val content = "【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLanguage()}"
-                            feedbackRepository.submitFeedback(content, null).fold(
+                            val identityLine = if (isLoggedIn) {
+                                val me = globalAuthManager.getAccessToken()?.let { token ->
+                                    runCatching { userRepository.fetchMeResponse(token).user }.getOrNull()
+                                }
+                                when {
+                                    me?.githubLogin != null -> "GitHub：@${me.githubLogin}（id ${me.githubUserId}）"
+                                    else -> "GitHub：已登录（未取到身份）"
+                                }
+                            } else null
+                            val content = buildString {
+                                append("【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLanguage()}")
+                                identityLine?.let { append(" · $it") }
+                            }
+                            val submitEmail = if (!isLoggedIn) email.ifEmpty { null } else null
+                            feedbackRepository.submitFeedback(content, submitEmail).fold(
                                 onSuccess = {
                                     langSubmitting = false
                                     showLangCaptureDialog = false
