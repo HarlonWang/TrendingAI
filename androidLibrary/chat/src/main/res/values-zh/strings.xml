@@ -22,7 +22,6 @@
     <string name="chat_quota_exceeded">今日免费额度已用完，明天自动恢复。</string>
     <string name="chat_quota_login_cta">登录解锁每日 10 条</string>
     <string name="chat_quota_waitlist_cta">想要更多额度？上线时通知我</string>
-    <string name="chat_quota_user_exceeded">今日 10 条额度已用完，明天自动恢复。</string>
     <string name="chat_pro_upsell_message">每天 10 条不够？Pro 提供更宽裕的每日额度，还能选用更强、更新的模型。</string>
     <string name="chat_quota_pro_exceeded">今天聊得有点多，稍后再来～</string>
     <string name="chat_pro_cta">解锁 Pro · $2/月</string>

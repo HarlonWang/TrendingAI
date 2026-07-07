@@ -32,3 +32,18 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 ### `timeout` vs `network` 的边界
 
 `timeout` 只有当异常 `cause` 链里恰好保留了 `SocketTimeoutException` 时才会命中。Logto SDK 构造多数异常时**丢弃底层 `Throwable`**（如授权码换 token 失败直接传 `null` cause），因此超时常常并入 `network` 桶。需要精确区分时看 `logto_type`。
+
+## Pro upsell 漏斗的 source 词汇统一（2026-07-07）
+
+`pro_upsell_shown` / `pro_upsell_clicked` 的 `source` 维度统一收口到 `ProSponsor`（shared/core），全部赞助入口共用同一词汇：
+
+| source | 入口 |
+|--------|------|
+| `chat_quota` | 聊天配额触顶卡的「解锁 Pro」 |
+| `model_locked` | 模型选择器点锁定项 |
+| `settings_language` | 设置 · 摘要语言弹窗的「赞助 Pro」 |
+| `settings_donate` | 设置 · 捐助弹窗的 GitHub Sponsors 渠道 |
+
+注意事项：
+- `settings_*` 两个入口自 2026-07-07 起**新增**上报 `pro_upsell_clicked`；此前只有各自的 `settings_summary_language_sponsor` / `settings_donate_github` 事件（两者保留未动，看板续用不受影响）。跨该日期对比 clicked 总量时需注意口径变化。
+- 曝光语义各入口不同：`chat_quota` 按卡片挂载去重一次，`model_locked` 是每次展开下拉都算（类广告 impression），settings 入口无 shown 事件。对比 shown→clicked 转化率须按 source 分开看。

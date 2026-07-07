@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.subscribe
 
+import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
@@ -32,7 +33,7 @@ data class SubscribeUiState(
 }
 
 class SubscribeViewModel(
-    private val repository: TrendingRepository = TrendingRepository(),
+    private val repository: TrendingRepository = TrendingRepository.shared,
     private val settings: SettingsManager = globalSettingsManager,
 ) : ViewModel() {
 
@@ -48,14 +49,14 @@ class SubscribeViewModel(
     val events = _events.receiveAsFlow()
 
     fun updateEmail(value: String) {
-        val valid = value.isBlank() || EMAIL_REGEX.matches(value.trim())
+        val valid = value.isBlank() || isValidEmail(value)
         _uiState.update { it.copy(email = value, isEmailValid = valid) }
     }
 
     fun submit() {
         val state = _uiState.value
         val email = state.email.trim()
-        if (email.isEmpty() || !EMAIL_REGEX.matches(email) || state.isSubmitting) return
+        if (email.isEmpty() || !isValidEmail(email) || state.isSubmitting) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
@@ -80,7 +81,7 @@ class SubscribeViewModel(
     fun cancel() {
         val state = _uiState.value
         val email = (state.subscribedEmail ?: state.email).trim()
-        if (email.isEmpty() || !EMAIL_REGEX.matches(email) || state.isSubmitting) return
+        if (email.isEmpty() || !isValidEmail(email) || state.isSubmitting) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
@@ -102,8 +103,4 @@ class SubscribeViewModel(
 
     private fun currentSource(): String =
         if (isIosPlatform()) "app-ios" else "app-android"
-
-    companion object {
-        private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
-    }
 }

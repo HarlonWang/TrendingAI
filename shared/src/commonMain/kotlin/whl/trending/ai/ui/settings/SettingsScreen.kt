@@ -10,12 +10,14 @@ import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.Constants
+import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
+import whl.trending.ai.ui.home.githubLogoPainter
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
@@ -96,8 +98,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import trendingai.shared.generated.resources.GitHub_Invertocat_Black
-import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.about_us
@@ -181,16 +181,6 @@ fun SettingsScreen(
     val authState by globalAuthManager.authState.collectAsState()
     val isLoggedIn = authState is AuthState.LoggedIn
     var showLangCaptureDialog by remember { mutableStateOf(false) }
-    var langInput by remember { mutableStateOf("") }
-    var langEmail by remember { mutableStateOf("") }
-    var langEmailInvalid by remember { mutableStateOf(false) }
-    var langSubmitting by remember { mutableStateOf(false) }
-    var langError by remember { mutableStateOf<String?>(null) }
-    val langScope = rememberCoroutineScope()
-    val feedbackRepository = remember { TrendingRepository() }
-    val emailRegex = remember { Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") }
-    val langErrGeneric = stringResource(Res.string.feedback_error)
-    val langErrRate = stringResource(Res.string.feedback_rate_limit)
 
     if (showOpenLinksDialog) {
         AlertDialog(
@@ -213,10 +203,6 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showSummaryLanguageDialog = false
-                    langInput = getSystemLanguageDisplayName()
-                    langEmail = ""
-                    langEmailInvalid = false
-                    langError = null
                     showLangCaptureDialog = true
                 }) {
                     Text(stringResource(Res.string.summary_language_sponsor))
@@ -235,110 +221,10 @@ fun SettingsScreen(
     }
 
     if (showLangCaptureDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!langSubmitting) showLangCaptureDialog = false },
-            title = { Text(stringResource(Res.string.summary_lang_capture_title)) },
-            text = {
-                Column {
-                    Text(stringResource(Res.string.summary_lang_capture_message))
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = langInput,
-                        onValueChange = { langInput = it; langError = null },
-                        label = { Text(stringResource(Res.string.summary_lang_capture_label)) },
-                        singleLine = true,
-                        isError = langError != null,
-                        enabled = !langSubmitting,
-                        supportingText = langError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (isLoggedIn) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(Res.string.summary_lang_capture_identity_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = langEmail,
-                            onValueChange = { langEmail = it; langEmailInvalid = false },
-                            label = { Text(stringResource(Res.string.feedback_email_placeholder)) },
-                            singleLine = true,
-                            isError = langEmailInvalid,
-                            enabled = !langSubmitting,
-                            supportingText = if (langEmailInvalid) {
-                                { Text(stringResource(Res.string.feedback_email_invalid), color = MaterialTheme.colorScheme.error) }
-                            } else null,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = langInput.isNotBlank() && !langSubmitting,
-                    onClick = {
-                        val lang = langInput.trim()
-                        if (lang.isEmpty()) return@TextButton
-                        val email = langEmail.trim()
-                        // 未登录：邮箱选填，但填了就必须格式正确
-                        if (!isLoggedIn && email.isNotEmpty() && !emailRegex.matches(email)) {
-                            langEmailInvalid = true
-                            return@TextButton
-                        }
-                        langSubmitting = true
-                        langError = null
-                        langScope.launch {
-                            // 身份直接读 syncMe 落好的本地缓存：免一次串行 /api/me 往返；id 可能缺失（后端
-                            // 兜底 username 建档时无数字 id），缺就只带 login，别写出「id null」污染赞助匹配
-                            val identityLine = if (isLoggedIn) {
-                                val login = globalSettingsManager.getGithubLoginSync()
-                                val userId = globalSettingsManager.getGithubUserIdSync()
-                                when {
-                                    login != null && userId != null -> "GitHub：@${login}（id ${userId}）"
-                                    login != null -> "GitHub：@${login}"
-                                    else -> "GitHub：已登录（未取到身份）"
-                                }
-                            } else null
-                            val content = buildString {
-                                append("【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLanguage()}")
-                                identityLine?.let { append(" · $it") }
-                            }
-                            val submitEmail = if (!isLoggedIn) email.ifEmpty { null } else null
-                            feedbackRepository.submitFeedback(content, submitEmail).fold(
-                                onSuccess = {
-                                    langSubmitting = false
-                                    showLangCaptureDialog = false
-                                    trackEvent("settings_summary_language_sponsor", mapOf("language" to lang))
-                                    ProSponsor.openSponsorPage()
-                                },
-                                onFailure = { e ->
-                                    langSubmitting = false
-                                    langError = if ((e as? ApiException)?.statusCode == 429) langErrRate else langErrGeneric
-                                },
-                            )
-                        }
-                    }
-                ) {
-                    if (langSubmitting) {
-                        LoadingIndicator(modifier = Modifier.size(24.dp))
-                    } else {
-                        Text(stringResource(Res.string.summary_language_sponsor))
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(enabled = !langSubmitting, onClick = { showLangCaptureDialog = false }) {
-                    Text(stringResource(Res.string.cancel))
-                }
-            }
-        )
+        LanguageCaptureDialog(isLoggedIn = isLoggedIn, onDismiss = { showLangCaptureDialog = false })
     }
 
     if (showDonateDialog) {
-        val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
         AlertDialog(
             onDismissRequest = { showDonateDialog = false },
             title = { Text(stringResource(Res.string.donate)) },
@@ -352,15 +238,12 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .clickable {
                                 trackEvent("settings_donate_github")
-                                ProSponsor.openSponsorPage()
+                                ProSponsor.openSponsorPage(ProSponsor.SOURCE_SETTINGS_DONATE)
                             }
                             .padding(vertical = 12.dp)
                     ) {
                         Icon(
-                            painter = painterResource(
-                                if (isDarkTheme) Res.drawable.GitHub_Invertocat_White
-                                else Res.drawable.GitHub_Invertocat_Black
-                            ),
+                            painter = githubLogoPainter(),
                             contentDescription = null,
                             tint = Color.Unspecified,
                             modifier = Modifier.size(24.dp)
@@ -792,5 +675,123 @@ fun SettingsHeader(text: String) {
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+}
+
+/**
+ * 摘要语言意图采集弹窗：期望语言（+ 未登录的选填邮箱）经反馈接口提交，成功后跳赞助页。
+ * 状态自持有——挂载即全新、关闭即丢弃，宿主只管 show 标记，无需在打开前手动重置各字段。
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
+    var langInput by remember { mutableStateOf(getSystemLanguageDisplayName()) }
+    var langEmail by remember { mutableStateOf("") }
+    var langEmailInvalid by remember { mutableStateOf(false) }
+    var langSubmitting by remember { mutableStateOf(false) }
+    var langError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val errGeneric = stringResource(Res.string.feedback_error)
+    val errRate = stringResource(Res.string.feedback_rate_limit)
+
+    AlertDialog(
+        onDismissRequest = { if (!langSubmitting) onDismiss() },
+        title = { Text(stringResource(Res.string.summary_lang_capture_title)) },
+        text = {
+            Column {
+                Text(stringResource(Res.string.summary_lang_capture_message))
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = langInput,
+                    onValueChange = { langInput = it; langError = null },
+                    label = { Text(stringResource(Res.string.summary_lang_capture_label)) },
+                    singleLine = true,
+                    isError = langError != null,
+                    enabled = !langSubmitting,
+                    supportingText = langError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (isLoggedIn) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(Res.string.summary_lang_capture_identity_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = langEmail,
+                        onValueChange = { langEmail = it; langEmailInvalid = false },
+                        label = { Text(stringResource(Res.string.feedback_email_placeholder)) },
+                        singleLine = true,
+                        isError = langEmailInvalid,
+                        enabled = !langSubmitting,
+                        supportingText = if (langEmailInvalid) {
+                            { Text(stringResource(Res.string.feedback_email_invalid), color = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = langInput.isNotBlank() && !langSubmitting,
+                onClick = {
+                    val lang = langInput.trim()
+                    if (lang.isEmpty()) return@TextButton
+                    val email = langEmail.trim()
+                    // 未登录：邮箱选填，但填了就必须格式正确
+                    if (!isLoggedIn && email.isNotEmpty() && !isValidEmail(email)) {
+                        langEmailInvalid = true
+                        return@TextButton
+                    }
+                    langSubmitting = true
+                    langError = null
+                    scope.launch {
+                        // 身份直接读 syncMe 落好的本地缓存：免一次串行 /api/me 往返；id 可能缺失（后端
+                        // 兜底 username 建档时无数字 id），缺就只带 login，别写出「id null」污染赞助匹配
+                        val identityLine = if (isLoggedIn) {
+                            val login = globalSettingsManager.getGithubLoginSync()
+                            val userId = globalSettingsManager.getGithubUserIdSync()
+                            when {
+                                login != null && userId != null -> "GitHub：@${login}（id ${userId}）"
+                                login != null -> "GitHub：@${login}"
+                                else -> "GitHub：已登录（未取到身份）"
+                            }
+                        } else null
+                        val content = buildString {
+                            append("【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLanguage()}")
+                            identityLine?.let { append(" · $it") }
+                        }
+                        val submitEmail = if (!isLoggedIn) email.ifEmpty { null } else null
+                        TrendingRepository.shared.submitFeedback(content, submitEmail).fold(
+                            onSuccess = {
+                                langSubmitting = false
+                                onDismiss()
+                                trackEvent("settings_summary_language_sponsor", mapOf("language" to lang))
+                                ProSponsor.openSponsorPage(ProSponsor.SOURCE_SETTINGS_LANGUAGE)
+                            },
+                            onFailure = { e ->
+                                langSubmitting = false
+                                langError = if ((e as? ApiException)?.statusCode == 429) errRate else errGeneric
+                            },
+                        )
+                    }
+                }
+            ) {
+                if (langSubmitting) {
+                    LoadingIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text(stringResource(Res.string.summary_language_sponsor))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(enabled = !langSubmitting, onClick = onDismiss) {
+                Text(stringResource(Res.string.cancel))
+            }
+        }
     )
 }

@@ -57,8 +57,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import trendingai.shared.generated.resources.GitHub_Invertocat_Black
-import trendingai.shared.generated.resources.GitHub_Invertocat_White
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.hackernews_title
@@ -79,7 +77,9 @@ import trendingai.shared.generated.resources.profile_title
 import trendingai.shared.generated.resources.sign_in
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
@@ -140,8 +140,8 @@ fun HomeScreen(
 
     // 预热聊天模型目录：让选择器 chip 在用户首次进入 chat 前就绪，避免冷首拉导致 chip 迟迟不出现。
     LaunchedEffect(Unit) {
-        if (whl.trending.ai.chat.globalChatScreen != null) {
-            runCatching { whl.trending.ai.data.repository.ChatModelsProvider.get() }
+        if (globalChatScreen != null) {
+            ChatModelsProvider.warmUp(this)
         }
     }
 
@@ -212,7 +212,7 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            if (whl.trending.ai.chat.globalChatScreen != null) {
+            if (globalChatScreen != null) {
                 FloatingActionButton(onClick = onNavigateToChat) {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
@@ -326,7 +326,6 @@ private fun TrendingTopBar(
     userAvatarUrl: String?,
     onProfileClick: () -> Unit,
 ) {
-    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val periodLabel = when (selectedPeriod) {
         "daily" -> stringResource(Res.string.period_daily)
         "weekly" -> stringResource(Res.string.period_weekly)
@@ -374,10 +373,7 @@ private fun TrendingTopBar(
         navigationIcon = {
             Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Icon(
-                    painter = painterResource(
-                        if (isDarkTheme) Res.drawable.GitHub_Invertocat_White
-                        else Res.drawable.GitHub_Invertocat_Black
-                    ),
+                    painter = githubLogoPainter(),
                     contentDescription = "GitHub",
                     modifier = Modifier.size(24.dp)
                 )

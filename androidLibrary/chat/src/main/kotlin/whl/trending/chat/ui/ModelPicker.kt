@@ -72,7 +72,7 @@ internal fun ModelPicker(
                 // 语义与 chat_quota（LaunchedEffect(Unit) 每次挂载去重一次）不同——model_locked 是「每次看」，
                 // 对比 shown→clicked 漏斗时需按 source 分开看，勿直接横比。
                 if (hasLocked) {
-                    trackEvent("pro_upsell_shown", mapOf(UPSELL_SOURCE_KEY to SOURCE_MODEL_LOCKED))
+                    ProSponsor.trackUpsellShown(ProSponsor.SOURCE_MODEL_LOCKED)
                 }
             },
             label = { Text(current.name) },
@@ -98,13 +98,12 @@ internal fun ModelPicker(
                     onClick = {
                         expanded = false
                         if (locked) {
-                            trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_MODEL_LOCKED))
                             Toast.makeText(
                                 context,
                                 context.getString(R.string.chat_model_pro_locked, model.name),
                                 Toast.LENGTH_SHORT,
                             ).show()
-                            ProSponsor.openSponsorPage()
+                            ProSponsor.openSponsorPage(ProSponsor.SOURCE_MODEL_LOCKED)
                         } else {
                             globalSettingsManager.setSelectedChatModel(model.id)
                         }
