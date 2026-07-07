@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -33,7 +32,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.Constants
+import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.TrendingRepository
@@ -54,7 +53,6 @@ internal fun QuotaLimitCard(
     onRetry: () -> Unit,
 ) {
     val authState by globalAuthManager.authState.collectAsState()
-    val uriHandler = LocalUriHandler.current
     val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
     var showWaitlistDialog by remember { mutableStateOf(false) }
@@ -77,7 +75,7 @@ internal fun QuotaLimitCard(
                 QuotaText(R.string.chat_pro_upsell_message)
                 Button(onClick = {
                     trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
-                    uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
+                    ProSponsor.openSponsorPage()
                 }) {
                     Text(stringResource(R.string.chat_pro_cta))
                 }

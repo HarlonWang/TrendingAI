@@ -10,6 +10,7 @@ import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.Constants
+import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
@@ -311,7 +312,7 @@ fun SettingsScreen(
                                     langSubmitting = false
                                     showLangCaptureDialog = false
                                     trackEvent("settings_summary_language_sponsor", mapOf("language" to lang))
-                                    uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
+                                    ProSponsor.openSponsorPage()
                                 },
                                 onFailure = { e ->
                                     langSubmitting = false
@@ -351,7 +352,7 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .clickable {
                                 trackEvent("settings_donate_github")
-                                uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
+                                ProSponsor.openSponsorPage()
                             }
                             .padding(vertical = 12.dp)
                     ) {

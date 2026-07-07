@@ -21,9 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.core.Constants
+import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelOption
@@ -44,7 +43,6 @@ internal fun ModelPicker(
     if (models.size <= 1) return
 
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
     val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.getIsProSync())
     val selectedId by globalSettingsManager.selectedChatModel
         .collectAsState(initial = globalSettingsManager.getSelectedChatModelSync())
@@ -105,7 +103,7 @@ internal fun ModelPicker(
                                 context.getString(R.string.chat_model_pro_locked, model.name),
                                 Toast.LENGTH_SHORT,
                             ).show()
-                            uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
+                            ProSponsor.openSponsorPage()
                         } else {
                             globalSettingsManager.setSelectedChatModel(model.id)
                         }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.App
+import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
@@ -80,16 +81,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 回到前台时对账 Pro：仅「已登录且当前非 Pro」才查——正好覆盖「刚在浏览器完成赞助、返回 app」的路径，
-     * 让权益即时生效，不等 webhook。已 Pro / 未登录直接跳过，避免每次 resume 都打后端。
+     * 回到前台时对账 Pro：仅「已登录、非 Pro、且处于 ProSponsor 对账窗口内（刚打开过赞助页）」才查，
+     * 让「浏览器完成赞助、返回 app」即时生效，不等 webhook。窗口外零请求——服务端
+     * pro-refresh 每次都消耗 GitHub PAT 配额，不能拿 resume 当轮询点。
      */
     override fun onResume() {
         super.onResume()
         val loggedIn = whl.trending.ai.auth.globalAuthManager.authState.value is whl.trending.ai.auth.AuthState.LoggedIn
-        if (loggedIn && !globalSettingsManager.getIsProSync()) {
+        if (loggedIn && !globalSettingsManager.getIsProSync() && ProSponsor.shouldReconcile()) {
             lifecycleScope.launch {
                 val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
-                whl.trending.ai.data.repository.UserRepository().refreshPro(token)
+                if (whl.trending.ai.data.repository.UserRepository().refreshPro(token) == true) {
+                    ProSponsor.markReconciled()
+                }
             }
         }
     }
