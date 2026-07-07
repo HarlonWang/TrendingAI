@@ -30,6 +30,18 @@ object ChatErrors {
         return ChatError(category, code = code, httpStatus = status, detail = bodyError, tier = tier)
     }
 
+    /**
+     * 已登录却拿到匿名档的 429 → 标记 [ChatError.authDegraded]：token 缺失（刷新失败）或被服务端
+     * 拒绝后静默降级，重发大概率还是匿名档。仅在「发请求时自认已登录 && 响应 tier=anonymous」时标记；
+     * 匿名触顶后才登录的正常路径（发请求时未登录）不受影响。
+     */
+    fun markAuthDegraded(error: ChatError, sentAsLoggedIn: Boolean): ChatError =
+        if (sentAsLoggedIn && error.tier == ChatError.TIER_ANONYMOUS) {
+            error.copy(authDegraded = true)
+        } else {
+            error
+        }
+
     /** 传输/未知异常 → 分类。SocketTimeout 先于 IOException 判断（前者是后者子类）。 */
     fun forThrowable(t: Throwable): ChatError {
         val category = when (t) {

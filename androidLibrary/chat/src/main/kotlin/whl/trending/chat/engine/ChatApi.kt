@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.Locale
+import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.data.local.AppLanguage
@@ -94,6 +95,8 @@ class ChatApi(
 
     override suspend fun send(history: List<ChatMessage>, context: ChatContext?): String {
         try {
+            // 发送时的登录自认知：与 429 的 tier=anonymous 对照可识别「token 缺失/被拒被静默降级」
+            val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
             val response: HttpResponse = client.post("$baseUrl/chat") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
                 // 已登录则带 token 走登录档配额（每日 10 条）；token 无效时服务端静默降级匿名档
@@ -126,7 +129,10 @@ class ChatApi(
             val parsed = raw?.let { runCatching { json.decodeFromString<ErrorResponse>(it) }.getOrNull() }
             val bodyError = parsed?.error ?: raw
             throw ChatException(
-                ChatErrors.forStatus(response.status.value, parsed?.code, bodyError, parsed?.tier),
+                ChatErrors.markAuthDegraded(
+                    ChatErrors.forStatus(response.status.value, parsed?.code, bodyError, parsed?.tier),
+                    sentAsLoggedIn,
+                ),
             )
         } catch (e: ChatException) {
             logFailure(e.error)
