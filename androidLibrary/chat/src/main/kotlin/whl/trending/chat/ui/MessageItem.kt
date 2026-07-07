@@ -147,6 +147,7 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
 
 /** 选具体文案：优先服务端 [ChatError.code]，未知则回落到 [ChatError.category]。 */
 private fun errorMessageRes(error: ChatError): Int = when (error.code) {
+    "auth_invalid" -> R.string.chat_error_auth_invalid
     "content_too_long" -> R.string.chat_error_content_too_long
     "quota_global" -> R.string.chat_error_quota_global
     ChatError.CODE_QUOTA_DEVICE -> R.string.chat_quota_exceeded

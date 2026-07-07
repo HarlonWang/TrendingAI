@@ -29,6 +29,7 @@
     <string name="chat_model_pro_locked">%1$s needs Pro. Unlock for $2/mo.</string>
     <string name="chat_quota_unlocked">Unlocked 10 chats a day — resend to continue.</string>
     <string name="chat_quota_auth_degraded">Signed in, but this request was treated as signed out — check your network and retry, or sign out and sign in again.</string>
+    <string name="chat_error_auth_invalid">Your session has expired — sign out and sign in again to continue.</string>
     <string name="chat_waitlist_title">Notify me at launch</string>
     <string name="chat_waitlist_message">Leave your email and we\'ll notify you when higher quotas launch.</string>
     <string name="chat_waitlist_newsletter_optin">Also subscribe to the daily picks newsletter (unsubscribe anytime)</string>
