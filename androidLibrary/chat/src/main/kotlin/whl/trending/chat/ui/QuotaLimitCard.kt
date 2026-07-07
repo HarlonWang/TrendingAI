@@ -1,8 +1,5 @@
 package whl.trending.chat.ui
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -56,7 +54,7 @@ internal fun QuotaLimitCard(
     onRetry: () -> Unit,
 ) {
     val authState by globalAuthManager.authState.collectAsState()
-    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
     var showWaitlistDialog by remember { mutableStateOf(false) }
@@ -79,7 +77,7 @@ internal fun QuotaLimitCard(
                 QuotaText(R.string.chat_pro_upsell_message)
                 Button(onClick = {
                     trackEvent("pro_upsell_clicked", mapOf(UPSELL_SOURCE_KEY to SOURCE_CHAT_QUOTA))
-                    openUrl(context, Constants.GITHUB_SPONSORS_URL)
+                    uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
                 }) {
                     Text(stringResource(R.string.chat_pro_cta))
                 }
@@ -219,15 +217,6 @@ internal const val UPSELL_SOURCE_KEY = "source"
 /** 付费漏斗来源：区分「配额触顶」入口与「模型锁定」入口 */
 internal const val SOURCE_CHAT_QUOTA = "chat_quota"
 internal const val SOURCE_MODEL_LOCKED = "model_locked"
-
-/** 用系统浏览器打开外链（Sponsors 页）。失败静默——不阻塞。 */
-internal fun openUrl(context: Context, url: String) {
-    runCatching {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-    }
-}
 
 // 与服务端 subscribe.js 的 isValidEmail 同构；服务端仍做完整校验，这里只挡明显无效输入
 private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")

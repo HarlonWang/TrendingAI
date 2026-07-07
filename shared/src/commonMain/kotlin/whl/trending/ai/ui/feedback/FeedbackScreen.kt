@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.feedback
 
 import whl.trending.ai.core.Constants
-import whl.trending.ai.core.platform.openUrl
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -61,6 +61,7 @@ fun FeedbackScreen(
     viewModel: FeedbackViewModel = viewModel { FeedbackViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val uriHandler = LocalUriHandler.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val successMsg = stringResource(Res.string.feedback_success)
@@ -155,7 +156,7 @@ fun FeedbackScreen(
             Spacer(Modifier.height(16.dp))
 
             TextButton(
-                onClick = { openUrl(Constants.FEEDBACK_URL, Constants.GITHUB_APP_PACKAGE) },
+                onClick = { uriHandler.openUri(Constants.FEEDBACK_URL) },
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(stringResource(Res.string.feedback_github_issues))

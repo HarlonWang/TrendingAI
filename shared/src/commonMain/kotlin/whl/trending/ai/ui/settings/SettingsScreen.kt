@@ -7,7 +7,6 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.getAppVersion
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.Constants
@@ -82,6 +81,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalUriHandler
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -164,6 +164,7 @@ fun SettingsScreen(
     onNavigateToWebPage: (url: String, title: String) -> Unit = { _, _ -> }
 ) {
     val isIos = isIosPlatform()
+    val uriHandler = LocalUriHandler.current
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val seedColor by globalSettingsManager.seedColor.collectAsState(DEFAULT_SEED_ARGB)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
@@ -310,7 +311,7 @@ fun SettingsScreen(
                                     langSubmitting = false
                                     showLangCaptureDialog = false
                                     trackEvent("settings_summary_language_sponsor", mapOf("language" to lang))
-                                    openUrl(Constants.GITHUB_SPONSORS_URL)
+                                    uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
                                 },
                                 onFailure = { e ->
                                     langSubmitting = false
@@ -350,7 +351,7 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .clickable {
                                 trackEvent("settings_donate_github")
-                                openUrl(Constants.GITHUB_SPONSORS_URL)
+                                uriHandler.openUri(Constants.GITHUB_SPONSORS_URL)
                             }
                             .padding(vertical = 12.dp)
                     ) {
@@ -655,7 +656,7 @@ fun SettingsScreen(
                         modifier = Modifier.clickable(enabled = !isChecking) {
                             trackEvent("settings_check_update")
                             if (isIos) {
-                                openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                                uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
                             } else {
                                 globalUpdateChecker.manualCheck()
                             }
@@ -669,7 +670,7 @@ fun SettingsScreen(
                     supportingContent = { Text(stringResource(Res.string.about_us_desc)) },
                     leadingContent = { Icon(Icons.Default.Info, null) },
                     modifier = Modifier.clickable {
-                        openUrl(Constants.OFFICIAL_WEBSITE_URL)
+                        uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
                     }
                 )
             }

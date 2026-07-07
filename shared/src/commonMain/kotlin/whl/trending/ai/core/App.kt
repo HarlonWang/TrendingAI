@@ -14,16 +14,18 @@ import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.platform.openInCustomTab
-import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
@@ -59,20 +61,26 @@ fun App() {
     // 用户在设置中关闭、或设备无浏览器可承接时，兜底进应用内 WebView。
     // GitHub README 阅读走 RepoDetail 路由，不经此处。
     val openExternalUrl: (url: String, title: String) -> Unit = { url, title ->
-        val useCustomTab = globalSettingsManager.getOpenLinksInCustomTabSync()
-        if (!useCustomTab || !openInCustomTab(url)) {
-            backStack.add(WebPage(url, title))
+        openUrl(url, onInAppFallback = { backStack.add(WebPage(url, title)) })
+    }
+
+    // 覆盖 Compose 默认 UriHandler，让所有 openUri 调用与 Markdown 链接都收口到统一出口，
+    // 无需逐处改造（Profile 列表、聊天回复链接等直接受益）。WebView 兜底无标题位，传空。
+    val customUriHandler = remember(backStack) {
+        object : UriHandler {
+            override fun openUri(uri: String) = openExternalUrl(uri, "")
         }
     }
 
     TrendingTheme {
-        WhatsNewHost()
-        SignInHintHost()
-        NavDisplay(
-            backStack = backStack,
-            onBack = { backStack.safePop() },
-            entryProvider = { key ->
-                when (key) {
+        CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
+            WhatsNewHost()
+            SignInHintHost()
+            NavDisplay(
+                backStack = backStack,
+                onBack = { backStack.safePop() },
+                entryProvider = { key ->
+                    when (key) {
                     is Home -> NavEntry(key) {
                         HomeScreen(
                             onNavigateToSettings = {
@@ -205,8 +213,9 @@ fun App() {
                     else -> {
                         error("Unknown route: $key")
                     }
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 }
