@@ -22,10 +22,10 @@
     <string name="chat_quota_exceeded">今日免费额度已用完，明天自动恢复。</string>
     <string name="chat_quota_login_cta">登录解锁每日 10 条</string>
     <string name="chat_quota_waitlist_cta">想要更多额度？上线时通知我</string>
-    <string name="chat_pro_upsell_message">每天 10 条不够？Pro 提供更宽裕的每日额度，还能选用更强、更新的模型。</string>
+    <string name="chat_pro_upsell_message">每天 10 条不够？通过 GitHub 赞助解锁 Pro：更宽裕的每日额度，还能选用更强、更新的模型。</string>
     <string name="chat_quota_pro_exceeded">今天聊得有点多，稍后再来～</string>
     <string name="chat_pro_cta">解锁 Pro · $2/月</string>
-    <string name="chat_pro_activation_hint">赞助后 Pro 通常几分钟内自动生效；如未解锁，我们会人工核对，可能稍有延迟——稍后回来重试即可。</string>
+    <string name="chat_pro_activation_hint">GitHub 赞助后 Pro 通常几分钟内自动生效；如未解锁，我们会人工核对，可能稍有延迟——稍后回来重试即可。</string>
     <string name="chat_model_unlock_title">解锁更强模型</string>
     <string name="chat_model_unlock_message">「%1$s」是 Pro 专属模型。\n\nTrendingAI 的 AI 能力目前由我个人自费提供，默认模型对所有人免费开放。如果你希望用上更强的模型，可以通过 GitHub 赞助（Sponsors，$2/月）支持——赞助后用你的 GitHub 账号登录即可切换全部模型，并拥有更宽裕的每日额度。</string>
     <string name="chat_model_unlock_confirm">去赞助</string>
