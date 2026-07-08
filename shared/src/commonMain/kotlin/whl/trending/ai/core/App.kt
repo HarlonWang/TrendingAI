@@ -13,6 +13,9 @@ import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
 
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +82,20 @@ fun App() {
             NavDisplay(
                 backStack = backStack,
                 onBack = { backStack.safePop() },
+                // Material 水平共享轴转场（Nav3 官方推荐写法，全局统一）：
+                // 前进——新页从右滑入、旧页向左滑出；返回及预测式返回手势——反向。
+                transitionSpec = {
+                    slideInHorizontally(initialOffsetX = { it }) togetherWith
+                        slideOutHorizontally(targetOffsetX = { -it })
+                },
+                popTransitionSpec = {
+                    slideInHorizontally(initialOffsetX = { -it }) togetherWith
+                        slideOutHorizontally(targetOffsetX = { it })
+                },
+                predictivePopTransitionSpec = {
+                    slideInHorizontally(initialOffsetX = { -it }) togetherWith
+                        slideOutHorizontally(targetOffsetX = { it })
+                },
                 entryProvider = { key ->
                     when (key) {
                     is Home -> NavEntry(key) {
