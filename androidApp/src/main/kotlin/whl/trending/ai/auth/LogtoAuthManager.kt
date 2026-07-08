@@ -1,6 +1,7 @@
 package whl.trending.ai.auth
 
 import android.app.Activity
+import android.os.SystemClock
 import io.logto.sdk.android.LogtoClient
 import io.logto.sdk.android.exception.LogtoException
 import io.logto.sdk.android.type.LogtoConfig
@@ -51,15 +52,21 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override fun signIn() {
         val activity = activityRef.get() ?: return
         _authState.value = AuthState.LoggingIn
+        // 登录耗时起点：单调时钟，不受系统时间/时区调整影响；用局部变量随闭包捕获，
+        // 配置变更重建 Activity 后回调即便落在旧实例也仍读到本次登录的起点（见 SignInFailureBus）。
+        val signInStartedAt = SystemClock.elapsedRealtime()
         logtoClient.signIn(activity, REDIRECT_URI) { logtoException ->
+            // 从登录进入到本次回调的耗时：成功=登录总时长，失败=到失败的时长（取消即用户在授权页停留时长）。
+            // 需结合事件/reason 解读：config/no_browser 等快失败耗时接近 0 属正常。
+            val durationMs = SystemClock.elapsedRealtime() - signInStartedAt
             if (logtoException == null && logtoClient.isAuthenticated) {
                 _authState.value = AuthState.LoggedIn
-                trackEvent("sign_in_success")
+                trackEvent("sign_in_success", mapOf("duration_ms" to durationMs))
             } else {
                 _authState.value = AuthState.LoggedOut
                 if (logtoException != null) {
                     val (reason, props) = analyzeSignInFailure(logtoException)
-                    trackEvent("sign_in_failed", props)
+                    trackEvent("sign_in_failed", props + ("duration_ms" to durationMs))
                     // 走进程级总线而非实例字段：配置变更重建 Activity 后回调可能落在旧实例上（见 SignInFailureBus）
                     SignInFailureBus.emit(reason)
                 }
