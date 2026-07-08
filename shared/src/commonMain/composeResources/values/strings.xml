@@ -70,7 +70,7 @@
     <string name="select_date">Select Date</string>
     <string name="action_help">Help</string>
     <string name="update_info_title">Update Schedule</string>
-    <string name="update_info_content">GitHub Trending updates twice daily (approx. every 12 hours) to keep you informed about the latest trends.</string>
+    <string name="update_info_content">Data comes from GitHub\'s official Trending page and stays in sync with it.\n\nThe list updates twice daily (approx. every 12 hours) to keep you informed about the latest trends.</string>
     <string name="history_info_title">History Snapshot</string>
     <string name="history_info_content">The system records data snapshots for both morning (AM) and afternoon (PM) sessions daily, allowing you to trace project growth over time.</string>
     <string name="feedback">Feedback</string>
