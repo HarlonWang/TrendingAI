@@ -1,5 +1,13 @@
 {
-  "version": "0.0.0",
-  "zh": [],
-  "en": []
+  "version": "0.19.0",
+  "zh": [
+    "聊天额度用尽后可登录解锁每日 10 条",
+    "通过 GitHub Sponsors 赞助，解锁进阶体验：更宽裕的每日额度和更强模型",
+    "优化登录体验与兼容性"
+  ],
+  "en": [
+    "Sign in to unlock 10 chats a day once your free quota runs out",
+    "Support us via GitHub Sponsors to unlock more: a more generous daily quota and stronger models",
+    "Improved sign-in experience and compatibility"
+  ]
 }
