@@ -45,6 +45,12 @@ jobs:
 
       # 构建前生成面向用户的双语 changelog，覆盖仓库里的占位文件后随 APK 打包，
       # App 升级后首启据此弹「新版本更新说明」。生成失败不阻塞发布（保留占位文件 = 该版本不弹窗）。
+      #
+      # 「自动 / 手动」开关（内容驱动，无额外配置）：
+      #   - 仓库里 whatsnew.json 的 version 恰等于本次 tag 且 zh/en 至少一个非空
+      #     → 手动模式：直接采用本地已写好的内容，跳过 AI。
+      #   - 否则 → 自动模式：调 AI 用 commit 记录生成并覆盖。
+      #     （若检测到本地有内容但 version 与 tag 不符，会打警告后仍由 AI 覆盖，避免误发。）
       - name: Generate What's New Changelog
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -68,6 +74,22 @@ jobs:
 
           with open("commit_logs.txt", "r") as f:
               commits = f.read().strip()
+
+          # 开关判定：仓库里已有「本版」人工内容则直接采用，跳过 AI
+          existing = {}
+          try:
+              with open(target, "r") as f:
+                  existing = json.load(f)
+          except Exception as e:
+              print(f"⚠️ Failed to read existing whatsnew.json: {e}")
+          existing_zh = [x for x in existing.get("zh", []) if isinstance(x, str) and x.strip()]
+          existing_en = [x for x in existing.get("en", []) if isinstance(x, str) and x.strip()]
+          has_content = bool(existing_zh or existing_en)
+          if version and existing.get("version") == version and has_content:
+              print(f"✅ 使用本地提供的更新说明，跳过 AI: zh={len(existing_zh)} en={len(existing_en)}")
+              exit(0)
+          if has_content and existing.get("version") != version:
+              print(f"⚠️ 检测到本地 whatsnew.json 有内容但版本({existing.get('version')})与本次 tag({version})不符，将由 AI 覆盖生成")
 
           api_key = os.environ.get("OPENAI_API_KEY", "")
           if not commits or not api_key or not version:
