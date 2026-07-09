@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import java.lang.ref.WeakReference
 
@@ -52,6 +53,13 @@ actual fun openInCustomTab(url: String): Boolean {
     return try {
         val customTabsIntent = CustomTabsIntent.Builder().build()
         customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // GitHub Sponsors 页依赖 github.com 的浏览器登录态，但 github.com 已被本机 GitHub 客户端
+        // 的 verified App Links 认领：无包名的 Custom Tab intent（底层 ACTION_VIEW）会被它优先截走，
+        // 而它打不开 Sponsors 页又会再弹一层 chooser。仅对赞助页锁定 Custom Tabs 提供方（默认浏览器）
+        // 包名绕开，确保稳定进浏览器；其余外链（含普通 github.com 仓库页）不受影响，保持系统默认解析。
+        if ("github.com/sponsors" in url) {
+            CustomTabsClient.getPackageName(context, null)?.let { customTabsIntent.intent.setPackage(it) }
+        }
         customTabsIntent.launchUrl(context, Uri.parse(url))
         true
     } catch (e: ActivityNotFoundException) {
