@@ -26,6 +26,10 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinxJson)
     implementation(libs.kotlinx.serialization.json)
 
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.coil.compose)
+
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)

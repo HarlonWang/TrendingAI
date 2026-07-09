@@ -43,4 +43,16 @@
     <string name="chat_waitlist_error">提交失败，请稍后重试。</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
+    <string name="chat_attach">添加图片</string>
+    <string name="chat_attach_camera">拍照</string>
+    <string name="chat_attach_album">从相册选择</string>
+    <string name="chat_image_login_title">登录后可发送图片</string>
+    <string name="chat_image_login_message">图片理解功能对登录用户开放，使用 GitHub 登录即可发送照片和图片。</string>
+    <string name="chat_image_login_confirm">登录</string>
+    <string name="chat_image_login_dismiss">暂不</string>
+    <string name="chat_image_processing_failed">图片处理失败，请换一张试试。</string>
+    <string name="chat_image_remove">移除图片</string>
+    <string name="chat_user_image">图片</string>
+    <string name="chat_image_viewer_close">关闭</string>
+    <string name="chat_error_images_require_login">发送图片需要先登录。</string>
 </resources>

@@ -19,6 +19,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import java.io.File
 import java.util.Locale
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
@@ -52,8 +54,9 @@ class ChatApi(
         val shared: ChatEngine by lazy { ChatApi() }
     }
 
+    /** content 两态：纯文本为 JSON string；末条带图 user 消息为 OpenAI 多模态 parts 数组 */
     @Serializable
-    private data class WireMessage(val role: String, val content: String)
+    private data class WireMessage(val role: String, val content: JsonElement)
 
     @Serializable
     private data class ChatRequest(
@@ -99,6 +102,8 @@ class ChatApi(
         try {
             // 发送时的登录自认知：与 429 的 tier=anonymous 对照可识别「token 缺失/被拒被静默降级」
             val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
+            val lang = resolveLang()
+            val imagePlaceholder = if (lang == "zh") "[图片]" else "[image]"
             val response: HttpResponse = client.post("$baseUrl/chat") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
                 // 已登录则带 token 走登录档配额（每日 10 条）；token 无效时服务端静默降级匿名档
@@ -106,13 +111,20 @@ class ChatApi(
                 contentType(ContentType.Application.Json)
                 setBody(
                     ChatRequest(
-                        messages = history.map {
+                        messages = history.mapIndexed { index, m ->
                             WireMessage(
-                                role = if (it.role == Role.USER) "user" else "assistant",
-                                content = it.content,
+                                role = if (m.role == Role.USER) "user" else "assistant",
+                                content = ChatWire.buildContent(
+                                    message = m,
+                                    isLast = index == history.lastIndex,
+                                    imagePlaceholder = imagePlaceholder,
+                                    readImageBytes = { path ->
+                                        runCatching { File(path).readBytes() }.getOrNull()
+                                    },
+                                ),
                             )
                         },
-                        lang = resolveLang(),
+                        lang = lang,
                         context = context?.let {
                             WireContext(it.title, it.summary, it.sourceUrl)
                         },
