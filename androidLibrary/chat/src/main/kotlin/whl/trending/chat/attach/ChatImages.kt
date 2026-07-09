@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import java.io.File
@@ -23,6 +24,7 @@ import kotlinx.coroutines.withContext
  */
 object ChatImages {
 
+    private const val TAG = "ChatImages"
     private const val MAX_EDGE = 1568
     private const val JPEG_QUALITY = 80
     private const val DIR = "chat_images"
@@ -39,9 +41,12 @@ object ChatImages {
         runCatching {
             val resolver = context.contentResolver
 
+            // 注意：inJustDecodeBounds 模式下 decodeStream 恒返回 null（只回填 bounds），
+            // 不能用它的返回值判空，须以 bounds 尺寸判断解码是否成功
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-                ?: return@runCatching null
+            val boundsStream = resolver.openInputStream(uri) ?: return@runCatching null
+            boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
             var sampleSize = 1
             while (maxOf(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= MAX_EDGE) {
                 sampleSize *= 2
@@ -68,7 +73,10 @@ object ChatImages {
             if (scaled !== upright) upright.recycle()
             scaled.recycle()
             out.absolutePath
-        }.getOrNull()
+        }
+            .onFailure { Log.w(TAG, "ingest failed: uri=$uri", it) }
+            .getOrNull()
+            .also { if (it == null) Log.w(TAG, "ingest returned null: uri=$uri") }
     }
 
     /** 为系统相机 TakePicture 生成输出目标：私有缓存文件 + 专属 FileProvider Uri。 */
