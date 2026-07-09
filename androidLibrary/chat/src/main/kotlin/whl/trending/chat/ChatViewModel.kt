@@ -52,22 +52,45 @@ class ChatViewModel(
         _uiState.update { it.copy(input = text) }
     }
 
+    /** 追加一张已压缩好的待发图片（本地缓存路径），超过单条上限时忽略。 */
+    fun addPendingImage(path: String) {
+        _uiState.update {
+            if (it.pendingImages.size >= MAX_IMAGES_PER_MESSAGE || path in it.pendingImages) it
+            else it.copy(pendingImages = it.pendingImages + path)
+        }
+    }
+
+    fun removePendingImage(path: String) {
+        _uiState.update { it.copy(pendingImages = it.pendingImages - path) }
+    }
+
     fun send() {
         val state = _uiState.value
         if (!state.canSend) return
         val text = state.input.trim()
-        _uiState.update { it.copy(input = "") }
-        sendText(text)
+        val images = state.pendingImages
+        _uiState.update { it.copy(input = "", pendingImages = emptyList()) }
+        sendMessage(text, images)
     }
 
     /** 发送一段指定文本（如快捷按钮的预设问题），不依赖输入框；发送中或空白则忽略。 */
-    fun sendText(text: String) {
-        if (_uiState.value.isSending || text.isBlank()) return
-        val userMessage = ChatMessage(nextId(), Role.USER, text)
+    fun sendText(text: String) = sendMessage(text, emptyList())
+
+    private fun sendMessage(text: String, images: List<String>) {
+        if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
+        if (images.isNotEmpty()) {
+            trackEvent("chat_send_with_images", mapOf("image_count" to images.size.toString()))
+        }
+        val userMessage = ChatMessage(nextId(), Role.USER, text, images = images)
         _uiState.update {
             it.copy(messages = it.messages + userMessage, isSending = true)
         }
         request()
+    }
+
+    companion object {
+        /** 单条消息图片数上限，与服务端及 [whl.trending.chat.engine.ChatWire] 对齐 */
+        const val MAX_IMAGES_PER_MESSAGE = 4
     }
 
     /** 对可重试的失败消息重试：移除该错误条，按当前历史重新请求。

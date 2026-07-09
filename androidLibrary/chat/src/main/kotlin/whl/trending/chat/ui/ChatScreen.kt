@@ -119,8 +119,11 @@ fun ChatScreen(
                 ChatInputBar(
                     input = state.input,
                     canSend = state.canSend,
+                    pendingImages = state.pendingImages,
                     onInputChange = viewModel::updateInput,
                     onSend = viewModel::send,
+                    onAddImage = viewModel::addPendingImage,
+                    onRemoveImage = viewModel::removePendingImage,
                 )
             }
         },

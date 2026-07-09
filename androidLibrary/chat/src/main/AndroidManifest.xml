@@ -14,6 +14,17 @@
             android:label="Chat Demo"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            拍照（TakePicture）输出目标。用专属子类 ChatFileProvider（路径配置由构造器传入），
+            避免与宿主打包的其他库（如 kmp-webview）注册的 androidx FileProvider 在
+            manifest merger 里按类名撞车；authority 也带 .chat 命名空间双保险。
+        -->
+        <provider
+            android:name="whl.trending.chat.attach.ChatFileProvider"
+            android:authorities="${applicationId}.chat.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 
 </manifest>

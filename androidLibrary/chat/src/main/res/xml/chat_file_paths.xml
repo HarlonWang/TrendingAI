@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 聊天图片专用缓存目录：拍照输出与压缩产物都在这里，24h 自动清理 -->
+<paths>
+    <cache-path name="chat_images" path="chat_images/" />
+</paths>

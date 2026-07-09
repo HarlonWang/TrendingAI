@@ -43,4 +43,16 @@
     <string name="chat_waitlist_error">Submission failed. Please try again later.</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
+    <string name="chat_attach">Add image</string>
+    <string name="chat_attach_camera">Take photo</string>
+    <string name="chat_attach_album">Choose from album</string>
+    <string name="chat_image_login_title">Sign in to send images</string>
+    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in with GitHub to send photos and pictures.</string>
+    <string name="chat_image_login_confirm">Sign in</string>
+    <string name="chat_image_login_dismiss">Not now</string>
+    <string name="chat_image_processing_failed">Couldn\'t process the image. Please try another one.</string>
+    <string name="chat_image_remove">Remove image</string>
+    <string name="chat_user_image">Image</string>
+    <string name="chat_image_viewer_close">Close</string>
+    <string name="chat_error_images_require_login">Sign in to send images.</string>
 </resources>

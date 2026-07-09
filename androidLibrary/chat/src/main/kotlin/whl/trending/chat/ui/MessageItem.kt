@@ -3,11 +3,13 @@ package whl.trending.chat.ui
 import android.content.ClipData
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -23,15 +25,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import java.io.File
 import kotlinx.coroutines.launch
 import whl.trending.ai.core.platform.shareText
 import whl.trending.chat.R
@@ -61,22 +71,73 @@ fun MessageItem(
 
 @Composable
 private fun UserMessage(message: ChatMessage, modifier: Modifier) {
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.widthIn(max = 300.dp),
-        ) {
-            SelectionContainer {
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                )
+    var viewerPath by remember { mutableStateOf<String?>(null) }
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (message.images.isNotEmpty()) {
+            UserImages(images = message.images, onImageClick = { viewerPath = it })
+        }
+        if (message.content.isNotBlank()) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.widthIn(max = 300.dp),
+            ) {
+                SelectionContainer {
+                    Text(
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    )
+                }
             }
         }
     }
+    viewerPath?.let { path ->
+        ImageViewerDialog(path = path, onDismiss = { viewerPath = null })
+    }
+}
+
+/** 用户消息的图片区：单张放大展示，多张两列网格；点击进全屏查看器。 */
+@Composable
+private fun UserImages(images: List<String>, onImageClick: (String) -> Unit) {
+    if (images.size == 1) {
+        UserImageThumb(
+            path = images[0],
+            onClick = { onImageClick(images[0]) },
+            modifier = Modifier.widthIn(max = 220.dp).heightIn(min = 120.dp, max = 280.dp),
+        )
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.End) {
+        images.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { path ->
+                    UserImageThumb(
+                        path = path,
+                        onClick = { onImageClick(path) },
+                        modifier = Modifier.size(140.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UserImageThumb(path: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AsyncImage(
+        model = File(path),
+        contentDescription = stringResource(R.string.chat_user_image),
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+    )
 }
 
 @Composable
@@ -148,6 +209,7 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
 /** 选具体文案：优先服务端 [ChatError.code]，未知则回落到 [ChatError.category]。 */
 private fun errorMessageRes(error: ChatError): Int = when (error.code) {
     "auth_invalid" -> R.string.chat_error_auth_invalid
+    "images_require_login" -> R.string.chat_error_images_require_login
     "content_too_long" -> R.string.chat_error_content_too_long
     "quota_global" -> R.string.chat_error_quota_global
     ChatError.CODE_QUOTA_DEVICE -> R.string.chat_quota_exceeded
