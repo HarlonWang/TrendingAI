@@ -42,21 +42,28 @@ import whl.trending.chat.R
 import whl.trending.chat.model.ChatError
 
 /**
- * 个人配额触顶卡片（`quota_device`），按档位分形态：
+ * 个人配额触顶卡片（`quota_device`）与详细解读登录闸卡片（`login_required`），按档位分形态：
  * - 匿名触顶：登录 CTA（转化点）+ waitlist 次按钮
  * - 匿名触顶后完成登录：提示已解锁，给重试按钮直接续聊
  * - 登录触顶：waitlist CTA（付费意愿温度计）
+ * - 解读登录闸（匿名点未缓存条目）：复用匿名触顶卡形态，文案换「生成解读需登录」口径；
+ *   登录成功后与触顶卡同样给重试按钮续上生成
  *
  * 全局熔断（`quota_global`）不走本卡片，仍是普通错误文案——语义上与个人额度承诺切开。
+ *
+ * @param isDetail 由解读消息触发（驱动 waitlist 埋点前缀 detail_summary_*）
  */
 @Composable
 internal fun QuotaLimitCard(
     error: ChatError,
     onRetry: () -> Unit,
+    isDetail: Boolean = false,
 ) {
     val authState by globalAuthManager.authState.collectAsState()
     val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
+    val isLoginGate = error.code == ChatError.CODE_LOGIN_REQUIRED
+    val waitlistEvent = if (isDetail) "detail_summary_waitlist_click" else "chat_quota_waitlist_click"
     var showWaitlistDialog by remember { mutableStateOf(false) }
 
     if (showWaitlistDialog) {
@@ -65,6 +72,36 @@ internal fun QuotaLimitCard(
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
+            isLoginGate -> {
+                when {
+                    // 发请求时自认已登录、却被按匿名档处理（Logto 故障降级）：如实提示登录态未生效，
+                    // 不给「已登录、重试即可」的死循环误导——authDegraded 就是为此而生，此分支必须消费它
+                    error.authDegraded -> {
+                        QuotaText(R.string.chat_quota_auth_degraded)
+                        TextButton(onClick = onRetry) {
+                            Text(stringResource(R.string.chat_retry))
+                        }
+                    }
+                    // 登录完成：与触顶卡的放行例外同构，点重试续上生成
+                    authState == AuthState.LoggedIn -> {
+                        QuotaText(R.string.chat_detail_login_unlocked)
+                        TextButton(onClick = onRetry) {
+                            Text(stringResource(R.string.chat_retry))
+                        }
+                    }
+                    else -> {
+                        QuotaText(R.string.chat_detail_login_message)
+                        if (globalAuthManager.isSupported) {
+                            Button(onClick = {
+                                trackEvent("detail_summary_login_click")
+                                globalAuthManager.signIn()
+                            }) {
+                                Text(stringResource(R.string.chat_quota_login_cta))
+                            }
+                        }
+                    }
+                }
+            }
             isProTier -> {
                 // Pro 触顶（极罕见）：不透数字的软着陆，无 CTA（已是 Pro，明日恢复）
                 QuotaText(R.string.chat_quota_pro_exceeded)
@@ -82,7 +119,7 @@ internal fun QuotaLimitCard(
                 }
                 // 次按钮：付不了国际卡的人 → waitlist（捕获支付摩擦样本）
                 TextButton(onClick = {
-                    trackEvent("chat_quota_waitlist_click", mapOf("tier" to ChatError.TIER_USER))
+                    trackEvent(waitlistEvent, mapOf("tier" to ChatError.TIER_USER))
                     showWaitlistDialog = true
                 }) {
                     Text(stringResource(R.string.chat_quota_waitlist_cta))
@@ -114,7 +151,7 @@ internal fun QuotaLimitCard(
                     }
                 }
                 TextButton(onClick = {
-                    trackEvent("chat_quota_waitlist_click", mapOf("tier" to ChatError.TIER_ANONYMOUS))
+                    trackEvent(waitlistEvent, mapOf("tier" to ChatError.TIER_ANONYMOUS))
                     showWaitlistDialog = true
                 }) {
                     Text(stringResource(R.string.chat_quota_waitlist_cta))

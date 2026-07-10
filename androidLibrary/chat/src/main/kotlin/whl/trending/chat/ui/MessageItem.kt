@@ -188,9 +188,13 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
                     )
                 }
             }
-        } else if (error.code == ChatError.CODE_QUOTA_DEVICE) {
-            // 个人配额触顶走专属卡片（登录 CTA / waitlist），全局熔断仍走普通错误文案
-            QuotaLimitCard(error = error, onRetry = onRetry)
+        } else if (error.code == ChatError.CODE_QUOTA_DEVICE || error.code == ChatError.CODE_LOGIN_REQUIRED) {
+            // 个人配额触顶 / 解读登录闸走专属卡片（登录 CTA / waitlist），全局熔断仍走普通错误文案
+            QuotaLimitCard(
+                error = error,
+                onRetry = onRetry,
+                isDetail = message.kind == whl.trending.chat.model.MessageKind.DETAIL_SUMMARY,
+            )
         } else {
             Text(
                 text = stringResource(errorMessageRes(error)),
@@ -208,6 +212,7 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
 
 /** 选具体文案：优先服务端 [ChatError.code]，未知则回落到 [ChatError.category]。 */
 private fun errorMessageRes(error: ChatError): Int = when (error.code) {
+    "readme_too_short" -> R.string.chat_error_readme_too_short
     "auth_invalid" -> R.string.chat_error_auth_invalid
     "images_require_login" -> R.string.chat_error_images_require_login
     "content_too_long" -> R.string.chat_error_content_too_long

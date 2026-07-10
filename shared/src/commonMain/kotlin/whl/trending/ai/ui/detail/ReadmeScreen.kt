@@ -190,7 +190,15 @@ fun ReadmeScreen(
                                 // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；
                                 // README 未加载完则为 null，退化为仅 title + url
                                 summary = summary,
-                                sourceUrl = repoUrl
+                                sourceUrl = repoUrl,
+                                // 「一键详细解读」入参：与服务端 contents 表 (source, external_id) 对齐
+                                source = "github",
+                                externalId = "$owner/$repo",
+                                // README 正文长度估计（HTML 去标签）；未加载完为 null → 解读 chip 不显示
+                                readmeLength = uiState.html
+                                    .takeIf { it.isNotBlank() }
+                                    ?.replace(Regex("<[^>]+>"), "")
+                                    ?.length,
                             )
                         )
                     }

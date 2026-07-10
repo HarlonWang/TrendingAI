@@ -1,22 +1,26 @@
 package whl.trending.chat.engine
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
-import io.ktor.client.request.post
+import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import android.util.Log
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -30,17 +34,19 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.resolveEffectiveChatModel
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.model.ChatError
+import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
 
 private const val TAG = "ChatApi"
 
 /**
- * 正式聊天引擎：POST 到 api.trendingai.cn，后端转 ChatGPT，返回整段 Markdown（非流式）。
+ * 正式聊天引擎：POST 到 api.trendingai.cn，后端转 ChatGPT，SSE 流式返回（`stream: true`）。
  *
  * - 透传 `X-Install-Id`（后端限流维度）
  * - 透传 `lang`（由 [AppLanguage] 解析，仅 zh 用中文，其余 en）
- * - 所有失败（HTTP 非 2xx / 传输异常）统一归类为 [ChatException]，由 [ChatErrors] 分类
+ * - chat 与 detail-summary 共用同一 SSE 解析路径（[ChatSse]），缓存命中一次性推完也走同一格式
+ * - 所有失败（HTTP 非 2xx / 传输异常 / 中途断流）统一归类为 [ChatException]，由 [ChatErrors] 分类
  */
 class ChatApi(
     private val baseUrl: String = "https://api.trendingai.cn/api",
@@ -52,25 +58,38 @@ class ChatApi(
          * 各会话线（keyed ChatViewModel）共用同一 engine，避免反复新建且从不关闭的泄漏。
          */
         val shared: ChatEngine by lazy { ChatApi() }
+
+        /** 流式请求总时长上限：生成 2500~4000 字解读可能远超普通请求，放到 5 分钟 */
+        private const val STREAM_REQUEST_TIMEOUT_MS = 300_000L
     }
 
     /** content 两态：纯文本为 JSON string；末条带图 user 消息为 OpenAI 多模态 parts 数组 */
     @Serializable
-    private data class WireMessage(val role: String, val content: JsonElement)
+    internal data class WireMessage(val role: String, val content: JsonElement)
 
+    /** internal 供 wire 序列化测试直接构造；stream 故意**不带默认值**——
+     *  encodeDefaults=false 下「值等于默认值的属性会被省略」，曾让 "stream":true 静默消失 */
     @Serializable
-    private data class ChatRequest(
+    internal data class ChatRequest(
         val messages: List<WireMessage>,
         val lang: String,
         val context: WireContext? = null,
         val model: String? = null,
+        val stream: Boolean,
     )
 
     @Serializable
-    private data class WireContext(
+    internal data class WireContext(
         val title: String,
         val summary: String? = null,
         val sourceUrl: String? = null,
+    )
+
+    @Serializable
+    private data class DetailSummaryRequest(
+        val source: String,
+        @SerialName("external_id") val externalId: String,
+        val lang: String,
     )
 
     @Serializable
@@ -90,86 +109,148 @@ class ChatApi(
             json(json)
         }
         install(HttpTimeout) {
-            // 非流式等待较久，放宽超时
             requestTimeoutMillis = 60_000
             connectTimeoutMillis = 15_000
-            // OkHttp 引擎默认 readTimeout=10s，会在等响应头阶段掐断慢的非流式回复，必须显式放宽
+            // OkHttp 引擎默认 readTimeout=10s；流式场景它约束的是「相邻数据块间隔」，放宽到 60s
             socketTimeoutMillis = 60_000
         }
     }
 
-    override suspend fun send(history: List<ChatMessage>, context: ChatContext?): String {
+    override suspend fun send(
+        history: List<ChatMessage>,
+        context: ChatContext?,
+        onDelta: (String) -> Unit,
+    ): String {
+        val lang = resolveLang()
+        val imagePlaceholder = if (lang == "zh") "[图片]" else "[image]"
+        return executeStreaming(path = "chat", onDelta = onDelta) {
+            setBody(
+                ChatRequest(
+                    messages = history.mapIndexed { index, m ->
+                        WireMessage(
+                            role = if (m.role == Role.USER) "user" else "assistant",
+                            content = ChatWire.buildContent(
+                                message = m,
+                                isLast = index == history.lastIndex,
+                                imagePlaceholder = imagePlaceholder,
+                                readImageBytes = { path ->
+                                    runCatching { File(path).readBytes() }.getOrNull()
+                                },
+                            ),
+                        )
+                    },
+                    lang = lang,
+                    context = context?.let {
+                        WireContext(it.title, it.summary, it.sourceUrl)
+                    },
+                    // 发送前按目录缓存解析实际生效模型（与选择器同一套判定），避免选择器未挂载时
+                    // 把过期的 Pro 专属选择原样发出；目录未拉到则透传，服务端仍按 tier 强制兜底
+                    model = resolveEffectiveChatModel(
+                        ChatModelsProvider.cachedOrEmpty(),
+                        globalSettingsManager.currentSelectedChatModel(),
+                        globalSettingsManager.currentIsPro(),
+                    ),
+                    stream = true,
+                ),
+            )
+        }.content
+    }
+
+    override suspend fun sendDetailSummary(
+        context: ChatContext,
+        onDelta: (String) -> Unit,
+    ): DetailSummaryResult {
+        val source = requireNotNull(context.source) { "detail summary requires context.source" }
+        val externalId = requireNotNull(context.externalId) { "detail summary requires context.externalId" }
+        val lang = resolveLang()
+        return executeStreaming(path = "detail-summary", onDelta = onDelta) {
+            setBody(DetailSummaryRequest(source = source, externalId = externalId, lang = lang))
+        }
+    }
+
+    /**
+     * 共用的流式执行路径：POST → 非 2xx 走 JSON 错误分类；2xx SSE 逐行解析 delta/done；
+     * 2xx 非 SSE（服务端降级非流式）整段作为一个 delta 兜底。
+     * 流在 done 之前结束视为中途断流 → SERVER 可重试，已渲染部分由调用方丢弃。
+     */
+    private suspend fun executeStreaming(
+        path: String,
+        onDelta: (String) -> Unit,
+        configure: HttpRequestBuilder.() -> Unit,
+    ): DetailSummaryResult {
         try {
             // 发送时的登录自认知：与 429 的 tier=anonymous 对照可识别「token 缺失/被拒被静默降级」
             val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
-            val lang = resolveLang()
-            val imagePlaceholder = if (lang == "zh") "[图片]" else "[image]"
-            val response: HttpResponse = client.post("$baseUrl/chat") {
+            return client.preparePost("$baseUrl/$path") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
-                // 已登录则带 token 走登录档配额（每日 10 条）；token 无效时服务端静默降级匿名档
+                // 已登录则带 token 走登录档配额；detail 生成仅登录档开放（服务端真闸）
                 globalAuthManager.getAccessToken()?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
-                setBody(
-                    ChatRequest(
-                        messages = history.mapIndexed { index, m ->
-                            WireMessage(
-                                role = if (m.role == Role.USER) "user" else "assistant",
-                                content = ChatWire.buildContent(
-                                    message = m,
-                                    isLast = index == history.lastIndex,
-                                    imagePlaceholder = imagePlaceholder,
-                                    readImageBytes = { path ->
-                                        runCatching { File(path).readBytes() }.getOrNull()
-                                    },
-                                ),
-                            )
-                        },
-                        lang = lang,
-                        context = context?.let {
-                            WireContext(it.title, it.summary, it.sourceUrl)
-                        },
-                        // 发送前按目录缓存解析实际生效模型（与选择器同一套判定），避免选择器未挂载时
-                        // 把过期的 Pro 专属选择原样发出；目录未拉到则透传，服务端仍按 tier 强制兜底
-                        model = resolveEffectiveChatModel(
-                            ChatModelsProvider.cachedOrEmpty(),
-                            globalSettingsManager.currentSelectedChatModel(),
-                            globalSettingsManager.currentIsPro(),
-                        ),
+                timeout { requestTimeoutMillis = STREAM_REQUEST_TIMEOUT_MS }
+                configure()
+            }.execute { response ->
+                if (response.status != HttpStatusCode.OK) {
+                    throw toChatException(response, sentAsLoggedIn)
+                }
+                if (response.contentType()?.match(ContentType.Text.EventStream) != true) {
+                    // 服务端降级为非流式 JSON（spec 的 SSE 兜底路径）
+                    val content = json.decodeFromString<ChatResponse>(response.bodyAsText()).content
+                    onDelta(content)
+                    return@execute DetailSummaryResult(content, cached = false)
+                }
+                val channel = response.bodyAsChannel()
+                val full = StringBuilder()
+                var done: ChatSse.Event.Done? = null
+                while (done == null) {
+                    val line = channel.readUTF8Line() ?: break
+                    when (val event = ChatSse.parseLine(line)) {
+                        is ChatSse.Event.Delta -> {
+                            full.append(event.text)
+                            onDelta(event.text)
+                        }
+                        is ChatSse.Event.Done -> done = event
+                        null -> Unit
+                    }
+                }
+                val finished = done ?: throw ChatException(
+                    ChatError(
+                        ChatErrorCategory.SERVER,
+                        code = "stream_interrupted",
+                        detail = "stream ended before done event",
                     ),
                 )
+                DetailSummaryResult(full.toString(), finished.cached)
             }
-
-            if (response.status == HttpStatusCode.OK) {
-                return response.body<ChatResponse>().content
-            }
-
-            // 非 2xx：取服务端 error 文案 + 机器码，按状态码分类
-            val raw = runCatching { response.bodyAsText() }.getOrNull()
-            val parsed = raw?.let { runCatching { json.decodeFromString<ErrorResponse>(it) }.getOrNull() }
-            val bodyError = parsed?.error ?: raw
-            throw ChatException(
-                ChatErrors.markAuthDegraded(
-                    ChatErrors.forStatus(response.status.value, parsed?.code, bodyError, parsed?.tier),
-                    sentAsLoggedIn,
-                ),
-            )
         } catch (e: ChatException) {
-            logFailure(e.error)
+            logFailure(path, e.error)
             throw e
         } catch (e: CancellationException) {
             throw e // 不吞协程取消
         } catch (e: Throwable) {
-            // 传输异常（超时/断网等）
+            // 传输异常（超时/断网/流中断等）
             val error = ChatErrors.forThrowable(e)
-            logFailure(error)
+            logFailure(path, error)
             throw ChatException(error)
         }
     }
 
-    private fun logFailure(error: ChatError) {
+    /** 非 2xx：取服务端 error 文案 + 机器码，按状态码分类 */
+    private suspend fun toChatException(response: HttpResponse, sentAsLoggedIn: Boolean): ChatException {
+        val raw = runCatching { response.bodyAsText() }.getOrNull()
+        val parsed = raw?.let { runCatching { json.decodeFromString<ErrorResponse>(it) }.getOrNull() }
+        val bodyError = parsed?.error ?: raw
+        return ChatException(
+            ChatErrors.markAuthDegraded(
+                ChatErrors.forStatus(response.status.value, parsed?.code, bodyError, parsed?.tier),
+                sentAsLoggedIn,
+            ),
+        )
+    }
+
+    private fun logFailure(path: String, error: ChatError) {
         Log.w(
             TAG,
-            "send failed: category=${error.category} code=${error.code} " +
+            "$path failed: category=${error.category} code=${error.code} " +
                 "status=${error.httpStatus} detail=${error.detail}",
         )
     }
