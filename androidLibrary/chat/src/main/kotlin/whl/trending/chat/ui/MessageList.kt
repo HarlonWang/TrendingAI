@@ -11,8 +11,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.model.ChatMessage
+import whl.trending.chat.model.Role
 
-/** 消息列表：LazyColumn，message.id 作稳定 key；新消息 / 思考中时自动滚到底。 */
+/** 消息列表：LazyColumn，message.id 作稳定 key；新消息 / 思考中 / 流式增量时自动滚到底。 */
 @Composable
 fun MessageList(
     messages: List<ChatMessage>,
@@ -22,10 +23,17 @@ fun MessageList(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size, isSending) {
+    // 流式渲染中内容在末条 assistant 消息里增长，size 不变——以末条内容长度作额外 key 跟随滚动
+    val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
+    LaunchedEffect(messages.size, isSending, lastContentLength) {
         val target = messages.size // 含末尾 typing 项时仍滚到底
-        if (target > 0) listState.animateScrollToItem(target)
+        if (target > 0) listState.scrollToItem(target)
     }
+
+    // 流式占位一旦开始出字（或出错）就收起 typing 指示器，避免「正文下面还转圈」
+    val last = messages.lastOrNull()
+    val showTyping = isSending &&
+        (last == null || last.role == Role.USER || (last.content.isBlank() && last.error == null))
 
     LazyColumn(
         state = listState,
@@ -36,7 +44,7 @@ fun MessageList(
         items(messages, key = { it.id }) { message ->
             MessageItem(message = message, onRetry = { onRetry(message) })
         }
-        if (isSending) {
+        if (showTyping) {
             item(key = "typing") { TypingIndicator() }
         }
     }

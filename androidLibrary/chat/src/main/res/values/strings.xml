@@ -55,4 +55,8 @@
     <string name="chat_user_image">Image</string>
     <string name="chat_image_viewer_close">Close</string>
     <string name="chat_error_images_require_login">Sign in to send images.</string>
+    <string name="chat_action_detail_summary">In-depth overview</string>
+    <string name="chat_detail_login_message">Generating an in-depth overview requires signing in. Reading already-generated overviews stays free.</string>
+    <string name="chat_detail_login_unlocked">Signed in — tap retry to continue generating.</string>
+    <string name="chat_error_readme_too_short">This project\'s README is too short for an in-depth overview.</string>
 </resources>

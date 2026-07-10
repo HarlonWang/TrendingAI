@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import whl.trending.ai.chat.ChatContext
 import whl.trending.chat.ChatViewModel
+import whl.trending.chat.DetailSummaryPolicy
 import whl.trending.chat.R
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
@@ -90,6 +91,18 @@ fun ChatScreen(
         },
         bottomBar = {
             Column {
+                // 「一键详细解读」chip：GitHub 条目 + README 达标 + 尚无成功解读 → 常驻显示
+                // （不同于介绍 chip 的「messages 为空才显示」）；生成中置灰，成功一次后隐藏。
+                if (DetailSummaryPolicy.chipVisible(initialContext, state.messages)) {
+                    val detailPrompt = stringResource(R.string.chat_action_detail_summary)
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        AssistChip(
+                            onClick = { viewModel.sendDetailSummary(detailPrompt) },
+                            enabled = !state.isSending,
+                            label = { Text(detailPrompt) },
+                        )
+                    }
+                }
                 // 尚无对话时在输入框上方显示入口对应的快捷问（label 资源 to prompt 资源）：
                 // 通用助手入口问能力，README 入口问项目介绍。messages 非空即隐藏，
                 // 天然覆盖"发送后隐藏"与"恢复历史会话不再显示"。
