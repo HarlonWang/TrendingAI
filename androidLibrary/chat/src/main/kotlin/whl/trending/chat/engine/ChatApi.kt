@@ -65,19 +65,21 @@ class ChatApi(
 
     /** content 两态：纯文本为 JSON string；末条带图 user 消息为 OpenAI 多模态 parts 数组 */
     @Serializable
-    private data class WireMessage(val role: String, val content: JsonElement)
+    internal data class WireMessage(val role: String, val content: JsonElement)
 
+    /** internal 供 wire 序列化测试直接构造；stream 故意**不带默认值**——
+     *  encodeDefaults=false 下「值等于默认值的属性会被省略」，曾让 "stream":true 静默消失 */
     @Serializable
-    private data class ChatRequest(
+    internal data class ChatRequest(
         val messages: List<WireMessage>,
         val lang: String,
         val context: WireContext? = null,
         val model: String? = null,
-        val stream: Boolean = true,
+        val stream: Boolean,
     )
 
     @Serializable
-    private data class WireContext(
+    internal data class WireContext(
         val title: String,
         val summary: String? = null,
         val sourceUrl: String? = null,
@@ -148,6 +150,7 @@ class ChatApi(
                         globalSettingsManager.currentSelectedChatModel(),
                         globalSettingsManager.currentIsPro(),
                     ),
+                    stream = true,
                 ),
             )
         }.content

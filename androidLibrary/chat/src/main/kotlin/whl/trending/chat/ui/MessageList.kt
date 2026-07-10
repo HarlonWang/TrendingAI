@@ -8,6 +8,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.model.ChatMessage
@@ -23,11 +26,23 @@ fun MessageList(
 ) {
     val listState = rememberLazyListState()
 
-    // 流式渲染中内容在末条 assistant 消息里增长，size 不变——以末条内容长度作额外 key 跟随滚动
-    val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
-    LaunchedEffect(messages.size, isSending, lastContentLength) {
+    // 新消息 / typing 项出现时总是滚到底（发送、回复到达等离散事件）
+    LaunchedEffect(messages.size, isSending) {
         val target = messages.size // 含末尾 typing 项时仍滚到底
-        if (target > 0) listState.scrollToItem(target)
+        if (target > 0) listState.animateScrollToItem(target)
+    }
+
+    // 流式渲染中内容在末条消息里增长、size 不变：仅当末项仍可见（用户没上滑离开底部）时跟随滚动，
+    // 避免长解读生成期间把上滑回看的用户反复拽回底部
+    val lastContentLength = messages.lastOrNull()?.content?.length ?: 0
+    val followStream by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            (info.visibleItemsInfo.lastOrNull()?.index ?: -1) >= info.totalItemsCount - 1
+        }
+    }
+    LaunchedEffect(lastContentLength) {
+        if (followStream && messages.isNotEmpty()) listState.scrollToItem(messages.size)
     }
 
     // 流式占位一旦开始出字（或出错）就收起 typing 指示器，避免「正文下面还转圈」

@@ -73,20 +73,31 @@ internal fun QuotaLimitCard(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
             isLoginGate -> {
-                if (authState == AuthState.LoggedIn) {
-                    // 登录完成：与触顶卡的放行例外同构，点重试续上生成
-                    QuotaText(R.string.chat_detail_login_unlocked)
-                    TextButton(onClick = onRetry) {
-                        Text(stringResource(R.string.chat_retry))
+                when {
+                    // 发请求时自认已登录、却被按匿名档处理（Logto 故障降级）：如实提示登录态未生效，
+                    // 不给「已登录、重试即可」的死循环误导——authDegraded 就是为此而生，此分支必须消费它
+                    error.authDegraded -> {
+                        QuotaText(R.string.chat_quota_auth_degraded)
+                        TextButton(onClick = onRetry) {
+                            Text(stringResource(R.string.chat_retry))
+                        }
                     }
-                } else {
-                    QuotaText(R.string.chat_detail_login_message)
-                    if (globalAuthManager.isSupported) {
-                        Button(onClick = {
-                            trackEvent("detail_summary_login_click")
-                            globalAuthManager.signIn()
-                        }) {
-                            Text(stringResource(R.string.chat_quota_login_cta))
+                    // 登录完成：与触顶卡的放行例外同构，点重试续上生成
+                    authState == AuthState.LoggedIn -> {
+                        QuotaText(R.string.chat_detail_login_unlocked)
+                        TextButton(onClick = onRetry) {
+                            Text(stringResource(R.string.chat_retry))
+                        }
+                    }
+                    else -> {
+                        QuotaText(R.string.chat_detail_login_message)
+                        if (globalAuthManager.isSupported) {
+                            Button(onClick = {
+                                trackEvent("detail_summary_login_click")
+                                globalAuthManager.signIn()
+                            }) {
+                                Text(stringResource(R.string.chat_quota_login_cta))
+                            }
                         }
                     }
                 }
