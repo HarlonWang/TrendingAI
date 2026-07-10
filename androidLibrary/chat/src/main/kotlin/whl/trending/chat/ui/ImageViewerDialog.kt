@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import java.io.File
 import whl.trending.chat.R
 
 private const val MIN_SCALE = 1f
@@ -39,10 +38,12 @@ private const val DOUBLE_TAP_SCALE = 2.5f
 /**
  * 全屏图片查看器：捏合缩放 + 平移 + 双击放大/还原，单击或关闭按钮退出。
  * Compose 手势自研，不引第三方 zoom 库。
+ *
+ * @param model Coil 可加载的图片来源：本地图传 [File]，网络图传 URL 字符串
  */
 @Composable
 fun ImageViewerDialog(
-    path: String,
+    model: Any,
     onDismiss: () -> Unit,
 ) {
     Dialog(
@@ -77,7 +78,7 @@ fun ImageViewerDialog(
                 },
         ) {
             AsyncImage(
-                model = File(path),
+                model = model,
                 contentDescription = stringResource(R.string.chat_user_image),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier

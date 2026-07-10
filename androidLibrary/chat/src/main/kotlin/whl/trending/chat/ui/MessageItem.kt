@@ -98,7 +98,7 @@ private fun UserMessage(message: ChatMessage, modifier: Modifier) {
         }
     }
     viewerPath?.let { path ->
-        ImageViewerDialog(path = path, onDismiss = { viewerPath = null })
+        ImageViewerDialog(model = File(path), onDismiss = { viewerPath = null })
     }
 }
 
@@ -145,11 +145,16 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
     Column(modifier = modifier.fillMaxWidth()) {
         val error = message.error
         if (error == null) {
+            var viewerUrl by remember { mutableStateOf<String?>(null) }
             SelectionContainer {
                 MarkdownText(
                     markdown = message.content,
                     textStyle = MaterialTheme.typography.bodyLarge,
+                    onImageClick = { viewerUrl = it },
                 )
+            }
+            viewerUrl?.let { url ->
+                ImageViewerDialog(model = url, onDismiss = { viewerUrl = null })
             }
             Row {
                 val clipboard = LocalClipboard.current

@@ -62,6 +62,16 @@ object SampleData {
                 "- 协程可切换调度器（`withContext`），JS 单线程事件循环\n\n" +
                 "简言之：协程更像*可取消、可调度*的 async/await。",
         ),
+        ChatMessage(5, Role.USER, "发几张图看看：独立图、图文混排、还有一张加载失败的"),
+        ChatMessage(
+            6, Role.ASSISTANT,
+            // 头像 CDN 与首页头像同域，模拟器可达；example.com 返回 HTML 触发解码失败
+            "独立成段的图片：\n\n" +
+                "![Octocat](https://avatars.githubusercontent.com/u/583231?s=600)\n\n" +
+                "图文混排：前面有字 ![GitHub 组织头像](https://avatars.githubusercontent.com/u/9919?s=400) 后面也有字。\n\n" +
+                "下面这张会加载失败，降级为可点链接：\n\n" +
+                "![加载失败的图](https://example.com/broken.png)",
+        ),
     )
 
     /** 末位 id，供 ViewModel 续号。 */

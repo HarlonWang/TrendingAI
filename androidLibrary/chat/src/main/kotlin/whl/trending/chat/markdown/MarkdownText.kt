@@ -1,5 +1,6 @@
 package whl.trending.chat.markdown
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +39,7 @@ import org.commonmark.node.Emphasis
 import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.HardLineBreak
 import org.commonmark.node.Heading
+import org.commonmark.node.Image
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Link
 import org.commonmark.node.ListItem
@@ -54,30 +56,33 @@ import org.commonmark.node.ThematicBreak
  *
  * 性能要点：`remember(markdown)` 缓存解析后的 AST，非流式下整段内容终态后只解析一次，
  * 列表滚动重组不会重复解析。
+ *
+ * @param onImageClick 段落里 http/https 图片被点击时回调（入参为图片 URL），默认无动作
  */
 @Composable
 fun MarkdownText(
     markdown: String,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = LocalTextStyle.current,
+    onImageClick: (String) -> Unit = {},
 ) {
     val document = remember(markdown) { MarkdownParser.parse(markdown) }
     Column(modifier = modifier) {
-        MarkdownBlocks(document.childList(), textStyle)
+        MarkdownBlocks(document.childList(), textStyle, onImageClick)
     }
 }
 
 /** 渲染一组块级节点（文档、列表项、引用块的子节点）。 */
 @Composable
-private fun MarkdownBlocks(nodes: List<Node>, textStyle: TextStyle) {
+private fun MarkdownBlocks(nodes: List<Node>, textStyle: TextStyle, onImageClick: (String) -> Unit) {
     nodes.forEachIndexed { index, node ->
         if (index > 0) Spacer(Modifier.padding(top = 4.dp))
-        BlockNode(node, textStyle)
+        BlockNode(node, textStyle, onImageClick)
     }
 }
 
 @Composable
-private fun BlockNode(node: Node, textStyle: TextStyle) {
+private fun BlockNode(node: Node, textStyle: TextStyle, onImageClick: (String) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val inlineStyles = InlineStyles(
         codeBackground = colors.surfaceVariant,
@@ -94,22 +99,39 @@ private fun BlockNode(node: Node, textStyle: TextStyle) {
             Text(buildInline(node, inlineStyles), style = style)
         }
 
-        is Paragraph -> Text(buildInline(node, inlineStyles), style = textStyle)
+        is Paragraph -> {
+            val segments = splitByImages(node)
+            if (segments.none { it is InlineSegment.Image }) {
+                Text(buildInline(node, inlineStyles), style = textStyle)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    segments.forEach { segment ->
+                        when (segment) {
+                            is InlineSegment.Text ->
+                                Text(buildInline(segment.nodes, inlineStyles), style = textStyle)
+                            is InlineSegment.Image ->
+                                MarkdownImage(url = segment.url, alt = segment.alt, onClick = onImageClick)
+                        }
+                    }
+                }
+            }
+        }
 
         is FencedCodeBlock -> CodeBlock(code = node.literal.trimEnd('\n'), language = node.info?.trim().orEmpty())
 
         is IndentedCodeBlock -> CodeBlock(code = node.literal.trimEnd('\n'), language = "")
 
-        is BulletList -> ListBlock(node, textStyle, ordered = false, start = 1)
+        is BulletList -> ListBlock(node, textStyle, ordered = false, start = 1, onImageClick = onImageClick)
 
-        is OrderedList -> ListBlock(node, textStyle, ordered = true, start = node.markerStartNumber ?: 1)
+        is OrderedList ->
+            ListBlock(node, textStyle, ordered = true, start = node.markerStartNumber ?: 1, onImageClick = onImageClick)
 
         is BlockQuote -> Row {
             HorizontalDivider(
                 modifier = Modifier.width(3.dp).padding(end = 8.dp),
                 color = colors.outline,
             )
-            Column { MarkdownBlocks(node.childList(), textStyle) }
+            Column { MarkdownBlocks(node.childList(), textStyle, onImageClick) }
         }
 
         is ThematicBreak -> HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -125,14 +147,14 @@ private fun BlockNode(node: Node, textStyle: TextStyle) {
 }
 
 @Composable
-private fun ListBlock(node: Node, textStyle: TextStyle, ordered: Boolean, start: Int) {
+private fun ListBlock(node: Node, textStyle: TextStyle, ordered: Boolean, start: Int, onImageClick: (String) -> Unit) {
     Column {
         var number = start
         node.childList().filterIsInstance<ListItem>().forEach { item ->
             Row {
                 val marker = if (ordered) "${number}. " else "•  "
                 Text(marker, style = textStyle, fontWeight = if (ordered) FontWeight.Normal else FontWeight.Bold)
-                Column { MarkdownBlocks(item.childList(), textStyle) }
+                Column { MarkdownBlocks(item.childList(), textStyle, onImageClick) }
             }
             number++
         }
@@ -179,30 +201,42 @@ private fun buildInline(container: Node, styles: InlineStyles): AnnotatedString 
     appendInline(container, styles)
 }
 
+/** 将拆段后的 inline 节点组构建为 AnnotatedString（节点仍挂在原 AST 上，仅逐个渲染自身）。 */
+private fun buildInline(nodes: List<Node>, styles: InlineStyles): AnnotatedString = buildAnnotatedString {
+    nodes.forEach { appendNode(it, styles) }
+}
+
 private fun AnnotatedString.Builder.appendInline(node: Node, styles: InlineStyles) {
     var child = node.firstChild
     while (child != null) {
-        when (child) {
-            is CmText -> append(child.literal)
-            is Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { appendInline(child, styles) }
-            is StrongEmphasis -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { appendInline(child, styles) }
-            is Code -> withStyle(
-                SpanStyle(fontFamily = FontFamily.Monospace, background = styles.codeBackground),
-            ) { append(child.literal) }
-
-            is Link -> withLink(
-                LinkAnnotation.Url(
-                    url = child.destination,
-                    styles = TextLinkStyles(
-                        SpanStyle(color = styles.linkColor, textDecoration = TextDecoration.Underline),
-                    ),
-                ),
-            ) { appendInline(child, styles) }
-
-            is SoftLineBreak -> append(" ")
-            is HardLineBreak -> append("\n")
-            else -> appendInline(child, styles)
-        }
+        appendNode(child, styles)
         child = child.next
+    }
+}
+
+private fun AnnotatedString.Builder.appendNode(child: Node, styles: InlineStyles) {
+    when (child) {
+        is CmText -> append(child.literal)
+        is Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { appendInline(child, styles) }
+        is StrongEmphasis -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { appendInline(child, styles) }
+        is Code -> withStyle(
+            SpanStyle(fontFamily = FontFamily.Monospace, background = styles.codeBackground),
+        ) { append(child.literal) }
+
+        is Link -> withLink(
+            LinkAnnotation.Url(
+                url = child.destination,
+                styles = TextLinkStyles(
+                    SpanStyle(color = styles.linkColor, textDecoration = TextDecoration.Underline),
+                ),
+            ),
+        ) { appendInline(child, styles) }
+
+        // 无法块级展示的图片（标题/表格内、相对路径等）降级为 alt 文本
+        is Image -> appendInline(child, styles)
+
+        is SoftLineBreak -> append(" ")
+        is HardLineBreak -> append("\n")
+        else -> appendInline(child, styles)
     }
 }
