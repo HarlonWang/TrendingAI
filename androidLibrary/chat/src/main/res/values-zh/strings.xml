@@ -56,7 +56,7 @@
     <string name="chat_image_viewer_close">关闭</string>
     <string name="chat_error_images_require_login">发送图片需要先登录。</string>
     <string name="chat_action_detail_summary">一键详细解读</string>
-    <string name="chat_detail_login_message">生成详细解读需要登录；阅读已生成的解读始终免费。</string>
+    <string name="chat_detail_login_message">生成详细解读需要登录。</string>
     <string name="chat_detail_login_unlocked">已登录，点击重试继续生成。</string>
     <string name="chat_error_readme_too_short">这个项目的 README 太短，暂不支持详细解读。</string>
 </resources>
