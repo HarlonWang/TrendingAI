@@ -51,6 +51,11 @@
     <string name="new_only_hint">Projects new to the GitHub daily all-language trending board</string>
     <string name="new_only_default">New only by default</string>
     <string name="new_only_default_desc">Turn on the New filter for the GitHub list at launch</string>
+    <string name="daily_picks_notification">Daily Picks reminder</string>
+    <string name="daily_picks_notification_desc">A local notification when the day\'s AI picks are ready — no push service required</string>
+    <string name="notification_permission_denied">Notification permission is off. Allow it in system settings to get reminders.</string>
+    <string name="picks_newsletter_title">Get Picks by email</string>
+    <string name="picks_newsletter_desc">Subscribe to the newsletter and receive the daily picks in your inbox</string>
     <string name="retry">Retry</string>
     <string name="error_fetch">Failed to fetch data: %1$s</string>
     <string name="back">Back</string>

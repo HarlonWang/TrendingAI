@@ -51,6 +51,11 @@
     <string name="new_only_hint">近期首次登上 GitHub 日榜（全语言）的新项目</string>
     <string name="new_only_default">默认只看 New</string>
     <string name="new_only_default_desc">启动时自动开启 GitHub 榜的「只看 New」过滤</string>
+    <string name="daily_picks_notification">每日精选提醒</string>
+    <string name="daily_picks_notification_desc">每日精选更新后本地通知提醒，无需推送服务</string>
+    <string name="notification_permission_denied">未获得通知权限，请在系统设置中允许通知</string>
+    <string name="picks_newsletter_title">邮件订阅每日精选</string>
+    <string name="picks_newsletter_desc">订阅 Newsletter，每天精选直达邮箱</string>
     <string name="retry">重试</string>
     <string name="error_fetch">获取数据失败: %1$s</string>
     <string name="back">返回</string>

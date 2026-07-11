@@ -19,8 +19,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
@@ -48,6 +52,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
 import trendingai.shared.generated.resources.picks_label_alternatives
 import trendingai.shared.generated.resources.picks_label_terms
+import trendingai.shared.generated.resources.picks_newsletter_desc
+import trendingai.shared.generated.resources.picks_newsletter_title
 import trendingai.shared.generated.resources.picks_no_data
 import trendingai.shared.generated.resources.picks_section_controversy
 import trendingai.shared.generated.resources.picks_section_deep_dive
@@ -71,6 +77,7 @@ import kotlin.time.Clock
 fun PicksScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onOpenUrl: (url: String) -> Unit,
+    onNavigateToSubscribe: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PicksViewModel
 ) {
@@ -125,11 +132,20 @@ fun PicksScreen(
                 } else {
                     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
                     val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                    // 初值同步读，避免已订阅用户冷启动时横幅闪现一帧
+                    val subscribedEmail by globalSettingsManager.subscribedEmail.collectAsState(
+                        remember { globalSettingsManager.currentSubscribedEmail() }
+                    )
                     PicksList(
                         deepDive = picks.deepDive,
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
                         favoriteUrls = favoriteUrls,
+                        showNewsletterBanner = subscribedEmail == null,
+                        onSubscribeClick = {
+                            trackEvent("picks_newsletter_banner")
+                            onNavigateToSubscribe()
+                        },
                         onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl) },
                     )
                 }
@@ -166,6 +182,8 @@ private fun PicksList(
     controversy: List<PickItem>,
     speedRead: List<PickItem>,
     favoriteUrls: Set<String>,
+    showNewsletterBanner: Boolean,
+    onSubscribeClick: () -> Unit,
     onItemClick: (PickItem, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -173,6 +191,11 @@ private fun PicksList(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
+        // Newsletter 订阅入口（已订阅隐藏）：把埋在设置深处的订阅提到每日回访的主场景
+        if (showNewsletterBanner) {
+            item { NewsletterBanner(onClick = onSubscribeClick) }
+        }
+
         // Deep Dive
         if (deepDive.isNotEmpty()) {
             item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
@@ -213,6 +236,46 @@ private fun PicksList(
             }
             // 尾部间距
             item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun NewsletterBanner(onClick: () -> Unit) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MailOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(Res.string.picks_newsletter_title),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = stringResource(Res.string.picks_newsletter_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

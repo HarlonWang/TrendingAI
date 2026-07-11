@@ -52,6 +52,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val SELECTED_CHAT_MODEL_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
+    private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -256,6 +257,21 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setTrendingNewOnlyDefault(value: Boolean) {
         settings.putBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, value)
+    }
+
+    /**
+     * 每日 Picks 本地通知开关（默认关，用户在设置页主动开启）。
+     * 仅记录用户意图；实际调度/取消由 DailyPicksNotifier 平台实现负责，
+     * worker 执行时也会再读一次此值兜底（关闭后未及时取消的任务不发通知）。
+     */
+    val dailyPicksNotificationEnabled: Flow<Boolean> =
+        settings.getBooleanFlow(DAILY_PICKS_NOTIFICATION_KEY, false)
+
+    fun currentDailyPicksNotificationEnabled(): Boolean =
+        settings.getBoolean(DAILY_PICKS_NOTIFICATION_KEY, false)
+
+    fun setDailyPicksNotificationEnabled(value: Boolean) {
+        settings.putBoolean(DAILY_PICKS_NOTIFICATION_KEY, value)
     }
 }
 

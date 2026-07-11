@@ -18,6 +18,7 @@ import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.ui.home.githubLogoPainter
+import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.update.globalUpdateChecker
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
@@ -70,6 +72,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -112,6 +117,9 @@ import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.close
+import trendingai.shared.generated.resources.daily_picks_notification
+import trendingai.shared.generated.resources.daily_picks_notification_desc
+import trendingai.shared.generated.resources.notification_permission_denied
 import trendingai.shared.generated.resources.dark_mode
 import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.language_option_chinese
@@ -181,6 +189,13 @@ fun SettingsScreen(
     val authState by globalAuthManager.authState.collectAsState()
     val isLoggedIn = authState is AuthState.LoggedIn
     var showLangCaptureDialog by remember { mutableStateOf(false) }
+    val dailyPicksNotificationEnabled by globalSettingsManager.dailyPicksNotificationEnabled.collectAsState(
+        remember { globalSettingsManager.currentDailyPicksNotificationEnabled() }
+    )
+    val snackbarHostState = remember { SnackbarHostState() }
+    val settingsScope = rememberCoroutineScope()
+    val permissionDeniedMsg = stringResource(Res.string.notification_permission_denied)
+    val openSystemSettingsLabel = stringResource(Res.string.open_system_settings)
 
     if (showOpenLinksDialog) {
         AlertDialog(
@@ -303,7 +318,8 @@ fun SettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -510,6 +526,46 @@ fun SettingsScreen(
                         )
                     }
                 )
+            }
+            // 每日精选提醒：本地定时通知（WorkManager），全渠道可用；iOS 未支持则隐藏
+            if (globalDailyPicksNotifier.isSupported) {
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
+                        supportingContent = { Text(stringResource(Res.string.daily_picks_notification_desc)) },
+                        leadingContent = { Icon(Icons.Default.Notifications, null) },
+                        trailingContent = {
+                            Switch(
+                                checked = dailyPicksNotificationEnabled,
+                                onCheckedChange = { enabled ->
+                                    trackEvent(
+                                        "settings_daily_picks_notification",
+                                        mapOf("enabled" to enabled.toString())
+                                    )
+                                    if (enabled) {
+                                        settingsScope.launch {
+                                            // 先确权再落设置：权限被拒时开关保持关闭，引导去系统设置
+                                            val granted = globalDailyPicksNotifier.enable()
+                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
+                                            if (!granted) {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    message = permissionDeniedMsg,
+                                                    actionLabel = openSystemSettingsLabel,
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    openAppSettings()
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        globalDailyPicksNotifier.disable()
+                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                    }
+                                }
+                            )
+                        }
+                    )
+                }
             }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 
