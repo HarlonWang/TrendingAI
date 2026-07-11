@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -51,6 +52,8 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
             // 13 以下没有运行时权限，通知被系统级关闭只能引导用户去系统设置
             return false
         }
+        // 覆盖前先了结旧请求，避免快速连续开关时前一个协程永远挂在 await 上
+        permissionResult?.complete(false)
         val deferred = CompletableDeferred<Boolean>()
         permissionResult = deferred
         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -80,6 +83,10 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
                 .setConstraints(
                     Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
                 )
+                // 「内容未更新」的 retry 用线性 30 分钟退避：默认指数退避从 30s 起，
+                // 5 次尝试 10 分钟内烧完；线性能把重试摊到 9:30/10:30/12:00/14:00，
+                // 覆盖服务端上午晚更新的情况
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.MINUTES)
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(WORK_NAME, policy, request)
         }
