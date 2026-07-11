@@ -5,10 +5,8 @@ import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.openAppSettings
-import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
-import whl.trending.ai.core.Constants
 import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.trackEvent
@@ -18,7 +16,6 @@ import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.notification.globalDailyPicksNotifier
-import whl.trending.ai.update.globalUpdateChecker
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -43,7 +40,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Feedback
@@ -69,7 +65,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalUriHandler
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -123,9 +118,6 @@ import trendingai.shared.generated.resources.feedback_error
 import trendingai.shared.generated.resources.feedback_rate_limit
 import trendingai.shared.generated.resources.feedback_email_placeholder
 import trendingai.shared.generated.resources.feedback_email_invalid
-import trendingai.shared.generated.resources.version
-import trendingai.shared.generated.resources.version_tap_to_check
-import trendingai.shared.generated.resources.version_up_to_date
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -138,7 +130,6 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit = {}
 ) {
     val isIos = isIosPlatform()
-    val uriHandler = LocalUriHandler.current
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
@@ -146,9 +137,6 @@ fun SettingsScreen(
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
     )
-    val appVersion = remember { getAppVersion() }
-    val isChecking by globalUpdateChecker.isChecking.collectAsState()
-    val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
     var showSummaryLanguageDialog by remember { mutableStateOf(false) }
     // 语言采集流程：点「赞助 Pro」→ 采集期望语言（复用反馈接口提交）→ 成功后跳赞助页
     // 登录用户带上 GitHub 身份（便于与赞助对齐 + 后续通知）；未登录则收邮箱
@@ -436,39 +424,6 @@ fun SettingsScreen(
                         trackEvent("settings_about")
                         onNavigateToAbout()
                     }
-                )
-            }
-            // 版本 + 检查更新合并为一行：apk 渠道点按自建检查，iOS 跳官网，play 渠道仅展示版本号
-            item {
-                val canCheckUpdate = globalUpdateChecker.isEnabled || isIos
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.version)) },
-                    supportingContent = if (canCheckUpdate) {
-                        { Text(stringResource(Res.string.version_tap_to_check)) }
-                    } else null,
-                    leadingContent = { Icon(Icons.Default.Numbers, null) },
-                    trailingContent = {
-                        when {
-                            !isIos && isChecking -> LoadingIndicator(
-                                modifier = Modifier.size(24.dp)
-                            )
-                            !isIos && isUpToDate -> Text(
-                                stringResource(Res.string.version_up_to_date),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            else -> Text(appVersion, color = MaterialTheme.colorScheme.outline)
-                        }
-                    },
-                    modifier = if (canCheckUpdate) {
-                        Modifier.clickable(enabled = !isChecking) {
-                            trackEvent("settings_check_update")
-                            if (isIos) {
-                                uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
-                            } else {
-                                globalUpdateChecker.manualCheck()
-                            }
-                        }
-                    } else Modifier
                 )
             }
         }
