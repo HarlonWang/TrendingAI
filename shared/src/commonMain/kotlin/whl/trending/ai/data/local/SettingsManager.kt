@@ -53,6 +53,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
+    private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -272,6 +273,17 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setDailyPicksNotificationEnabled(value: Boolean) {
         settings.putBoolean(DAILY_PICKS_NOTIFICATION_KEY, value)
+    }
+
+    /** Picks 页 Newsletter 横幅的手动关闭标记：点「×」永久收起，与订阅状态解耦。 */
+    val picksNewsletterBannerDismissed: Flow<Boolean> =
+        settings.getBooleanFlow(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, false)
+
+    fun currentPicksNewsletterBannerDismissed(): Boolean =
+        settings.getBoolean(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, false)
+
+    fun setPicksNewsletterBannerDismissed(value: Boolean) {
+        settings.putBoolean(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, value)
     }
 }
 

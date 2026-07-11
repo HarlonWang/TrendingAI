@@ -20,11 +20,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
@@ -52,6 +53,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
 import trendingai.shared.generated.resources.picks_label_alternatives
 import trendingai.shared.generated.resources.picks_label_terms
+import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.picks_newsletter_desc
 import trendingai.shared.generated.resources.picks_newsletter_title
 import trendingai.shared.generated.resources.picks_no_data
@@ -132,19 +134,26 @@ fun PicksScreen(
                 } else {
                     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
                     val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
-                    // 初值同步读，避免已订阅用户冷启动时横幅闪现一帧
+                    // 初值同步读，避免已订阅/已关闭用户冷启动时横幅闪现一帧
                     val subscribedEmail by globalSettingsManager.subscribedEmail.collectAsState(
                         remember { globalSettingsManager.currentSubscribedEmail() }
+                    )
+                    val bannerDismissed by globalSettingsManager.picksNewsletterBannerDismissed.collectAsState(
+                        remember { globalSettingsManager.currentPicksNewsletterBannerDismissed() }
                     )
                     PicksList(
                         deepDive = picks.deepDive,
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
                         favoriteUrls = favoriteUrls,
-                        showNewsletterBanner = subscribedEmail == null,
+                        showNewsletterBanner = subscribedEmail == null && !bannerDismissed,
                         onSubscribeClick = {
                             trackEvent("picks_newsletter_banner")
                             onNavigateToSubscribe()
+                        },
+                        onDismissBanner = {
+                            trackEvent("picks_newsletter_banner_dismiss")
+                            globalSettingsManager.setPicksNewsletterBannerDismissed(true)
                         },
                         onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl) },
                     )
@@ -184,6 +193,7 @@ private fun PicksList(
     favoriteUrls: Set<String>,
     showNewsletterBanner: Boolean,
     onSubscribeClick: () -> Unit,
+    onDismissBanner: () -> Unit,
     onItemClick: (PickItem, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -191,9 +201,9 @@ private fun PicksList(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // Newsletter 订阅入口（已订阅隐藏）：把埋在设置深处的订阅提到每日回访的主场景
+        // Newsletter 订阅入口（已订阅或手动关闭后隐藏）：把埋在设置深处的订阅提到每日回访的主场景
         if (showNewsletterBanner) {
-            item { NewsletterBanner(onClick = onSubscribeClick) }
+            item { NewsletterBanner(onClick = onSubscribeClick, onDismiss = onDismissBanner) }
         }
 
         // Deep Dive
@@ -241,7 +251,7 @@ private fun PicksList(
 }
 
 @Composable
-private fun NewsletterBanner(onClick: () -> Unit) {
+private fun NewsletterBanner(onClick: () -> Unit, onDismiss: () -> Unit) {
     OutlinedCard(
         onClick = onClick,
         modifier = Modifier
@@ -251,7 +261,7 @@ private fun NewsletterBanner(onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -271,11 +281,13 @@ private fun NewsletterBanner(onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(Res.string.close),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
