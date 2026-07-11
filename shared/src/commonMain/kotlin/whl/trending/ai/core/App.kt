@@ -115,6 +115,9 @@ fun App() {
                             onNavigateToProfile = {
                                 backStack.add(Profile)
                             },
+                            onNavigateToSubscribe = {
+                                backStack.add(Subscribe)
+                            },
                         )
                     }
 

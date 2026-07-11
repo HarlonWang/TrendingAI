@@ -19,8 +19,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
@@ -48,6 +53,9 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
 import trendingai.shared.generated.resources.picks_label_alternatives
 import trendingai.shared.generated.resources.picks_label_terms
+import trendingai.shared.generated.resources.close
+import trendingai.shared.generated.resources.picks_newsletter_desc
+import trendingai.shared.generated.resources.picks_newsletter_title
 import trendingai.shared.generated.resources.picks_no_data
 import trendingai.shared.generated.resources.picks_section_controversy
 import trendingai.shared.generated.resources.picks_section_deep_dive
@@ -71,6 +79,7 @@ import kotlin.time.Clock
 fun PicksScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onOpenUrl: (url: String) -> Unit,
+    onNavigateToSubscribe: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PicksViewModel
 ) {
@@ -125,11 +134,27 @@ fun PicksScreen(
                 } else {
                     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
                     val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                    // 初值同步读，避免已订阅/已关闭用户冷启动时横幅闪现一帧
+                    val subscribedEmail by globalSettingsManager.subscribedEmail.collectAsState(
+                        remember { globalSettingsManager.currentSubscribedEmail() }
+                    )
+                    val bannerDismissed by globalSettingsManager.picksNewsletterBannerDismissed.collectAsState(
+                        remember { globalSettingsManager.currentPicksNewsletterBannerDismissed() }
+                    )
                     PicksList(
                         deepDive = picks.deepDive,
                         controversy = picks.controversy,
                         speedRead = picks.speedRead,
                         favoriteUrls = favoriteUrls,
+                        showNewsletterBanner = subscribedEmail == null && !bannerDismissed,
+                        onSubscribeClick = {
+                            trackEvent("picks_newsletter_banner")
+                            onNavigateToSubscribe()
+                        },
+                        onDismissBanner = {
+                            trackEvent("picks_newsletter_banner_dismiss")
+                            globalSettingsManager.setPicksNewsletterBannerDismissed(true)
+                        },
                         onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl) },
                     )
                 }
@@ -166,6 +191,9 @@ private fun PicksList(
     controversy: List<PickItem>,
     speedRead: List<PickItem>,
     favoriteUrls: Set<String>,
+    showNewsletterBanner: Boolean,
+    onSubscribeClick: () -> Unit,
+    onDismissBanner: () -> Unit,
     onItemClick: (PickItem, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -173,6 +201,11 @@ private fun PicksList(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
+        // Newsletter 订阅入口（已订阅或手动关闭后隐藏）：把埋在设置深处的订阅提到每日回访的主场景
+        if (showNewsletterBanner) {
+            item { NewsletterBanner(onClick = onSubscribeClick, onDismiss = onDismissBanner) }
+        }
+
         // Deep Dive
         if (deepDive.isNotEmpty()) {
             item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
@@ -213,6 +246,48 @@ private fun PicksList(
             }
             // 尾部间距
             item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun NewsletterBanner(onClick: () -> Unit, onDismiss: () -> Unit) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MailOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(Res.string.picks_newsletter_title),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = stringResource(Res.string.picks_newsletter_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(Res.string.close),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

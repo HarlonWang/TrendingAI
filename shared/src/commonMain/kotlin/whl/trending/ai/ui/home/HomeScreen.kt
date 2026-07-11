@@ -101,10 +101,21 @@ fun HomeScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onNavigateToChat: () -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToSubscribe: () -> Unit = {}
 ) {
     var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
     val selectedTab = HomeTab.valueOf(selectedTabName)
+
+    // 组合树外的切 tab 请求（通知点击深链等）：置位状态可跨冷启动等到这里再消费
+    LaunchedEffect(Unit) {
+        HomeTabRequest.pending.collect { tab ->
+            if (tab != null) {
+                selectedTabName = tab.name
+                HomeTabRequest.consume()
+            }
+        }
+    }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     var showHistorySheet by rememberSaveable { mutableStateOf(false) }
 
@@ -301,6 +312,7 @@ fun HomeScreen(
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 onOpenUrl = onOpenUrl,
+                onNavigateToSubscribe = onNavigateToSubscribe,
                 modifier = Modifier.padding(innerPadding),
                 viewModel = picksViewModel!!
             )
