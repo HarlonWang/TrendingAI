@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="daily_picks_channel_name">Daily Picks</string>
+    <string name="daily_picks_channel_desc">Daily reminder when AI-curated picks are ready</string>
+    <string name="daily_picks_notification_title">Today\'s AI Picks are ready</string>
+    <string name="daily_picks_notification_text">%1$s and %2$d more picks</string>
+    <string name="daily_picks_notification_text_single">%1$s</string>
+</resources>
