@@ -31,6 +31,14 @@ class DailyPicksSchedulingTest {
     }
 
     @Test
+    fun supportsTargetMinute() {
+        // 09:00 → 当天 09:30，差 30 分钟
+        assertEquals(30 * 60 * 1000L, initialDelayMillis(at(9, 0), targetHour = 9, targetMinute = 30))
+        // 09:45 → 次日 09:30
+        assertEquals((24 * 60 - 15) * 60 * 1000L, initialDelayMillis(at(9, 45), targetHour = 9, targetMinute = 30))
+    }
+
+    @Test
     fun notifiesWhenDateIsNew() {
         assertTrue(shouldNotify(lastNotifiedDate = "2026-07-10", newDate = "2026-07-11"))
     }

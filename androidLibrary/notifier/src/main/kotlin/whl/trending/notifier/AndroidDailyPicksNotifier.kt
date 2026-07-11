@@ -62,7 +62,13 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
 
     companion object {
         private const val WORK_NAME = "daily_picks_notification"
+
+        // 本地 09:30：服务端 Picks 于 UTC 01:00（北京 09:00）才开始生成、Newsletter 排在
+        // UTC 01:15 发送（即后端合同为 15 分钟内出结果）。取 09:30 让 UTC+8 主力用户
+        // 一次命中新内容，避免每天固定吃一轮 30 分钟重试；其他时区不受影响
+        // （西侧触发时内容早已就绪，东侧仍靠重试梯子兜底）。
         private const val NOTIFY_HOUR = 9
+        private const val NOTIFY_MINUTE = 30
 
         /**
          * 冷启动对账：开关为开时确保周期任务仍在（KEEP 不动既有排期）。
@@ -77,7 +83,7 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
         private fun schedule(context: Context, policy: ExistingPeriodicWorkPolicy) {
             val request = PeriodicWorkRequestBuilder<DailyPicksWorker>(24, TimeUnit.HOURS)
                 .setInitialDelay(
-                    initialDelayMillis(ZonedDateTime.now(), NOTIFY_HOUR),
+                    initialDelayMillis(ZonedDateTime.now(), NOTIFY_HOUR, NOTIFY_MINUTE),
                     TimeUnit.MILLISECONDS,
                 )
                 .setConstraints(
