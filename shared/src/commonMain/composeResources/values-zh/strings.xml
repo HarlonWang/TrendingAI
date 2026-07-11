@@ -55,7 +55,7 @@
     <string name="daily_picks_notification_desc">每日精选更新后本地通知提醒，无需推送服务</string>
     <string name="notification_permission_denied">未获得通知权限，请在系统设置中允许通知</string>
     <string name="picks_newsletter_title">邮件订阅每日精选</string>
-    <string name="picks_newsletter_desc">订阅 Newsletter，每天精选直达邮箱</string>
+    <string name="picks_newsletter_desc">每天一封，随时可退订</string>
     <string name="retry">重试</string>
     <string name="error_fetch">获取数据失败: %1$s</string>
     <string name="back">返回</string>
