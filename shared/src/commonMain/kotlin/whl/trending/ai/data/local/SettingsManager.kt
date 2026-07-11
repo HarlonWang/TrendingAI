@@ -27,6 +27,9 @@ enum class ThemeMode(val title: String) {
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
 
+/** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
+private const val DEFAULT_HOME_TAB_NAME = "GitHub"
+
 enum class AppLanguage(val isoCode: String?) {
     FOLLOW_SYSTEM(null),
     CHINESE("zh"),
@@ -292,9 +295,9 @@ class SettingsManager(private val settings: ObservableSettings) {
      * data 层不依赖 ui 层枚举，只存取字符串；解析与回落由 HomeTab.fromNameOrDefault 负责。
      * 只决定初始值；会话内切 tab 不回写此设置。
      */
-    val defaultHomeTab: Flow<String> = settings.getStringFlow(DEFAULT_HOME_TAB_KEY, "GitHub")
+    val defaultHomeTab: Flow<String> = settings.getStringFlow(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
 
-    fun currentDefaultHomeTab(): String = settings.getString(DEFAULT_HOME_TAB_KEY, "GitHub")
+    fun currentDefaultHomeTab(): String = settings.getString(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
 
     fun setDefaultHomeTab(name: String) {
         settings.putString(DEFAULT_HOME_TAB_KEY, name)
