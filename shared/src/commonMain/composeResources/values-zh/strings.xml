@@ -141,6 +141,9 @@
     <string name="theme_color_pink">粉</string>
     <string name="whats_new_title">🎉 新版本 %1$s</string>
     <string name="whats_new_got_it">知道了</string>
+    <string name="force_update_title">需要更新</string>
+    <string name="force_update_message">当前版本（%1$s）已停止支持，请前往官方渠道获取最新版本后继续使用。</string>
+    <string name="force_update_button">前往获取最新版</string>
     <string name="profile_title">个人主页</string>
     <string name="sign_in">登录</string>
     <string name="sign_out">退出登录</string>

@@ -52,6 +52,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val SELECTED_CHAT_MODEL_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
+    private val MIN_VERSION_KEY = "prefs_min_version"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -109,6 +110,18 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setLastUpdateCheckTime(time: Long) =
         settings.putLong(LAST_UPDATE_CHECK_KEY, time)
+
+    /**
+     * 服务端最近一次下发的最低可用版本；离线冷启动用它兜底判定强更。
+     * 服务端撤销（返回 null）时清除，避免离线状态一直误拦。
+     */
+    fun getCachedMinVersion(): String? =
+        settings.getStringOrNull(MIN_VERSION_KEY)
+
+    fun setCachedMinVersion(version: String?) {
+        if (version == null) settings.remove(MIN_VERSION_KEY)
+        else settings.putString(MIN_VERSION_KEY, version)
+    }
 
     /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */
     fun getLastSeenWhatsNewVersion(): String? =

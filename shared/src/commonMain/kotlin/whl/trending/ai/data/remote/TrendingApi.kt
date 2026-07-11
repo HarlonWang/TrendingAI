@@ -1,6 +1,7 @@
 package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
+import whl.trending.ai.data.model.AppConfigResponse
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.model.ChatModelsResponse
@@ -164,6 +165,15 @@ open class TrendingApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<ProRefreshResponse>().pro
+    }
+
+    /** 应用级配置（min_version 强更开关等），冷启动拉取，失败由调用方静默处理。 */
+    open suspend fun fetchAppConfig(): AppConfigResponse {
+        val response = client.get("$baseHost/api/app-config")
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<AppConfigResponse>()
     }
 
     /** 聊天可选模型目录（公开只读；后端从 OpenAI 动态取 + 缓存）。 */
