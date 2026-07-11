@@ -50,12 +50,13 @@ fun SignInValueDialog(
 ) {
     LaunchedEffect(Unit) { trackEvent("sign_in_value_shown", mapOf("source" to source)) }
 
-    val dismiss = {
-        trackEvent("sign_in_value_dismiss", mapOf("source" to source))
+    // method 区分「暂不」按钮（button）与外点/返回键（outside）：明确拒绝和随手关闭对文案迭代的含义不同
+    val dismiss = { method: String ->
+        trackEvent("sign_in_value_dismiss", mapOf("source" to source, "method" to method))
         onDismiss()
     }
     AlertDialog(
-        onDismissRequest = dismiss,
+        onDismissRequest = { dismiss("outside") },
         title = { Text(stringResource(Res.string.sign_in_value_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -79,7 +80,7 @@ fun SignInValueDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = dismiss) {
+            TextButton(onClick = { dismiss("button") }) {
                 Text(stringResource(Res.string.sign_in_value_dismiss))
             }
         },
