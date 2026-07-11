@@ -8,6 +8,8 @@ import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
 import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.profile.RepoListScreen
+import whl.trending.ai.ui.settings.AboutScreen
+import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
@@ -34,6 +36,8 @@ import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
 data object Settings
+data object Appearance
+data object About
 data object Feedback
 data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
@@ -134,6 +138,28 @@ fun App() {
                             },
                             onNavigateToSubscribe = {
                                 backStack.add(Subscribe)
+                            },
+                            onNavigateToAppearance = {
+                                backStack.add(Appearance)
+                            },
+                            onNavigateToAbout = {
+                                backStack.add(About)
+                            }
+                        )
+                    }
+
+                    is Appearance -> NavEntry(key) {
+                        AppearanceScreen(
+                            onBack = {
+                                backStack.safePop()
+                            }
+                        )
+                    }
+
+                    is About -> NavEntry(key) {
+                        AboutScreen(
+                            onBack = {
+                                backStack.safePop()
                             },
                             onNavigateToWebPage = { url, title ->
                                 openExternalUrl(url, title)
