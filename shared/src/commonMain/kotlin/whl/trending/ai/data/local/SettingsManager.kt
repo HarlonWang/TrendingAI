@@ -251,16 +251,14 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * GitHub 榜「只看 New」的默认状态：true 时进入 app 默认开启该过滤。
-     * 只决定初始值；榜单页手动切换仅影响当前会话，不回写此设置。
+     * GitHub 榜「只看 New」的记忆状态：榜单页显式切换时回写，冷启动恢复上次状态（开关即设置）。
+     * 视图切换导致的自动关闭（New-only 仅 daily 全语言榜有效）不回写，不覆盖用户意图。
+     * 存储键沿用旧「默认值」设置的键，老用户已设置的默认值自然延续为初始记忆状态。
      */
-    val trendingNewOnlyDefault: Flow<Boolean> =
-        settings.getBooleanFlow(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
-
-    fun currentTrendingNewOnlyDefault(): Boolean =
+    fun currentTrendingNewOnly(): Boolean =
         settings.getBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
 
-    fun setTrendingNewOnlyDefault(value: Boolean) {
+    fun setTrendingNewOnly(value: Boolean) {
         settings.putBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, value)
     }
 
