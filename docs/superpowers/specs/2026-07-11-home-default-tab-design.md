@@ -13,7 +13,7 @@
 
 `shared/src/commonMain/kotlin/whl/trending/ai/data/local/SettingsManager.kt`：
 
-- 新增 key 常量 `DEFAULT_HOME_TAB_KEY = "default_home_tab"`。
+- 新增 key 常量 `DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"`（沿用现有 `prefs_` 前缀约定）。
 - 按现有偏好三件套模式暴露：
   - `val defaultHomeTab: Flow<String>` — `settings.getStringFlow(DEFAULT_HOME_TAB_KEY, "GitHub")`
   - `fun currentDefaultHomeTab(): String` — 同步读，默认 `"GitHub"`
