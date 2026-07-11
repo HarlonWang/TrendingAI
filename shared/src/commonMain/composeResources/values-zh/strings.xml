@@ -11,6 +11,7 @@
     <string name="theme_dark">深色</string>
     <string name="appearance">外观</string>
     <string name="app_settings">应用设置</string>
+    <string name="subscription_reminders">订阅与提醒</string>
     <string name="language_settings">语言设置</string>
     <string name="language_option_follow_system">跟随系统</string>
     <string name="language_option_chinese">中文</string>

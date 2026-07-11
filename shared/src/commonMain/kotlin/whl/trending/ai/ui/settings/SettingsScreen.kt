@@ -98,6 +98,7 @@ import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.settings
+import trendingai.shared.generated.resources.subscription_reminders
 
 import trendingai.shared.generated.resources.favorites
 import trendingai.shared.generated.resources.feedback
@@ -229,7 +230,10 @@ fun SettingsScreen(
                     }
                 )
             }
-            // 邮件订阅
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
+            // 分组 2: 订阅与提醒——每日 Picks 的两条触达通道（邮件 / 本地通知）
+            item { SettingsHeader(stringResource(Res.string.subscription_reminders)) }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.subscribe_title)) },
@@ -241,9 +245,49 @@ fun SettingsScreen(
                     }
                 )
             }
+            // 每日精选提醒：本地定时通知（WorkManager），全渠道可用；iOS 未支持则隐藏
+            if (globalDailyPicksNotifier.isSupported) {
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
+                        supportingContent = { Text(stringResource(Res.string.daily_picks_notification_desc)) },
+                        leadingContent = { Icon(Icons.Default.Notifications, null) },
+                        trailingContent = {
+                            Switch(
+                                checked = dailyPicksNotificationEnabled,
+                                onCheckedChange = { enabled ->
+                                    trackEvent(
+                                        "settings_daily_picks_notification",
+                                        mapOf("enabled" to enabled.toString())
+                                    )
+                                    if (enabled) {
+                                        settingsScope.launch {
+                                            // 先确权再落设置：权限被拒时开关保持关闭，引导去系统设置
+                                            val granted = globalDailyPicksNotifier.enable()
+                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
+                                            if (!granted) {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    message = permissionDeniedMsg,
+                                                    actionLabel = openSystemSettingsLabel,
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    openAppSettings()
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        globalDailyPicksNotifier.disable()
+                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                    }
+                                }
+                            )
+                        }
+                    )
+                }
+            }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 
-            // 分组 2: 应用设置
+            // 分组 3: 应用设置
             item { SettingsHeader(stringResource(Res.string.app_settings)) }
             // 语言设置：trailing 切应用语言；行点击弹摘要语言说明（原独立条目并入此处）
             item {
@@ -359,49 +403,9 @@ fun SettingsScreen(
                     modifier = Modifier.clickable { toggleOpenLinks(!openLinksInCustomTab) }
                 )
             }
-            // 每日精选提醒：本地定时通知（WorkManager），全渠道可用；iOS 未支持则隐藏
-            if (globalDailyPicksNotifier.isSupported) {
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
-                        supportingContent = { Text(stringResource(Res.string.daily_picks_notification_desc)) },
-                        leadingContent = { Icon(Icons.Default.Notifications, null) },
-                        trailingContent = {
-                            Switch(
-                                checked = dailyPicksNotificationEnabled,
-                                onCheckedChange = { enabled ->
-                                    trackEvent(
-                                        "settings_daily_picks_notification",
-                                        mapOf("enabled" to enabled.toString())
-                                    )
-                                    if (enabled) {
-                                        settingsScope.launch {
-                                            // 先确权再落设置：权限被拒时开关保持关闭，引导去系统设置
-                                            val granted = globalDailyPicksNotifier.enable()
-                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
-                                            if (!granted) {
-                                                val result = snackbarHostState.showSnackbar(
-                                                    message = permissionDeniedMsg,
-                                                    actionLabel = openSystemSettingsLabel,
-                                                )
-                                                if (result == SnackbarResult.ActionPerformed) {
-                                                    openAppSettings()
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        globalDailyPicksNotifier.disable()
-                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
-                                    }
-                                }
-                            )
-                        }
-                    )
-                }
-            }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 
-            // 分组 3: 关于
+            // 分组 4: 关于
             item { SettingsHeader(stringResource(Res.string.about)) }
             item {
                 ListItem(

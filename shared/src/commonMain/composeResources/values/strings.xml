@@ -11,6 +11,7 @@
     <string name="theme_dark">Dark</string>
     <string name="appearance">Appearance</string>
     <string name="app_settings">App Settings</string>
+    <string name="subscription_reminders">Subscription &amp; Reminders</string>
     <string name="language_settings">Language</string>
     <string name="language_option_follow_system">Follow system</string>
     <string name="language_option_chinese">Chinese</string>
