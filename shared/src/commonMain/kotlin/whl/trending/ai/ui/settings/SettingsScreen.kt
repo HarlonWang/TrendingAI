@@ -35,7 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
@@ -91,8 +90,6 @@ import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
-import trendingai.shared.generated.resources.new_only_default
-import trendingai.shared.generated.resources.new_only_default_desc
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
@@ -134,7 +131,6 @@ fun SettingsScreen(
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
-    val trendingNewOnlyDefault by globalSettingsManager.trendingNewOnlyDefault.collectAsState(false)
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
     )
@@ -364,23 +360,6 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                    }
-                )
-            }
-            // 「只看 New」默认开关：只决定进入 app 时的初始状态，榜单页手动切换不回写
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.new_only_default)) },
-                    supportingContent = { Text(stringResource(Res.string.new_only_default_desc)) },
-                    leadingContent = { Icon(Icons.Default.FiberNew, null) },
-                    trailingContent = {
-                        Switch(
-                            checked = trendingNewOnlyDefault,
-                            onCheckedChange = { enabled ->
-                                trackEvent("settings_new_only_default", mapOf("enabled" to enabled.toString()))
-                                globalSettingsManager.setTrendingNewOnlyDefault(enabled)
-                            }
-                        )
                     }
                 )
             }
