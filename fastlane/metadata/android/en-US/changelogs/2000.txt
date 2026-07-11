@@ -1,0 +1,5 @@
+• Daily Picks now supports local notification reminders, with a Newsletter subscription entry added to the Picks tab
+• Chat now supports sending images (camera/gallery), with one-tap deep dive and fully streamed responses
+• Set which tab the home screen opens by default
+• Redesigned Settings page with a cleaner layout
+• Smoother page transitions, and fixed an issue opening the Sponsor page
