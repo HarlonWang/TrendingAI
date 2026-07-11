@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
 import whl.trending.ai.data.model.FavoriteItem
 
@@ -127,12 +128,16 @@ class SettingsManager(private val settings: ObservableSettings) {
         if (current.any { it.url == item.url }) return
         val updated = listOf(item) + current
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
+        // 当前所有调用点均为用户手势，集中在此埋点即可覆盖各页面入口；
+        // 若未来引入同步/导入等非手势写入，需绕开本方法或拆分埋点
+        trackEvent("favorite_toggle", mapOf("on" to true, "source" to item.source))
     }
 
     fun removeFavorite(url: String) {
         val current = getCurrentFavorites()
         val updated = current.filter { it.url != url }
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
+        trackEvent("favorite_toggle", mapOf("on" to false))
     }
 
     private fun getCurrentFavorites(): List<FavoriteItem> {

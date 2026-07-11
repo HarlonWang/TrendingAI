@@ -2,6 +2,7 @@ package whl.trending.ai.ui.subscribe
 
 import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.platform.isIosPlatform
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.SubscribeStatus
@@ -66,11 +67,13 @@ class SubscribeViewModel(
             result.fold(
                 onSuccess = { resp ->
                     val status = SubscribeStatus.from(resp.status)
+                    trackEvent("subscribe_submit", mapOf("result" to "success", "lang" to lang, "status" to status.name.lowercase()))
                     settings.setSubscribedEmail(email)
                     _uiState.update { it.copy(isSubmitting = false, subscribedEmail = email) }
                     _events.send(SubscribeEvent.Success(status))
                 },
                 onFailure = {
+                    trackEvent("subscribe_submit", mapOf("result" to "error", "lang" to lang))
                     _uiState.update { it.copy(isSubmitting = false) }
                     _events.send(SubscribeEvent.Error)
                 }
@@ -89,11 +92,13 @@ class SubscribeViewModel(
             result.fold(
                 onSuccess = { resp ->
                     val status = SubscribeStatus.from(resp.status)
+                    trackEvent("subscribe_cancel", mapOf("result" to "success"))
                     settings.setSubscribedEmail(null)
                     _uiState.update { it.copy(isSubmitting = false, subscribedEmail = null) }
                     _events.send(SubscribeEvent.Success(status))
                 },
                 onFailure = {
+                    trackEvent("subscribe_cancel", mapOf("result" to "error"))
                     _uiState.update { it.copy(isSubmitting = false) }
                     _events.send(SubscribeEvent.Error)
                 }
