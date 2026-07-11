@@ -7,9 +7,9 @@ android-targetSdk = "36"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.7.1"
 androidx-browser = "1.10.0"
-androidx-core = "1.17.0"
-androidx-exifinterface = "1.4.1"
-androidx-work = "2.10.1"
+androidx-core = "1.19.0"
+androidx-exifinterface = "1.4.2"
+androidx-work = "2.11.2"
 
 # 💡 注意：此版本号由 Google (androidx.*) 与 JetBrains (org.jetbrains.androidx.*) 共用。
 # 由于两者的发布节奏并不完全同步，升级前需确认该版本在 Google Maven 与 JetBrains 仓库中均已发布。
