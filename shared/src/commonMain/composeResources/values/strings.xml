@@ -52,7 +52,7 @@
     <string name="new_only_default">New only by default</string>
     <string name="new_only_default_desc">Turn on the New filter for the GitHub list at launch</string>
     <string name="daily_picks_notification">Daily Picks reminder</string>
-    <string name="daily_picks_notification_desc">A local notification when the day\'s AI picks are ready — no push service required</string>
+    <string name="daily_picks_notification_desc">A local notification when the day&#8217;s AI picks are ready — no push service required</string>
     <string name="notification_permission_denied">Notification permission is off. Allow it in system settings to get reminders.</string>
     <string name="picks_newsletter_title">Get Picks by email</string>
     <string name="picks_newsletter_desc">Subscribe to the newsletter and receive the daily picks in your inbox</string>
@@ -75,7 +75,7 @@
     <string name="select_date">Select Date</string>
     <string name="action_help">Help</string>
     <string name="update_info_title">Update Schedule</string>
-    <string name="update_info_content">Data comes from GitHub\'s official Trending page and stays in sync with it.\n\nThe list updates twice daily (approx. every 12 hours) to keep you informed about the latest trends.</string>
+    <string name="update_info_content">Data comes from GitHub&#8217;s official Trending page and stays in sync with it.\n\nThe list updates twice daily (approx. every 12 hours) to keep you informed about the latest trends.</string>
     <string name="history_info_title">History Snapshot</string>
     <string name="history_info_content">The system records data snapshots for both morning (AM) and afternoon (PM) sessions daily, allowing you to trace project growth over time.</string>
     <string name="feedback">Feedback</string>
