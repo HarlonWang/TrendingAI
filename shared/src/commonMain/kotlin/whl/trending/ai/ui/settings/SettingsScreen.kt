@@ -18,6 +18,7 @@ import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.ui.home.githubLogoPainter
+import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
@@ -51,6 +52,7 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FiberNew
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Language
@@ -121,6 +123,11 @@ import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.daily_picks_notification_desc
 import trendingai.shared.generated.resources.notification_permission_denied
 import trendingai.shared.generated.resources.dark_mode
+import trendingai.shared.generated.resources.default_home_tab
+import trendingai.shared.generated.resources.default_home_tab_desc
+import trendingai.shared.generated.resources.hackernews_title
+import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
@@ -178,6 +185,9 @@ fun SettingsScreen(
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
     val trendingNewOnlyDefault by globalSettingsManager.trendingNewOnlyDefault.collectAsState(false)
+    val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
+        remember { globalSettingsManager.currentDefaultHomeTab() }
+    )
     val appVersion = remember { getAppVersion() }
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
@@ -527,6 +537,39 @@ fun SettingsScreen(
                     }
                 )
             }
+            // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.default_home_tab)) },
+                    supportingContent = { Text(stringResource(Res.string.default_home_tab_desc)) },
+                    leadingContent = { Icon(Icons.Default.Home, null) },
+                    trailingContent = {
+                        Box {
+                            Text(
+                                text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable { expanded = true }
+                            )
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                HomeTab.entries.forEach { tab ->
+                                    DropdownMenuItem(
+                                        text = { Text(homeTabOptionText(tab)) },
+                                        onClick = {
+                                            expanded = false
+                                            trackEvent("settings_default_home_tab_change", mapOf("tab" to tab.name.lowercase()))
+                                            globalSettingsManager.setDefaultHomeTab(tab.name)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
             // 每日精选提醒：本地定时通知（WorkManager），全渠道可用；iOS 未支持则隐藏
             if (globalDailyPicksNotifier.isSupported) {
                 item {
@@ -672,6 +715,14 @@ private fun languageOptionText(language: AppLanguage): String {
         AppLanguage.ENGLISH -> Res.string.language_option_english
     }
     return stringResource(labelRes)
+}
+
+@Composable
+private fun homeTabOptionText(tab: HomeTab): String = when (tab) {
+    HomeTab.GitHub -> "GitHub"
+    HomeTab.HackerNews -> stringResource(Res.string.hackernews_title)
+    HomeTab.ProductHunt -> stringResource(Res.string.producthunt_title)
+    HomeTab.Picks -> stringResource(Res.string.picks_title)
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -92,7 +92,13 @@ import whl.trending.ai.ui.trending.TrendingViewModel
 import kotlin.time.Clock
 
 enum class HomeTab {
-    GitHub, HackerNews, ProductHunt, Picks
+    GitHub, HackerNews, ProductHunt, Picks;
+
+    companion object {
+        /** 解析持久化的 tab name；非法值（枚举改名、脏数据）回落 GitHub */
+        fun fromNameOrDefault(name: String): HomeTab =
+            entries.firstOrNull { it.name == name } ?: GitHub
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,8 +111,11 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {}
 ) {
-    var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
-    val selectedTab = HomeTab.valueOf(selectedTabName)
+    // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
+    var selectedTabName by rememberSaveable {
+        mutableStateOf(HomeTab.fromNameOrDefault(globalSettingsManager.currentDefaultHomeTab()).name)
+    }
+    val selectedTab = HomeTab.fromNameOrDefault(selectedTabName)
 
     // 组合树外的切 tab 请求（通知点击深链等）：置位状态可跨冷启动等到这里再消费
     LaunchedEffect(Unit) {

@@ -27,6 +27,9 @@ enum class ThemeMode(val title: String) {
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
 
+/** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
+private const val DEFAULT_HOME_TAB_NAME = "GitHub"
+
 enum class AppLanguage(val isoCode: String?) {
     FOLLOW_SYSTEM(null),
     CHINESE("zh"),
@@ -54,6 +57,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
+    private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -284,6 +288,19 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setPicksNewsletterBannerDismissed(value: Boolean) {
         settings.putBoolean(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, value)
+    }
+
+    /**
+     * 冷启动默认显示的首页 tab，存 ui 层 HomeTab 枚举的 name（如 "GitHub"、"Picks"）。
+     * data 层不依赖 ui 层枚举，只存取字符串；解析与回落由 HomeTab.fromNameOrDefault 负责。
+     * 只决定初始值；会话内切 tab 不回写此设置。
+     */
+    val defaultHomeTab: Flow<String> = settings.getStringFlow(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
+
+    fun currentDefaultHomeTab(): String = settings.getString(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
+
+    fun setDefaultHomeTab(name: String) {
+        settings.putString(DEFAULT_HOME_TAB_KEY, name)
     }
 }
 
