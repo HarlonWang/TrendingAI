@@ -105,11 +105,6 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 ThemeMode.entries.forEachIndexed { index, mode ->
-                    val labelRes = when (mode) {
-                        ThemeMode.FOLLOW_SYSTEM -> Res.string.theme_follow_system
-                        ThemeMode.LIGHT -> Res.string.theme_light
-                        ThemeMode.DARK -> Res.string.theme_dark
-                    }
                     SegmentedButton(
                         selected = themeMode == mode,
                         onClick = {
@@ -122,7 +117,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
                         ),
                         label = {
                             Text(
-                                text = stringResource(labelRes),
+                                text = themeModeText(mode),
                                 style = MaterialTheme.typography.labelMedium
                             )
                         }
@@ -156,6 +151,17 @@ fun AppearanceScreen(onBack: () -> Unit) {
             )
         }
     }
+}
+
+/** ThemeMode → 展示文案，设置一级页外观入口与本页分段按钮共用 */
+@Composable
+internal fun themeModeText(mode: ThemeMode): String {
+    val labelRes = when (mode) {
+        ThemeMode.FOLLOW_SYSTEM -> Res.string.theme_follow_system
+        ThemeMode.LIGHT -> Res.string.theme_light
+        ThemeMode.DARK -> Res.string.theme_dark
+    }
+    return stringResource(labelRes)
 }
 
 @OptIn(ExperimentalLayoutApi::class)

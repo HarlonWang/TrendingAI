@@ -109,9 +109,6 @@ import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.settings
-import trendingai.shared.generated.resources.theme_dark
-import trendingai.shared.generated.resources.theme_follow_system
-import trendingai.shared.generated.resources.theme_light
 
 import trendingai.shared.generated.resources.favorites
 import trendingai.shared.generated.resources.feedback
@@ -499,16 +496,6 @@ private fun languageOptionText(language: AppLanguage): String {
         AppLanguage.FOLLOW_SYSTEM -> Res.string.language_option_follow_system
         AppLanguage.CHINESE -> Res.string.language_option_chinese
         AppLanguage.ENGLISH -> Res.string.language_option_english
-    }
-    return stringResource(labelRes)
-}
-
-@Composable
-private fun themeModeText(mode: ThemeMode): String {
-    val labelRes = when (mode) {
-        ThemeMode.FOLLOW_SYSTEM -> Res.string.theme_follow_system
-        ThemeMode.LIGHT -> Res.string.theme_light
-        ThemeMode.DARK -> Res.string.theme_dark
     }
     return stringResource(labelRes)
 }
