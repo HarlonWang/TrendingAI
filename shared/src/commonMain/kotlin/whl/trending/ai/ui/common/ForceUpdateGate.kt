@@ -54,6 +54,9 @@ fun ForceUpdateGate(content: @Composable () -> Unit) {
         runCatching { TrendingApi().fetchAppConfig() }.onSuccess { config ->
             globalSettingsManager.setCachedMinVersion(config.minVersion)
             minVersion = config.minVersion
+        }.onFailure {
+            // fail-open：接口未上线（404）/断网都不影响使用，仅留日志便于排查服务端误配置
+            println("ForceUpdateGate: fetchAppConfig failed: $it")
         }
     }
 
