@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.settings
 
 import whl.trending.ai.data.local.AppLanguage
-import whl.trending.ai.data.local.DEFAULT_SEED_ARGB
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.isIosPlatform
@@ -21,7 +20,6 @@ import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.update.globalUpdateChecker
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +31,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.OutlinedTextField
@@ -76,10 +73,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -146,7 +140,6 @@ fun SettingsScreen(
     val isIos = isIosPlatform()
     val uriHandler = LocalUriHandler.current
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
-    val seedColor by globalSettingsManager.seedColor.collectAsState(DEFAULT_SEED_ARGB)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
     val trendingNewOnlyDefault by globalSettingsManager.trendingNewOnlyDefault.collectAsState(false)
@@ -225,20 +218,12 @@ fun SettingsScreen(
         ) {
             // 分组 1: 个性化
             item { SettingsHeader(stringResource(Res.string.personalization)) }
-            // 外观：深色模式 + 主题色收进二级页，trailing 色点直观展示当前主题色
+            // 外观：深色模式 + 主题色收进二级页
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.appearance)) },
                     supportingContent = { Text(themeModeText(themeMode)) },
                     leadingContent = { Icon(Icons.Default.Palette, null) },
-                    trailingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(Color(seedColor))
-                        )
-                    },
                     modifier = Modifier.clickable {
                         trackEvent("settings_appearance")
                         onNavigateToAppearance()
