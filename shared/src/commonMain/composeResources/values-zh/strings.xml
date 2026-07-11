@@ -33,6 +33,7 @@
     <string name="current_datasource">当前使用: Gemini API</string>
     <string name="about">关于</string>
     <string name="check_updates">检查更新</string>
+    <string name="changelog">更新日志</string>
     <string name="version_up_to_date">已是最新</string>
     <string name="about_us">关于我们</string>
     <string name="about_us_desc">了解更多关于 Trending AI 的信息</string>

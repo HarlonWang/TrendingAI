@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
@@ -56,6 +57,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.changelog
 import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.contact_author
@@ -146,6 +148,14 @@ fun AboutScreen(
                     }
                 )
             }
+            ListItem(
+                headlineContent = { Text(stringResource(Res.string.changelog)) },
+                leadingContent = { Icon(Icons.Default.History, null) },
+                modifier = Modifier.clickable {
+                    trackEvent("settings_changelog")
+                    uriHandler.openUri(Constants.CHANGELOG_URL)
+                }
+            )
             ListItem(
                 headlineContent = { Text(stringResource(Res.string.official_website)) },
                 leadingContent = { Icon(Icons.Default.Public, null) },
