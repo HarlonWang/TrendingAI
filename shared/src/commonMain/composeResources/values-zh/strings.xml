@@ -12,14 +12,15 @@
     <string name="appearance">外观</string>
     <string name="app_settings">应用设置</string>
     <string name="subscription_reminders">订阅与提醒</string>
-    <string name="language_settings">语言设置</string>
+    <string name="language_settings">应用语言</string>
+    <string name="app_language_desc">界面显示语言</string>
     <string name="language_option_follow_system">跟随系统</string>
     <string name="language_option_chinese">中文</string>
     <string name="language_option_english">英文</string>
     <string name="open_system_settings">前往系统设置</string>
     <string name="summary_language">摘要语言</string>
     <string name="summary_language_desc">AI 摘要支持中英文 · 点击了解</string>
-    <string name="summary_language_message">摘要语言跟随应用语言设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换语言后自动刷新。\n\n希望支持你的母语？通过 GitHub 赞助 Pro 支持我们持续投入，你的语言会进入优先排期，最快在下个版本上线。</string>
+    <string name="summary_language_message">摘要语言可独立于应用语言单独设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换后自动刷新。\n\n希望支持你的母语？通过 GitHub 赞助 Pro 支持我们持续投入，你的语言会进入优先排期，最快在下个版本上线。</string>
     <string name="summary_language_feedback">去反馈</string>
     <string name="summary_language_sponsor">GitHub 赞助 Pro</string>
     <string name="summary_lang_capture_title">你希望支持哪门语言？</string>

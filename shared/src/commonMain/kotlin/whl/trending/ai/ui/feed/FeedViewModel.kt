@@ -42,7 +42,7 @@ class FeedViewModel(
 
         viewModelScope.launch {
             // drop(1) 丢弃首次初始化的当前值，只监听真正发生的设置修改，避免初始化时重复调用 fetchFeed
-            settingsManager.appLanguage.drop(1).collect {
+            settingsManager.summaryLanguage.drop(1).collect {
                 fetchFeed(isRefresh = true)
             }
         }

@@ -1,6 +1,7 @@
 package whl.trending.ai.ui.settings
 
 import whl.trending.ai.data.local.AppLanguage
+import whl.trending.ai.data.local.SummaryLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.isIosPlatform
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material3.AlertDialog
@@ -86,6 +88,7 @@ import trendingai.shared.generated.resources.default_home_tab_desc
 import trendingai.shared.generated.resources.hackernews_title
 import trendingai.shared.generated.resources.producthunt_title
 import trendingai.shared.generated.resources.picks_title
+import trendingai.shared.generated.resources.app_language_desc
 import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
@@ -130,6 +133,7 @@ fun SettingsScreen(
     val isIos = isIosPlatform()
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
+    val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(SummaryLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
@@ -285,11 +289,12 @@ fun SettingsScreen(
 
             // 分组 3: 应用设置
             item { SettingsHeader(stringResource(Res.string.app_settings)) }
-            // 语言设置：trailing 切应用语言；行点击弹摘要语言说明（原独立条目并入此处）
+            // 应用语言：只管界面文案，与摘要语言解耦；iOS 由系统的按 App 语言设置接管，跳系统设置
             item {
+                var expanded by remember { mutableStateOf(false) }
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.language_settings)) },
-                    supportingContent = { Text(stringResource(Res.string.summary_language_desc)) },
+                    supportingContent = { Text(stringResource(Res.string.app_language_desc)) },
                     leadingContent = { Icon(Icons.Default.Language, null) },
                     trailingContent = {
                         if (isIos) {
@@ -299,7 +304,6 @@ fun SettingsScreen(
                                 modifier = Modifier.clickable { openAppSettings() }
                             )
                         } else {
-                            var expanded by remember { mutableStateOf(false) }
                             Box {
                                 Text(
                                     text = languageOptionText(appLanguage),
@@ -325,7 +329,44 @@ fun SettingsScreen(
                         }
                     },
                     modifier = Modifier.clickable {
-                        trackEvent("settings_summary_language", mapOf("app_language" to appLanguage.name.lowercase()))
+                        if (isIos) openAppSettings() else expanded = true
+                    }
+                )
+            }
+            // 摘要语言：独立决定 AI 摘要/解读的请求语言，两端都是应用内下拉；
+            // 行点击弹说明（含「更多语言」引导采集 + 赞助流程）
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.summary_language)) },
+                    supportingContent = { Text(stringResource(Res.string.summary_language_desc)) },
+                    leadingContent = { Icon(Icons.Default.Translate, null) },
+                    trailingContent = {
+                        Box {
+                            Text(
+                                text = languageOptionText(summaryLanguage),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable { expanded = true }
+                            )
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                SummaryLanguage.entries.forEach { language ->
+                                    DropdownMenuItem(
+                                        text = { Text(languageOptionText(language)) },
+                                        onClick = {
+                                            expanded = false
+                                            trackEvent("settings_summary_language_change", mapOf("language" to language.name.lowercase()))
+                                            globalSettingsManager.setSummaryLanguage(language)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_summary_language", mapOf("summary_language" to summaryLanguage.name.lowercase()))
                         showSummaryLanguageDialog = true
                     }
                 )
@@ -419,6 +460,16 @@ private fun languageOptionText(language: AppLanguage): String {
         AppLanguage.FOLLOW_SYSTEM -> Res.string.language_option_follow_system
         AppLanguage.CHINESE -> Res.string.language_option_chinese
         AppLanguage.ENGLISH -> Res.string.language_option_english
+    }
+    return stringResource(labelRes)
+}
+
+@Composable
+private fun languageOptionText(language: SummaryLanguage): String {
+    val labelRes = when (language) {
+        SummaryLanguage.FOLLOW_SYSTEM -> Res.string.language_option_follow_system
+        SummaryLanguage.CHINESE -> Res.string.language_option_chinese
+        SummaryLanguage.ENGLISH -> Res.string.language_option_english
     }
     return stringResource(labelRes)
 }

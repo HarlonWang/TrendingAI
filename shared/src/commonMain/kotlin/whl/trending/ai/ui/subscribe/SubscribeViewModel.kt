@@ -61,7 +61,7 @@ class SubscribeViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
-            // 订阅语言跟随 App 当前语言设置（与摘要请求同口径），后端按 zh/en 决定邮件语言，非法值兜底英文
+            // 订阅语言跟随摘要语言设置（与摘要请求同口径），后端按 zh/en 决定邮件语言，非法值兜底英文
             val lang = settings.currentContentLang()
             val result = repository.subscribe(email, currentSource(), lang)
             result.fold(

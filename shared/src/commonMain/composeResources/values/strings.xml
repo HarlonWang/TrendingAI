@@ -12,14 +12,15 @@
     <string name="appearance">Appearance</string>
     <string name="app_settings">App Settings</string>
     <string name="subscription_reminders">Subscription &amp; Reminders</string>
-    <string name="language_settings">Language</string>
+    <string name="language_settings">App Language</string>
+    <string name="app_language_desc">Interface display language</string>
     <string name="language_option_follow_system">Follow system</string>
     <string name="language_option_chinese">Chinese</string>
     <string name="language_option_english">English</string>
     <string name="open_system_settings">Open system settings</string>
     <string name="summary_language">Summary Language</string>
     <string name="summary_language_desc">AI summaries in Chinese &amp; English · Tap to learn more</string>
-    <string name="summary_language_message">Summary language follows the app language setting: AI summaries for GitHub, Hacker News and Product Hunt, as well as Picks deep dives, are available in both Chinese and English, and refresh automatically when you switch languages.\n\nWant your own language? Sponsor Pro on GitHub to support us — we&apos;ll put it on the priority list and ship it as early as the next release.</string>
+    <string name="summary_language_message">Summary language can be set independently of the app language: AI summaries for GitHub, Hacker News and Product Hunt, as well as Picks deep dives, are available in both Chinese and English, and refresh automatically when you switch.\n\nWant your own language? Sponsor Pro on GitHub to support us — we&apos;ll put it on the priority list and ship it as early as the next release.</string>
     <string name="summary_language_feedback">Send Feedback</string>
     <string name="summary_language_sponsor">Sponsor Pro on GitHub</string>
     <string name="summary_lang_capture_title">Which language would you like?</string>

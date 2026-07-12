@@ -36,11 +36,34 @@ enum class AppLanguage(val isoCode: String?) {
     ENGLISH("en")
 }
 
+/** 后端已支持的摘要语言；「跟随系统」钳制到该清单，清单外的系统语言回落英文 */
+val SUPPORTED_SUMMARY_LANGS = setOf("zh", "en")
+private const val FALLBACK_SUMMARY_LANG = "en"
+
+/**
+ * 摘要内容语言，与 App 界面语言（[AppLanguage]）解耦：
+ * 界面语言受限于打包的 strings 翻译，摘要语言只受后端支持范围约束，两者扩展节奏独立。
+ * 持久化存 [storageValue] 字符串而非 ordinal，便于后续在任意位置插入新语言。
+ */
+enum class SummaryLanguage(val isoCode: String?) {
+    FOLLOW_SYSTEM(null),
+    CHINESE("zh"),
+    ENGLISH("en");
+
+    val storageValue: String get() = isoCode ?: "system"
+
+    companion object {
+        fun fromStorage(value: String?): SummaryLanguage =
+            entries.firstOrNull { it.storageValue == value } ?: FOLLOW_SYSTEM
+    }
+}
+
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val SEED_COLOR_KEY = "prefs_seed_color"
     private val LANGUAGE_KEY = "prefs_language"
+    private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val LAST_SEEN_WHATSNEW_KEY = "prefs_last_seen_whatsnew_version"
     private val FAVORITES_KEY = "prefs_favorites"
@@ -96,18 +119,46 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putLong(SEED_COLOR_KEY, argb)
     }
 
+    init {
+        // 摘要语言一次性迁移：旧版本摘要语言复用 App 语言设置，升级后首次构造时
+        // 用当时的 App 语言初始化摘要语言，解耦本身不改变既有用户看到的摘要语言
+        if (!settings.hasKey(SUMMARY_LANGUAGE_KEY)) {
+            val app = AppLanguage.entries.getOrElse(
+                settings.getInt(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
+            ) { AppLanguage.FOLLOW_SYSTEM }
+            val initial = when (app) {
+                AppLanguage.CHINESE -> SummaryLanguage.CHINESE
+                AppLanguage.ENGLISH -> SummaryLanguage.ENGLISH
+                AppLanguage.FOLLOW_SYSTEM -> SummaryLanguage.FOLLOW_SYSTEM
+            }
+            settings.putString(SUMMARY_LANGUAGE_KEY, initial.storageValue)
+        }
+    }
+
     val appLanguage: Flow<AppLanguage> = settings.getIntFlow(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
         .map { AppLanguage.entries.getOrElse(it) { AppLanguage.FOLLOW_SYSTEM } }
 
-    /**
-     * 当前内容语言：跟随 App 语言设置，FOLLOW_SYSTEM 时回退系统语言。
-     * 供摘要请求与邮件订阅复用，避免各处各自推导导致口径分叉。
-     */
-    suspend fun currentContentLang(): String =
-        appLanguage.first().isoCode ?: getSystemLanguage()
-
     fun setLanguage(language: AppLanguage) {
         settings.putInt(LANGUAGE_KEY, language.ordinal)
+    }
+
+    val summaryLanguage: Flow<SummaryLanguage> =
+        settings.getStringFlow(SUMMARY_LANGUAGE_KEY, SummaryLanguage.FOLLOW_SYSTEM.storageValue)
+            .map { SummaryLanguage.fromStorage(it) }
+
+    fun setSummaryLanguage(language: SummaryLanguage) {
+        settings.putString(SUMMARY_LANGUAGE_KEY, language.storageValue)
+    }
+
+    /**
+     * 当前内容语言：读摘要语言设置，FOLLOW_SYSTEM 时取系统语言并钳制到后端支持清单
+     * （清单外回落英文，避免发出后端无数据的 lang 导致摘要整页为空）。
+     * 供摘要请求与邮件订阅复用，避免各处各自推导导致口径分叉。
+     */
+    suspend fun currentContentLang(): String {
+        summaryLanguage.first().isoCode?.let { return it }
+        val system = getSystemLanguage()
+        return if (system in SUPPORTED_SUMMARY_LANGS) system else FALLBACK_SUMMARY_LANG
     }
 
     fun getLastUpdateCheckTime(): Long =
