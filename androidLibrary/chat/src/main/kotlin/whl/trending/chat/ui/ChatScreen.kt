@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -62,6 +63,17 @@ fun ChatScreen(
     val viewModel: ChatViewModel =
         viewModel(key = sessionKey) { ChatViewModel(engine, initialContext, initialMessages) }
     val state by viewModel.uiState.collectAsState()
+
+    // README 详情页「一键解读」入口：进入会话后自动触发一次详细解读，省去手动点 chip。
+    // chipVisible 已含「GitHub + README 达标 + 尚无成功解读」判定，天然幂等、防重复触发。
+    val autoDetailPrompt = stringResource(R.string.chat_action_detail_summary)
+    LaunchedEffect(sessionKey) {
+        if (initialContext?.autoDetailSummary == true &&
+            DetailSummaryPolicy.chipVisible(initialContext, viewModel.uiState.value.messages)
+        ) {
+            viewModel.sendDetailSummary(autoDetailPrompt)
+        }
+    }
 
     Scaffold(
         topBar = {

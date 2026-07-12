@@ -14,15 +14,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -32,17 +36,24 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,6 +63,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_star
 import trendingai.shared.generated.resources.action_unstar
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.readme_fab_chat
+import trendingai.shared.generated.resources.readme_fab_detail_summary
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
 import trendingai.shared.generated.resources.share_to_ai
@@ -89,6 +102,27 @@ fun ReadmeScreen(
     val uriHandler = LocalUriHandler.current
     // README 摘录涉及多次正则替换，缓存结果避免每次重组重算（分享栏与 FAB 共用）
     val summary = remember(uiState.html) { readmeExcerpt(uiState.html) }
+    // README 正文长度估计（HTML 去标签）；未加载完为 null → 解读 chip / 「一键解读」子项不显示
+    val readmeLength = remember(uiState.html) {
+        uiState.html
+            .takeIf { it.isNotBlank() }
+            ?.replace(Regex("<[^>]+>"), "")
+            ?.length
+    }
+    // 构造进入 chat 的上下文；autoDetailSummary=true 时进 chat 自动触发「一键详细解读」
+    fun buildChatContext(autoDetailSummary: Boolean) = ChatContext(
+        title = "$owner/$repo",
+        // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；未加载完为 null，退化为仅 title + url
+        summary = summary,
+        sourceUrl = repoUrl,
+        // 「一键详细解读」入参：与服务端 contents 表 (source, external_id) 对齐
+        source = "github",
+        externalId = "$owner/$repo",
+        readmeLength = readmeLength,
+        autoDetailSummary = autoDetailSummary,
+    )
+    // 与 chat 模块 DetailSummaryPolicy.MIN_README_CHARS 保持一致（shared 无法跨模块引用该常量）
+    val detailSummaryAvailable = (readmeLength ?: 0) >= 1500
 
     val snackbarHostState = remember { SnackbarHostState() }
     val msgStarred = stringResource(Res.string.star_success)
@@ -182,31 +216,61 @@ fun ReadmeScreen(
         },
         floatingActionButton = {
             if (globalChatScreen != null) {
-                FloatingActionButton(
-                    onClick = {
-                        onNavigateToChat(
-                            ChatContext(
-                                title = "$owner/$repo",
-                                // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；
-                                // README 未加载完则为 null，退化为仅 title + url
-                                summary = summary,
-                                sourceUrl = repoUrl,
-                                // 「一键详细解读」入参：与服务端 contents 表 (source, external_id) 对齐
-                                source = "github",
-                                externalId = "$owner/$repo",
-                                // README 正文长度估计（HTML 去标签）；未加载完为 null → 解读 chip 不显示
-                                readmeLength = uiState.html
-                                    .takeIf { it.isNotBlank() }
-                                    ?.replace(Regex("<[^>]+>"), "")
-                                    ?.length,
+                // 点击主按钮展开菜单：「AI 对话」进普通会话，「一键解读」进会话并自动触发详细解读
+                var menuExpanded by rememberSaveable { mutableStateOf(false) }
+                FloatingActionButtonMenu(
+                    expanded = menuExpanded,
+                    button = {
+                        ToggleFloatingActionButton(
+                            checked = menuExpanded,
+                            onCheckedChange = { menuExpanded = it },
+                            // 显式配对容器色，避免依赖默认值，保证与下面图标 tint 的对比度
+                            containerColor = ToggleFloatingActionButtonDefaults.containerColor(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.primary,
+                            ),
+                        ) {
+                            Icon(
+                                imageVector = if (checkedProgress > 0.5f) {
+                                    Icons.Default.Close
+                                } else {
+                                    Icons.Default.Menu
+                                },
+                                contentDescription = "AI",
+                                // 图标色随展开进度从「容器上前景」过渡到「主色上前景」，
+                                // 避免展开态深紫背景上 ✕ 对比度不足
+                                tint = lerp(
+                                    MaterialTheme.colorScheme.onPrimaryContainer,
+                                    MaterialTheme.colorScheme.onPrimary,
+                                    checkedProgress,
+                                ),
                             )
+                        }
+                    },
+                ) {
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            menuExpanded = false
+                            onNavigateToChat(buildChatContext(autoDetailSummary = false))
+                        },
+                        icon = {
+                            Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
+                        },
+                        text = { Text(stringResource(Res.string.readme_fab_chat)) },
+                    )
+                    // README 正文过短（< 1500 字）时不提供「一键解读」，与 chat 里 chip 显示规则一致
+                    if (detailSummaryAvailable) {
+                        FloatingActionButtonMenuItem(
+                            onClick = {
+                                menuExpanded = false
+                                onNavigateToChat(buildChatContext(autoDetailSummary = true))
+                            },
+                            icon = {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                            },
+                            text = { Text(stringResource(Res.string.readme_fab_detail_summary)) },
                         )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "AI"
-                    )
                 }
             }
         }
