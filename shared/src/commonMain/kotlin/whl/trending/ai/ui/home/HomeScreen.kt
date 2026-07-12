@@ -81,6 +81,7 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.data.repository.UserRepository
+import whl.trending.ai.ui.common.SignInValueDialog
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
@@ -91,7 +92,13 @@ import whl.trending.ai.ui.trending.TrendingViewModel
 import kotlin.time.Clock
 
 enum class HomeTab {
-    GitHub, HackerNews, ProductHunt, Picks
+    GitHub, HackerNews, ProductHunt, Picks;
+
+    companion object {
+        /** 解析持久化的 tab name；非法值（枚举改名、脏数据）回落 GitHub */
+        fun fromNameOrDefault(name: String): HomeTab =
+            entries.firstOrNull { it.name == name } ?: GitHub
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,12 +108,28 @@ fun HomeScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onNavigateToChat: () -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToSubscribe: () -> Unit = {}
 ) {
-    var selectedTabName by rememberSaveable { mutableStateOf(HomeTab.GitHub.name) }
-    val selectedTab = HomeTab.valueOf(selectedTabName)
+    // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
+    var selectedTabName by rememberSaveable {
+        mutableStateOf(HomeTab.fromNameOrDefault(globalSettingsManager.currentDefaultHomeTab()).name)
+    }
+    val selectedTab = HomeTab.fromNameOrDefault(selectedTabName)
+
+    // 组合树外的切 tab 请求（通知点击深链等）：置位状态可跨冷启动等到这里再消费
+    LaunchedEffect(Unit) {
+        HomeTabRequest.pending.collect { tab ->
+            if (tab != null) {
+                selectedTabName = tab.name
+                HomeTabRequest.consume()
+            }
+        }
+    }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     var showHistorySheet by rememberSaveable { mutableStateOf(false) }
+    // 未登录点头像不直接拉起网页授权，先弹登录价值说明（见 SignInValueDialog）
+    var showSignInValueDialog by rememberSaveable { mutableStateOf(false) }
 
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
@@ -166,7 +189,7 @@ fun HomeScreen(
                     authState = authState,
                     userAvatarUrl = userAvatarUrl,
                     onProfileClick = {
-                        if (authState is AuthState.LoggedIn) onNavigateToProfile() else authManager.signIn()
+                        if (authState is AuthState.LoggedIn) onNavigateToProfile() else showSignInValueDialog = true
                     },
                 )
                 HomeTab.Picks -> PicksTopBar(
@@ -301,10 +324,22 @@ fun HomeScreen(
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 onOpenUrl = onOpenUrl,
+                onNavigateToSubscribe = onNavigateToSubscribe,
                 modifier = Modifier.padding(innerPadding),
                 viewModel = picksViewModel!!
             )
         }
+    }
+
+    if (showSignInValueDialog) {
+        SignInValueDialog(
+            source = "home_avatar",
+            onConfirm = {
+                showSignInValueDialog = false
+                authManager.signIn()
+            },
+            onDismiss = { showSignInValueDialog = false },
+        )
     }
 }
 

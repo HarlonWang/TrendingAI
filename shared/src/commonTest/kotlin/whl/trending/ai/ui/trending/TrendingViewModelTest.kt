@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import whl.trending.ai.data.local.AppLanguage
+import whl.trending.ai.data.local.SummaryLanguage
 import whl.trending.ai.data.local.FakeCacheFileStore
 import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
@@ -48,7 +48,7 @@ class TrendingViewModelTest {
     )
 
     private fun settings(): SettingsManager =
-        SettingsManager(MapSettings() as ObservableSettings).also { it.setLanguage(AppLanguage.CHINESE) }
+        SettingsManager(MapSettings() as ObservableSettings).also { it.setSummaryLanguage(SummaryLanguage.CHINESE) }
 
     private fun TestScope.cache(store: FakeCacheFileStore) =
         LastDataCache(store, StandardTestDispatcher(testScheduler))

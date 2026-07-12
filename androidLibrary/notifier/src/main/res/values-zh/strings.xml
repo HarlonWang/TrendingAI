@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="daily_picks_channel_name">每日精选</string>
+    <string name="daily_picks_channel_desc">AI 每日精选更新提醒</string>
+    <string name="daily_picks_notification_title">今日 AI 精选已就绪</string>
+    <string name="daily_picks_notification_text">「%1$s」及另外 %2$d 条精选内容</string>
+    <string name="daily_picks_notification_text_single">「%1$s」</string>
+</resources>

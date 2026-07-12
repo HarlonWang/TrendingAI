@@ -129,4 +129,20 @@ class SettingsManagerTest {
         manager.setOpenLinksInCustomTab(true)
         assertEquals(true, manager.currentOpenLinksInCustomTab())
     }
+
+    @Test
+    fun defaultHomeTab_defaults_to_github_and_persists() = runTest {
+        // 默认值：GitHub
+        assertEquals("GitHub", manager.currentDefaultHomeTab())
+        assertEquals("GitHub", manager.defaultHomeTab.first())
+
+        // 改为 Picks
+        manager.setDefaultHomeTab("Picks")
+        assertEquals("Picks", manager.currentDefaultHomeTab())
+        assertEquals("Picks", manager.defaultHomeTab.first())
+
+        // 模拟应用重启：同一份底层存储，新建 manager
+        val rebuilt = SettingsManager(settings)
+        assertEquals("Picks", rebuilt.currentDefaultHomeTab())
+    }
 }

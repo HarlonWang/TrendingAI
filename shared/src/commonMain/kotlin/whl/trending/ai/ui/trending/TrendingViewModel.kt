@@ -56,16 +56,16 @@ class TrendingViewModel(
     private var fetchJob: Job? = null
 
     init {
-        // 「只看 New」初始值取自设置项（默认关）；页面内手动切换仅影响当前会话。
+        // 「只看 New」开关即设置：冷启动恢复上次显式切换的状态（toggleNewOnly 回写）。
         // 初始视图就是该过滤唯一有效的 daily 全语言榜，直接置位即可。
-        if (settingsManager.currentTrendingNewOnlyDefault()) {
+        if (settingsManager.currentTrendingNewOnly()) {
             _uiState.update { it.copy(newOnly = true) }
         }
         loadWithCache()
 
         viewModelScope.launch {
             // drop(1) 丢弃首次初始化的当前值，只监听真正发生的设置修改，避免初始化时重复调用 fetchData
-            settingsManager.appLanguage.drop(1).collect {
+            settingsManager.summaryLanguage.drop(1).collect {
                 fetchData(isRefresh = true)
             }
         }
@@ -183,6 +183,7 @@ class TrendingViewModel(
     /**
      * 切换「只看 New」。开启时把视图 snap 到 daily 全语言榜（isNew 仅此视图有效）；
      * 已在该视图时仅改本地过滤状态，不触发网络请求。
+     * 开关即设置：显式切换立即持久化，冷启动恢复；[updateFilter] 的视图约束自动关闭不回写。
      */
     fun toggleNewOnly() {
         val turnOn = !_uiState.value.newOnly
@@ -194,6 +195,7 @@ class TrendingViewModel(
         _uiState.update {
             it.copy(selectedPeriod = effPeriod, selectedLanguage = effLang, newOnly = turnOn)
         }
+        settingsManager.setTrendingNewOnly(turnOn)
         trackEvent("trending_new_only", mapOf("on" to turnOn))
         if (needFetch) fetchData()
     }

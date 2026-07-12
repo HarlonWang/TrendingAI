@@ -27,10 +27,35 @@ enum class ThemeMode(val title: String) {
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
 
+/** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
+private const val DEFAULT_HOME_TAB_NAME = "GitHub"
+
 enum class AppLanguage(val isoCode: String?) {
     FOLLOW_SYSTEM(null),
     CHINESE("zh"),
     ENGLISH("en")
+}
+
+/** 后端已支持的摘要语言；「跟随系统」钳制到该清单，清单外的系统语言回落英文 */
+val SUPPORTED_SUMMARY_LANGS = setOf("zh", "en")
+private const val FALLBACK_SUMMARY_LANG = "en"
+
+/**
+ * 摘要内容语言，与 App 界面语言（[AppLanguage]）解耦：
+ * 界面语言受限于打包的 strings 翻译，摘要语言只受后端支持范围约束，两者扩展节奏独立。
+ * 持久化存 [storageValue] 字符串而非 ordinal，便于后续在任意位置插入新语言。
+ */
+enum class SummaryLanguage(val isoCode: String?) {
+    FOLLOW_SYSTEM(null),
+    CHINESE("zh"),
+    ENGLISH("en");
+
+    val storageValue: String get() = isoCode ?: "system"
+
+    companion object {
+        fun fromStorage(value: String?): SummaryLanguage =
+            entries.firstOrNull { it.storageValue == value } ?: FOLLOW_SYSTEM
+    }
 }
 
 @OptIn(ExperimentalSettingsApi::class)
@@ -38,6 +63,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val SEED_COLOR_KEY = "prefs_seed_color"
     private val LANGUAGE_KEY = "prefs_language"
+    private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val LAST_SEEN_WHATSNEW_KEY = "prefs_last_seen_whatsnew_version"
     private val FAVORITES_KEY = "prefs_favorites"
@@ -53,6 +79,9 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
     private val MIN_VERSION_KEY = "prefs_min_version"
+    private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
+    private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
+    private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -91,18 +120,46 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putLong(SEED_COLOR_KEY, argb)
     }
 
+    init {
+        // 摘要语言一次性迁移：旧版本摘要语言复用 App 语言设置，升级后首次构造时
+        // 用当时的 App 语言初始化摘要语言，解耦本身不改变既有用户看到的摘要语言
+        if (!settings.hasKey(SUMMARY_LANGUAGE_KEY)) {
+            val app = AppLanguage.entries.getOrElse(
+                settings.getInt(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
+            ) { AppLanguage.FOLLOW_SYSTEM }
+            val initial = when (app) {
+                AppLanguage.CHINESE -> SummaryLanguage.CHINESE
+                AppLanguage.ENGLISH -> SummaryLanguage.ENGLISH
+                AppLanguage.FOLLOW_SYSTEM -> SummaryLanguage.FOLLOW_SYSTEM
+            }
+            settings.putString(SUMMARY_LANGUAGE_KEY, initial.storageValue)
+        }
+    }
+
     val appLanguage: Flow<AppLanguage> = settings.getIntFlow(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
         .map { AppLanguage.entries.getOrElse(it) { AppLanguage.FOLLOW_SYSTEM } }
 
-    /**
-     * 当前内容语言：跟随 App 语言设置，FOLLOW_SYSTEM 时回退系统语言。
-     * 供摘要请求与邮件订阅复用，避免各处各自推导导致口径分叉。
-     */
-    suspend fun currentContentLang(): String =
-        appLanguage.first().isoCode ?: getSystemLanguage()
-
     fun setLanguage(language: AppLanguage) {
         settings.putInt(LANGUAGE_KEY, language.ordinal)
+    }
+
+    val summaryLanguage: Flow<SummaryLanguage> =
+        settings.getStringFlow(SUMMARY_LANGUAGE_KEY, SummaryLanguage.FOLLOW_SYSTEM.storageValue)
+            .map { SummaryLanguage.fromStorage(it) }
+
+    fun setSummaryLanguage(language: SummaryLanguage) {
+        settings.putString(SUMMARY_LANGUAGE_KEY, language.storageValue)
+    }
+
+    /**
+     * 当前内容语言：读摘要语言设置，FOLLOW_SYSTEM 时取系统语言并钳制到后端支持清单
+     * （清单外回落英文，避免发出后端无数据的 lang 导致摘要整页为空）。
+     * 供摘要请求与邮件订阅复用，避免各处各自推导导致口径分叉。
+     */
+    suspend fun currentContentLang(): String {
+        summaryLanguage.first().isoCode?.let { return it }
+        val system = getSystemLanguage()
+        return if (system in SUPPORTED_SUMMARY_LANGS) system else FALLBACK_SUMMARY_LANG
     }
 
     fun getLastUpdateCheckTime(): Long =
@@ -258,17 +315,54 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * GitHub 榜「只看 New」的默认状态：true 时进入 app 默认开启该过滤。
-     * 只决定初始值；榜单页手动切换仅影响当前会话，不回写此设置。
+     * GitHub 榜「只看 New」的记忆状态：榜单页显式切换时回写，冷启动恢复上次状态（开关即设置）。
+     * 视图切换导致的自动关闭（New-only 仅 daily 全语言榜有效）不回写，不覆盖用户意图。
+     * 存储键沿用旧「默认值」设置的键，老用户已设置的默认值自然延续为初始记忆状态。
      */
-    val trendingNewOnlyDefault: Flow<Boolean> =
-        settings.getBooleanFlow(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
-
-    fun currentTrendingNewOnlyDefault(): Boolean =
+    fun currentTrendingNewOnly(): Boolean =
         settings.getBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
 
-    fun setTrendingNewOnlyDefault(value: Boolean) {
+    fun setTrendingNewOnly(value: Boolean) {
         settings.putBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, value)
+    }
+
+    /**
+     * 每日 Picks 本地通知开关（默认关，用户在设置页主动开启）。
+     * 仅记录用户意图；实际调度/取消由 DailyPicksNotifier 平台实现负责，
+     * worker 执行时也会再读一次此值兜底（关闭后未及时取消的任务不发通知）。
+     */
+    val dailyPicksNotificationEnabled: Flow<Boolean> =
+        settings.getBooleanFlow(DAILY_PICKS_NOTIFICATION_KEY, false)
+
+    fun currentDailyPicksNotificationEnabled(): Boolean =
+        settings.getBoolean(DAILY_PICKS_NOTIFICATION_KEY, false)
+
+    fun setDailyPicksNotificationEnabled(value: Boolean) {
+        settings.putBoolean(DAILY_PICKS_NOTIFICATION_KEY, value)
+    }
+
+    /** Picks 页 Newsletter 横幅的手动关闭标记：点「×」永久收起，与订阅状态解耦。 */
+    val picksNewsletterBannerDismissed: Flow<Boolean> =
+        settings.getBooleanFlow(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, false)
+
+    fun currentPicksNewsletterBannerDismissed(): Boolean =
+        settings.getBoolean(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, false)
+
+    fun setPicksNewsletterBannerDismissed(value: Boolean) {
+        settings.putBoolean(PICKS_NEWSLETTER_BANNER_DISMISSED_KEY, value)
+    }
+
+    /**
+     * 冷启动默认显示的首页 tab，存 ui 层 HomeTab 枚举的 name（如 "GitHub"、"Picks"）。
+     * data 层不依赖 ui 层枚举，只存取字符串；解析与回落由 HomeTab.fromNameOrDefault 负责。
+     * 只决定初始值；会话内切 tab 不回写此设置。
+     */
+    val defaultHomeTab: Flow<String> = settings.getStringFlow(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
+
+    fun currentDefaultHomeTab(): String = settings.getString(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
+
+    fun setDefaultHomeTab(name: String) {
+        settings.putString(DEFAULT_HOME_TAB_KEY, name)
     }
 }
 

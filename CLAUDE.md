@@ -45,4 +45,9 @@ App 升级后首启弹的「新版本更新说明」来自 `shared/src/commonMai
    - 每条一句话，简洁、不堆技术术语；**中文 3–6 条**，英文为对应翻译。
 4. 把草稿逐条交用户调整定稿。
 5. 写入 `whatsnew.json`，格式 `{"version": "<版本>", "zh": [...], "en": [...]}`，**`version` 必须等于本次 tag**（否则 CI 判成自动模式、AI 会覆盖你的内容）。
-6. `git commit` 后再 `git tag <版本> && git push origin <版本>`，让 tag 指向含手动内容的 commit。
+6. **同步写 F-Droid fastlane changelog**（仅手动模式做，自动模式 CI 不回写）：
+   - 路径 `fastlane/metadata/android/zh-CN/changelogs/<versionCode>.txt` 和 `en-US/changelogs/<versionCode>.txt`，内容与 whatsnew 的 zh/en 一致（每条前加 `• `）；
+   - `versionCode = MAJOR*10000 + MINOR*100 + PATCH`（与 `androidApp/build.gradle.kts` 的 tag 推导规则一致，如 `0.20.0` → `2000`）；
+   - 单文件不超过 500 字符（F-Droid 上限，超出会截断）；
+   - 必须与 whatsnew.json 同一个 commit——F-Droid 从 tag 对应的 commit 读元数据。
+7. `git commit` 后再 `git tag <版本> && git push origin <版本>`，让 tag 指向含手动内容的 commit。
