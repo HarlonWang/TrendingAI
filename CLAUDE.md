@@ -23,6 +23,10 @@
     ```
     不传 `indicator` 会回落到默认的 `CircularProgressIndicator`，与全 app 的 `LoadingIndicator` 风格不一致。参照 `Picks/Feed/Trending/Profile` 各 Screen 的写法。
 
+## 发布前冒烟（必做）
+
+**打 tag 前必须跑 `scripts/release-smoke.sh` 并看到 PASS。** 它构建 r2 渠道 release 包（与线上同样开 R8 minify）、安装到 Pixel_9_2 模拟器、启动并检查崩溃日志与进程存活。日常开发全用 debug 包（不混淆），R8 裁剪类问题只有 release 包能暴露——0.20.0 曾因此启动即崩、发布后才发现（room 2.6.1 老 keep 规则 + R8 full mode 裁掉 WorkDatabase_Impl 构造器）。FAIL 时禁止发布，先按崩溃堆栈排查。
+
 ## 版本更新说明（whatsnew）发布流程
 
 App 升级后首启弹的「新版本更新说明」来自 `shared/src/commonMain/composeResources/files/whatsnew.json`（随 APK 打包）。同一份内容也用于拼 GitHub Release 正文。它有两种生成模式，由**内容驱动的开关**决定，无需额外配置：
