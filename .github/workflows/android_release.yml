@@ -322,7 +322,8 @@ jobs:
               sys.exit(1)
           def items(key):
               return [x for x in d.get(key, []) if isinstance(x, str) and x.strip()]
-          ok = d.get("version") == os.environ["VERSION_NAME"] and (items("zh") or items("en"))
+          version = os.environ.get("VERSION_NAME", "")
+          ok = bool(version) and d.get("version") == version and (items("zh") or items("en"))
           sys.exit(0 if ok else 1)
           EOF
           then
