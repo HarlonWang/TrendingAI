@@ -5,6 +5,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -60,12 +61,16 @@ class UpdateApi {
                 "https://api.github.com/repos/HarlonWang/TrendingAI/releases/latest"
             ).bodyAsText()
         )
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         null
     }
 
     suspend fun fetchWhatsNew(url: String): WhatsNewInfo? = try {
         parseWhatsNew(client.get(url).bodyAsText())
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         null
     }

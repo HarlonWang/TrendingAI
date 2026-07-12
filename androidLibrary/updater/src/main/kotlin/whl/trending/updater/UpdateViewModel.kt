@@ -58,8 +58,8 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
             val current = getAppVersion()
             if (isNewer(latest.tagName, current)) {
                 // 更新内容取自 release asset，任一环节失败仅回退为不带内容的弹窗，不影响更新提示本身
-                val whatsNew = latest.whatsNewAssetUrl?.let { url ->
-                    withContext(Dispatchers.IO) { api.fetchWhatsNew(url) }
+                val whatsNew = withContext(Dispatchers.IO) {
+                    latest.whatsNewAssetUrl?.let { api.fetchWhatsNew(it) }
                 }
                 _updateInfo.value = UpdateInfo(
                     latestVersion = latest.tagName,
