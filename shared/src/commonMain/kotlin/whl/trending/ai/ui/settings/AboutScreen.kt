@@ -58,6 +58,7 @@ import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.changelog
+import trendingai.shared.generated.resources.check_update_failed
 import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.contact_author
@@ -80,6 +81,7 @@ fun AboutScreen(
     val appVersion = remember { getAppVersion() }
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
+    val isCheckFailed by globalUpdateChecker.isCheckFailed.collectAsState()
     var showDonateDialog by remember { mutableStateOf(false) }
 
     if (showDonateDialog) {
@@ -135,6 +137,10 @@ fun AboutScreen(
                             !isIos && isUpToDate -> Text(
                                 stringResource(Res.string.version_up_to_date),
                                 color = MaterialTheme.colorScheme.primary
+                            )
+                            !isIos && isCheckFailed -> Text(
+                                stringResource(Res.string.check_update_failed),
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                     },

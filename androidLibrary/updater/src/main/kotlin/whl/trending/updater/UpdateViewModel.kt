@@ -27,6 +27,9 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
     private val _isUpToDate = MutableStateFlow(false)
     override val isUpToDate: StateFlow<Boolean> = _isUpToDate
 
+    private val _isCheckFailed = MutableStateFlow(false)
+    override val isCheckFailed: StateFlow<Boolean> = _isCheckFailed
+
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
     val updateInfo: StateFlow<UpdateInfo?> = _updateInfo
 
@@ -50,8 +53,12 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
         if (_isChecking.value) return@launch
         _isChecking.value = true
         _isUpToDate.value = false
+        _isCheckFailed.value = false
 
         val latest = withContext(Dispatchers.IO) { api.fetchLatestRelease() }
+        // 网络请求已结束，先收起 loading——否则「已是最新」展示态会被 AboutScreen 里
+        // 优先级更高的 isChecking 分支持续遮蔽（该分支的 delay 期间 isChecking 仍为 true）
+        _isChecking.value = false
 
         if (latest != null) {
             globalSettingsManager.setLastUpdateCheckTime(System.currentTimeMillis())
@@ -71,9 +78,12 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
                 delay(2000)
                 _isUpToDate.value = false
             }
+        } else {
+            // 网络/解析失败：给出可感知的失败提示，避免 loading 消失后一片空白
+            _isCheckFailed.value = true
+            delay(2000)
+            _isCheckFailed.value = false
         }
-
-        _isChecking.value = false
     }
 
     fun dismissUpdate() {
