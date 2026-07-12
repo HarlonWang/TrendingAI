@@ -26,6 +26,7 @@ import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.update.WhatsNewInfo
 import whl.trending.ai.update.parseWhatsNew
+import whl.trending.ai.update.pickByLanguage
 import whl.trending.ai.update.shouldShowWhatsNew
 
 /**
@@ -62,11 +63,7 @@ fun WhatsNewHost() {
         val appLanguage by globalSettingsManager.appLanguage
             .collectAsState(AppLanguage.FOLLOW_SYSTEM)
         val lang = appLanguage.isoCode ?: getSystemLanguage()
-        val items = if (lang.startsWith("zh")) {
-            whatsNew.zh.ifEmpty { whatsNew.en }
-        } else {
-            whatsNew.en.ifEmpty { whatsNew.zh }
-        }
+        val items = pickByLanguage(lang, whatsNew.zh, whatsNew.en)
         WhatsNewDialog(
             version = whatsNew.version,
             items = items,

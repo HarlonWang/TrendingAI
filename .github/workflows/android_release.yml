@@ -309,7 +309,30 @@ jobs:
           if [ -s diff-apk.txt ]; then
             FILES+=("diff-apk.txt")
           fi
-          
+
+          # whatsnew.json 上传为 release asset，供 app 更新弹窗展示更新内容（androidLibrary/updater
+          # 按固定文件名 whatsnew.json 查找并消费）。仅在 version==本次 tag 且内容非空时上传；
+          # 占位文件 / 生成失败则跳过，客户端找不到 asset 会回退为不带内容的更新弹窗。
+          if python3 - <<'EOF'
+          import json, os, sys
+          try:
+              with open(os.environ["WHATSNEW_PATH"]) as f:
+                  d = json.load(f)
+          except Exception:
+              sys.exit(1)
+          def items(key):
+              return [x for x in d.get(key, []) if isinstance(x, str) and x.strip()]
+          version = os.environ.get("VERSION_NAME", "")
+          ok = bool(version) and d.get("version") == version and (items("zh") or items("en"))
+          sys.exit(0 if ok else 1)
+          EOF
+          then
+            echo "✅ whatsnew.json 内容有效，随 Release 上传"
+            FILES+=("$WHATSNEW_PATH")
+          else
+            echo "⚠️ whatsnew.json 无本版有效内容，跳过上传"
+          fi
+
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --notes-file release_summary.md \
