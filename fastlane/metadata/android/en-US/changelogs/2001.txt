@@ -1,0 +1,6 @@
+• Daily Picks now supports local notification reminders, with a Newsletter subscription entry added to the Picks tab
+• Chat now supports sending images (camera/gallery), with one-tap deep dive and fully streamed responses
+• Set which tab the home screen opens by default
+• Summary language can now be set independently from the app language
+• In-app update prompts now show what's new in the release
+• Redesigned Settings page, and fixed a startup crash in the previous release
