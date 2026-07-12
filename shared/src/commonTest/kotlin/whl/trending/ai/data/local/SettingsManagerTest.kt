@@ -63,6 +63,21 @@ class SettingsManagerTest {
     }
 
     @Test
+    fun cachedMinVersion_defaults_to_null_and_persists() {
+        assertNull(manager.getCachedMinVersion())
+        manager.setCachedMinVersion("0.15.0")
+        assertEquals("0.15.0", manager.getCachedMinVersion())
+    }
+
+    @Test
+    fun cachedMinVersion_null_clears_previous_value() {
+        manager.setCachedMinVersion("0.15.0")
+        // 服务端撤销强更（min_version 返回 null）时要清掉缓存，避免离线一直误拦
+        manager.setCachedMinVersion(null)
+        assertNull(manager.getCachedMinVersion())
+    }
+
+    @Test
     fun seedColor_and_themeMode_are_independent() = runTest {
         manager.setSeedColor(0xFFC2185BL)
         manager.setThemeMode(ThemeMode.DARK)

@@ -148,6 +148,9 @@
     <string name="theme_color_pink">Pink</string>
     <string name="whats_new_title">🎉 What&apos;s New in %1$s</string>
     <string name="whats_new_got_it">Got it</string>
+    <string name="force_update_title">Update Required</string>
+    <string name="force_update_message">This version (%1$s) is no longer supported. Please get the latest version from the official channel to continue.</string>
+    <string name="force_update_button">Get the Latest Version</string>
     <string name="profile_title">Profile</string>
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>

@@ -31,6 +31,7 @@ import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.openUrl
+import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
@@ -81,187 +82,189 @@ fun App() {
 
     TrendingTheme {
         CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
-            WhatsNewHost()
-            SignInHintHost()
-            NavDisplay(
-                backStack = backStack,
-                onBack = { backStack.safePop() },
-                // Material 水平共享轴转场（Nav3 官方推荐写法，全局统一）：
-                // 前进——新页从右滑入、旧页向左滑出；返回及预测式返回手势——反向。
-                transitionSpec = {
-                    slideInHorizontally(initialOffsetX = { it }) togetherWith
-                        slideOutHorizontally(targetOffsetX = { -it })
-                },
-                popTransitionSpec = {
-                    slideInHorizontally(initialOffsetX = { -it }) togetherWith
-                        slideOutHorizontally(targetOffsetX = { it })
-                },
-                predictivePopTransitionSpec = {
-                    slideInHorizontally(initialOffsetX = { -it }) togetherWith
-                        slideOutHorizontally(targetOffsetX = { it })
-                },
-                entryProvider = { key ->
-                    when (key) {
-                    is Home -> NavEntry(key) {
-                        HomeScreen(
-                            onNavigateToSettings = {
-                                backStack.add(Settings)
-                            },
-                            onNavigateToDetail = { owner, repo ->
-                                backStack.add(RepoDetail(owner, repo))
-                            },
-                            onNavigateToChat = {
-                                backStack.add(Chat(null))
-                            },
-                            onOpenUrl = { url ->
-                                openExternalUrl(url, "")
-                            },
-                            onNavigateToProfile = {
-                                backStack.add(Profile)
-                            },
-                            onNavigateToSubscribe = {
-                                backStack.add(Subscribe)
-                            },
-                        )
-                    }
+            ForceUpdateGate {
+                WhatsNewHost()
+                SignInHintHost()
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { backStack.safePop() },
+                    // Material 水平共享轴转场（Nav3 官方推荐写法，全局统一）：
+                    // 前进——新页从右滑入、旧页向左滑出；返回及预测式返回手势——反向。
+                    transitionSpec = {
+                        slideInHorizontally(initialOffsetX = { it }) togetherWith
+                            slideOutHorizontally(targetOffsetX = { -it })
+                    },
+                    popTransitionSpec = {
+                        slideInHorizontally(initialOffsetX = { -it }) togetherWith
+                            slideOutHorizontally(targetOffsetX = { it })
+                    },
+                    predictivePopTransitionSpec = {
+                        slideInHorizontally(initialOffsetX = { -it }) togetherWith
+                            slideOutHorizontally(targetOffsetX = { it })
+                    },
+                    entryProvider = { key ->
+                        when (key) {
+                        is Home -> NavEntry(key) {
+                            HomeScreen(
+                                onNavigateToSettings = {
+                                    backStack.add(Settings)
+                                },
+                                onNavigateToDetail = { owner, repo ->
+                                    backStack.add(RepoDetail(owner, repo))
+                                },
+                                onNavigateToChat = {
+                                    backStack.add(Chat(null))
+                                },
+                                onOpenUrl = { url ->
+                                    openExternalUrl(url, "")
+                                },
+                                onNavigateToProfile = {
+                                    backStack.add(Profile)
+                                },
+                                onNavigateToSubscribe = {
+                                    backStack.add(Subscribe)
+                                },
+                            )
+                        }
 
-                    is Settings -> NavEntry(key) {
-                        SettingsScreen(
-                            onBack = {
-                                backStack.safePop()
-                            },
-                            onNavigateToFavorites = {
-                                backStack.add(Favorites)
-                            },
-                            onNavigateToFeedback = {
-                                backStack.add(Feedback)
-                            },
-                            onNavigateToSubscribe = {
-                                backStack.add(Subscribe)
-                            },
-                            onNavigateToAppearance = {
-                                backStack.add(Appearance)
-                            },
-                            onNavigateToAbout = {
-                                backStack.add(About)
+                        is Settings -> NavEntry(key) {
+                            SettingsScreen(
+                                onBack = {
+                                    backStack.safePop()
+                                },
+                                onNavigateToFavorites = {
+                                    backStack.add(Favorites)
+                                },
+                                onNavigateToFeedback = {
+                                    backStack.add(Feedback)
+                                },
+                                onNavigateToSubscribe = {
+                                    backStack.add(Subscribe)
+                                },
+                                onNavigateToAppearance = {
+                                    backStack.add(Appearance)
+                                },
+                                onNavigateToAbout = {
+                                    backStack.add(About)
+                                }
+                            )
+                        }
+
+                        is Appearance -> NavEntry(key) {
+                            AppearanceScreen(
+                                onBack = {
+                                    backStack.safePop()
+                                }
+                            )
+                        }
+
+                        is About -> NavEntry(key) {
+                            AboutScreen(
+                                onBack = {
+                                    backStack.safePop()
+                                },
+                                onNavigateToWebPage = { url, title ->
+                                    openExternalUrl(url, title)
+                                }
+                            )
+                        }
+
+                        is Feedback -> NavEntry(key) {
+                            FeedbackScreen(
+                                onBack = {
+                                    backStack.safePop()
+                                }
+                            )
+                        }
+
+                        is Subscribe -> NavEntry(key) {
+                            SubscribeScreen(
+                                onBack = {
+                                    backStack.safePop()
+                                }
+                            )
+                        }
+
+                        is WebPage -> NavEntry(key) {
+                            WebViewScreen(
+                                url = key.url,
+                                title = key.title,
+                                onBack = { backStack.safePop() }
+                            )
+                        }
+
+                        is Favorites -> NavEntry(key) {
+                            FavoriteListScreen(
+                                onBack = { backStack.safePop() },
+                                onNavigateToDetail = { owner, repo ->
+                                    backStack.add(RepoDetail(owner, repo))
+                                },
+                                onOpenUrl = { url ->
+                                    openExternalUrl(url, "")
+                                }
+                            )
+                        }
+
+                        is Profile -> NavEntry(key) {
+                            ProfileScreen(
+                                onBack = { backStack.safePop() },
+                                onOpenFollowers = { backStack.add(ProfileFollowers) },
+                                onOpenFollowing = { backStack.add(ProfileFollowing) },
+                                onOpenRepos = { backStack.add(ProfileRepos) },
+                            )
+                        }
+
+                        is ProfileFollowers -> NavEntry(key) {
+                            GithubUserListScreen(
+                                mode = GithubUserListMode.FOLLOWERS,
+                                onBack = { backStack.safePop() },
+                            )
+                        }
+
+                        is ProfileFollowing -> NavEntry(key) {
+                            GithubUserListScreen(
+                                mode = GithubUserListMode.FOLLOWING,
+                                onBack = { backStack.safePop() },
+                            )
+                        }
+
+                        is ProfileRepos -> NavEntry(key) {
+                            RepoListScreen(
+                                onBack = { backStack.safePop() },
+                                onOpenRepo = { owner, repo ->
+                                    backStack.add(RepoDetail(owner, repo))
+                                },
+                            )
+                        }
+
+                        is RepoDetail -> NavEntry(key) {
+                            ReadmeScreen(
+                                owner = key.owner,
+                                repo = key.repo,
+                                onBack = { backStack.safePop() },
+                                onNavigateToChat = { context ->
+                                    backStack.add(Chat(context))
+                                }
+                            )
+                        }
+
+                        is Chat -> NavEntry(key) {
+                            val screen = globalChatScreen
+                            if (screen != null) {
+                                screen(key.context) { backStack.safePop() }
+                            } else {
+                                // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
+                                LaunchedEffect(Unit) { backStack.safePop() }
                             }
-                        )
-                    }
+                        }
 
-                    is Appearance -> NavEntry(key) {
-                        AppearanceScreen(
-                            onBack = {
-                                backStack.safePop()
-                            }
-                        )
-                    }
-
-                    is About -> NavEntry(key) {
-                        AboutScreen(
-                            onBack = {
-                                backStack.safePop()
-                            },
-                            onNavigateToWebPage = { url, title ->
-                                openExternalUrl(url, title)
-                            }
-                        )
-                    }
-
-                    is Feedback -> NavEntry(key) {
-                        FeedbackScreen(
-                            onBack = {
-                                backStack.safePop()
-                            }
-                        )
-                    }
-
-                    is Subscribe -> NavEntry(key) {
-                        SubscribeScreen(
-                            onBack = {
-                                backStack.safePop()
-                            }
-                        )
-                    }
-
-                    is WebPage -> NavEntry(key) {
-                        WebViewScreen(
-                            url = key.url,
-                            title = key.title,
-                            onBack = { backStack.safePop() }
-                        )
-                    }
-
-                    is Favorites -> NavEntry(key) {
-                        FavoriteListScreen(
-                            onBack = { backStack.safePop() },
-                            onNavigateToDetail = { owner, repo ->
-                                backStack.add(RepoDetail(owner, repo))
-                            },
-                            onOpenUrl = { url ->
-                                openExternalUrl(url, "")
-                            }
-                        )
-                    }
-
-                    is Profile -> NavEntry(key) {
-                        ProfileScreen(
-                            onBack = { backStack.safePop() },
-                            onOpenFollowers = { backStack.add(ProfileFollowers) },
-                            onOpenFollowing = { backStack.add(ProfileFollowing) },
-                            onOpenRepos = { backStack.add(ProfileRepos) },
-                        )
-                    }
-
-                    is ProfileFollowers -> NavEntry(key) {
-                        GithubUserListScreen(
-                            mode = GithubUserListMode.FOLLOWERS,
-                            onBack = { backStack.safePop() },
-                        )
-                    }
-
-                    is ProfileFollowing -> NavEntry(key) {
-                        GithubUserListScreen(
-                            mode = GithubUserListMode.FOLLOWING,
-                            onBack = { backStack.safePop() },
-                        )
-                    }
-
-                    is ProfileRepos -> NavEntry(key) {
-                        RepoListScreen(
-                            onBack = { backStack.safePop() },
-                            onOpenRepo = { owner, repo ->
-                                backStack.add(RepoDetail(owner, repo))
-                            },
-                        )
-                    }
-
-                    is RepoDetail -> NavEntry(key) {
-                        ReadmeScreen(
-                            owner = key.owner,
-                            repo = key.repo,
-                            onBack = { backStack.safePop() },
-                            onNavigateToChat = { context ->
-                                backStack.add(Chat(context))
-                            }
-                        )
-                    }
-
-                    is Chat -> NavEntry(key) {
-                        val screen = globalChatScreen
-                        if (screen != null) {
-                            screen(key.context) { backStack.safePop() }
-                        } else {
-                            // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
-                            LaunchedEffect(Unit) { backStack.safePop() }
+                        else -> {
+                            error("Unknown route: $key")
+                        }
                         }
                     }
-
-                    else -> {
-                        error("Unknown route: $key")
-                    }
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
