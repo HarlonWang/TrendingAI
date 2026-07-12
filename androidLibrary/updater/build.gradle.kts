@@ -21,10 +21,11 @@ android {
 dependencies {
     implementation(project(":shared"))
     implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.contentNegotiation)
-    implementation(libs.ktor.serialization.kotlinxJson)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.compose.material3)
     implementation(libs.compose.runtime)
     implementation(libs.androidx.lifecycle.viewmodelCompose)
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
 }

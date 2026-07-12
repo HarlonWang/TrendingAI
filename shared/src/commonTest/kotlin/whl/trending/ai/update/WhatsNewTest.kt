@@ -74,4 +74,29 @@ class WhatsNewTest {
         assertNull(parseWhatsNew("not json"))
         assertNull(parseWhatsNew(""))
     }
+
+    // ---- pickByLanguage ----
+
+    @Test
+    fun chinese_picks_zh_list() {
+        assertEquals(listOf("中文"), pickByLanguage("zh", listOf("中文"), listOf("en")))
+        assertEquals(listOf("中文"), pickByLanguage("zh-Hans", listOf("中文"), listOf("en")))
+    }
+
+    @Test
+    fun non_chinese_picks_en_list() {
+        assertEquals(listOf("en"), pickByLanguage("en", listOf("中文"), listOf("en")))
+        assertEquals(listOf("en"), pickByLanguage("ja", listOf("中文"), listOf("en")))
+    }
+
+    @Test
+    fun empty_preferred_list_falls_back_to_other() {
+        assertEquals(listOf("en"), pickByLanguage("zh", emptyList(), listOf("en")))
+        assertEquals(listOf("中文"), pickByLanguage("en", listOf("中文"), emptyList()))
+    }
+
+    @Test
+    fun both_empty_returns_empty() {
+        assertEquals(emptyList(), pickByLanguage("zh", emptyList(), emptyList()))
+    }
 }

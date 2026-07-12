@@ -51,13 +51,21 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
         _isChecking.value = true
         _isUpToDate.value = false
 
-        val latest = withContext(Dispatchers.IO) { api.fetchLatestVersion() }
+        val latest = withContext(Dispatchers.IO) { api.fetchLatestRelease() }
 
         if (latest != null) {
             globalSettingsManager.setLastUpdateCheckTime(System.currentTimeMillis())
             val current = getAppVersion()
-            if (isNewer(latest, current)) {
-                _updateInfo.value = UpdateInfo(latest, current)
+            if (isNewer(latest.tagName, current)) {
+                // 更新内容取自 release asset，任一环节失败仅回退为不带内容的弹窗，不影响更新提示本身
+                val whatsNew = latest.whatsNewAssetUrl?.let { url ->
+                    withContext(Dispatchers.IO) { api.fetchWhatsNew(url) }
+                }
+                _updateInfo.value = UpdateInfo(
+                    latestVersion = latest.tagName,
+                    currentVersion = current,
+                    whatsNew = acceptWhatsNew(whatsNew, latest.tagName),
+                )
             } else {
                 _isUpToDate.value = true
                 delay(2000)
