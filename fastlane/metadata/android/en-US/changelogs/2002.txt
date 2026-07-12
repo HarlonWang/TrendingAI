@@ -1,0 +1,4 @@
+• Daily Picks now supports local notification reminders
+• Chat now supports sending images (camera/gallery), with one-tap deep dive
+• Set which tab the home screen opens by default
+• Summary language can now be set independently
