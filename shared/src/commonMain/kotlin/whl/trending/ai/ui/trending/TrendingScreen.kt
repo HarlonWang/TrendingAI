@@ -222,9 +222,16 @@ private fun RepoList(
     val state = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     // 切换「只看 New」时滚回顶部：LazyColumn 按 key 会保持可视位置，
-    // 关掉开关后画面几乎不变，用户容易以为切换没生效（#36）
+    // 关掉开关后画面几乎不变，用户容易以为切换没生效（#36）。
+    // 只在开关「真正切换」时滚顶：用 remember 记住上次值，页面重新进入 composition
+    // （如从详情返回）时 remember 会以当前值重新初始化 → 判等 → 不滚顶，
+    // 从而保留 Nav3 SavedState 恢复的滚动位置（否则每次返回都被 scrollToItem(0) 清零）。
+    var lastNewOnly by remember { mutableStateOf(uiState.newOnly) }
     LaunchedEffect(uiState.newOnly) {
-        listState.scrollToItem(0)
+        if (uiState.newOnly != lastNewOnly) {
+            lastNewOnly = uiState.newOnly
+            listState.scrollToItem(0)
+        }
     }
 
     PullToRefreshBox(
