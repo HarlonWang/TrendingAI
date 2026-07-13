@@ -67,6 +67,13 @@ expect fun getSystemLanguage(): String
 /** 系统语言的本地化显示名（如「中文」「English」「Português」），用于展示给用户，而非语言代码。 */
 expect fun getSystemLanguageDisplayName(): String
 
+/**
+ * 系统级完整 locale 标签（BCP-47，如 "zh-Hant-TW" / "de-DE"），用于埋点。
+ * 必须读系统配置而非 [getSystemLanguage] 的 Locale.getDefault()——应用内切换语言
+ * （setApplicationLocales）会覆盖后者，导致上报的是 app 语言而非用户真实设备语言。
+ */
+expect fun getSystemLocaleTag(): String
+
 expect fun getUserAgent(): String
 
 /**
@@ -75,13 +82,17 @@ expect fun getUserAgent(): String
  * Aptabase 默认的 user_id 由「每日轮换 salt」哈希生成，无法跨天追踪同一用户，
  * 留存分析因此失效。这里补一个卸载重装才会变的 install_id，
  * 留存/回访改以 install_id 为口径（安装日 = 该 install_id 首次出现的日期）。
+ *
+ * sys_locale：Aptabase 采集的 locale 只剩语言码（"zh"），区分不了繁简/地区，
+ * 补上完整系统 locale 标签供语言分布分析。
  */
 fun trackEvent(name: String, props: Map<String, Any> = emptyMap()) {
     platformTrackEvent(
         name,
         props + mapOf(
             "install_id" to globalSettingsManager.getOrCreateInstallId(),
-            "channel" to ChannelHolder.get()
+            "channel" to ChannelHolder.get(),
+            "sys_locale" to getSystemLocaleTag()
         )
     )
 }

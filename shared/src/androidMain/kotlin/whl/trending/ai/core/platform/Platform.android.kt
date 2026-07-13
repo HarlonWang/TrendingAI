@@ -100,6 +100,9 @@ actual fun getSystemLanguageDisplayName(): String {
     return locale.getDisplayLanguage(locale).replaceFirstChar { it.uppercase() }
 }
 
+actual fun getSystemLocaleTag(): String =
+    android.content.res.Resources.getSystem().configuration.locales[0].toLanguageTag()
+
 internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
     com.aptabase.Aptabase.instance.trackEvent(name, props)
 }

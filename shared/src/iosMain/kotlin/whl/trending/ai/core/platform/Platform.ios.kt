@@ -87,6 +87,9 @@ actual fun getSystemLanguageDisplayName(): String {
     return (name ?: code).replaceFirstChar { it.uppercase() }
 }
 
+actual fun getSystemLocaleTag(): String =
+    NSLocale.preferredLanguages.firstOrNull() as? String ?: "en"
+
 internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
     // iOS 暂不接入事件上报
 }
