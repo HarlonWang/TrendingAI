@@ -38,7 +38,7 @@ class PicksViewModelTest {
     private fun response(date: String) = PicksResponse(
         success = true,
         metadata = PicksMetadata(date = date),
-        speedRead = listOf(PickItem(rank = 1, title = "item-$date")),
+        deepDive = listOf(PickItem(rank = 1, title = "item-$date")),
     )
 
     private fun settings(): SettingsManager =

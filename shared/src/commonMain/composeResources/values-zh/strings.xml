@@ -51,7 +51,7 @@
     <string name="no_data">暂无数据</string>
     <string name="filter_new_only">只看 New</string>
     <string name="no_new_repos">今日暂无新上榜项目</string>
-    <string name="new_only_hint">近期首次登上 GitHub 日榜（全语言）的新项目</string>
+    <string name="new_only_hint">24 小时内首次登上 GitHub 日榜（全语言）的新项目</string>
     <string name="default_home_tab">默认首页</string>
     <string name="default_home_tab_desc">启动时进入的标签页</string>
     <string name="daily_picks_notification">每日精选提醒</string>
@@ -119,9 +119,8 @@
     <string name="hackernews_placeholder">Hacker News 内容即将上线</string>
     <string name="producthunt_placeholder">Product Hunt 内容即将上线</string>
     <string name="picks_no_data">暂无精选</string>
+    <string name="picks_section_debut">GitHub 上新</string>
     <string name="picks_section_deep_dive">深度解读</string>
-    <string name="picks_section_controversy">争议话题</string>
-    <string name="picks_section_speed_read">Top 5 速览</string>
     <string name="picks_label_action">适合场景</string>
     <string name="picks_label_alternatives">类似产品</string>
     <string name="picks_label_terms">关键词</string>

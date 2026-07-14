@@ -44,7 +44,7 @@ class DailyPicksWorker(
         } catch (e: Exception) {
             return retryOrGiveUp()
         }
-        val items = picks.deepDive + picks.controversy + picks.speedRead
+        val items = picks.debut + picks.deepDive + picks.controversy + picks.speedRead
         if (items.isEmpty()) return retryOrGiveUp()
 
         val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
