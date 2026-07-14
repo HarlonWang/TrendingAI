@@ -107,7 +107,12 @@ class DailyPicksWorker(
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-        manager.notify(NOTIFICATION_ID, notification)
+        try {
+            manager.notify(NOTIFICATION_ID, notification)
+        } catch (_: SecurityException) {
+            // POST_NOTIFICATIONS 在 doWork 的 areNotificationsEnabled 检查后被收回（竞态窗口极小）：
+            // 静默放弃本次通知，符合"宁缺勿错"策略；lint 的跨方法流分析看不到上游守卫，此处显式处理
+        }
     }
 
     private fun localizedContext(context: Context, lang: String): Context {
