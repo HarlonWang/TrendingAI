@@ -206,6 +206,8 @@ private fun PicksList(
             items(debut, key = { "debut_${it.rank}" }) { item ->
                 DebutCard(
                     item = item,
+                    isFavorite = item.url in favoriteUrls,
+                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
                     onClick = { onItemClick(item, "debut") }
                 )
             }
@@ -403,6 +405,8 @@ private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: 
 @Composable
 private fun DebutCard(
     item: PickItem,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -456,6 +460,29 @@ private fun DebutCard(
             } ?: item.summary?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(6.dp))
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            // 底部三点菜单（与 DeepDiveCard 同交互模式）
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                val shareContent = aiShareText(item.title, item.analysis?.core ?: item.summary, item.url)
+                ItemActionMenu(
+                    isFavorite = isFavorite,
+                    onToggle = onToggleFavorite,
+                    onShare = {
+                        shareText(shareContent)
+                        trackEvent(
+                            "share_to_ai",
+                            mapOf(
+                                "source" to item.source,
+                                "has_summary" to (item.analysis != null || !item.summary.isNullOrBlank()),
+                                "from" to "debut"
+                            )
+                        )
+                    }
+                )
             }
         }
     }
