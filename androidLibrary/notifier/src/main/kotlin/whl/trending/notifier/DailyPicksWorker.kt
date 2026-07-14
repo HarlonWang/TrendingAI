@@ -44,7 +44,8 @@ class DailyPicksWorker(
         } catch (e: Exception) {
             return retryOrGiveUp()
         }
-        val items = picks.debut + picks.deepDive + picks.controversy + picks.speedRead
+        // 与 Picks 页空态判定同口径：只认两档（speedRead/controversy 已退役，UI 不再渲染）
+        val items = picks.debut + picks.deepDive
         if (items.isEmpty()) return retryOrGiveUp()
 
         val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

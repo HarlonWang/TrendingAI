@@ -453,7 +453,7 @@ private fun DebutCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                     )
                 }
-            } ?: item.summary?.let {
+            } ?: item.summary?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(6.dp))
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
