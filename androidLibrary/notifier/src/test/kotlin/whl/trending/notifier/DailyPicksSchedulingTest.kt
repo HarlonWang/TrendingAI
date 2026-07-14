@@ -1,7 +1,7 @@
 package whl.trending.notifier
 
-import java.time.ZoneId
-import java.time.ZonedDateTime
+import java.util.Calendar
+import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -9,8 +9,11 @@ import kotlin.test.assertTrue
 
 class DailyPicksSchedulingTest {
 
-    private fun at(hour: Int, minute: Int): ZonedDateTime =
-        ZonedDateTime.of(2026, 7, 11, hour, minute, 0, 0, ZoneId.of("Asia/Shanghai"))
+    private fun at(hour: Int, minute: Int): Calendar =
+        Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai")).apply {
+            set(2026, Calendar.JULY, 11, hour, minute, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
 
     @Test
     fun beforeTargetHourDelaysUntilSameDay() {

@@ -12,7 +12,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import java.time.ZonedDateTime
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
 import whl.trending.ai.data.local.globalSettingsManager
@@ -83,7 +83,7 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
         private fun schedule(context: Context, policy: ExistingPeriodicWorkPolicy) {
             val request = PeriodicWorkRequestBuilder<DailyPicksWorker>(24, TimeUnit.HOURS)
                 .setInitialDelay(
-                    initialDelayMillis(ZonedDateTime.now(), NOTIFY_HOUR, NOTIFY_MINUTE),
+                    initialDelayMillis(Calendar.getInstance(), NOTIFY_HOUR, NOTIFY_MINUTE),
                     TimeUnit.MILLISECONDS,
                 )
                 .setConstraints(
