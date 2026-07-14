@@ -44,7 +44,8 @@ class DailyPicksWorker(
         } catch (e: Exception) {
             return retryOrGiveUp()
         }
-        val items = picks.deepDive + picks.controversy + picks.speedRead
+        // 与 Picks 页空态判定同口径：只认两档（speedRead/controversy 已退役，UI 不再渲染）
+        val items = picks.debut + picks.deepDive
         if (items.isEmpty()) return retryOrGiveUp()
 
         val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -106,7 +107,12 @@ class DailyPicksWorker(
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-        manager.notify(NOTIFICATION_ID, notification)
+        try {
+            manager.notify(NOTIFICATION_ID, notification)
+        } catch (_: SecurityException) {
+            // POST_NOTIFICATIONS 在 doWork 的 areNotificationsEnabled 检查后被收回（竞态窗口极小）：
+            // 静默放弃本次通知，符合"宁缺勿错"策略；lint 的跨方法流分析看不到上游守卫，此处显式处理
+        }
     }
 
     private fun localizedContext(context: Context, lang: String): Context {

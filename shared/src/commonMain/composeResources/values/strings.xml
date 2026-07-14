@@ -51,7 +51,7 @@
     <string name="no_data">No data available</string>
     <string name="filter_new_only">New only</string>
     <string name="no_new_repos">No new repos today</string>
-    <string name="new_only_hint">Projects new to the GitHub daily all-language trending board</string>
+    <string name="new_only_hint">First appeared on the GitHub daily (all languages) list within 24 hours</string>
     <string name="default_home_tab">Default home tab</string>
     <string name="default_home_tab_desc">Which tab the app opens to at launch</string>
     <string name="daily_picks_notification">Daily Picks reminder</string>
@@ -119,9 +119,8 @@
     <string name="hackernews_placeholder">Hacker News content coming soon</string>
     <string name="producthunt_placeholder">Product Hunt content coming soon</string>
     <string name="picks_no_data">No picks available</string>
+    <string name="picks_section_debut">New on Trending</string>
     <string name="picks_section_deep_dive">Deep Dive</string>
-    <string name="picks_section_controversy">Controversy</string>
-    <string name="picks_section_speed_read">Top 5 Speed Read</string>
     <string name="picks_label_action">Use case</string>
     <string name="picks_label_alternatives">Alternatives</string>
     <string name="picks_label_terms">Keywords</string>

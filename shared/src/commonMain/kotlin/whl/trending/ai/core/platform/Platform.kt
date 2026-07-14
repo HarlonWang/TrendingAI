@@ -105,7 +105,7 @@ internal expect fun platformTrackEvent(name: String, props: Map<String, Any>)
  * @param source 数据来源：github / hackernews / producthunt
  * @param rank 条目在列表中的排名（从 1 开始）
  * @param title 条目标题，截断至 100 字符
- * @param section 仅 Picks 页使用：deep_dive / controversy / speed_read
+ * @param section 仅 Picks 页使用：deep_dive / debut
  */
 fun trackItemClick(
     source: String,

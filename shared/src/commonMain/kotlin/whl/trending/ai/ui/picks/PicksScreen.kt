@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.picks
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -57,12 +55,10 @@ import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.picks_newsletter_desc
 import trendingai.shared.generated.resources.picks_newsletter_title
 import trendingai.shared.generated.resources.picks_no_data
-import trendingai.shared.generated.resources.picks_section_controversy
+import trendingai.shared.generated.resources.picks_section_debut
 import trendingai.shared.generated.resources.picks_section_deep_dive
-import trendingai.shared.generated.resources.picks_section_speed_read
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
-import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
@@ -127,7 +123,7 @@ fun PicksScreen(
 
             else -> {
                 val picks = uiState.picks
-                if (picks == null || (picks.deepDive.isEmpty() && picks.controversy.isEmpty() && picks.speedRead.isEmpty())) {
+                if (picks == null || (picks.debut.isEmpty() && picks.deepDive.isEmpty())) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(text = stringResource(Res.string.picks_no_data))
                     }
@@ -142,9 +138,8 @@ fun PicksScreen(
                         remember { globalSettingsManager.currentPicksNewsletterBannerDismissed() }
                     )
                     PicksList(
+                        debut = picks.debut,
                         deepDive = picks.deepDive,
-                        controversy = picks.controversy,
-                        speedRead = picks.speedRead,
                         favoriteUrls = favoriteUrls,
                         showNewsletterBanner = subscribedEmail == null && !bannerDismissed,
                         onSubscribeClick = {
@@ -187,9 +182,8 @@ private fun handleItemClick(
 
 @Composable
 private fun PicksList(
+    debut: List<PickItem>,
     deepDive: List<PickItem>,
-    controversy: List<PickItem>,
-    speedRead: List<PickItem>,
     favoriteUrls: Set<String>,
     showNewsletterBanner: Boolean,
     onSubscribeClick: () -> Unit,
@@ -206,8 +200,24 @@ private fun PicksList(
             item { NewsletterBanner(onClick = onSubscribeClick, onDismiss = onDismissBanner) }
         }
 
+        // Debut — GitHub 上新
+        if (debut.isNotEmpty()) {
+            item { SectionHeader(title = stringResource(Res.string.picks_section_debut)) }
+            items(debut, key = { "debut_${it.rank}" }) { item ->
+                DebutCard(
+                    item = item,
+                    isFavorite = item.url in favoriteUrls,
+                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onClick = { onItemClick(item, "debut") }
+                )
+            }
+        }
+
         // Deep Dive
         if (deepDive.isNotEmpty()) {
+            if (debut.isNotEmpty()) {
+                item { SectionDivider() }
+            }
             item { SectionHeader(title = stringResource(Res.string.picks_section_deep_dive)) }
             items(deepDive, key = { "deep_${it.rank}" }) { item ->
                 DeepDiveCard(
@@ -219,34 +229,8 @@ private fun PicksList(
             }
         }
 
-        // Controversy
-        if (controversy.isNotEmpty()) {
-            item { SectionDivider() }
-            item { SectionHeader(title = stringResource(Res.string.picks_section_controversy)) }
-            item {
-                ControversyGroup(
-                    items = controversy,
-                    favoriteUrls = favoriteUrls,
-                    onItemClick = { item -> onItemClick(item, "controversy") }
-                )
-            }
-        }
-
-        // Speed Read
-        if (speedRead.isNotEmpty()) {
-            item { SectionDivider() }
-            item { SectionHeader(title = stringResource(Res.string.picks_section_speed_read)) }
-            items(speedRead, key = { "speed_${it.rank}" }) { item ->
-                SpeedReadItem(
-                    item = item,
-                    isFavorite = item.url in favoriteUrls,
-                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
-                    onClick = { onItemClick(item, "speed_read") }
-                )
-            }
-            // 尾部间距
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
+        // 尾部间距
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
@@ -419,135 +403,71 @@ private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: 
 }
 
 @Composable
-private fun ControversyGroup(items: List<PickItem>, favoriteUrls: Set<String>, onItemClick: (PickItem) -> Unit) {
+private fun DebutCard(
+    item: PickItem,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     OutlinedCard(
-        modifier = Modifier
+        onClick = onClick,
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        items.forEachIndexed { index, item ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onItemClick(item) }
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.title,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    SourceTag(source = item.source, label = item.sourceLabel)
-                }
-
-                item.analysis?.let { analysis ->
-                    Text(
-                        text = analysis.core,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-
-                // 底部三点菜单
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    val shareContent = aiShareText(item.title, item.summary, item.url)
-                    ItemActionMenu(
-                        isFavorite = item.url in favoriteUrls,
-                        onToggle = { togglePickFavorite(item, favoriteUrls) },
-                        onShare = {
-                            shareText(shareContent)
-                            trackEvent(
-                                "share_to_ai",
-                                mapOf(
-                                    "source" to item.source,
-                                    "has_summary" to !item.summary.isNullOrBlank(),
-                                    "from" to "list"
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-            if (index < items.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SpeedReadItem(item: PickItem, isFavorite: Boolean, onToggleFavorite: () -> Unit, onClick: () -> Unit) {
-    Column {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // 序号
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${item.rank}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-
-                // 标题
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SourceTag(source = item.source, label = item.sourceLabel)
+                Spacer(Modifier.width(8.dp))
                 Text(
                     text = item.title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
-
-                // 来源标签 + 分数
-                SourceTag(source = item.source, label = "${item.sourceLabel} ${formatScore(item.source, item.score)}")
-            }
-
-            // AI 总结
-            if (!item.summary.isNullOrBlank()) {
-                AiSummaryBox(
-                    summary = item.summary,
-                    modifier = Modifier.padding(start = 34.dp)
+                Text(
+                    text = formatScore(item.source, item.score),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            item.analysis?.let { analysis ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = analysis.core,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (analysis.whyImportant.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = analysis.whyImportant,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                analysis.action?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    )
+                }
+            } ?: item.summary?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(6.dp))
+                Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
 
-            // 底部三点菜单
+            // 底部三点菜单（与 DeepDiveCard 同交互模式）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                val shareContent = aiShareText(item.title, item.summary, item.url)
+                val shareContent = aiShareText(item.title, item.analysis?.core ?: item.summary, item.url)
                 ItemActionMenu(
                     isFavorite = isFavorite,
                     onToggle = onToggleFavorite,
@@ -557,15 +477,14 @@ private fun SpeedReadItem(item: PickItem, isFavorite: Boolean, onToggleFavorite:
                             "share_to_ai",
                             mapOf(
                                 "source" to item.source,
-                                "has_summary" to !item.summary.isNullOrBlank(),
-                                "from" to "list"
+                                "has_summary" to (item.analysis != null || !item.summary.isNullOrBlank()),
+                                "from" to "debut"
                             )
                         )
                     }
                 )
             }
         }
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     }
 }
 

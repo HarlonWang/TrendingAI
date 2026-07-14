@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class PicksResponse(
     val success: Boolean = false,
     val metadata: PicksMetadata = PicksMetadata(),
+    val debut: List<PickItem> = emptyList(),
     val speedRead: List<PickItem> = emptyList(),
     val deepDive: List<PickItem> = emptyList(),
     val controversy: List<PickItem> = emptyList()
