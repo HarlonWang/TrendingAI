@@ -1,0 +1,4 @@
+• Daily Picks redesigned into two sections: New on Trending and Deep Dive
+• Debut cards show a one-line summary and use case, with favorite and share
+• "New only" on the GitHub board now means first appearance within 24 hours
+• New one-tap AI explanation entry on project details

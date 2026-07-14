@@ -1,15 +1,15 @@
 {
-  "version": "0.20.2",
+  "version": "0.21.0",
   "zh": [
-    "每日 Picks 支持本地通知提醒",
-    "聊天支持发送图片（拍照/相册），新增一键详细解读",
-    "首页支持设置默认打开的标签页",
-    "AI 摘要语言支持独立设置"
+    "每日精选改版为「GitHub 上新」和「深度解读」两大板块",
+    "上新卡片提供一句话定位与适用场景，支持收藏和分享",
+    "GitHub 榜单「只看 New」调整为 24 小时内首次上榜",
+    "项目详情页新增「一键解读」，直达 AI 详细解读"
   ],
   "en": [
-    "Daily Picks now supports local notification reminders",
-    "Chat now supports sending images (camera/gallery), with one-tap deep dive",
-    "Set which tab the home screen opens by default",
-    "Summary language can now be set independently"
+    "Daily Picks redesigned into two sections: New on Trending and Deep Dive",
+    "Debut cards show a one-line summary and use case, with favorite and share",
+    "\"New only\" on the GitHub board now means first appearance within 24 hours",
+    "New one-tap AI explanation entry on project details"
   ]
 }
