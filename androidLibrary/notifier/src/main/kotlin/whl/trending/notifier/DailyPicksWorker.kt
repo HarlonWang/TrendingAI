@@ -25,8 +25,11 @@ const val TAB_PICKS = "picks"
  * 每日 Picks 通知任务：拉取当日精选，内容为新的一天时弹本地通知。
  * 纯 androidx.work，不依赖 GMS/FCM，F-Droid 等无 Play 服务设备同样可用。
  *
- * 拉取失败或服务端尚未更新到新一天时 retry（指数退避），最多 [MAX_ATTEMPTS] 次后
- * 放弃本周期，静默等下一天——通知宁缺勿错，不拿旧内容打扰用户。
+ * 拉取失败或服务端尚未更新到新一天时 retry（线性退避），最多 [MAX_ATTEMPTS] 次后
+ * 放弃当天，静默等下一天——通知宁缺勿错，不拿旧内容打扰用户。
+ *
+ * 自续期链：除「开关已关」和 retry 外，每个终局都必须经 [finishDay] 排下一天，
+ * 漏排即断链（syncOnAppStart 对账兜底，但要等下次冷启动才恢复）。
  */
 class DailyPicksWorker(
     context: Context,
@@ -35,7 +38,8 @@ class DailyPicksWorker(
 
     override suspend fun doWork(): Result {
         val settings = globalSettingsManager
-        // 兜底：任务与开关状态脱节（如取消失败）时以开关为准
+        // 兜底：任务与开关状态脱节（如取消失败）时以开关为准；不排下一天，链就此终止，
+        // 重新开启时 enable 会重排
         if (!settings.currentDailyPicksNotificationEnabled()) return Result.success()
 
         val lang = settings.currentContentLang()
@@ -54,18 +58,24 @@ class DailyPicksWorker(
         }
 
         if (!NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()) {
-            // 权限被系统侧收回：静默跳过，等用户重新授权
-            return Result.success()
+            // 权限被系统侧收回：静默跳过当天，链保持，等用户重新授权后次日恢复
+            return finishDay()
         }
 
         postNotification(firstTitle = items.first().title, total = items.size, lang = lang)
         prefs.edit { putString(KEY_LAST_NOTIFIED_DATE, picks.metadata.date) }
         trackEvent("daily_picks_notification_shown", mapOf("date" to picks.metadata.date))
-        return Result.success()
+        return finishDay()
     }
 
     private fun retryOrGiveUp(): Result =
-        if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
+        if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else finishDay()
+
+    /** 当天终局：排下一天后收尾 */
+    private fun finishDay(): Result {
+        AndroidDailyPicksNotifier.scheduleNextFromWorker(applicationContext)
+        return Result.success()
+    }
 
     private fun postNotification(firstTitle: String, total: Int, lang: String) {
         val context = applicationContext
