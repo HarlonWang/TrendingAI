@@ -5,6 +5,9 @@ import android.os.SystemClock
 import io.logto.sdk.android.LogtoClient
 import io.logto.sdk.android.exception.LogtoException
 import io.logto.sdk.android.type.LogtoConfig
+import io.logto.sdk.android.type.SignInOptions
+import io.logto.sdk.core.constant.DirectSignInMethod
+import io.logto.sdk.core.type.DirectSignInOptions
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.ConnectException
@@ -55,7 +58,14 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         // 登录耗时起点：单调时钟，不受系统时间/时区调整影响；用局部变量随闭包捕获，
         // 配置变更重建 Activity 后回调即便落在旧实例也仍读到本次登录的起点（见 SignInFailureBus）。
         val signInStartedAt = SystemClock.elapsedRealtime()
-        logtoClient.signIn(activity, REDIRECT_URI) { logtoException ->
+        // directSignIn：授权端点直接 302 到 GitHub，跳过 Logto 托管登录页（海外 Cloudflare 边缘
+        // 无境内节点，SPA ~490KB、大陆单请求 ~1s，是登录取消漏斗的主要嫌疑）。target 需与
+        // Logto 控制台 GitHub connector 的 target 一致；不匹配时 Logto 回落到普通登录页，不会报错。
+        val signInOptions = SignInOptions(
+            redirectUri = REDIRECT_URI,
+            directSignIn = DirectSignInOptions(method = DirectSignInMethod.SOCIAL, target = "github"),
+        )
+        logtoClient.signIn(activity, signInOptions) { logtoException ->
             // 从登录进入到本次回调的耗时：成功=登录总时长，失败=到失败的时长（取消即用户在授权页停留时长）。
             // 需结合事件/reason 解读：config/no_browser 等快失败耗时接近 0 属正常。
             val durationMs = SystemClock.elapsedRealtime() - signInStartedAt
