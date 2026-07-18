@@ -141,7 +141,7 @@ fun ReadmeScreen(
                         message = msgNeedLogin,
                         actionLabel = actionLogin,
                     )
-                    if (action == SnackbarResult.ActionPerformed) viewModel.signIn()
+                    if (action == SnackbarResult.ActionPerformed) viewModel.signIn("readme_star_snackbar")
                 }
             }
         }

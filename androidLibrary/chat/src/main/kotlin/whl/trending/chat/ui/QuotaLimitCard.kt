@@ -94,7 +94,7 @@ internal fun QuotaLimitCard(
                         if (globalAuthManager.isSupported) {
                             Button(onClick = {
                                 trackEvent("detail_summary_login_click")
-                                globalAuthManager.signIn()
+                                globalAuthManager.signIn("detail_summary_quota_card")
                             }) {
                                 Text(stringResource(R.string.chat_quota_login_cta))
                             }
@@ -145,7 +145,7 @@ internal fun QuotaLimitCard(
                 if (globalAuthManager.isSupported) {
                     Button(onClick = {
                         trackEvent("chat_quota_login_click")
-                        globalAuthManager.signIn()
+                        globalAuthManager.signIn("chat_quota_card")
                     }) {
                         Text(stringResource(R.string.chat_quota_login_cta))
                     }

@@ -336,7 +336,7 @@ fun HomeScreen(
             source = "home_avatar",
             onConfirm = {
                 showSignInValueDialog = false
-                authManager.signIn()
+                authManager.signIn("home_avatar")
             },
             onDismiss = { showSignInValueDialog = false },
         )

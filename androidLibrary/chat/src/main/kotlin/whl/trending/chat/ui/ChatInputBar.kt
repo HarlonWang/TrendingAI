@@ -139,7 +139,7 @@ fun ChatInputBar(
                 TextButton(onClick = {
                     showLoginDialog = false
                     trackEvent("chat_image_login_click")
-                    globalAuthManager.signIn()
+                    globalAuthManager.signIn("chat_image_dialog")
                 }) {
                     Text(stringResource(R.string.chat_image_login_confirm))
                 }

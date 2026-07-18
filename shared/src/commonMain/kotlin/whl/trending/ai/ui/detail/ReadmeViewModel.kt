@@ -81,7 +81,7 @@ class ReadmeViewModel(
         }
     }
 
-    fun signIn() = authManager().signIn()
+    fun signIn(source: String) = authManager().signIn(source)
 
     fun fetchReadme() {
         viewModelScope.launch {

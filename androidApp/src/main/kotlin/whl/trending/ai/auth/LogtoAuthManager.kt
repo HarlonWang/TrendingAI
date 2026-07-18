@@ -52,10 +52,13 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
     override val isSupported: Boolean = true
 
-    override fun signIn() {
+    override fun signIn(source: String) {
         val activity = activityRef.get() ?: return
         _authState.value = AuthState.LoggingIn
-        // 登录耗时起点：单调时钟，不受系统时间/时区调整影响；用局部变量随闭包捕获，
+        // 漏斗起点事件：start 数减去 success/canceled/error 终态数 = 无终态的静默流失
+        // （典型如用户停在授权页直接杀进程，SDK 回调永远不会到达）。
+        trackEvent("sign_in_start", mapOf("source" to source))
+        // 登录耗时起点：单调时钟，不受系统时间/时区调整影响；source 同理用局部变量随闭包捕获，
         // 配置变更重建 Activity 后回调即便落在旧实例也仍读到本次登录的起点（见 SignInFailureBus）。
         val signInStartedAt = SystemClock.elapsedRealtime()
         // directSignIn：授权端点直接 302 到 GitHub，跳过 Logto 托管登录页（海外 Cloudflare 边缘
@@ -71,12 +74,29 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             val durationMs = SystemClock.elapsedRealtime() - signInStartedAt
             if (logtoException == null && logtoClient.isAuthenticated) {
                 _authState.value = AuthState.LoggedIn
-                trackEvent("sign_in_success", mapOf("duration_ms" to durationMs))
+                trackEvent(
+                    "sign_in_success",
+                    mapOf("source" to source, "duration_ms" to durationMs, "duration_bucket" to durationBucket(durationMs)),
+                )
             } else {
                 _authState.value = AuthState.LoggedOut
                 if (logtoException != null) {
                     val (reason, props) = analyzeSignInFailure(logtoException)
-                    trackEvent("sign_in_failed", props + ("duration_ms" to durationMs))
+                    // 「取消 vs 异常」拆到事件名层面：Aptabase 面板以事件名为中心，混在一个事件里
+                    // 靠 reason 属性区分时，日常巡检无法一眼分辨产品漏斗问题与技术故障。
+                    if (reason == SignInFailureReason.USER_CANCELED) {
+                        trackEvent(
+                            "sign_in_canceled",
+                            mapOf(
+                                "source" to source,
+                                "duration_ms" to durationMs,
+                                "duration_bucket" to durationBucket(durationMs),
+                                "cancel_kind" to if (durationMs < CANCEL_KIND_QUICK_THRESHOLD_MS) "quick" else "wait",
+                            ),
+                        )
+                    } else {
+                        trackEvent("sign_in_error", props + ("source" to source) + ("duration_ms" to durationMs))
+                    }
                     // 走进程级总线而非实例字段：配置变更重建 Activity 后回调可能落在旧实例上（见 SignInFailureBus）
                     SignInFailureBus.emit(reason)
                 }
@@ -85,8 +105,8 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     }
 
     /**
-     * 把 Logto 登录异常归为粗粒度失败类别，并生成 sign_in_failed 埋点属性——logtoType 与 cause 链
-     * 只推导一次，归因与埋点保证同源。
+     * 把 Logto 登录异常归为粗粒度失败类别，并生成 sign_in_error 埋点属性——logtoType 与 cause 链
+     * 只推导一次，归因与埋点保证同源。USER_CANCELED 不上报本属性集，单独走 sign_in_canceled 事件。
      *
      * 归因（`reason`，同时喂连通性提示）：Logto SDK 构造多数 `LogtoException` 时不透传底层
      * `Throwable`（如授权码换 token 失败直接传 `null` cause），故「超时 vs 网络」通常只能落到同一
@@ -148,6 +168,25 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
 
     companion object {
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
+
+        /**
+         * 长短取消的分界：短于此为 `quick`（授权页正常加载后主动拒绝），长于此为 `wait`
+         * （等待/挣扎后放弃，体感上多为授权页加载不出的网络性失败）。取 10s 依据 2026-07
+         * Aptabase 实测取消耗时双峰——短峰中位 3.1s、长峰中位 33.7s，10s 落在两峰谷底。
+         */
+        private const val CANCEL_KIND_QUICK_THRESHOLD_MS = 10_000L
+
+        /**
+         * 耗时预分桶：Aptabase 把属性值当字符串枚举分组，原始 duration_ms 每个值都唯一、
+         * 分布在面板上直接碎掉，只能导 CSV 手工分析；客户端先归入固定枚举桶才能直接看分布。
+         */
+        private fun durationBucket(durationMs: Long): String = when {
+            durationMs < 5_000 -> "lt_5s"
+            durationMs < 15_000 -> "5_15s"
+            durationMs < 45_000 -> "15_45s"
+            durationMs < 120_000 -> "45_120s"
+            else -> "gte_120s"
+        }
 
         /** 远端拉取失败——网络不可达 / 服务端异常，归为 `network`。 */
         private val NETWORK_LOGTO_TYPES = setOf(

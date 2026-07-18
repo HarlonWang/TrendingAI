@@ -13,8 +13,8 @@ sealed interface AuthState {
 }
 
 /**
- * 登录失败的粗粒度归因，同时喂埋点（[whl.trending.ai.auth] 内映射为 sign_in_failed 的 reason）
- * 与失败后的连通性提示。分类逻辑见 androidApp 的 LogtoAuthManager。
+ * 登录失败的粗粒度归因，同时喂埋点（USER_CANCELED 上报 sign_in_canceled 事件，
+ * 其余映射为 sign_in_error 的 reason）与失败后的连通性提示。分类逻辑见 androidApp 的 LogtoAuthManager。
  */
 enum class SignInFailureReason {
     USER_CANCELED, TIMEOUT, NETWORK, NO_BROWSER, CONFIG, OTHER,
@@ -51,7 +51,8 @@ interface AuthManager {
     val isSupported: Boolean
     val authState: StateFlow<AuthState>
 
-    fun signIn()
+    /** @param source 登录入口标识（如 "home_avatar"），随 sign_in_start/success/canceled/error 埋点上报做入口归因 */
+    fun signIn(source: String)
     fun signOut()
     suspend fun getAccessToken(): String?
 }
@@ -59,7 +60,7 @@ interface AuthManager {
 object NoopAuthManager : AuthManager {
     override val isSupported: Boolean = false
     override val authState: StateFlow<AuthState> = MutableStateFlow(AuthState.LoggedOut)
-    override fun signIn() {}
+    override fun signIn(source: String) {}
     override fun signOut() {}
     override suspend fun getAccessToken(): String? = null
 }

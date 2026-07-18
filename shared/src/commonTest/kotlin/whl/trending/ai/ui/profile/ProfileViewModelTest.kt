@@ -42,7 +42,7 @@ class ProfileViewModelTest {
         val state = MutableStateFlow<AuthState>(AuthState.LoggedIn)
         override val isSupported: Boolean = true
         override val authState: StateFlow<AuthState> = state
-        override fun signIn() {}
+        override fun signIn(source: String) {}
         override fun signOut() {}
         override suspend fun getAccessToken(): String? = "token"
     }

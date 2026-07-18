@@ -149,7 +149,7 @@ fun TrendingScreen(
                         message = msgNeedLogin,
                         actionLabel = actionLogin,
                     )
-                    if (action == SnackbarResult.ActionPerformed) globalAuthManager.signIn()
+                    if (action == SnackbarResult.ActionPerformed) globalAuthManager.signIn("trending_star_snackbar")
                 }
                 RepoStarService.Result.UNSTARRED -> Unit // 列表页只 star，不触发取消
             }
