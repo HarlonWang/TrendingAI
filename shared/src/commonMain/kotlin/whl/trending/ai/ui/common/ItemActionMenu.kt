@@ -1,12 +1,14 @@
 package whl.trending.ai.ui.common
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -19,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
@@ -38,62 +41,68 @@ fun ItemActionMenu(
     onStar: (() -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         IconButton(
-            onClick = { expanded = true },
+            onClick = onShare,
             modifier = Modifier.size(24.dp)
         ) {
             Icon(
-                Icons.Default.MoreHoriz,
-                contentDescription = null,
+                Icons.AutoMirrored.Outlined.Shortcut,
+                contentDescription = stringResource(Res.string.share_to_ai),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(
-                            if (isFavorite) Res.string.action_unfavorite
-                            else Res.string.action_favorite
-                        )
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null
-                    )
-                },
-                onClick = {
-                    expanded = false
-                    onToggle()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.share_to_ai)) },
-                leadingIcon = {
-                    Icon(Icons.Default.Share, contentDescription = null)
-                },
-                onClick = {
-                    expanded = false
-                    onShare()
-                }
-            )
-            if (onStar != null) {
+        Box {
+            IconButton(
+                onClick = { expanded = true },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.MoreHoriz,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(Res.string.action_star)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isFavorite) Res.string.action_unfavorite
+                                else Res.string.action_favorite
+                            )
+                        )
+                    },
                     leadingIcon = {
-                        Icon(Icons.Outlined.StarBorder, contentDescription = null)
+                        Icon(
+                            if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = null
+                        )
                     },
                     onClick = {
                         expanded = false
-                        onStar()
+                        onToggle()
                     }
                 )
+                if (onStar != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.action_star)) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.StarBorder, contentDescription = null)
+                        },
+                        onClick = {
+                            expanded = false
+                            onStar()
+                        }
+                    )
+                }
             }
         }
     }
