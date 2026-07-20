@@ -144,7 +144,7 @@ private fun handleFavoriteClick(
             return
         }
     }
-    onOpenUrl(item.url)
+    onOpenUrl(item.targetUrl)
 }
 
 @Composable

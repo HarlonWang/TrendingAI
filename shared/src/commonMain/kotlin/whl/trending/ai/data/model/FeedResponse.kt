@@ -28,18 +28,21 @@ data class FeedItem(
     /**
      * 点击条目时应打开的链接。
      * Hacker News 条目优先打开讨论页（extra.hn_url），避免外链文章站点不可达；
+     * Product Hunt 条目优先打开 PH 原帖（extra.ph_url），保留评论区并带上官方归因；
      * 其余来源仍使用 url。
      */
     val openUrl: String
-        get() = if (source == "hackernews") {
-            extra?.hnUrl?.takeIf { it.isNotBlank() } ?: url
-        } else {
-            url
+        get() = when (source) {
+            "hackernews" -> extra?.hnUrl?.takeIf { it.isNotBlank() } ?: url
+            "producthunt" -> extra?.phUrl?.takeIf { it.isNotBlank() } ?: url
+            else -> url
         }
 }
 
 @Serializable
 data class FeedExtra(
     @SerialName("hn_url")
-    val hnUrl: String? = null
+    val hnUrl: String? = null,
+    @SerialName("ph_url")
+    val phUrl: String? = null
 )

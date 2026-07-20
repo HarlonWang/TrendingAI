@@ -129,7 +129,8 @@ fun FeedScreen(
                                             source = item.source,
                                             description = item.description,
                                             summary = item.summary,
-                                            savedAt = Clock.System.now().toEpochMilliseconds()
+                                            savedAt = Clock.System.now().toEpochMilliseconds(),
+                                            openUrl = item.openUrl
                                         )
                                     )
                                 }
@@ -205,7 +206,7 @@ private fun FeedItemCard(
                 Box(modifier = Modifier.weight(1f)) {
                     FeedItemMetadata(item = item)
                 }
-                val shareContent = aiShareText(item.title, item.summary, item.url)
+                val shareContent = aiShareText(item.title, item.summary, item.openUrl)
                 ItemActionMenu(
                     isFavorite = isFavorite,
                     onToggle = onToggleFavorite,

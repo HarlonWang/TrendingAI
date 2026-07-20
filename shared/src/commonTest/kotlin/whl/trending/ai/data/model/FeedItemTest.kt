@@ -48,4 +48,35 @@ class FeedItemTest {
         val item = json.decodeFromString<FeedItem>(payload)
         assertEquals("https://github.com/foo/bar", item.openUrl)
     }
+
+    @Test
+    fun producthunt_item_opens_ph_post_from_extra() {
+        val payload = """
+            {"source":"producthunt","externalId":"p1","title":"ZooData",
+            "url":"https://zoodata.ai/",
+            "extra":{"ph_url":"https://www.producthunt.com/products/zoodata?utm_source=api"}}
+        """.trimIndent()
+        val item = json.decodeFromString<FeedItem>(payload)
+        assertEquals("https://www.producthunt.com/products/zoodata?utm_source=api", item.openUrl)
+    }
+
+    @Test
+    fun producthunt_item_without_ph_url_falls_back_to_url() {
+        val payload = """
+            {"source":"producthunt","externalId":"p2","title":"Legacy product",
+            "url":"https://example.com/"}
+        """.trimIndent()
+        val item = json.decodeFromString<FeedItem>(payload)
+        assertEquals("https://example.com/", item.openUrl)
+    }
+
+    @Test
+    fun producthunt_item_with_blank_ph_url_falls_back_to_url() {
+        val payload = """
+            {"source":"producthunt","externalId":"p3","title":"Product",
+            "url":"https://example.com/","extra":{"ph_url":""}}
+        """.trimIndent()
+        val item = json.decodeFromString<FeedItem>(payload)
+        assertEquals("https://example.com/", item.openUrl)
+    }
 }

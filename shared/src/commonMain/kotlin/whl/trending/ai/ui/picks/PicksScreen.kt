@@ -177,7 +177,7 @@ private fun handleItemClick(
             return
         }
     }
-    onOpenUrl(item.url)
+    onOpenUrl(item.openUrl)
 }
 
 @Composable
@@ -381,7 +381,7 @@ private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: 
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                val shareContent = aiShareText(item.title, item.summary, item.url)
+                val shareContent = aiShareText(item.title, item.summary, item.openUrl)
                 ItemActionMenu(
                     isFavorite = isFavorite,
                     onToggle = onToggleFavorite,
@@ -467,7 +467,7 @@ private fun DebutCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                val shareContent = aiShareText(item.title, item.analysis?.core ?: item.summary, item.url)
+                val shareContent = aiShareText(item.title, item.analysis?.core ?: item.summary, item.openUrl)
                 ItemActionMenu(
                     isFavorite = isFavorite,
                     onToggle = onToggleFavorite,
@@ -499,7 +499,8 @@ private fun togglePickFavorite(item: PickItem, favoriteUrls: Set<String>) {
                 source = item.source,
                 description = item.analysis?.core ?: item.description,
                 summary = item.analysis?.whyImportant ?: item.summary,
-                savedAt = Clock.System.now().toEpochMilliseconds()
+                savedAt = Clock.System.now().toEpochMilliseconds(),
+                openUrl = item.openUrl
             )
         )
     }
