@@ -298,7 +298,12 @@ private fun SourcesRow(sources: List<SourceRef>) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         sources.forEach { source ->
             SuggestionChip(
-                onClick = { runCatching { uriHandler.openUri(source.url) } },
+                // 全局 UriHandler 已含「无浏览器 → 应用内 WebView」兜底，此处仅防极端 URL 异常；
+                // 失败留日志便于排查，不打扰用户（Sourcery 建议采纳日志、toast 评估后不做）
+                onClick = {
+                    runCatching { uriHandler.openUri(source.url) }
+                        .onFailure { android.util.Log.w("SourcesRow", "open source failed: ${'$'}{source.url}", it) }
+                },
                 label = {
                     Text(source.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },

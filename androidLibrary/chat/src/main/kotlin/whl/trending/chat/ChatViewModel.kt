@@ -327,7 +327,7 @@ class ChatViewModel(
         streams[threadId] = job
     }
 
-    /** 搜索事件落到占位消息：searching 瞬态 + sources 累积（url 去重由服务端保证） */
+    /** 搜索事件落到占位消息：searching 瞬态 + sources 累积（服务端已按 url 去重，客户端再防御一层） */
     private fun applySearchEvent(threadId: Long?, messageId: Long, event: SearchEvent) {
         updateThreadMessages(threadId) { list ->
             list.map { m ->
@@ -335,7 +335,8 @@ class ChatViewModel(
                 else when (event) {
                     is SearchEvent.Started -> m.copy(searching = true)
                     is SearchEvent.Done -> m.copy(searching = false)
-                    is SearchEvent.Source -> m.copy(sources = m.sources + SourceRef(event.title, event.url))
+                    is SearchEvent.Source ->
+                        m.copy(sources = (m.sources + SourceRef(event.title, event.url)).distinctBy { it.url })
                 }
             }
         }
