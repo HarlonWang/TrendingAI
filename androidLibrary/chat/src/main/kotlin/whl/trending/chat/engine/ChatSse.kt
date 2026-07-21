@@ -16,6 +16,15 @@ internal object ChatSse {
     sealed interface Event {
         data class Delta(val text: String) : Event
         data class Done(val cached: Boolean) : Event
+
+        /** P2 搜索事件：一次搜索开始（transient 指示器） */
+        data object SearchStarted : Event
+
+        /** 单次搜索完成；query 服务端尽力而为（open_page 等动作无 query） */
+        data class SearchDone(val query: String?) : Event
+
+        /** 引用来源（服务端已按 url 去重） */
+        data class Source(val title: String, val url: String) : Event
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -29,6 +38,19 @@ internal object ChatSse {
         (obj["delta"] as? JsonPrimitive)?.contentOrNull?.let { return Event.Delta(it) }
         if ((obj["done"] as? JsonPrimitive)?.booleanOrNull == true) {
             return Event.Done(cached = (obj["cached"] as? JsonPrimitive)?.booleanOrNull == true)
+        }
+        (obj["search"])?.let { search ->
+            val s = runCatching { search.jsonObject }.getOrNull() ?: return null
+            return when ((s["state"] as? JsonPrimitive)?.contentOrNull) {
+                "started" -> Event.SearchStarted
+                "done" -> Event.SearchDone((s["query"] as? JsonPrimitive)?.contentOrNull)
+                else -> null // 未知 state 忽略（向前兼容）
+            }
+        }
+        (obj["source"])?.let { source ->
+            val s = runCatching { source.jsonObject }.getOrNull() ?: return null
+            val url = (s["url"] as? JsonPrimitive)?.contentOrNull ?: return null
+            return Event.Source(title = (s["title"] as? JsonPrimitive)?.contentOrNull ?: url, url = url)
         }
         return null
     }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DrawerValue
@@ -197,6 +198,24 @@ fun ChatScreen(
                             )
                         }
                     }
+                    // 能力 chip 回显区：开启的模式可见可撤（EchoFlow「菜单开启 + chip 回显」范式）
+                    val mode by viewModel.chatMode.collectAsState()
+                    if (mode == whl.trending.chat.model.ChatMode.WebSearch) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
+                            androidx.compose.material3.InputChip(
+                                selected = true,
+                                onClick = { viewModel.toggleWebSearch() },
+                                label = { Text(stringResource(R.string.chat_web_search)) },
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Filled.Close,
+                                        contentDescription = stringResource(R.string.chat_dialog_cancel),
+                                        modifier = Modifier.padding(0.dp),
+                                    )
+                                },
+                            )
+                        }
+                    }
                     // 常驻模型选择器（≤1 个模型时自动隐藏）
                     val models by viewModel.models.collectAsState()
                     ModelPicker(
@@ -207,6 +226,8 @@ fun ChatScreen(
                         input = state.input,
                         canSend = state.canSend,
                         pendingImages = state.pendingImages,
+                        searchActive = mode == whl.trending.chat.model.ChatMode.WebSearch,
+                        onToggleSearch = viewModel::toggleWebSearch,
                         onInputChange = viewModel::updateInput,
                         onSend = viewModel::send,
                         onAddImage = viewModel::addPendingImage,

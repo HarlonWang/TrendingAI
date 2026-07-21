@@ -18,6 +18,8 @@ enum class MessageKind { CHAT, DETAIL_SUMMARY }
  *   UI 直接按路径渲染，发送时由 transport 层读文件转 base64 内嵌
  * @param error 非空表示这条 assistant 消息是一次失败（按 [ChatError.category] 区分展示）
  * @param kind 生成管线标记，默认普通对话
+ * @param sources 联网搜索的引用来源（随消息持久化，尾部 SourcesRow 渲染）
+ * @param searching 流式过程中「正在搜索」瞬态指示（不持久化）
  */
 data class ChatMessage(
     val id: Long,
@@ -26,4 +28,6 @@ data class ChatMessage(
     val images: List<String> = emptyList(),
     val error: ChatError? = null,
     val kind: MessageKind = MessageKind.CHAT,
+    val sources: List<SourceRef> = emptyList(),
+    val searching: Boolean = false,
 )

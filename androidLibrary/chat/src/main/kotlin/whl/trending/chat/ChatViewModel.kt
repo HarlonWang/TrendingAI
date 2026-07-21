@@ -22,9 +22,12 @@ import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
+import whl.trending.chat.model.ChatMode
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
+import whl.trending.chat.model.SearchEvent
+import whl.trending.chat.model.SourceRef
 import whl.trending.chat.store.ChatStore
 
 /** 抽屉里的一条会话概要 */
@@ -66,6 +69,15 @@ class ChatViewModel(
 
     private val _currentThreadId = MutableStateFlow<Long?>(null)
     val currentThreadId: StateFlow<Long?> = _currentThreadId.asStateFlow()
+
+    /** 会话能力模式（P2：联网搜索）。粘滞语义：开启后对后续每条消息生效，直到手动关闭 */
+    private val _chatMode = MutableStateFlow<ChatMode>(ChatMode.Normal)
+    val chatMode: StateFlow<ChatMode> = _chatMode.asStateFlow()
+
+    /** EchoFlow 单选互斥范式：再点同项回 Normal，点别项自动顶掉 */
+    fun toggleWebSearch() {
+        _chatMode.value = if (_chatMode.value == ChatMode.WebSearch) ChatMode.Normal else ChatMode.WebSearch
+    }
 
     /** 当前会话的 ChatContext（解读 chip / 服务端 context 注入）；随切换/恢复而变 */
     private var activeContext: ChatContext? = initialContext
@@ -264,7 +276,14 @@ class ChatViewModel(
                     MessageKind.CHAT -> {
                         val history = (messagesByThread[threadId] ?: emptyList())
                             .filterNot { it.id == placeholderId }
-                        engine.send(history, context) { delta -> appendDelta(threadId, placeholderId, delta) }
+                        val useSearch = _chatMode.value == ChatMode.WebSearch
+                        engine.send(
+                            history,
+                            context,
+                            onDelta = { delta -> appendDelta(threadId, placeholderId, delta) },
+                            search = useSearch,
+                            onSearch = { event -> applySearchEvent(threadId, placeholderId, event) },
+                        )
                     }
                     MessageKind.DETAIL_SUMMARY -> {
                         val detail = engine.sendDetailSummary(requireNotNull(context)) { delta ->
@@ -277,11 +296,17 @@ class ChatViewModel(
             }
             result.fold(
                 onSuccess = { full ->
+                    var sources: List<SourceRef> = emptyList()
                     updateThreadMessages(threadId) { list ->
-                        list.map { if (it.id == placeholderId) it.copy(content = full) else it }
+                        list.map {
+                            if (it.id == placeholderId) {
+                                sources = it.sources
+                                it.copy(content = full, searching = false)
+                            } else it
+                        }
                     }
                     if (store != null && threadId != null) {
-                        store.persistAssistantMessage(threadId, full, kind, selectedModelId())
+                        store.persistAssistantMessage(threadId, full, kind, selectedModelId(), sources)
                     }
                 },
                 onFailure = { e ->
@@ -290,7 +315,7 @@ class ChatViewModel(
                     trackFailure(kind, error)
                     updateThreadMessages(threadId) { list ->
                         // 已渲染部分丢弃，整条重试（中途断流语义）
-                        list.map { if (it.id == placeholderId) it.copy(content = "", error = error) else it }
+                        list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }
                     }
                 },
             )
@@ -300,6 +325,21 @@ class ChatViewModel(
             }
         }
         streams[threadId] = job
+    }
+
+    /** 搜索事件落到占位消息：searching 瞬态 + sources 累积（服务端已按 url 去重，客户端再防御一层） */
+    private fun applySearchEvent(threadId: Long?, messageId: Long, event: SearchEvent) {
+        updateThreadMessages(threadId) { list ->
+            list.map { m ->
+                if (m.id != messageId) m
+                else when (event) {
+                    is SearchEvent.Started -> m.copy(searching = true)
+                    is SearchEvent.Done -> m.copy(searching = false)
+                    is SearchEvent.Source ->
+                        m.copy(sources = (m.sources + SourceRef(event.title, event.url)).distinctBy { it.url })
+                }
+            }
+        }
     }
 
     private fun appendDelta(threadId: Long?, messageId: Long, delta: String) {

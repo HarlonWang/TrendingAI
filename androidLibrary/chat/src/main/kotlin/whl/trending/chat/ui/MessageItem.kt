@@ -48,7 +48,17 @@ import whl.trending.chat.R
 import whl.trending.chat.markdown.MarkdownText
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.ui.platform.LocalUriHandler
 import whl.trending.chat.model.ChatMessage
+import whl.trending.chat.model.SourceRef
 import whl.trending.chat.model.Role
 
 /**
@@ -145,6 +155,19 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
     Column(modifier = modifier.fillMaxWidth()) {
         val error = message.error
         if (error == null) {
+            // 联网搜索瞬态指示（M3 Expressive LoadingIndicator，全 app 统一）
+            @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+            if (message.searching) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LoadingIndicator(modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.chat_searching),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             var viewerUrl by remember { mutableStateOf<String?>(null) }
             SelectionContainer {
                 MarkdownText(
@@ -155,6 +178,9 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
             }
             viewerUrl?.let { url ->
                 ImageViewerDialog(model = url, onDismiss = { viewerUrl = null })
+            }
+            if (message.sources.isNotEmpty()) {
+                SourcesRow(message.sources)
             }
             Row {
                 val clipboard = LocalClipboard.current
@@ -258,6 +284,29 @@ private fun MessageItemPreview() {
                         "- 平均时间复杂度 `O(n log n)`\n- 最坏 `O(n²)`",
                 ),
                 onRetry = {},
+            )
+        }
+    }
+}
+
+
+/** 引用来源行：可点击 chip 流式排布（点击经全局 UriHandler 统一出口打开） */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SourcesRow(sources: List<SourceRef>) {
+    val uriHandler = LocalUriHandler.current
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        sources.forEach { source ->
+            SuggestionChip(
+                // 全局 UriHandler 已含「无浏览器 → 应用内 WebView」兜底，此处仅防极端 URL 异常；
+                // 失败留日志便于排查，不打扰用户（Sourcery 建议采纳日志、toast 评估后不做）
+                onClick = {
+                    runCatching { uriHandler.openUri(source.url) }
+                        .onFailure { android.util.Log.w("SourcesRow", "open source failed: ${'$'}{source.url}", it) }
+                },
+                label = {
+                    Text(source.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                },
             )
         }
     }

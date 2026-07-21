@@ -57,6 +57,8 @@ class ChatViewModelPersistenceTest {
             history: List<ChatMessage>,
             context: ChatContext?,
             onDelta: (String) -> Unit,
+            search: Boolean,
+            onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
         ): String {
             failWith?.let { throw ChatException(it) }
             onDelta(reply)
@@ -224,4 +226,71 @@ class ChatViewModelPersistenceTest {
         assertTrue(store.threads().first().isEmpty())
         assertTrue(v.uiState.value.messages.isEmpty())
     }
+
+    // ---- P2 web search ----
+
+    /** 带搜索事件的假引擎 */
+    private class SearchEngine(var reply: String = "答案") : ChatEngine {
+        var lastSearchFlag = false
+        override suspend fun send(
+            history: List<ChatMessage>,
+            context: ChatContext?,
+            onDelta: (String) -> Unit,
+            search: Boolean,
+            onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
+        ): String {
+            lastSearchFlag = search
+            if (search) {
+                onSearch(whl.trending.chat.model.SearchEvent.Started)
+                onSearch(whl.trending.chat.model.SearchEvent.Done("q"))
+                onSearch(whl.trending.chat.model.SearchEvent.Source("Kotlin", "https://kotlinlang.org"))
+            }
+            onDelta(reply)
+            return reply
+        }
+        override suspend fun sendDetailSummary(context: ChatContext, onDelta: (String) -> Unit) =
+            DetailSummaryResult(reply, cached = false)
+    }
+
+    @Test
+    fun `搜索模式：引擎收到 search=true，来源落到消息并随消息持久化`() = runTest(dispatcher) {
+        val engine = SearchEngine()
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleWebSearch()
+        v.updateInput("查一下")
+        v.send()
+        advanceUntilIdle()
+
+        assertTrue(engine.lastSearchFlag)
+        val msg = v.uiState.value.messages.last()
+        assertEquals(listOf("https://kotlinlang.org"), msg.sources.map { it.url })
+        assertEquals(false, msg.searching)
+
+        // 持久化往返：重新加载后 sources 还在（segmentsJson v1 信封）
+        val threadId = store.threads().first()[0].id
+        val loaded = store.loadMessages(threadId)
+        assertEquals(listOf("https://kotlinlang.org"), loaded.last().sources.map { it.url })
+    }
+
+    @Test
+    fun `未开搜索模式：引擎收到 search=false`() = runTest(dispatcher) {
+        val engine = SearchEngine()
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.updateInput("普通问题")
+        v.send()
+        advanceUntilIdle()
+        assertEquals(false, engine.lastSearchFlag)
+    }
+
+    @Test
+    fun `toggle 两次回到 Normal（单选互斥范式）`() = runTest(dispatcher) {
+        val v = vm(SearchEngine())
+        v.toggleWebSearch()
+        assertEquals(whl.trending.chat.model.ChatMode.WebSearch, v.chatMode.value)
+        v.toggleWebSearch()
+        assertEquals(whl.trending.chat.model.ChatMode.Normal, v.chatMode.value)
+    }
+
 }

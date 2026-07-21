@@ -36,6 +36,7 @@ import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
+import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.Role
 
 private const val TAG = "ChatApi"
@@ -76,6 +77,8 @@ class ChatApi(
         val context: WireContext? = null,
         val model: String? = null,
         val stream: Boolean,
+        // P2 联网搜索开关：默认 false 时被 encodeDefaults=false 省略，旧服务端零感知
+        val search: Boolean = false,
     )
 
     @Serializable
@@ -120,10 +123,12 @@ class ChatApi(
         history: List<ChatMessage>,
         context: ChatContext?,
         onDelta: (String) -> Unit,
+        search: Boolean,
+        onSearch: (SearchEvent) -> Unit,
     ): String {
         val lang = resolveLang()
         val imagePlaceholder = if (lang == "zh") "[图片]" else "[image]"
-        return executeStreaming(path = "chat", onDelta = onDelta) {
+        return executeStreaming(path = "chat", onDelta = onDelta, onSearch = onSearch) {
             setBody(
                 ChatRequest(
                     messages = history.mapIndexed { index, m ->
@@ -151,6 +156,7 @@ class ChatApi(
                         globalSettingsManager.currentIsPro(),
                     ),
                     stream = true,
+                    search = search,
                 ),
             )
         }.content
@@ -176,6 +182,7 @@ class ChatApi(
     private suspend fun executeStreaming(
         path: String,
         onDelta: (String) -> Unit,
+        onSearch: (SearchEvent) -> Unit = {},
         configure: HttpRequestBuilder.() -> Unit,
     ): DetailSummaryResult {
         try {
@@ -209,6 +216,9 @@ class ChatApi(
                             onDelta(event.text)
                         }
                         is ChatSse.Event.Done -> done = event
+                        is ChatSse.Event.SearchStarted -> onSearch(SearchEvent.Started)
+                        is ChatSse.Event.SearchDone -> onSearch(SearchEvent.Done(event.query))
+                        is ChatSse.Event.Source -> onSearch(SearchEvent.Source(event.title, event.url))
                         null -> Unit
                     }
                 }

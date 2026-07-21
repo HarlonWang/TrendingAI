@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.TravelExplore
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -76,6 +78,8 @@ fun ChatInputBar(
     input: String,
     canSend: Boolean,
     pendingImages: List<String>,
+    searchActive: Boolean = false,
+    onToggleSearch: () -> Unit = {},
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onAddImage: (String) -> Unit,
@@ -169,18 +173,11 @@ fun ChatInputBar(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 登录能力不可用的构建（如无 auth 渠道）直接隐藏图片入口
-                if (globalAuthManager.isSupported) {
+                // + 菜单常开：搜索 toggle 对匿名可用；图片两项在点击时才做登录闸
+                run {
                     Box {
                         IconButton(
-                            onClick = {
-                                if (authState !is AuthState.LoggedIn) {
-                                    showLoginDialog = true
-                                } else {
-                                    menuExpanded = true
-                                }
-                            },
-                            enabled = remaining > 0,
+                            onClick = { menuExpanded = true },
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
@@ -196,11 +193,27 @@ fun ChatInputBar(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
                         ) {
+                            // 能力开关：联网搜索（勾选态 = 已开启；EchoFlow 的「菜单开启 + chip 回显」范式）
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.chat_web_search)) },
+                                leadingIcon = { Icon(Icons.Outlined.TravelExplore, contentDescription = null) },
+                                trailingIcon = {
+                                    if (searchActive) Icon(Icons.Filled.Check, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onToggleSearch()
+                                },
+                            )
+                            if (globalAuthManager.isSupported) DropdownMenuItem(
                                 text = { Text(stringResource(R.string.chat_attach_camera)) },
                                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
                                 onClick = {
                                     menuExpanded = false
+                                    if (authState !is AuthState.LoggedIn) {
+                                        showLoginDialog = true
+                                        return@DropdownMenuItem
+                                    }
                                     val target = ChatImages.newCaptureTarget(context)
                                     captureTarget = target
                                     // 极少数无相机应用的设备：launch 会抛 ActivityNotFoundException
@@ -211,11 +224,15 @@ fun ChatInputBar(
                                         }
                                 },
                             )
-                            DropdownMenuItem(
+                            if (globalAuthManager.isSupported) DropdownMenuItem(
                                 text = { Text(stringResource(R.string.chat_attach_album)) },
                                 leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
                                 onClick = {
                                     menuExpanded = false
+                                    if (authState !is AuthState.LoggedIn) {
+                                        showLoginDialog = true
+                                        return@DropdownMenuItem
+                                    }
                                     albumLauncher.launch(
                                         PickVisualMediaRequest(
                                             ActivityResultContracts.PickVisualMedia.ImageOnly,
