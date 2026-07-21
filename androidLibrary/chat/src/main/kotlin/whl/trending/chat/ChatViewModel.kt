@@ -2,13 +2,19 @@ package whl.trending.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.engine.ChatEngine
@@ -19,21 +25,30 @@ import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
+import whl.trending.chat.store.ChatStore
+
+/** 抽屉里的一条会话概要 */
+data class ThreadSummary(val id: Long, val title: String, val updatedAt: Long)
 
 /**
- * 聊天 ViewModel：内存级单会话，流式渲染（发送先追加空 assistant 占位，delta 到达增量更新）。
- * 通过 [engine] 注入实现 Demo / 正式切换。
+ * 聊天 ViewModel：单实例 + currentThreadId 状态（P1 起，多会话由 [ChatStore] 支撑）。
+ * 流式渲染不变（发送先追加空 assistant 占位，delta 到达增量更新）；落库为终局一次写。
  *
- * @param loadModels 模型目录拉取，注入点（便于测试替身）；默认走 [ChatModelsProvider] 的进程级缓存，
- *   避免每个会话都网络冷拉取导致选择器 chip 迟迟不出现（见冷首拉根因）。
- * @param track 埋点注入点（便于测试替身），默认 [trackEvent]。
+ * 会话切换语义：流按 threadId 分键（[streams]/[messagesByThread]）——切走后后台继续
+ * 完成并落库（服务端已在计费，取消才是浪费），切回可见全文；uiState 只镜像当前线。
+ *
+ * @param store 持久化层；null = 纯内存模式（Demo/预览与旧行为完全一致）
+ * @param selectedModelId 应答模型记录用（展示「哪个模型答的」）；默认读全局设置的用户选择
  */
 class ChatViewModel(
     private val engine: ChatEngine,
-    private val context: ChatContext? = null,
+    initialContext: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
+    private val store: ChatStore? = null,
     private val loadModels: suspend () -> List<ChatModelOption> = { ChatModelsProvider.get() },
     private val track: (String, Map<String, String>) -> Unit = { name, props -> trackEvent(name, props) },
+    private val selectedModelId: () -> String? =
+        { runCatching { globalSettingsManager.currentSelectedChatModel() }.getOrNull() },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
@@ -43,9 +58,33 @@ class ChatViewModel(
     private val _models = MutableStateFlow<List<ChatModelOption>>(emptyList())
     val models: StateFlow<List<ChatModelOption>> = _models.asStateFlow()
 
+    /** 会话列表（抽屉数据源）；纯内存模式恒为空 */
+    val threads: StateFlow<List<ThreadSummary>> =
+        (store?.threads()?.map { list -> list.map { ThreadSummary(it.id, it.title, it.updatedAt) } }
+            ?: flowOf(emptyList()))
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _currentThreadId = MutableStateFlow<Long?>(null)
+    val currentThreadId: StateFlow<Long?> = _currentThreadId.asStateFlow()
+
+    /** 当前会话的 ChatContext（解读 chip / 服务端 context 注入）；随切换/恢复而变 */
+    private var activeContext: ChatContext? = initialContext
+
+    // 每线消息缓冲（真相源，uiState.messages 只是当前线的镜像）；null 键 = 尚未落库的新会话
+    private val messagesByThread = mutableMapOf<Long?, List<ChatMessage>>(null to initialMessages)
+
+    // 每线在途流（切走后后台继续）
+    private val streams = mutableMapOf<Long?, Job>()
+
     init {
         viewModelScope.launch {
             _models.value = runCatching { loadModels() }.getOrDefault(emptyList())
+        }
+        // 入口恢复：该入口最近会话（跨进程延续原 sessionKey 的「再次进入恢复」体验）
+        if (store != null) {
+            viewModelScope.launch {
+                store.resolveLatestThread(initialContext)?.let { openThread(it, fallbackContext = initialContext) }
+            }
         }
     }
 
@@ -85,11 +124,16 @@ class ChatViewModel(
      * 可见性由 [DetailSummaryPolicy] 保证（GitHub 条目 + README 达标 + 尚无成功解读）。
      */
     fun sendDetailSummary(promptText: String) {
+        val context = activeContext
         if (_uiState.value.isSending || context?.externalId == null) return
         track("detail_summary_generate", mapOf("from" to "chat"))
-        val userMessage = ChatMessage(nextId(), Role.USER, promptText, kind = MessageKind.DETAIL_SUMMARY)
-        _uiState.update { it.copy(messages = it.messages + userMessage, isSending = true) }
-        launchRequest(MessageKind.DETAIL_SUMMARY)
+        _uiState.update { it.copy(isSending = true) }
+        viewModelScope.launch {
+            val threadId = ensureThreadForSend(promptText)
+            val userMessage = ChatMessage(nextId(), Role.USER, promptText, kind = MessageKind.DETAIL_SUMMARY)
+            appendAndPersistUser(threadId, userMessage)
+            launchRequest(threadId, MessageKind.DETAIL_SUMMARY, context)
+        }
     }
 
     private fun sendMessage(text: String, images: List<String>) {
@@ -97,16 +141,13 @@ class ChatViewModel(
         if (images.isNotEmpty()) {
             track("chat_send_with_images", mapOf("image_count" to images.size.toString()))
         }
-        val userMessage = ChatMessage(nextId(), Role.USER, text, images = images)
-        _uiState.update {
-            it.copy(messages = it.messages + userMessage, isSending = true)
+        _uiState.update { it.copy(isSending = true) }
+        viewModelScope.launch {
+            val threadId = ensureThreadForSend(text)
+            val userMessage = ChatMessage(nextId(), Role.USER, text, images = images)
+            appendAndPersistUser(threadId, userMessage)
+            launchRequest(threadId, MessageKind.CHAT, activeContext)
         }
-        launchRequest(MessageKind.CHAT)
-    }
-
-    companion object {
-        /** 单条消息图片数上限，与服务端及 [whl.trending.chat.engine.ChatWire] 对齐 */
-        const val MAX_IMAGES_PER_MESSAGE = 4
     }
 
     /** 对可重试的失败消息重试：移除该错误条，按消息 [MessageKind] 路由回对应管线。
@@ -116,71 +157,147 @@ class ChatViewModel(
         val passthrough = error.code == ChatError.CODE_QUOTA_DEVICE ||
             error.code == ChatError.CODE_LOGIN_REQUIRED
         if (!error.category.retryable && !passthrough) return
+        val threadId = _currentThreadId.value
+        updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
+        _uiState.update { it.copy(isSending = true) }
+        launchRequest(threadId, message.kind, activeContext)
+    }
+
+    // ---- 会话管理（抽屉） ----
+
+    fun switchThread(id: Long) {
+        if (id == _currentThreadId.value) return
+        viewModelScope.launch { openThread(id) }
+    }
+
+    /** 抽屉「新会话」：总是全新开始（通用入口），不复用任何历史 */
+    fun startNewThread() {
+        _currentThreadId.value = null
+        activeContext = null
+        messagesByThread[null] = emptyList()
         _uiState.update {
-            it.copy(messages = it.messages.filterNot { m -> m.id == message.id }, isSending = true)
+            it.copy(messages = emptyList(), isSending = false, input = "", pendingImages = emptyList())
         }
-        launchRequest(message.kind)
+    }
+
+    fun renameThread(id: Long, title: String) {
+        viewModelScope.launch { store?.renameThread(id, title) }
+    }
+
+    fun deleteThread(id: Long) {
+        viewModelScope.launch {
+            // 在途流一并取消：线程行将消失，终局落库会撞外键
+            streams.remove(id)?.cancel()
+            messagesByThread.remove(id)
+            store?.deleteThread(id)
+            if (_currentThreadId.value == id) startNewThread()
+        }
+    }
+
+    // ---- 内部 ----
+
+    private suspend fun openThread(id: Long, fallbackContext: ChatContext? = null) {
+        val s = store ?: return
+        val messages = messagesByThread[id] ?: s.loadMessages(id).also { messagesByThread[id] = it }
+        idSeq = maxOf(idSeq, messages.maxOfOrNull { it.id } ?: 0L)
+        _currentThreadId.value = id
+        activeContext = s.contextOf(id) ?: fallbackContext
+        _uiState.update {
+            it.copy(
+                messages = messages,
+                isSending = streams[id]?.isActive == true,
+                pendingImages = emptyList(),
+            )
+        }
+    }
+
+    /** 首条消息才建线（懒建）；当前线已存在则直接复用。内存模式恒为 null 键。 */
+    private suspend fun ensureThreadForSend(firstMessageText: String): Long? {
+        val s = store ?: return _currentThreadId.value
+        _currentThreadId.value?.let { return it }
+        val id = s.createThread(activeContext, firstMessageText)
+        // 未落库缓冲迁移到新线名下
+        messagesByThread[id] = messagesByThread.remove(null) ?: emptyList()
+        _currentThreadId.value = id
+        return id
+    }
+
+    private suspend fun appendAndPersistUser(threadId: Long?, message: ChatMessage) {
+        updateThreadMessages(threadId) { it + message }
+        if (store != null && threadId != null) {
+            val persisted = store.persistUserMessage(threadId, message)
+            if (persisted.images != message.images) {
+                // 图片已迁入 filesDir：回写新路径（cache 路径随时可能被系统清理）
+                updateThreadMessages(threadId) { list ->
+                    list.map { if (it.id == message.id) it.copy(images = persisted.images) else it }
+                }
+            }
+        }
     }
 
     /**
      * 统一请求路径：先追加空 assistant 占位消息，delta 到达时增量更新其 content；
-     * 成功以全文定稿，失败清空已渲染部分（整条重试）并挂上分类错误。
+     * 成功以全文定稿并终局落库，失败清空已渲染部分（整条重试）并挂上分类错误（不落库）。
      */
-    private fun launchRequest(kind: MessageKind) = viewModelScope.launch {
+    private fun launchRequest(threadId: Long?, kind: MessageKind, context: ChatContext?) {
         val placeholderId = nextId()
-        _uiState.update {
-            it.copy(messages = it.messages + ChatMessage(placeholderId, Role.ASSISTANT, "", kind = kind))
-        }
-        val result = runCatching {
-            when (kind) {
-                MessageKind.CHAT -> {
-                    val history = _uiState.value.messages.filterNot { it.id == placeholderId }
-                    engine.send(history, context) { delta -> appendDelta(placeholderId, delta) }
-                }
-                MessageKind.DETAIL_SUMMARY -> {
-                    val detail = engine.sendDetailSummary(requireNotNull(context)) { delta ->
-                        appendDelta(placeholderId, delta)
+        updateThreadMessages(threadId) { it + ChatMessage(placeholderId, Role.ASSISTANT, "", kind = kind) }
+        val job = viewModelScope.launch {
+            val result = runCatching {
+                when (kind) {
+                    MessageKind.CHAT -> {
+                        val history = (messagesByThread[threadId] ?: emptyList())
+                            .filterNot { it.id == placeholderId }
+                        engine.send(history, context) { delta -> appendDelta(threadId, placeholderId, delta) }
                     }
-                    if (detail.cached) track("detail_summary_cache_hit", mapOf("from" to "chat"))
-                    detail.content
+                    MessageKind.DETAIL_SUMMARY -> {
+                        val detail = engine.sendDetailSummary(requireNotNull(context)) { delta ->
+                            appendDelta(threadId, placeholderId, delta)
+                        }
+                        if (detail.cached) track("detail_summary_cache_hit", mapOf("from" to "chat"))
+                        detail.content
+                    }
                 }
             }
-        }
-        result.fold(
-            onSuccess = { full ->
-                _uiState.update { st ->
-                    st.copy(
-                        messages = st.messages.map { m ->
-                            if (m.id == placeholderId) m.copy(content = full) else m
-                        },
-                        isSending = false,
-                    )
-                }
-            },
-            onFailure = { e ->
-                val error = (e as? ChatException)?.error
-                    ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-                trackFailure(kind, error)
-                _uiState.update { st ->
-                    st.copy(
+            result.fold(
+                onSuccess = { full ->
+                    updateThreadMessages(threadId) { list ->
+                        list.map { if (it.id == placeholderId) it.copy(content = full) else it }
+                    }
+                    if (store != null && threadId != null) {
+                        store.persistAssistantMessage(threadId, full, kind, selectedModelId())
+                    }
+                },
+                onFailure = { e ->
+                    val error = (e as? ChatException)?.error
+                        ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                    trackFailure(kind, error)
+                    updateThreadMessages(threadId) { list ->
                         // 已渲染部分丢弃，整条重试（中途断流语义）
-                        messages = st.messages.map { m ->
-                            if (m.id == placeholderId) m.copy(content = "", error = error) else m
-                        },
-                        isSending = false,
-                    )
-                }
-            },
-        )
-    }
-
-    private fun appendDelta(messageId: Long, delta: String) {
-        _uiState.update { st ->
-            st.copy(
-                messages = st.messages.map { m ->
-                    if (m.id == messageId) m.copy(content = m.content + delta) else m
+                        list.map { if (it.id == placeholderId) it.copy(content = "", error = error) else it }
+                    }
                 },
             )
+            streams.remove(threadId)
+            if (threadId == _currentThreadId.value) {
+                _uiState.update { it.copy(isSending = false) }
+            }
+        }
+        streams[threadId] = job
+    }
+
+    private fun appendDelta(threadId: Long?, messageId: Long, delta: String) {
+        updateThreadMessages(threadId) { list ->
+            list.map { if (it.id == messageId) it.copy(content = it.content + delta) else it }
+        }
+    }
+
+    /** 所有消息变更的唯一入口：写缓冲，且仅当该线是当前线时镜像进 uiState */
+    private fun updateThreadMessages(threadId: Long?, transform: (List<ChatMessage>) -> List<ChatMessage>) {
+        val updated = transform(messagesByThread[threadId] ?: emptyList())
+        messagesByThread[threadId] = updated
+        if (threadId == _currentThreadId.value) {
+            _uiState.update { it.copy(messages = updated) }
         }
     }
 
@@ -196,5 +313,10 @@ class ChatViewModel(
                 track("detail_summary_login_required", mapOf("from" to "chat"))
             }
         }
+    }
+
+    companion object {
+        /** 单条消息图片数上限，与服务端及 [whl.trending.chat.engine.ChatWire] 对齐 */
+        const val MAX_IMAGES_PER_MESSAGE = 4
     }
 }

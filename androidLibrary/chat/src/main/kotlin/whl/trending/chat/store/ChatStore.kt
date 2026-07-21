@@ -36,13 +36,17 @@ class ChatStore(
      * 标题优先取 context 标题（repo 名可读性最好），通用入口取首条消息截断。
      */
     suspend fun ensureThread(context: ChatContext?, firstMessageText: String): Long {
-        val entryKey = entryKeyOf(context)
-        db.threadDao().latestByEntry(entryKey)?.let { return it.id }
+        db.threadDao().latestByEntry(entryKeyOf(context))?.let { return it.id }
+        return createThread(context, firstMessageText)
+    }
+
+    /** 总是新建（抽屉「新会话」语义）——入口复用由 [resolveLatestThread] 在进入时单独承担 */
+    suspend fun createThread(context: ChatContext?, firstMessageText: String): Long {
         val now = clock()
         return db.threadDao().insert(
             ThreadEntity(
                 title = context?.title ?: titleFrom(firstMessageText),
-                entryKey = entryKey,
+                entryKey = entryKeyOf(context),
                 contextJson = context?.let { json.encodeToString(StoredContext.from(it)) },
                 createdAt = now,
                 updatedAt = now,
