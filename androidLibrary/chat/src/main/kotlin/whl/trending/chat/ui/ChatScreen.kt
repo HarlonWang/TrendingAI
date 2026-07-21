@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -155,7 +155,7 @@ fun ChatScreen(
                         if (store != null) {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(
-                                    imageVector = Icons.Filled.History,
+                                    imageVector = Icons.Filled.Menu,
                                     contentDescription = stringResource(R.string.chat_history),
                                 )
                             }
