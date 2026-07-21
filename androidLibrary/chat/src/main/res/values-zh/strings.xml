@@ -59,4 +59,14 @@
     <string name="chat_detail_login_message">生成详细解读需要登录。</string>
     <string name="chat_detail_login_unlocked">已登录，点击重试继续生成。</string>
     <string name="chat_error_readme_too_short">这个项目的 README 太短，暂不支持详细解读。</string>
+    <!-- 会话抽屉 -->
+    <string name="chat_history">会话</string>
+    <string name="chat_new_thread">新会话</string>
+    <string name="chat_thread_more">更多</string>
+    <string name="chat_thread_rename">重命名</string>
+    <string name="chat_thread_delete">删除</string>
+    <string name="chat_thread_delete_title">删除该会话？</string>
+    <string name="chat_thread_delete_text">该会话中的消息将被永久删除。</string>
+    <string name="chat_dialog_cancel">取消</string>
+    <string name="chat_dialog_confirm">确定</string>
 </resources>

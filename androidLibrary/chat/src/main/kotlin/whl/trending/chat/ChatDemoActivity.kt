@@ -48,6 +48,8 @@ private fun DemoContent(real: Boolean, onBack: () -> Unit) {
             onBack = onBack,
             engine = androidx.compose.runtime.remember { FakeChatEngine() },
             initialMessages = SampleData.messages,
+            // 纯内存：假引擎的样例会话不落真库
+            persistent = false,
         )
     }
 }

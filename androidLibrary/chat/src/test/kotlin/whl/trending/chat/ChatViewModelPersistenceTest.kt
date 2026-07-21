@@ -93,8 +93,10 @@ class ChatViewModelPersistenceTest {
         imagesDir.deleteRecursively()
     }
 
+    /** 构造并执行入口进入（Screen 的 enterEntry 时序在测试里显式驱动） */
     private fun vm(engine: ChatEngine, context: ChatContext? = null) =
         ChatViewModel(engine, context, store = store, loadModels = { emptyList() }, track = { _, _ -> }, selectedModelId = { "gpt-5.5" })
+            .also { it.enterEntry(context) }
 
     @Test
     fun `首条发送懒建线程，user 与 assistant 终局各落一行，model 记录在案`() = runTest(dispatcher) {

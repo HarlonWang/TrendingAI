@@ -80,10 +80,26 @@ class ChatViewModel(
         viewModelScope.launch {
             _models.value = runCatching { loadModels() }.getOrDefault(emptyList())
         }
-        // 入口恢复：该入口最近会话（跨进程延续原 sessionKey 的「再次进入恢复」体验）
-        if (store != null) {
-            viewModelScope.launch {
-                store.resolveLatestThread(initialContext)?.let { openThread(it, fallbackContext = initialContext) }
+    }
+
+    /**
+     * 入口进入（Screen 每个新入口调用一次）：恢复该入口最近会话（跨进程延续原
+     * sessionKey 的「再次进入恢复」体验）；无历史则以该 context 呈现空会话态。
+     * 纯内存模式只切 context，不动 initialMessages。
+     */
+    fun enterEntry(context: ChatContext?) {
+        viewModelScope.launch {
+            activeContext = context
+            val s = store ?: return@launch
+            val id = s.resolveLatestThread(context)
+            if (id != null) {
+                openThread(id, fallbackContext = context)
+            } else {
+                _currentThreadId.value = null
+                messagesByThread[null] = emptyList()
+                _uiState.update {
+                    it.copy(messages = emptyList(), isSending = false, pendingImages = emptyList())
+                }
             }
         }
     }
