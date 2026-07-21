@@ -110,7 +110,9 @@ class ChatStore(
         val source = File(sourcePath)
         if (!source.exists() || source.parentFile?.absolutePath == imagesDir.absolutePath) return sourcePath
         imagesDir.mkdirs()
-        val target = File(imagesDir, "${UUID.randomUUID()}.jpg")
+        // 保留源扩展名（当前附件层恒产 JPEG，此处是对未来透传原图的加固；无扩展名回退 jpg）
+        val extension = source.extension.takeIf { it.isNotBlank() } ?: "jpg"
+        val target = File(imagesDir, "${UUID.randomUUID()}.$extension")
         return runCatching {
             source.copyTo(target, overwrite = true)
             target.absolutePath
