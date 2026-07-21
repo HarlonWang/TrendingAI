@@ -102,6 +102,13 @@ interface MessageDao {
     /** 删线程前收集待删的图片文件路径（行删除交给 CASCADE） */
     @Query("SELECT imagesJson FROM chat_messages WHERE threadId = :threadId AND imagesJson IS NOT NULL")
     suspend fun imagesJsonFor(threadId: Long): List<String>
+
+    /** research 占位 → 终局报告（P3：占位行是跨进程恢复轮询的载体） */
+    @Query("UPDATE chat_messages SET content = :content, segmentsJson = :segmentsJson WHERE id = :id")
+    suspend fun updateContent(id: Long, content: String, segmentsJson: String?)
+
+    @Query("DELETE FROM chat_messages WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
 
 @Database(entities = [ThreadEntity::class, MessageEntity::class], version = 1, exportSchema = true)

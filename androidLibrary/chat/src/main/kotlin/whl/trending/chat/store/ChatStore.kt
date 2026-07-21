@@ -98,6 +98,35 @@ class ChatStore(
     suspend fun loadMessages(threadId: Long): List<ChatMessage> =
         db.messageDao().messagesFor(threadId).map { it.toModel() }
 
+    /**
+     * Deep Research 占位行：提交成功即落库（content 空 + runId），是跨进程恢复轮询的
+     * 载体——进程死亡后重进，「空内容 + runId」的行触发续轮询，5 credits 不白花。
+     */
+    suspend fun persistResearchPlaceholder(threadId: Long, runId: String): Long {
+        val id = db.messageDao().insert(
+            MessageEntity(
+                threadId = threadId, role = ROLE_ASSISTANT, content = "",
+                imagesJson = null, kind = MessageKind.DEEP_RESEARCH.name, model = null,
+                segmentsJson = json.encodeToString(StoredSegments(researchRunId = runId)),
+                createdAt = clock(),
+            ),
+        )
+        db.threadDao().touch(threadId, clock())
+        return id
+    }
+
+    /** research 终局：占位行升级为报告全文（保留 runId 供追溯） */
+    suspend fun completeResearchMessage(threadId: Long, messageId: Long, report: String, runId: String) {
+        db.messageDao().updateContent(
+            messageId, report,
+            json.encodeToString(StoredSegments(researchRunId = runId)),
+        )
+        db.threadDao().touch(threadId, clock())
+    }
+
+    /** research 失败：删占位行（服务端已退款；留着会让重启误续轮询死任务） */
+    suspend fun deleteMessage(messageId: Long) = db.messageDao().deleteById(messageId)
+
     suspend fun renameThread(threadId: Long, title: String) =
         db.threadDao().rename(threadId, title.trim().take(MAX_TITLE_LENGTH))
 
@@ -141,6 +170,9 @@ class ChatStore(
             runCatching { json.decodeFromString<StoredSegments>(raw) }.getOrNull()
                 ?.sources?.map { SourceRef(it.title, it.url) }
         } ?: emptyList(),
+        researchRunId = segmentsJson?.let { raw ->
+            runCatching { json.decodeFromString<StoredSegments>(raw) }.getOrNull()?.researchRunId
+        },
     )
 
     private fun ChatMessage.toEntity(threadId: Long, now: Long) = MessageEntity(
@@ -159,7 +191,7 @@ class ChatStore(
      * 反序列化 ignoreUnknownKeys 保证老版本读新数据不崩（EchoFlow 教训的版本化版）
      */
     @Serializable
-    private data class StoredSegments(val v: Int = 1, val sources: List<StoredSource> = emptyList())
+    private data class StoredSegments(val v: Int = 1, val sources: List<StoredSource> = emptyList(), val researchRunId: String? = null)
 
     @Serializable
     private data class StoredSource(val title: String, val url: String)

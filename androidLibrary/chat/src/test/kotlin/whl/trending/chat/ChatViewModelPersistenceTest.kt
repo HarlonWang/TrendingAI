@@ -293,4 +293,94 @@ class ChatViewModelPersistenceTest {
         assertEquals(whl.trending.chat.model.ChatMode.Normal, v.chatMode.value)
     }
 
+
+    // ---- P3 Deep Research ----
+
+    /** research 假引擎：脚本化状态序列 */
+    private class ResearchEngine(
+        var statuses: MutableList<whl.trending.chat.model.ResearchRun> = mutableListOf(),
+        var failCreate: ChatError? = null,
+    ) : ChatEngine {
+        var created = 0
+        override suspend fun send(
+            history: List<ChatMessage>, context: ChatContext?, onDelta: (String) -> Unit,
+            search: Boolean, onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
+        ): String = "n/a"
+        override suspend fun sendDetailSummary(context: ChatContext, onDelta: (String) -> Unit) =
+            DetailSummaryResult("n/a", cached = false)
+        override suspend fun createResearch(topic: String): String {
+            failCreate?.let { throw ChatException(it) }
+            created++
+            return "run-77"
+        }
+        override suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun =
+            if (statuses.size > 1) statuses.removeAt(0) else statuses[0]
+    }
+
+    @Test
+    fun `research 提交→占位落库→轮询完成→报告落库`() = runTest(dispatcher) {
+        val engine = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "running", null, null),
+            whl.trending.chat.model.ResearchRun("run-77", "completed", "# 研究报告", null),
+        ))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("研究一下 KMP")
+        v.send()
+        advanceUntilIdle()
+
+        val msg = v.uiState.value.messages.last()
+        assertEquals("# 研究报告", msg.content)
+        assertEquals(false, msg.searching)
+
+        val threadId = store.threads().first()[0].id
+        val rows = db.messageDao().messagesFor(threadId)
+        assertEquals("DEEP_RESEARCH", rows.last().kind)
+        assertEquals("# 研究报告", rows.last().content)
+        assertTrue(rows.last().segmentsJson!!.contains("run-77"))
+    }
+
+    @Test
+    fun `research 失败→删占位行→错误条可见`() = runTest(dispatcher) {
+        val engine = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "failed", null, "failed"),
+        ))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("x")
+        v.send()
+        advanceUntilIdle()
+
+        assertNotNull(v.uiState.value.messages.last().error)
+        val threadId = store.threads().first()[0].id
+        val rows = db.messageDao().messagesFor(threadId)
+        // 占位行已删，只剩 user 消息
+        assertEquals(listOf("user"), rows.map { it.role })
+    }
+
+    @Test
+    fun `重开会话发现未完成占位→恢复轮询直至完成`() = runTest(dispatcher) {
+        val engine = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "running", null, null),
+        ))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("长任务")
+        v.send()
+        // 只让创建完成、不推进轮询到终局：先切走再回来模拟重开
+        advanceUntilIdle()
+
+        // 新 VM（模拟进程重启）：占位行在库里 → enterEntry 恢复轮询
+        val engine2 = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "completed", "迟到的报告", null),
+        ))
+        val v2 = vm(engine2)
+        advanceUntilIdle()
+
+        assertEquals("迟到的报告", v2.uiState.value.messages.last().content)
+    }
+
 }

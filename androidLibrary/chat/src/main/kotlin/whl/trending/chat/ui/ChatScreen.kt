@@ -200,12 +200,17 @@ fun ChatScreen(
                     }
                     // 能力 chip 回显区：开启的模式可见可撤（EchoFlow「菜单开启 + chip 回显」范式）
                     val mode by viewModel.chatMode.collectAsState()
-                    if (mode == whl.trending.chat.model.ChatMode.WebSearch) {
+                    if (mode != whl.trending.chat.model.ChatMode.Normal) {
+                        val isResearch = mode == whl.trending.chat.model.ChatMode.DeepResearch
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
                             androidx.compose.material3.InputChip(
                                 selected = true,
-                                onClick = { viewModel.toggleWebSearch() },
-                                label = { Text(stringResource(R.string.chat_web_search)) },
+                                onClick = {
+                                    if (isResearch) viewModel.toggleDeepResearch() else viewModel.toggleWebSearch()
+                                },
+                                label = {
+                                    Text(stringResource(if (isResearch) R.string.chat_deep_research else R.string.chat_web_search))
+                                },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Filled.Close,
@@ -227,7 +232,9 @@ fun ChatScreen(
                         canSend = state.canSend,
                         pendingImages = state.pendingImages,
                         searchActive = mode == whl.trending.chat.model.ChatMode.WebSearch,
+                        researchActive = mode == whl.trending.chat.model.ChatMode.DeepResearch,
                         onToggleSearch = viewModel::toggleWebSearch,
+                        onToggleResearch = viewModel::toggleDeepResearch,
                         onInputChange = viewModel::updateInput,
                         onSend = viewModel::send,
                         onAddImage = viewModel::addPendingImage,

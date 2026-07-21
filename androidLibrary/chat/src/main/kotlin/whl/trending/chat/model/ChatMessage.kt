@@ -8,7 +8,7 @@ enum class Role { USER, ASSISTANT }
  * 若未来新增 kind 需要消息级再生成参数或差异化渲染，届时再升级为 sealed interface——
  * 会话仅内存存储，重构无兼容成本。
  */
-enum class MessageKind { CHAT, DETAIL_SUMMARY }
+enum class MessageKind { CHAT, DETAIL_SUMMARY, DEEP_RESEARCH }
 
 /**
  * 一条聊天消息。
@@ -30,4 +30,6 @@ data class ChatMessage(
     val kind: MessageKind = MessageKind.CHAT,
     val sources: List<SourceRef> = emptyList(),
     val searching: Boolean = false,
+    /** Deep Research 任务 id（随占位消息持久化——冷启动恢复轮询的载体） */
+    val researchRunId: String? = null,
 )

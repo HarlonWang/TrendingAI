@@ -162,7 +162,10 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
                     LoadingIndicator(modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.chat_searching),
+                        text = stringResource(
+                            if (message.kind == whl.trending.chat.model.MessageKind.DEEP_RESEARCH) R.string.chat_researching
+                            else R.string.chat_searching,
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

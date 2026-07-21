@@ -40,4 +40,12 @@ interface ChatEngine {
         context: ChatContext,
         onDelta: (String) -> Unit = {},
     ): DetailSummaryResult
+
+    /** 提交 Deep Research（POST /api/research）→ 服务端 run id；403 login_required 为登录闸 */
+    suspend fun createResearch(topic: String): String =
+        throw UnsupportedOperationException("research not supported by this engine")
+
+    /** 轮询任务状态（GET /api/research/{id}） */
+    suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun =
+        throw UnsupportedOperationException("research not supported by this engine")
 }

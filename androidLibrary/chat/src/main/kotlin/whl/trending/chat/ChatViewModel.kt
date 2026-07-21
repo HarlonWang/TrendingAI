@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.core.platform.trackEvent
@@ -26,6 +27,7 @@ import whl.trending.chat.model.ChatMode
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
+import whl.trending.chat.model.ResearchRun
 import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.SourceRef
 import whl.trending.chat.store.ChatStore
@@ -75,8 +77,11 @@ class ChatViewModel(
     val chatMode: StateFlow<ChatMode> = _chatMode.asStateFlow()
 
     /** EchoFlow 单选互斥范式：再点同项回 Normal，点别项自动顶掉 */
-    fun toggleWebSearch() {
-        _chatMode.value = if (_chatMode.value == ChatMode.WebSearch) ChatMode.Normal else ChatMode.WebSearch
+    fun toggleWebSearch() = toggleMode(ChatMode.WebSearch)
+    fun toggleDeepResearch() = toggleMode(ChatMode.DeepResearch)
+
+    private fun toggleMode(mode: ChatMode) {
+        _chatMode.value = if (_chatMode.value == mode) ChatMode.Normal else mode
     }
 
     /** 当前会话的 ChatContext（解读 chip / 服务端 context 注入）；随切换/恢复而变 */
@@ -166,6 +171,10 @@ class ChatViewModel(
 
     private fun sendMessage(text: String, images: List<String>) {
         if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
+        if (_chatMode.value == ChatMode.DeepResearch) {
+            sendResearch(text)
+            return
+        }
         if (images.isNotEmpty()) {
             track("chat_send_with_images", mapOf("image_count" to images.size.toString()))
         }
@@ -237,6 +246,7 @@ class ChatViewModel(
                 pendingImages = emptyList(),
             )
         }
+        resumeResearchIfAny(id, messages)
     }
 
     /** 首条消息才建线（懒建）；当前线已存在则直接复用。内存模式恒为 null 键。 */
@@ -292,6 +302,7 @@ class ChatViewModel(
                         if (detail.cached) track("detail_summary_cache_hit", mapOf("from" to "chat"))
                         detail.content
                     }
+                    MessageKind.DEEP_RESEARCH -> error("research 走 launchResearch，不进流式管线")
                 }
             }
             result.fold(
@@ -325,6 +336,93 @@ class ChatViewModel(
             }
         }
         streams[threadId] = job
+    }
+
+    // ---- Deep Research（P3）----
+
+    private fun sendResearch(topic: String) {
+        track("research_start", mapOf("from" to "chat"))
+        _uiState.update { it.copy(isSending = true) }
+        viewModelScope.launch {
+            val threadId = ensureThreadForSend(topic)
+            appendAndPersistUser(threadId, ChatMessage(nextId(), Role.USER, topic, kind = MessageKind.DEEP_RESEARCH))
+            val runId = try {
+                engine.createResearch(topic)
+            } catch (e: ChatException) {
+                trackFailure(MessageKind.DEEP_RESEARCH, e.error)
+                updateThreadMessages(threadId) {
+                    it + ChatMessage(nextId(), Role.ASSISTANT, "", error = e.error, kind = MessageKind.DEEP_RESEARCH)
+                }
+                if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
+                return@launch
+            }
+            // 占位行即恢复载体：提交成功立即落库（store 缺席时用内存 id）
+            val messageId = if (store != null && threadId != null) {
+                store.persistResearchPlaceholder(threadId, runId).also { idSeq = maxOf(idSeq, it) }
+            } else nextId()
+            updateThreadMessages(threadId) {
+                it + ChatMessage(messageId, Role.ASSISTANT, "", kind = MessageKind.DEEP_RESEARCH, searching = true, researchRunId = runId)
+            }
+            launchResearchPolling(threadId, messageId, runId)
+        }
+    }
+
+    /** 轮询任务（约 8s 间隔）；running 达上限静默停轮，占位行保留 → 下次打开会话续轮 */
+    private fun launchResearchPolling(threadId: Long?, messageId: Long, runId: String) {
+        if (streams[messageId]?.isActive == true) return
+        val job = viewModelScope.launch {
+            repeat(MAX_RESEARCH_POLLS) {
+                delay(RESEARCH_POLL_MS)
+                val run = try {
+                    engine.pollResearch(runId)
+                } catch (e: ChatException) {
+                    return@repeat // 瞬态失败：下轮再试
+                }
+                when (run.status) {
+                    "completed" -> {
+                        val report = run.report.orEmpty()
+                        if (store != null && threadId != null) {
+                            store.completeResearchMessage(threadId, messageId, report, runId)
+                        }
+                        updateThreadMessages(threadId) { list ->
+                            list.map { if (it.id == messageId) it.copy(content = report, searching = false) else it }
+                        }
+                        track("research_done", emptyMap())
+                        finishResearch(threadId, messageId)
+                        return@launch
+                    }
+                    "failed" -> {
+                        store?.deleteMessage(messageId)
+                        val error = ChatError(ChatErrorCategory.SERVER, detail = run.error ?: "research failed")
+                        track("research_fail", mapOf("reason" to (run.error ?: "unknown")))
+                        updateThreadMessages(threadId) { list ->
+                            list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
+                        }
+                        finishResearch(threadId, messageId)
+                        return@launch
+                    }
+                    else -> Unit // running：继续
+                }
+            }
+            finishResearch(threadId, messageId) // 达上限：停轮不判死，恢复机制兜底
+        }
+        streams[messageId] = job
+    }
+
+    private fun finishResearch(threadId: Long?, messageId: Long) {
+        streams.remove(messageId)
+        if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
+    }
+
+    /** 恢复：打开会话时发现「空内容 + runId」的 research 占位 → 续轮询 */
+    private fun resumeResearchIfAny(threadId: Long?, messages: List<ChatMessage>) {
+        messages.filter { it.kind == MessageKind.DEEP_RESEARCH && it.content.isBlank() && it.researchRunId != null && it.error == null }
+            .forEach { placeholder ->
+                updateThreadMessages(threadId) { list ->
+                    list.map { if (it.id == placeholder.id) it.copy(searching = true) else it }
+                }
+                launchResearchPolling(threadId, placeholder.id, placeholder.researchRunId!!)
+            }
     }
 
     /** 搜索事件落到占位消息：searching 瞬态 + sources 累积（服务端已按 url 去重，客户端再防御一层） */
@@ -374,5 +472,9 @@ class ChatViewModel(
     companion object {
         /** 单条消息图片数上限，与服务端及 [whl.trending.chat.engine.ChatWire] 对齐 */
         const val MAX_IMAGES_PER_MESSAGE = 4
+
+        /** research 轮询间隔与上限：8s × 90 ≈ 12 分钟；达上限停轮不判死（恢复机制兜底续轮） */
+        private const val RESEARCH_POLL_MS = 8_000L
+        private const val MAX_RESEARCH_POLLS = 90
     }
 }
