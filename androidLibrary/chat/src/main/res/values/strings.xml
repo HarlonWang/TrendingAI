@@ -59,4 +59,14 @@
     <string name="chat_detail_login_message">Sign in to generate an in-depth overview.</string>
     <string name="chat_detail_login_unlocked">Signed in — tap retry to continue generating.</string>
     <string name="chat_error_readme_too_short">This project\'s README is too short for an in-depth overview.</string>
+    <!-- 会话抽屉 -->
+    <string name="chat_history">Conversations</string>
+    <string name="chat_new_thread">New chat</string>
+    <string name="chat_thread_more">More</string>
+    <string name="chat_thread_rename">Rename</string>
+    <string name="chat_thread_delete">Delete</string>
+    <string name="chat_thread_delete_title">Delete this conversation?</string>
+    <string name="chat_thread_delete_text">Messages in this conversation will be permanently removed.</string>
+    <string name="chat_dialog_cancel">Cancel</string>
+    <string name="chat_dialog_confirm">OK</string>
 </resources>
