@@ -44,3 +44,39 @@ class ChatSseTest {
         assertEquals(ChatSse.Event.Delta("a\nb \"c\""), event)
     }
 }
+
+// ---------------------------------------------------------------------------
+// P2 web search：服务端 sse.js 新增的搜索事件行
+// ---------------------------------------------------------------------------
+
+class ChatSseSearchTest {
+
+    @Test
+    fun `search started 行`() {
+        val e = ChatSse.parseLine("""data: {"search":{"state":"started"}}""")
+        assertEquals(ChatSse.Event.SearchStarted, e)
+    }
+
+    @Test
+    fun `search done 行带 query`() {
+        val e = ChatSse.parseLine("""data: {"search":{"state":"done","query":"kotlin 2.4"}}""")
+        assertEquals(ChatSse.Event.SearchDone("kotlin 2.4"), e)
+    }
+
+    @Test
+    fun `search done 行无 query`() {
+        val e = ChatSse.parseLine("""data: {"search":{"state":"done"}}""")
+        assertEquals(ChatSse.Event.SearchDone(null), e)
+    }
+
+    @Test
+    fun `source 行`() {
+        val e = ChatSse.parseLine("""data: {"source":{"title":"Kotlin","url":"https://kotlinlang.org"}}""")
+        assertEquals(ChatSse.Event.Source("Kotlin", "https://kotlinlang.org"), e)
+    }
+
+    @Test
+    fun `未知 search state 返回 null（向前兼容）`() {
+        assertNull(ChatSse.parseLine("""data: {"search":{"state":"future"}}"""))
+    }
+}

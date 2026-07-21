@@ -9,6 +9,7 @@ import whl.trending.chat.db.ThreadEntity
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
+import whl.trending.chat.model.SourceRef
 import java.io.File
 import java.util.UUID
 
@@ -70,7 +71,13 @@ class ChatStore(
     }
 
     /** assistant 仅成功终局落一次；空内容（如内容过滤拒答）不落空行 */
-    suspend fun persistAssistantMessage(threadId: Long, content: String, kind: MessageKind, model: String?) {
+    suspend fun persistAssistantMessage(
+        threadId: Long,
+        content: String,
+        kind: MessageKind,
+        model: String?,
+        sources: List<SourceRef> = emptyList(),
+    ) {
         if (content.isBlank()) return
         db.messageDao().insert(
             MessageEntity(
@@ -80,7 +87,8 @@ class ChatStore(
                 imagesJson = null,
                 kind = kind.name,
                 model = model,
-                segmentsJson = null,
+                segmentsJson = sources.takeIf { it.isNotEmpty() }
+                    ?.let { json.encodeToString(StoredSegments(sources = it.map { s -> StoredSource(s.title, s.url) })) },
                 createdAt = clock(),
             ),
         )
@@ -129,6 +137,10 @@ class ChatStore(
         images = imagesJson?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
             ?: emptyList(),
         kind = runCatching { MessageKind.valueOf(kind) }.getOrDefault(MessageKind.CHAT),
+        sources = segmentsJson?.let { raw ->
+            runCatching { json.decodeFromString<StoredSegments>(raw) }.getOrNull()
+                ?.sources?.map { SourceRef(it.title, it.url) }
+        } ?: emptyList(),
     )
 
     private fun ChatMessage.toEntity(threadId: Long, now: Long) = MessageEntity(
@@ -141,6 +153,16 @@ class ChatStore(
         segmentsJson = null,
         createdAt = now,
     )
+
+    /**
+     * segmentsJson 信封 v1（P2）：目前只承载搜索来源；v 字段为演进留位，
+     * 反序列化 ignoreUnknownKeys 保证老版本读新数据不崩（EchoFlow 教训的版本化版）
+     */
+    @Serializable
+    private data class StoredSegments(val v: Int = 1, val sources: List<StoredSource> = emptyList())
+
+    @Serializable
+    private data class StoredSource(val title: String, val url: String)
 
     /**
      * ChatContext 的持久化镜像（shared 里的原类未标 @Serializable，此处 DTO 隔离序列化关注点）。

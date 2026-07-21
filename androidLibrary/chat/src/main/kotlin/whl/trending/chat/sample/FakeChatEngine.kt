@@ -25,7 +25,15 @@ class FakeChatEngine(
         history: List<ChatMessage>,
         context: ChatContext?,
         onDelta: (String) -> Unit,
+        search: Boolean,
+        onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
     ): String {
+        if (search) {
+            onSearch(whl.trending.chat.model.SearchEvent.Started)
+            delay(600)
+            onSearch(whl.trending.chat.model.SearchEvent.Done("demo query"))
+            onSearch(whl.trending.chat.model.SearchEvent.Source("Kotlin", "https://kotlinlang.org"))
+        }
         val reply = replies[index % replies.size]
         index++
         return streamOut(reply, onDelta)

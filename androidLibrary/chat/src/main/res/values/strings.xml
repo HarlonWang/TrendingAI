@@ -69,4 +69,7 @@
     <string name="chat_thread_delete_text">Messages in this conversation will be permanently removed.</string>
     <string name="chat_dialog_cancel">Cancel</string>
     <string name="chat_dialog_confirm">OK</string>
+    <!-- P2 联网搜索 -->
+    <string name="chat_web_search">Web search</string>
+    <string name="chat_searching">Searching the web…</string>
 </resources>

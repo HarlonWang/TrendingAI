@@ -56,6 +56,8 @@ class ChatViewModelStreamingTest {
             history: List<ChatMessage>,
             context: ChatContext?,
             onDelta: (String) -> Unit,
+            search: Boolean,
+            onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
         ): String {
             chatCalls++
             failWith?.let { throw ChatException(it) }

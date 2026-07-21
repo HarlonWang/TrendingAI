@@ -25,6 +25,8 @@ interface ChatEngine {
         history: List<ChatMessage>,
         context: ChatContext?,
         onDelta: (String) -> Unit = {},
+        search: Boolean = false,
+        onSearch: (whl.trending.chat.model.SearchEvent) -> Unit = {},
     ): String
 
     /**
