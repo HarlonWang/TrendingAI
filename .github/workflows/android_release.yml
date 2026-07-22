@@ -141,9 +141,9 @@ jobs:
 
       - name: Build Release APK & AAB
         run: |
-          # fdroid flavor 专供 Obtainium 直连 GitHub Release 抓取：
-          # 不含自更新器、用本仓 keystore 签名，与 github/r2 仅 CHANNEL 不同、可互相覆盖升级。
-          ./gradlew :androidApp:assembleGithubRelease :androidApp:assembleR2Release :androidApp:assembleFdroidRelease :androidApp:bundlePlayRelease
+          # fdroid flavor 不在 CI 构建：F-Droid buildserver 从 tag 源码自建（fdroiddata 元数据
+          # gradle: fdroid），release assets 不需要它；Obtainium 抓 github 渠道 APK
+          ./gradlew :androidApp:assembleGithubRelease :androidApp:assembleR2Release :androidApp:bundlePlayRelease
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -300,9 +300,9 @@ jobs:
           printf 'versionCode=%d\nversionName=%s\n' "$VCODE" "$VNAME" > version_code.txt
           cat version_code.txt
 
-          # 收集待上传的文件（github 渠道 APK + fdroid 渠道 APK + play 渠道 AAB + version_code.txt）
-          # fdroid APK 供 Obtainium 抓取（无自更新器的干净包）
-          FILES=(androidApp/build/outputs/apk/github/release/*.apk androidApp/build/outputs/apk/fdroid/release/*.apk version_code.txt)
+          # 收集待上传的文件（github 渠道 APK + play 渠道 AAB + version_code.txt）
+          # assets 只放一个 APK，Obtainium 单 APK 时自动选中、不弹多选对话框
+          FILES=(androidApp/build/outputs/apk/github/release/*.apk version_code.txt)
           for aab in androidApp/build/outputs/bundle/playRelease/*.aab; do
             [ -f "$aab" ] && FILES+=("$aab")
           done
@@ -347,21 +347,29 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
           ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
         run: |
+          # 预发布（alpha/beta/rc，判定与 Create Release 步骤一致）不上传 R2：
+          # 官网下载入口指向 TrendingAI-latest.apk，灰度包不能覆盖它，
+          # 灰度分发走 GitHub Release 的 prerelease 附件链接
+          if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc) ]]; then
+            echo "⏭️ Prerelease tag，跳过 R2 上传"
+            exit 0
+          fi
+
           # 动态寻找刚才打包好的 r2 渠道 APK 路径（官网/R2 分发的就是 r2 包）
           APK_PATH=$(find androidApp/build/outputs/apk/r2/release -name "*.apk" | head -n 1)
-          
+
           if [ -z "$APK_PATH" ]; then
             echo "Error: APK file not found!"
             exit 1
           fi
-          
+
           echo "Found APK at: $APK_PATH"
           echo "Uploading to R2..."
-          
+
           # 执行上传操作，固定命名为 TrendingAI-latest.apk，覆盖上一版本
           # 请确保 s3:// 后面跟着的是你在 R2 创建的真实 Bucket 名称
           aws s3 cp "$APK_PATH" s3://trendingai-apk/TrendingAI-latest.apk \
             --endpoint-url "https://$ACCOUNT_ID.r2.cloudflarestorage.com"
-          
+
           echo "✅ Upload completed. Download link: https://download.trendingai.cn/TrendingAI-latest.apk"
 
