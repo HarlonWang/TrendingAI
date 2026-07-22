@@ -72,4 +72,6 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">Web search</string>
     <string name="chat_searching">Searching the web…</string>
+    <string name="chat_deep_research">Deep research</string>
+    <string name="chat_researching">Deep research in progress… this may take a few minutes</string>
 </resources>

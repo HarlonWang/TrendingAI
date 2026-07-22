@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
@@ -79,7 +80,9 @@ fun ChatInputBar(
     canSend: Boolean,
     pendingImages: List<String>,
     searchActive: Boolean = false,
+    researchActive: Boolean = false,
     onToggleSearch: () -> Unit = {},
+    onToggleResearch: () -> Unit = {},
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onAddImage: (String) -> Unit,
@@ -203,6 +206,17 @@ fun ChatInputBar(
                                 onClick = {
                                     menuExpanded = false
                                     onToggleSearch()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.chat_deep_research)) },
+                                leadingIcon = { Icon(Icons.Outlined.Science, contentDescription = null) },
+                                trailingIcon = {
+                                    if (researchActive) Icon(Icons.Filled.Check, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onToggleResearch()
                                 },
                             )
                             if (globalAuthManager.isSupported) DropdownMenuItem(
