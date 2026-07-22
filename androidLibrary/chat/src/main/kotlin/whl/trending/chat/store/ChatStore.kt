@@ -159,21 +159,22 @@ class ChatStore(
     private fun titleFrom(text: String): String =
         text.trim().take(MAX_TITLE_LENGTH).ifBlank { DEFAULT_TITLE }
 
-    private fun MessageEntity.toModel() = ChatMessage(
-        id = id,
-        role = if (role == ROLE_USER) Role.USER else Role.ASSISTANT,
-        content = content,
-        images = imagesJson?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
-            ?: emptyList(),
-        kind = runCatching { MessageKind.valueOf(kind) }.getOrDefault(MessageKind.CHAT),
-        sources = segmentsJson?.let { raw ->
+    private fun MessageEntity.toModel(): ChatMessage {
+        // segments 信封热路径只解码一次（Sourcery 建议）
+        val segments = segmentsJson?.let { raw ->
             runCatching { json.decodeFromString<StoredSegments>(raw) }.getOrNull()
-                ?.sources?.map { SourceRef(it.title, it.url) }
-        } ?: emptyList(),
-        researchRunId = segmentsJson?.let { raw ->
-            runCatching { json.decodeFromString<StoredSegments>(raw) }.getOrNull()?.researchRunId
-        },
-    )
+        }
+        return ChatMessage(
+            id = id,
+            role = if (role == ROLE_USER) Role.USER else Role.ASSISTANT,
+            content = content,
+            images = imagesJson?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+                ?: emptyList(),
+            kind = runCatching { MessageKind.valueOf(kind) }.getOrDefault(MessageKind.CHAT),
+            sources = segments?.sources?.map { SourceRef(it.title, it.url) } ?: emptyList(),
+            researchRunId = segments?.researchRunId,
+        )
+    }
 
     private fun ChatMessage.toEntity(threadId: Long, now: Long) = MessageEntity(
         threadId = threadId,

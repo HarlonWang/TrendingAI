@@ -144,6 +144,14 @@ class ChatViewModel(
         val state = _uiState.value
         if (!state.canSend) return
         val text = state.input.trim()
+        // research 仅支持文本：不消费待发图片（保留在输入区，用户可换模式再发或移除），
+        // 避免静默丢弃（Sourcery 审查建议）
+        if (_chatMode.value == ChatMode.DeepResearch) {
+            if (text.isBlank()) return
+            _uiState.update { it.copy(input = "") }
+            sendResearch(text)
+            return
+        }
         val images = state.pendingImages
         _uiState.update { it.copy(input = "", pendingImages = emptyList()) }
         sendMessage(text, images)
@@ -376,7 +384,16 @@ class ChatViewModel(
                 val run = try {
                     engine.pollResearch(runId)
                 } catch (e: ChatException) {
-                    return@repeat // 瞬态失败：下轮再试
+                    // 瞬态（网络/超时/5xx）继续轮；永久错误（鉴权/配额/非法请求）终局呈现——
+                    // 否则用户只看到转圈直到静默停轮（Sourcery 审查确认的 bug）。
+                    // 占位行不删：任务可能仍在服务端跑完，重登后重开会话可恢复
+                    if (e.error.category.retryable) return@repeat
+                    trackFailure(MessageKind.DEEP_RESEARCH, e.error)
+                    updateThreadMessages(threadId) { list ->
+                        list.map { if (it.id == messageId) it.copy(searching = false, error = e.error) else it }
+                    }
+                    finishResearch(threadId, messageId)
+                    return@launch
                 }
                 when (run.status) {
                     "completed" -> {
