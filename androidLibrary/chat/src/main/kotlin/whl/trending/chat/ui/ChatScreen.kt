@@ -221,12 +221,15 @@ fun ChatScreen(
                             )
                         }
                     }
-                    // 常驻模型选择器（≤1 个模型时自动隐藏）
-                    val models by viewModel.models.collectAsState()
-                    ModelPicker(
-                        models = models,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
+                    // 常驻模型选择器（≤1 个模型时自动隐藏）。research 模式下整个隐藏：
+                    // 模型由服务端钉死，选择器留着会误导用户以为选的模型生效
+                    if (mode != whl.trending.chat.model.ChatMode.DeepResearch) {
+                        val models by viewModel.models.collectAsState()
+                        ModelPicker(
+                            models = models,
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                        )
+                    }
                     ChatInputBar(
                         input = state.input,
                         // research 仅支持文本：只有图片没文字时发送会被 VM 忽略，按钮同步禁用（不静默）
