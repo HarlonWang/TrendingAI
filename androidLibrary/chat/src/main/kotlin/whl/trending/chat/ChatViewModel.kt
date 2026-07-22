@@ -2,6 +2,7 @@ package whl.trending.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -92,6 +93,14 @@ class ChatViewModel(
 
     // 每线在途流（切走后后台继续）
     private val streams = mutableMapOf<Long?, Job>()
+
+    // research 轮询任务，按占位消息 id 分键——不与 streams（threadId 键）共用一张表：
+    // 两者都是从 1 起的自增序列，键空间重叠会互相顶掉 / 误取消 / 误判 isSending
+    private val researchJobs = mutableMapOf<Long, Job>()
+
+    // research 占位行：缓冲内消息 id → Room 行 id。error 消息占内存 id 但不落库，两套自增
+    // 序列会错位；Room id 直接混进缓冲会与已有消息重号（LazyColumn 按 id 作 key 时崩溃）
+    private val researchRowIds = mutableMapOf<Long, Long>()
 
     init {
         viewModelScope.launch {
@@ -202,6 +211,11 @@ class ChatViewModel(
         val passthrough = error.code == ChatError.CODE_QUOTA_DEVICE ||
             error.code == ChatError.CODE_LOGIN_REQUIRED
         if (!error.category.retryable && !passthrough) return
+        if (message.kind == MessageKind.DEEP_RESEARCH) {
+            // research 不进流式管线（launchRequest 对该 kind 直接 error()），单独路由
+            retryResearch(message)
+            return
+        }
         val threadId = _currentThreadId.value
         updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
         _uiState.update { it.copy(isSending = true) }
@@ -231,8 +245,9 @@ class ChatViewModel(
 
     fun deleteThread(id: Long) {
         viewModelScope.launch {
-            // 在途流一并取消：线程行将消失，终局落库会撞外键
+            // 在途流一并取消：线程行将消失，终局落库会撞外键；research 轮询同理
             streams.remove(id)?.cancel()
+            messagesByThread[id]?.forEach { researchJobs.remove(it.id)?.cancel() }
             messagesByThread.remove(id)
             store?.deleteThread(id)
             if (_currentThreadId.value == id) startNewThread()
@@ -292,8 +307,12 @@ class ChatViewModel(
             val result = runCatching {
                 when (kind) {
                     MessageKind.CHAT -> {
+                        // 空 assistant 行（research 占位 / 错误条）不进 history：对模型无信息量，
+                        // 且上游可能拒空 content
                         val history = (messagesByThread[threadId] ?: emptyList())
-                            .filterNot { it.id == placeholderId }
+                            .filterNot {
+                                it.id == placeholderId || (it.role == Role.ASSISTANT && it.content.isBlank())
+                            }
                         val useSearch = _chatMode.value == ChatMode.WebSearch
                         engine.send(
                             history,
@@ -354,39 +373,78 @@ class ChatViewModel(
         viewModelScope.launch {
             val threadId = ensureThreadForSend(topic)
             appendAndPersistUser(threadId, ChatMessage(nextId(), Role.USER, topic, kind = MessageKind.DEEP_RESEARCH))
-            val runId = try {
-                engine.createResearch(topic)
-            } catch (e: ChatException) {
-                trackFailure(MessageKind.DEEP_RESEARCH, e.error)
-                updateThreadMessages(threadId) {
-                    it + ChatMessage(nextId(), Role.ASSISTANT, "", error = e.error, kind = MessageKind.DEEP_RESEARCH)
-                }
-                if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
-                return@launch
-            }
-            // 占位行即恢复载体：提交成功立即落库（store 缺席时用内存 id）
-            val messageId = if (store != null && threadId != null) {
-                store.persistResearchPlaceholder(threadId, runId).also { idSeq = maxOf(idSeq, it) }
-            } else nextId()
-            updateThreadMessages(threadId) {
-                it + ChatMessage(messageId, Role.ASSISTANT, "", kind = MessageKind.DEEP_RESEARCH, searching = true, researchRunId = runId)
-            }
-            launchResearchPolling(threadId, messageId, runId)
+            startResearch(threadId, topic)
         }
     }
 
-    /** 轮询任务（约 8s 间隔）；running 达上限静默停轮，占位行保留 → 下次打开会话续轮 */
+    /** 提交 research 任务并启动轮询；提交失败挂错误条（重试经 [retryResearch] 重新提交） */
+    private suspend fun startResearch(threadId: Long?, topic: String) {
+        val runId = try {
+            engine.createResearch(topic)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // 不只 catch ChatException：Demo/预览引擎的默认实现抛 UnsupportedOperationException，逃逸即崩
+            val error = (e as? ChatException)?.error
+                ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+            trackFailure(MessageKind.DEEP_RESEARCH, error)
+            updateThreadMessages(threadId) {
+                it + ChatMessage(nextId(), Role.ASSISTANT, "", error = error, kind = MessageKind.DEEP_RESEARCH)
+            }
+            if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
+            return
+        }
+        // 占位行即恢复载体：提交成功立即落库。缓冲内一律用内存 id，Room 行 id 另记映射
+        // 供终局写库（见 researchRowIds 的重号说明）
+        val messageId = nextId()
+        if (store != null && threadId != null) {
+            researchRowIds[messageId] = store.persistResearchPlaceholder(threadId, runId)
+        }
+        updateThreadMessages(threadId) {
+            it + ChatMessage(messageId, Role.ASSISTANT, "", kind = MessageKind.DEEP_RESEARCH, searching = true, researchRunId = runId)
+        }
+        launchResearchPolling(threadId, messageId, runId)
+    }
+
+    /** research 错误条的重试：任务已在服务端存在则恢复轮询同一 runId（绝不重复建任务——
+     *  会重复扣费）；任务未建立（提交失败 / 已判死删行）则取相邻提问重新提交 */
+    private fun retryResearch(message: ChatMessage) {
+        val threadId = _currentThreadId.value
+        val runId = message.researchRunId
+        if (runId != null) {
+            updateThreadMessages(threadId) { list ->
+                list.map { if (it.id == message.id) it.copy(error = null, searching = true) else it }
+            }
+            _uiState.update { it.copy(isSending = true) }
+            launchResearchPolling(threadId, message.id, runId)
+            return
+        }
+        val messages = messagesByThread[threadId] ?: emptyList()
+        val index = messages.indexOfFirst { it.id == message.id }
+        val topic = messages.take(index.coerceAtLeast(0))
+            .lastOrNull { it.role == Role.USER && it.kind == MessageKind.DEEP_RESEARCH }
+            ?.content ?: return
+        updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
+        _uiState.update { it.copy(isSending = true) }
+        viewModelScope.launch { startResearch(threadId, topic) }
+    }
+
+    /**
+     * 轮询任务：快轮 8s 覆盖正常时长，转慢轮 60s 直到盖过服务端 2h 超龄判死闸——服务端
+     * 保证死任务终会转 failed，客户端跟到那个终态为止，不留「静默停轮永远转圈」的僵尸态。
+     * 绝对上限仍无终态（异常情况）→ 呈现可重试错误，runId 保留（重试恢复轮询，不重复扣费）。
+     */
     private fun launchResearchPolling(threadId: Long?, messageId: Long, runId: String) {
-        if (streams[messageId]?.isActive == true) return
+        if (researchJobs[messageId]?.isActive == true) return
         val job = viewModelScope.launch {
-            repeat(MAX_RESEARCH_POLLS) {
-                delay(RESEARCH_POLL_MS)
+            repeat(MAX_RESEARCH_POLLS + MAX_RESEARCH_SLOW_POLLS) { attempt ->
+                delay(if (attempt < MAX_RESEARCH_POLLS) RESEARCH_POLL_MS else RESEARCH_SLOW_POLL_MS)
                 val run = try {
                     engine.pollResearch(runId)
                 } catch (e: ChatException) {
                     // 瞬态（网络/超时/5xx）继续轮；永久错误（鉴权/配额/非法请求）终局呈现——
                     // 否则用户只看到转圈直到静默停轮（Sourcery 审查确认的 bug）。
-                    // 占位行不删：任务可能仍在服务端跑完，重登后重开会话可恢复
+                    // 占位行不删：任务可能仍在服务端跑完，重登后重试/重开会话可恢复
                     if (e.error.category.retryable) return@repeat
                     trackFailure(MessageKind.DEEP_RESEARCH, e.error)
                     updateThreadMessages(threadId) { list ->
@@ -398,18 +456,29 @@ class ChatViewModel(
                 when (run.status) {
                     "completed" -> {
                         val report = run.report.orEmpty()
-                        if (store != null && threadId != null) {
-                            store.completeResearchMessage(threadId, messageId, report, runId)
+                        if (report.isBlank()) {
+                            // 空报告视同失败（服务端已按失败退款）：直接写回空串会留下一个
+                            // 永远满足恢复哨兵的空占位——每次开会话闪一次、清不掉
+                            store?.deleteMessage(researchRowId(messageId))
+                            val error = ChatError(ChatErrorCategory.SERVER, detail = "empty report")
+                            track("research_fail", mapOf("reason" to "empty_report"))
+                            updateThreadMessages(threadId) { list ->
+                                list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
+                            }
+                        } else {
+                            if (store != null && threadId != null) {
+                                store.completeResearchMessage(threadId, researchRowId(messageId), report, runId)
+                            }
+                            updateThreadMessages(threadId) { list ->
+                                list.map { if (it.id == messageId) it.copy(content = report, searching = false) else it }
+                            }
+                            track("research_done", emptyMap())
                         }
-                        updateThreadMessages(threadId) { list ->
-                            list.map { if (it.id == messageId) it.copy(content = report, searching = false) else it }
-                        }
-                        track("research_done", emptyMap())
                         finishResearch(threadId, messageId)
                         return@launch
                     }
                     "failed" -> {
-                        store?.deleteMessage(messageId)
+                        store?.deleteMessage(researchRowId(messageId))
                         val error = ChatError(ChatErrorCategory.SERVER, detail = run.error ?: "research failed")
                         track("research_fail", mapOf("reason" to (run.error ?: "unknown")))
                         updateThreadMessages(threadId) { list ->
@@ -421,13 +490,23 @@ class ChatViewModel(
                     else -> Unit // running：继续
                 }
             }
-            finishResearch(threadId, messageId) // 达上限：停轮不判死，恢复机制兜底
+            // 绝对上限：已超过服务端判死闸仍无终态，属异常。呈现可重试错误（runId 保留 →
+            // 重试恢复轮询同一任务；库中占位行保留 → 跨进程仍可恢复），不再无限转圈
+            val error = ChatError(ChatErrorCategory.TIMEOUT, detail = "research polling exhausted")
+            trackFailure(MessageKind.DEEP_RESEARCH, error)
+            updateThreadMessages(threadId) { list ->
+                list.map { if (it.id == messageId) it.copy(searching = false, error = error) else it }
+            }
+            finishResearch(threadId, messageId)
         }
-        streams[messageId] = job
+        researchJobs[messageId] = job
     }
 
+    /** 占位行的 Room 行 id：同会话建的走映射，重启后从库载入的消息 id 本身就是行 id */
+    private fun researchRowId(messageId: Long): Long = researchRowIds[messageId] ?: messageId
+
     private fun finishResearch(threadId: Long?, messageId: Long) {
-        streams.remove(messageId)
+        researchJobs.remove(messageId)
         if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
     }
 
@@ -473,6 +552,10 @@ class ChatViewModel(
     }
 
     private fun trackFailure(kind: MessageKind, error: ChatError) {
+        // research 失败漏斗：提交失败 / 轮询永久错误 / 轮询耗尽都计数（status=failed 在轮询处单独上报）
+        if (kind == MessageKind.DEEP_RESEARCH) {
+            track("research_fail", mapOf("reason" to (error.code ?: error.category.name.lowercase())))
+        }
         when {
             // 付费意愿漏斗第一级：个人配额触顶（在 VM 记一次，避免 UI 重组重复上报）
             error.code == ChatError.CODE_QUOTA_DEVICE -> {
@@ -490,8 +573,11 @@ class ChatViewModel(
         /** 单条消息图片数上限，与服务端及 [whl.trending.chat.engine.ChatWire] 对齐 */
         const val MAX_IMAGES_PER_MESSAGE = 4
 
-        /** research 轮询间隔与上限：8s × 90 ≈ 12 分钟；达上限停轮不判死（恢复机制兜底续轮） */
+        /** research 轮询节奏：快轮 8s×90（≈12 分钟）覆盖正常任务时长，慢轮 60s×110（≈110 分钟）
+         *  盖过服务端 2h 超龄判死闸——每个任务都能等到服务端终态，不留僵尸占位 */
         private const val RESEARCH_POLL_MS = 8_000L
         private const val MAX_RESEARCH_POLLS = 90
+        private const val RESEARCH_SLOW_POLL_MS = 60_000L
+        private const val MAX_RESEARCH_SLOW_POLLS = 110
     }
 }

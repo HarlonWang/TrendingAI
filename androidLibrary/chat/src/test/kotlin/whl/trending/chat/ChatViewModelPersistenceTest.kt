@@ -296,16 +296,22 @@ class ChatViewModelPersistenceTest {
 
     // ---- P3 Deep Research ----
 
-    /** research 假引擎：脚本化状态序列 */
+    /** research 假引擎：脚本化状态序列 + 可编程失败 + history 捕获 */
     private class ResearchEngine(
         var statuses: MutableList<whl.trending.chat.model.ResearchRun> = mutableListOf(),
         var failCreate: ChatError? = null,
+        var failPoll: ChatError? = null,
     ) : ChatEngine {
         var created = 0
+        var polled = 0
+        var lastHistory: List<ChatMessage>? = null
         override suspend fun send(
             history: List<ChatMessage>, context: ChatContext?, onDelta: (String) -> Unit,
             search: Boolean, onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
-        ): String = "n/a"
+        ): String {
+            lastHistory = history
+            return "n/a"
+        }
         override suspend fun sendDetailSummary(context: ChatContext, onDelta: (String) -> Unit) =
             DetailSummaryResult("n/a", cached = false)
         override suspend fun createResearch(topic: String): String {
@@ -313,8 +319,11 @@ class ChatViewModelPersistenceTest {
             created++
             return "run-77"
         }
-        override suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun =
-            if (statuses.size > 1) statuses.removeAt(0) else statuses[0]
+        override suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun {
+            failPoll?.let { throw ChatException(it) }
+            polled++
+            return if (statuses.size > 1) statuses.removeAt(0) else statuses[0]
+        }
     }
 
     @Test
@@ -381,6 +390,159 @@ class ChatViewModelPersistenceTest {
         advanceUntilIdle()
 
         assertEquals("迟到的报告", v2.uiState.value.messages.last().content)
+    }
+
+    @Test
+    fun `research 空报告视同失败：删占位行、错误可重试、不留恢复哨兵`() = runTest(dispatcher) {
+        val engine = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "completed", "", null),
+        ))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("空手而归")
+        v.send()
+        advanceUntilIdle()
+
+        val last = v.uiState.value.messages.last()
+        assertNotNull(last.error)
+        assertEquals(null, last.researchRunId)
+        // 占位行已删：库里只剩 user，重开会话不会再触发恢复轮询
+        val threadId = store.threads().first()[0].id
+        assertEquals(listOf("user"), db.messageDao().messagesFor(threadId).map { it.role })
+    }
+
+    @Test
+    fun `error 条占过内存 id 后，research 占位 id 不与已有消息重号`() = runTest(dispatcher) {
+        // 第一次提交失败：error 条占用内存 id 但不落库 → Room 自增从此落后于内存序列
+        val engine = ResearchEngine(
+            statuses = mutableListOf(whl.trending.chat.model.ResearchRun("run-77", "completed", "# 报告", null)),
+            failCreate = ChatError(ChatErrorCategory.SERVER),
+        )
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("第一问")
+        v.send()
+        advanceUntilIdle()
+
+        engine.failCreate = null
+        v.updateInput("第二问")
+        v.send()
+        advanceUntilIdle()
+
+        val messages = v.uiState.value.messages
+        // id 全局唯一（重号会让 LazyColumn 的 key 崩溃、报告覆盖用户气泡）
+        assertEquals(messages.size, messages.map { it.id }.distinct().size)
+        // 用户自己的提问未被报告内容覆盖
+        assertEquals(listOf("第一问", "第二问"), messages.filter { it.role == Role.USER }.map { it.content })
+        assertEquals("# 报告", messages.last().content)
+    }
+
+    @Test
+    fun `retry research 提交失败条→重新提交而非撞流式管线`() = runTest(dispatcher) {
+        val engine = ResearchEngine(
+            statuses = mutableListOf(whl.trending.chat.model.ResearchRun("run-77", "completed", "# 报告", null)),
+            failCreate = ChatError(ChatErrorCategory.SERVER),
+        )
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("研究题")
+        v.send()
+        advanceUntilIdle()
+        val errorRow = v.uiState.value.messages.last()
+        assertNotNull(errorRow.error)
+
+        engine.failCreate = null
+        v.retry(errorRow)
+        advanceUntilIdle()
+
+        assertEquals(1, engine.created)
+        assertEquals("# 报告", v.uiState.value.messages.last().content)
+        // user 提问只有一条，未被重试复制
+        val threadId = store.threads().first()[0].id
+        assertEquals(listOf("user", "assistant"), db.messageDao().messagesFor(threadId).map { it.role })
+    }
+
+    @Test
+    fun `retry research 轮询永久错误条→恢复轮询同一任务，不重复建任务`() = runTest(dispatcher) {
+        val engine = ResearchEngine(
+            statuses = mutableListOf(whl.trending.chat.model.ResearchRun("run-77", "completed", "# 报告", null)),
+            failPoll = ChatError(ChatErrorCategory.QUOTA, code = ChatError.CODE_QUOTA_DEVICE),
+        )
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("配额题")
+        v.send()
+        advanceUntilIdle()
+        val errorRow = v.uiState.value.messages.last()
+        assertNotNull(errorRow.error)
+        assertEquals("run-77", errorRow.researchRunId) // runId 保留是恢复的前提
+
+        engine.failPoll = null
+        v.retry(errorRow)
+        advanceUntilIdle()
+
+        assertEquals(1, engine.created) // 没有重复建任务（重复扣费）
+        assertEquals("# 报告", v.uiState.value.messages.last().content)
+    }
+
+    @Test
+    fun `不支持 research 的引擎（Demo 默认实现）：不崩溃、呈现错误条`() = runTest(dispatcher) {
+        // GatedEngine 未覆写 createResearch → 默认实现抛 UnsupportedOperationException
+        val v = vm(GatedEngine())
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("不支持")
+        v.send()
+        advanceUntilIdle()
+
+        assertNotNull(v.uiState.value.messages.last().error)
+        assertEquals(false, v.uiState.value.isSending)
+    }
+
+    @Test
+    fun `空 assistant 行（research 错误条）不进后续 chat history`() = runTest(dispatcher) {
+        val engine = ResearchEngine(failCreate = ChatError(ChatErrorCategory.SERVER))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("失败的研究")
+        v.send()
+        advanceUntilIdle()
+
+        v.toggleDeepResearch() // 回 Normal
+        v.updateInput("普通问题")
+        v.send()
+        advanceUntilIdle()
+
+        val history = engine.lastHistory
+        assertNotNull(history)
+        assertTrue(history.none { it.role == Role.ASSISTANT && it.content.isBlank() })
+    }
+
+    @Test
+    fun `deleteThread 取消 research 轮询任务`() = runTest(dispatcher) {
+        val engine = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "running", null, null),
+        ))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("长任务")
+        v.send()
+        testScheduler.runCurrent()
+        testScheduler.advanceTimeBy(20_000) // 快轮阶段推进两轮
+        val polledBefore = engine.polled
+        assertTrue(polledBefore > 0)
+
+        val threadId = store.threads().first()[0].id
+        v.deleteThread(threadId)
+        advanceUntilIdle()
+
+        assertEquals(polledBefore, engine.polled) // 轮询已随线程删除而取消
     }
 
 }

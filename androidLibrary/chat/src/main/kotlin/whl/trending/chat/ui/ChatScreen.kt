@@ -229,7 +229,9 @@ fun ChatScreen(
                     )
                     ChatInputBar(
                         input = state.input,
-                        canSend = state.canSend,
+                        // research 仅支持文本：只有图片没文字时发送会被 VM 忽略，按钮同步禁用（不静默）
+                        canSend = state.canSend &&
+                            (mode != whl.trending.chat.model.ChatMode.DeepResearch || state.input.isNotBlank()),
                         pendingImages = state.pendingImages,
                         searchActive = mode == whl.trending.chat.model.ChatMode.WebSearch,
                         researchActive = mode == whl.trending.chat.model.ChatMode.DeepResearch,

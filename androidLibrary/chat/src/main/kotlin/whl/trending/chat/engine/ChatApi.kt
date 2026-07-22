@@ -196,7 +196,7 @@ class ChatApi(
     }
 
     override suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun {
-        val r = researchJson(HttpMethod.Get, "research/${'$'}id") {}
+        val r = researchJson(HttpMethod.Get, "research/$id") {}
         return whl.trending.chat.model.ResearchRun(r.id, r.status, r.report, r.error)
     }
 
@@ -208,10 +208,10 @@ class ChatApi(
     ): ResearchRunResponse {
         try {
             val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
-            val response = client.request("${'$'}baseUrl/${'$'}path") {
+            val response = client.request("$baseUrl/$path") {
                 this.method = method
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
-                globalAuthManager.getAccessToken()?.let { header("Authorization", "Bearer ${'$'}it") }
+                globalAuthManager.getAccessToken()?.let { header("Authorization", "Bearer $it") }
                 timeout { requestTimeoutMillis = 30_000 }
                 configure()
             }
