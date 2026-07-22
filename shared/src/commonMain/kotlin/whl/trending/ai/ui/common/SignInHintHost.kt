@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.sign_in_hint_clock_skew
 import trendingai.shared.generated.resources.sign_in_hint_connectivity
 import trendingai.shared.generated.resources.sign_in_hint_dismiss
 import trendingai.shared.generated.resources.sign_in_hint_title
@@ -18,8 +19,9 @@ import whl.trending.ai.auth.SignInFailureBus
 import whl.trending.ai.auth.SignInFailureReason
 
 /**
- * 全局登录失败提示宿主：收集 [SignInFailureBus] 的失败事件，命中「连通性类」失败时弹一个轻量弹窗
- * 引导用户检查网络。
+ * 全局登录失败提示宿主：收集 [SignInFailureBus] 的失败事件，对可行动的失败类别弹轻量弹窗——
+ * 连通性类（NETWORK/TIMEOUT）引导检查网络；时钟偏差类（CLOCK_SKEW）引导修系统时间，
+ * 后者若只给通用提示，用户会陷入「重试永远失败」的死循环（时钟不修，id_token 校验必败）。
  *
  * 用弹窗（独立窗口）而非 Snackbar：① 不占/不盖 app 布局；② 登录失败值得被明确看见，Snackbar 易被错过。
  * 放在 App 根部（与 WhatsNewHost 平级），是因为登录有 4 个触发点（首页头像 / Trending·Readme 的
@@ -27,23 +29,30 @@ import whl.trending.ai.auth.SignInFailureReason
  */
 @Composable
 fun SignInHintHost() {
-    var show by remember { mutableStateOf(false) }
+    var hint by remember { mutableStateOf<SignInFailureReason?>(null) }
 
     LaunchedEffect(Unit) {
         SignInFailureBus.events.collect { reason ->
             // 收到即消费：清掉 replay 缓存，避免之后重建的收集者（旋转/主题切换）把旧失败再弹一遍
             SignInFailureBus.consume()
-            if (reason.shouldHintConnectivity()) show = true
+            if (reason.shouldHint()) hint = reason
         }
     }
 
-    if (show) {
+    hint?.let { reason ->
         AlertDialog(
-            onDismissRequest = { show = false },
+            onDismissRequest = { hint = null },
             title = { Text(stringResource(Res.string.sign_in_hint_title)) },
-            text = { Text(stringResource(Res.string.sign_in_hint_connectivity)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (reason == SignInFailureReason.CLOCK_SKEW) Res.string.sign_in_hint_clock_skew
+                        else Res.string.sign_in_hint_connectivity,
+                    ),
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { show = false }) {
+                TextButton(onClick = { hint = null }) {
                     Text(stringResource(Res.string.sign_in_hint_dismiss))
                 }
             },
@@ -52,15 +61,16 @@ fun SignInHintHost() {
 }
 
 /**
- * 是否属于「网络可能不通」的失败，值得提示用户检查连通性。
+ * 是否值得弹提示：仅限用户可行动的失败（查网络 / 修时钟）。
  *
- * 只在明确的网络类失败（NETWORK / TIMEOUT）时弹：USER_CANCELED 不弹——用户主动关闭授权页是常见操作，
- * 弹「检查网络」既误导又打扰。代价是已缓存 OIDC 配置的老用户断网登录（错误落在浏览器内、被归为
- * USER_CANCELED）收不到提示，这是取舍后的选择。CONFIG / NO_BROWSER / OTHER 与连通性无关，同样不弹。
+ * USER_CANCELED 不弹——用户主动关闭授权页是常见操作，弹提示既误导又打扰。代价是已缓存 OIDC 配置的
+ * 老用户断网登录（错误落在浏览器内、被归为 USER_CANCELED）收不到提示，这是取舍后的选择。
+ * CONFIG / NO_BROWSER / OTHER 用户无从行动，同样不弹。
  */
-private fun SignInFailureReason.shouldHintConnectivity(): Boolean = when (this) {
+private fun SignInFailureReason.shouldHint(): Boolean = when (this) {
     SignInFailureReason.NETWORK,
-    SignInFailureReason.TIMEOUT -> true
+    SignInFailureReason.TIMEOUT,
+    SignInFailureReason.CLOCK_SKEW -> true
     SignInFailureReason.USER_CANCELED,
     SignInFailureReason.NO_BROWSER,
     SignInFailureReason.CONFIG,

@@ -2,6 +2,7 @@ package whl.trending.ai.auth
 
 import android.app.Activity
 import android.os.SystemClock
+import android.util.Log
 import io.logto.sdk.android.LogtoClient
 import io.logto.sdk.android.exception.LogtoException
 import io.logto.sdk.android.type.LogtoConfig
@@ -11,9 +12,15 @@ import io.logto.sdk.core.type.DirectSignInOptions
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.ConnectException
+import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
+import java.net.URL
 import java.net.UnknownHostException
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 import kotlin.coroutines.resume
+import org.jose4j.jwt.consumer.ErrorCodes
+import org.jose4j.jwt.consumer.InvalidJwtException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +41,9 @@ import whl.trending.ai.data.local.globalSettingsManager
  */
 class LogtoAuthManager(activity: Activity) : AuthManager {
     private val activityRef = WeakReference(activity)
+
+    /** 时钟偏差提示的进程级一次性标志（刷新路径专用；显式登录失败不受限，每次都给反馈） */
+    private val clockSkewHinted = AtomicBoolean(false)
 
     private val logtoClient = LogtoClient(
         LogtoConfig(
@@ -95,7 +105,10 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
                             ),
                         )
                     } else {
-                        trackEvent("sign_in_error", props + ("source" to source) + ("duration_ms" to durationMs))
+                        trackSignInError(props + ("source" to source) + ("duration_ms" to durationMs))
+                    }
+                    if (BuildConfig.DEBUG) {
+                        Log.w(TAG, "sign_in failed: reason=$reason props=$props", logtoException)
                     }
                     // 走进程级总线而非实例字段：配置变更重建 Activity 后回调可能落在旧实例上（见 SignInFailureBus）
                     SignInFailureBus.emit(reason)
@@ -120,6 +133,9 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
         val reason = when {
             logtoType == LogtoException.Type.USER_CANCELED.name -> SignInFailureReason.USER_CANCELED
+            // 时钟偏差：id_token 的 iat/exp 校验被 jose4j 拒绝（容差 60s）。必须先于网络类判定——
+            // 重试永远失败，通用提示会把用户引进死循环（2026-07-22 模拟器慢 63s 实测的坑）
+            isClockSkew(causeChain) -> SignInFailureReason.CLOCK_SKEW
             causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
             causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
             logtoType in NETWORK_LOGTO_TYPES -> SignInFailureReason.NETWORK
@@ -160,14 +176,66 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         // 竞态由 SDK 的 CredentialGuard 兜底：登出后的在途刷新会以 NOT_AUTHENTICATED 收尾、不写回。
         if (!logtoClient.isAuthenticated) return null
         return suspendCancellableCoroutine { cont ->
-            logtoClient.getAccessToken { _, accessToken ->
+            logtoClient.getAccessToken { exception, accessToken ->
+                exception?.let { maybeHintRefreshClockSkew(it) }
                 cont.resume(accessToken?.token)
             }
         }
     }
 
+    /**
+     * 静默刷新失败若是时钟偏差，重试/重登都救不回来（新 token 的 id_token 校验同样失败），而 app 仍
+     * 自认已登录、请求被服务端按匿名处理（authDegraded）——用户看到的「重试」提示是死循环。
+     * 弹一次时钟修复提示（复用 [SignInFailureBus] 的 CLOCK_SKEW 通道），进程内只弹一次防打扰
+     * （getAccessToken 每次请求都会调）。
+     */
+    private fun maybeHintRefreshClockSkew(exception: LogtoException) {
+        val causeChain = generateSequence(exception.cause) { it.cause }.toList()
+        if (!isClockSkew(causeChain)) return
+        if (clockSkewHinted.compareAndSet(false, true)) {
+            trackEvent("token_refresh_clock_skew", emptyMap())
+            SignInFailureBus.emit(SignInFailureReason.CLOCK_SKEW)
+        }
+    }
+
+    /**
+     * jose4j 的时间类校验失败即时钟偏差：iat 在「未来」（23，本机偏慢）或刚签发即「过期」（1，本机
+     * 偏快超过 token 有效期）。id_token 是刚从服务端换来的，这两种拒绝只可能是本机时钟不准。
+     */
+    private fun isClockSkew(causeChain: List<Throwable>): Boolean = causeChain.any {
+        it is InvalidJwtException &&
+            (it.hasErrorCode(ErrorCodes.ISSUED_AT_INVALID_FUTURE) || it.hasErrorCode(ErrorCodes.EXPIRED))
+    }
+
+    /**
+     * sign_in_error 上报前异步补测服务器-本机时钟偏差（任一 HTTPS 响应的 Date 头即可，取 Logto 端点）：
+     * `clock_offset_ms` 正值 = 本机偏慢。让 Aptabase 面板能直接回答「真实用户里有多少时钟不准」。
+     * 探测失败（离线等）不带该属性照常上报；后台线程执行，不阻塞失败回调。
+     */
+    private fun trackSignInError(props: Map<String, Any>) {
+        thread(isDaemon = true, name = "sign-in-clock-probe") {
+            val offset = measureClockOffsetMs()
+            trackEvent("sign_in_error", if (offset != null) props + ("clock_offset_ms" to offset) else props)
+        }
+    }
+
+    private fun measureClockOffsetMs(): Long? = runCatching {
+        val connection = URL(LOGTO_ENDPOINT).openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "HEAD"
+            connection.connectTimeout = CLOCK_PROBE_TIMEOUT_MS
+            connection.readTimeout = CLOCK_PROBE_TIMEOUT_MS
+            val serverDate = connection.getHeaderFieldDate("Date", 0L)
+            if (serverDate == 0L) null else serverDate - System.currentTimeMillis()
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
+
     companion object {
+        private const val TAG = "LogtoAuth"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
+        private const val CLOCK_PROBE_TIMEOUT_MS = 3_000
 
         /**
          * 长短取消的分界：短于此为 `quick`（授权页正常加载后主动拒绝），长于此为 `wait`

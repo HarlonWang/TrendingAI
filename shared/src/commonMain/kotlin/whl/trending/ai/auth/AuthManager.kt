@@ -17,7 +17,11 @@ sealed interface AuthState {
  * 其余映射为 sign_in_error 的 reason）与失败后的连通性提示。分类逻辑见 androidApp 的 LogtoAuthManager。
  */
 enum class SignInFailureReason {
-    USER_CANCELED, TIMEOUT, NETWORK, NO_BROWSER, CONFIG, OTHER,
+    USER_CANCELED, TIMEOUT, NETWORK, NO_BROWSER, CONFIG,
+
+    /** 设备时钟偏差超出 id_token 校验容差（Logto SDK 60s）：重试无用，提示修时间（见 SignInHintHost） */
+    CLOCK_SKEW,
+    OTHER,
 }
 
 /**

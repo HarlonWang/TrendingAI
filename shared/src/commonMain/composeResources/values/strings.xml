@@ -165,6 +165,7 @@
     <string name="sign_in_value_dismiss">Not now</string>
     <string name="sign_in_hint_title">Sign-in not completed</string>
     <string name="sign_in_hint_connectivity">GitHub sign-in needs to reach github.com. Please check your connection and try again.</string>
+    <string name="sign_in_hint_clock_skew">Your device clock is off by more than a minute, so the sign-in security check fails. Turn on automatic date &amp; time in system settings, then try again.</string>
     <string name="sign_in_hint_dismiss">Got it</string>
     <string name="profile_load_failed">Failed to load profile</string>
     <string name="profile_retry">Retry</string>
