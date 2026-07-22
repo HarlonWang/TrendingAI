@@ -264,12 +264,13 @@ fun ChatScreen(
                     // 自动切到 MessageList，与「介绍这个项目」chip 的隐藏时机一致。
                     ChatWelcome(hasContext = initialContext != null)
                 } else {
-                    val upsellPrompt = stringResource(R.string.chat_action_research_upsell)
+                    // topic 用预填调研主题而非按钮 CTA 文案：与 FAB 入口同构，后端拿到的是
+                    // 有内容的调研诉求（Sourcery 审查采纳）
                     MessageList(
                         messages = state.messages,
                         isSending = state.isSending,
                         onRetry = viewModel::retry,
-                        onResearchUpsell = { viewModel.sendRepoResearch(upsellPrompt) },
+                        onResearchUpsell = { viewModel.sendRepoResearch(researchPrefill) },
                     )
                 }
             }
