@@ -9,7 +9,7 @@
 1. **登录可达性**：埋点显示 GitHub 登录取消率 76%，结构性原因是大陆 GitHub 可达性差；Google 同样不可达，只有邮箱验证码能真正解决。
 2. **余额可见性**：后端 `GET /api/quota` 已上线（balance / dailyGrant / resetAt / tier），但客户端从未调用，用户只能在 429 触顶后被动看到额度卡片。
 
-本期范围：**保留 Logto，新增邮箱验证码登录（Logto 托管登录页）；Profile 页重构为账户页，展示账户信息与配额**。仅 Android。
+本期范围：**保留 Logto，新增邮箱验证码登录（Logto 托管登录页）；Profile 页重构为账户页，展示账户信息与配额；登录链路补可达性埋点**（为未来 Logto vs 自研决策积累数据，见 3.1）。仅 Android。
 
 ## 已确认的决策
 
@@ -60,6 +60,17 @@
 - `SettingsManager` 持久化 email，登出清空；`setGithubIdentity` 接受 null。
 - 邮箱用户调 `LogtoAccountApi` 取 GitHub token 会失败——确认该路径静默降级、不弹错。
 - iOS `NoopAuthManager` 不变。
+
+### 3.1 登录可达性埋点
+
+目的：为未来「继续 Logto vs 自研登录」的决策积累判据——区分登录失败到底是**链路可达性问题**（托管页打不开/超时/网络错误，指向 Logto Cloud 在大陆不可达）还是**用户主动取消**（Custom Tab 被关掉）。该决策的失效条件之一就是「可达性失败占登录失败的大头」，没有这份数据，将来只能拍脑袋。
+
+现状盘点：`sign_in_error` 已带 `reason` 归因（`analyzeSignInFailure`：clock_skew / timeout / network / no_browser / config / other）+ `logto_type` + `cause`，`sign_in_canceled` 已带时长分桶与 `cancel_kind`（quick/wait）。**但存在一个结构性观测盲区：托管页在 Custom Tab 里加载失败（auth.trendingai.cn 不可达/超时）时，SDK 收不到任何回调，不会走 error 路径**——用户只能手动关掉 Custom Tab，被计入 `sign_in_canceled`。「可达性失败」被系统性伪装成「用户取消」，这正是取消率（76% 基线）只能靠推测归因大陆可达性的原因。本期补两点：
+
+- **登录发起时的可达性探测**：`signIn()` 触发时后台异步对 `auth.trendingai.cn` 发一个轻量探测请求（HEAD/GET，超时 5s，不阻塞登录流程），上报 `auth_probe` 事件（属性：`result` ok/timeout/fail + 延迟分桶）。与同一会话的登录结果交叉：probe 失败 + wait 型取消 ≈ 可达性失败——把盲区显性化；
+- **成功事件增加 `method` 属性**（`github` / `email`）：托管页内用户选了哪种方式客户端事前不可见，回调成功后从 claims 的 `identities` 有无 github 判断；同时作为邮箱登录渗透率的观测口径。
+
+分析口径：可达性失败占比 ≈ `auth_probe` 失败率，并用「probe 失败 × cancel_kind=wait」交叉验证；对照取消率基线，判断邮箱登录上线后失败结构的变化。这份数据是「继续 Logto vs 自研」失效条件第 1 条的直接判据。
 
 ### 4. 账户页重构（原 ProfileScreen）
 
