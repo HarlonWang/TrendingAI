@@ -32,4 +32,6 @@ data class ChatMessage(
     val searching: Boolean = false,
     /** Deep Research 任务 id（随占位消息持久化——冷启动恢复轮询的载体） */
     val researchRunId: String? = null,
+    /** 生成本条消息的模型 id（research 由服务端随报告返回；气泡上标注用），可空 */
+    val model: String? = null,
 )

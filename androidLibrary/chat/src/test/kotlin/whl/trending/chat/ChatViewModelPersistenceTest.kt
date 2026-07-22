@@ -330,7 +330,7 @@ class ChatViewModelPersistenceTest {
     fun `research 提交→占位落库→轮询完成→报告落库`() = runTest(dispatcher) {
         val engine = ResearchEngine(mutableListOf(
             whl.trending.chat.model.ResearchRun("run-77", "running", null, null),
-            whl.trending.chat.model.ResearchRun("run-77", "completed", "# 研究报告", null),
+            whl.trending.chat.model.ResearchRun("run-77", "completed", "# 研究报告", null, "gpt-5.5"),
         ))
         val v = vm(engine)
         advanceUntilIdle()
@@ -342,11 +342,13 @@ class ChatViewModelPersistenceTest {
         val msg = v.uiState.value.messages.last()
         assertEquals("# 研究报告", msg.content)
         assertEquals(false, msg.searching)
+        assertEquals("gpt-5.5", msg.model) // 生成模型随报告透传
 
         val threadId = store.threads().first()[0].id
         val rows = db.messageDao().messagesFor(threadId)
         assertEquals("DEEP_RESEARCH", rows.last().kind)
         assertEquals("# 研究报告", rows.last().content)
+        assertEquals("gpt-5.5", rows.last().model) // 模型留痕随报告落库
         assertTrue(rows.last().segmentsJson!!.contains("run-77"))
     }
 

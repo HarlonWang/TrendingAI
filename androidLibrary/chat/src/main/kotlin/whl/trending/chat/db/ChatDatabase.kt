@@ -103,9 +103,9 @@ interface MessageDao {
     @Query("SELECT imagesJson FROM chat_messages WHERE threadId = :threadId AND imagesJson IS NOT NULL")
     suspend fun imagesJsonFor(threadId: Long): List<String>
 
-    /** research 占位 → 终局报告（P3：占位行是跨进程恢复轮询的载体） */
-    @Query("UPDATE chat_messages SET content = :content, segmentsJson = :segmentsJson WHERE id = :id")
-    suspend fun updateContent(id: Long, content: String, segmentsJson: String?)
+    /** research 占位 → 终局报告（P3：占位行是跨进程恢复轮询的载体）；model 为生成模型留痕 */
+    @Query("UPDATE chat_messages SET content = :content, segmentsJson = :segmentsJson, model = :model WHERE id = :id")
+    suspend fun updateContent(id: Long, content: String, segmentsJson: String?, model: String?)
 
     @Query("DELETE FROM chat_messages WHERE id = :id")
     suspend fun deleteById(id: Long)

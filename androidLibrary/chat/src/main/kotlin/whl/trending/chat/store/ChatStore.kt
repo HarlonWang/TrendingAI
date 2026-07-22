@@ -115,11 +115,12 @@ class ChatStore(
         return id
     }
 
-    /** research 终局：占位行升级为报告全文（保留 runId 供追溯） */
-    suspend fun completeResearchMessage(threadId: Long, messageId: Long, report: String, runId: String) {
+    /** research 终局：占位行升级为报告全文（保留 runId 供追溯；model 为生成模型留痕） */
+    suspend fun completeResearchMessage(threadId: Long, messageId: Long, report: String, runId: String, model: String? = null) {
         db.messageDao().updateContent(
             messageId, report,
             json.encodeToString(StoredSegments(researchRunId = runId)),
+            model,
         )
         db.threadDao().touch(threadId, clock())
     }
@@ -173,6 +174,7 @@ class ChatStore(
             kind = runCatching { MessageKind.valueOf(kind) }.getOrDefault(MessageKind.CHAT),
             sources = segments?.sources?.map { SourceRef(it.title, it.url) } ?: emptyList(),
             researchRunId = segments?.researchRunId,
+            model = model,
         )
     }
 

@@ -467,10 +467,10 @@ class ChatViewModel(
                             }
                         } else {
                             if (store != null && threadId != null) {
-                                store.completeResearchMessage(threadId, researchRowId(messageId), report, runId)
+                                store.completeResearchMessage(threadId, researchRowId(messageId), report, runId, run.model)
                             }
                             updateThreadMessages(threadId) { list ->
-                                list.map { if (it.id == messageId) it.copy(content = report, searching = false) else it }
+                                list.map { if (it.id == messageId) it.copy(content = report, searching = false, model = run.model) else it }
                             }
                             track("research_done", emptyMap())
                         }

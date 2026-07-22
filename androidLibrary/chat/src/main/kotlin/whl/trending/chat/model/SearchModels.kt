@@ -11,7 +11,7 @@ sealed interface ChatMode {
 }
 
 /** Deep Research 任务状态（引擎轮询返回） */
-data class ResearchRun(val id: String, val status: String, val report: String?, val error: String?)
+data class ResearchRun(val id: String, val status: String, val report: String?, val error: String?, val model: String? = null)
 
 /** 引用来源（服务端按 url 去重后下发；随 assistant 消息持久化） */
 data class SourceRef(val title: String, val url: String)

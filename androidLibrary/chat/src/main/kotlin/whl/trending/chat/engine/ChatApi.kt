@@ -109,6 +109,7 @@ class ChatApi(
         val status: String,
         val report: String? = null,
         val error: String? = null,
+        val model: String? = null,
     )
 
     @Serializable
@@ -197,7 +198,7 @@ class ChatApi(
 
     override suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun {
         val r = researchJson(HttpMethod.Get, "research/$id") {}
-        return whl.trending.chat.model.ResearchRun(r.id, r.status, r.report, r.error)
+        return whl.trending.chat.model.ResearchRun(r.id, r.status, r.report, r.error, r.model)
     }
 
     /** research 的非流式 JSON 路径：错误分类与流式路径同一套（含 login_required/quota 语义） */

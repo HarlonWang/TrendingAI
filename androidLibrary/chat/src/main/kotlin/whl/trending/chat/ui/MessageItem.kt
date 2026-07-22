@@ -185,6 +185,25 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
             if (message.sources.isNotEmpty()) {
                 SourcesRow(message.sources)
             }
+            // research 报告标注生成模型（服务端随报告返回；模式下无选择器，这里给足透明度）。
+            // 胶囊底色 + 上间距把它从 Markdown 正文里区分出来（裸灰字会融进报告结尾）；
+            // 老数据 model 为空则不显示
+            if (message.kind == whl.trending.chat.model.MessageKind.DEEP_RESEARCH &&
+                !message.model.isNullOrBlank() && message.content.isNotBlank()
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    Text(
+                        text = message.model.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+            }
             Row {
                 val clipboard = LocalClipboard.current
                 val context = LocalContext.current
