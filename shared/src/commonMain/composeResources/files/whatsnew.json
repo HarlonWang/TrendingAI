@@ -1,15 +1,19 @@
 {
-  "version": "0.21.0",
+  "version": "0.22.0-beta.1",
   "zh": [
-    "每日精选改版为「GitHub 上新」和「深度解读」两大板块",
-    "上新卡片提供一句话定位与适用场景，支持收藏和分享",
-    "GitHub 榜单「只看 New」调整为 24 小时内首次上榜",
-    "项目详情页新增「一键解读」，直达 AI 详细解读"
+    "AI 对话支持多会话：历史会话随时切换，退出后自动恢复",
+    "AI 对话新增联网搜索，回答附带来源链接",
+    "新增 Deep Research 深度研究模式，可生成完整调研报告",
+    "登录简化为一步直达 GitHub 授权，失败时给出更明确的提示",
+    "Product Hunt 条目的点击、分享、收藏均直达原帖",
+    "分享按钮移出菜单独立展示；修复每日提醒可能不准时的问题"
   ],
   "en": [
-    "Daily Picks redesigned into two sections: New on Trending and Deep Dive",
-    "Debut cards show a one-line summary and use case, with favorite and share",
-    "\"New only\" on the GitHub board now means first appearance within 24 hours",
-    "New one-tap AI explanation entry on project details"
+    "AI chat now supports multiple sessions: switch between conversations anytime, with automatic restore",
+    "Web search in AI chat, with source links in answers",
+    "New Deep Research mode for generating in-depth research reports",
+    "Simplified sign-in that goes straight to GitHub authorization, with clearer error messages",
+    "Product Hunt items now link directly to the original post for view, share, and favorite",
+    "Share button is now shown directly on cards; fixed daily reminder timing drift"
   ]
 }
