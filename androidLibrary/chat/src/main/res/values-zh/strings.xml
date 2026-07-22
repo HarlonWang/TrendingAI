@@ -74,4 +74,6 @@
     <string name="chat_searching">正在搜索网络…</string>
     <string name="chat_deep_research">深入研究</string>
     <string name="chat_researching">深入研究中，约需几分钟…</string>
+    <string name="chat_action_research_upsell">深度调研此项目</string>
+    <string name="chat_research_repo_prefill">全面调研这个项目：技术定位与亮点、同类方案对比、社区口碑与采用情况</string>
 </resources>

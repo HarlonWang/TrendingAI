@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -64,6 +65,7 @@ import trendingai.shared.generated.resources.action_star
 import trendingai.shared.generated.resources.action_unstar
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.readme_fab_chat
+import trendingai.shared.generated.resources.readme_fab_deep_research
 import trendingai.shared.generated.resources.readme_fab_detail_summary
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
@@ -109,8 +111,9 @@ fun ReadmeScreen(
             ?.replace(Regex("<[^>]+>"), "")
             ?.length
     }
-    // 构造进入 chat 的上下文；autoDetailSummary=true 时进 chat 自动触发「一键详细解读」
-    fun buildChatContext(autoDetailSummary: Boolean) = ChatContext(
+    // 构造进入 chat 的上下文；autoDetailSummary=true 时进 chat 自动触发「一键详细解读」，
+    // autoDeepResearch=true 时预选 Deep Research 模式 + 预填主题（发送由用户确认）
+    fun buildChatContext(autoDetailSummary: Boolean = false, autoDeepResearch: Boolean = false) = ChatContext(
         title = "$owner/$repo",
         // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；未加载完为 null，退化为仅 title + url
         summary = summary,
@@ -120,6 +123,7 @@ fun ReadmeScreen(
         externalId = "$owner/$repo",
         readmeLength = readmeLength,
         autoDetailSummary = autoDetailSummary,
+        autoDeepResearch = autoDeepResearch,
     )
     // 与 chat 模块 DetailSummaryPolicy.MIN_README_CHARS 保持一致（shared 无法跨模块引用该常量）
     val detailSummaryAvailable = (readmeLength ?: 0) >= 1500
@@ -251,7 +255,7 @@ fun ReadmeScreen(
                     FloatingActionButtonMenuItem(
                         onClick = {
                             menuExpanded = false
-                            onNavigateToChat(buildChatContext(autoDetailSummary = false))
+                            onNavigateToChat(buildChatContext())
                         },
                         icon = {
                             Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
@@ -271,6 +275,17 @@ fun ReadmeScreen(
                             text = { Text(stringResource(Res.string.readme_fab_detail_summary)) },
                         )
                     }
+                    // 「深度调研」不受 README 长度限制：research 联网检索，不依赖 README 正文
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            menuExpanded = false
+                            onNavigateToChat(buildChatContext(autoDeepResearch = true))
+                        },
+                        icon = {
+                            Icon(Icons.Outlined.TravelExplore, contentDescription = null)
+                        },
+                        text = { Text(stringResource(Res.string.readme_fab_deep_research)) },
+                    )
                 }
             }
         }

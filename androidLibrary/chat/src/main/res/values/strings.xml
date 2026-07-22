@@ -74,4 +74,6 @@
     <string name="chat_searching">Searching the web…</string>
     <string name="chat_deep_research">Deep research</string>
     <string name="chat_researching">Deep research in progress… this may take a few minutes</string>
+    <string name="chat_action_research_upsell">Deep research this project</string>
+    <string name="chat_research_repo_prefill">Research this project in depth: positioning and highlights, comparable alternatives, community feedback and adoption.</string>
 </resources>
