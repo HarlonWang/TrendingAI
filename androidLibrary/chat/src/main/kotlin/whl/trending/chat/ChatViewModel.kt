@@ -81,6 +81,11 @@ class ChatViewModel(
     fun toggleWebSearch() = toggleMode(ChatMode.WebSearch)
     fun toggleDeepResearch() = toggleMode(ChatMode.DeepResearch)
 
+    /** README 详情页「深度调研」入口：定向开启（非 toggle——重进已开启的会话不能反把模式关掉） */
+    fun enableDeepResearch() {
+        _chatMode.value = ChatMode.DeepResearch
+    }
+
     private fun toggleMode(mode: ChatMode) {
         _chatMode.value = if (_chatMode.value == mode) ChatMode.Normal else mode
     }
@@ -367,8 +372,14 @@ class ChatViewModel(
 
     // ---- Deep Research（P3）----
 
-    private fun sendResearch(topic: String) {
-        track("research_start", mapOf("from" to "chat"))
+    /** 解读卡尾部「深度调研此项目」升级入口：按 research 管线直发，不依赖模式开关 */
+    fun sendRepoResearch(promptText: String) {
+        if (_uiState.value.isSending || activeContext == null) return
+        sendResearch(promptText, from = "detail_summary_upsell")
+    }
+
+    private fun sendResearch(topic: String, from: String = "chat") {
+        track("research_start", mapOf("from" to from))
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             val threadId = ensureThreadForSend(topic)
@@ -380,7 +391,8 @@ class ChatViewModel(
     /** 提交 research 任务并启动轮询；提交失败挂错误条（重试经 [retryResearch] 重新提交） */
     private suspend fun startResearch(threadId: Long?, topic: String) {
         val runId = try {
-            engine.createResearch(topic)
+            // 条目会话附上标题/链接锚点（拼装收口在此：发送与重试都传原文，各自重拼保证同构）
+            engine.createResearch(ResearchTopics.compose(topic, activeContext))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
