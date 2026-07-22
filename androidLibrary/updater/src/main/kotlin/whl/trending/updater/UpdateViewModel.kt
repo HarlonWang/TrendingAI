@@ -63,7 +63,7 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
         if (latest != null) {
             globalSettingsManager.setLastUpdateCheckTime(System.currentTimeMillis())
             val current = getAppVersion()
-            if (isNewer(latest.tagName, current)) {
+            if (isNewerVersion(latest.tagName, current)) {
                 // 更新内容取自 release asset，任一环节失败仅回退为不带内容的弹窗，不影响更新提示本身
                 val whatsNew = withContext(Dispatchers.IO) {
                     latest.whatsNewAssetUrl?.let { api.fetchWhatsNew(it) }
@@ -89,16 +89,19 @@ class UpdateViewModel : ViewModel(), UpdateChecker {
     fun dismissUpdate() {
         _updateInfo.value = null
     }
+}
 
-    private fun isNewer(latest: String, current: String): Boolean {
-        fun parse(v: String) = v.substringBefore("-")
-            .split(".").mapNotNull { it.toIntOrNull() }
-        val l = parse(latest)
-        val c = parse(current)
-        for (i in 0 until maxOf(l.size, c.size)) {
-            val diff = l.getOrElse(i) { 0 } - c.getOrElse(i) { 0 }
-            if (diff != 0) return diff > 0
-        }
-        return false
+internal fun isNewerVersion(latest: String, current: String): Boolean {
+    fun parse(v: String) = v.substringBefore("-")
+        .split(".").mapNotNull { it.toIntOrNull() }
+    val l = parse(latest)
+    val c = parse(current)
+    for (i in 0 until maxOf(l.size, c.size)) {
+        val diff = l.getOrElse(i) { 0 } - c.getOrElse(i) { 0 }
+        if (diff != 0) return diff > 0
     }
+    // 数字部分相等时按 semver 处理预发布后缀：正式版 > 同号预发布版（0.22.0 > 0.22.0-beta.1），
+    // 保证灰度用户在转正后能收到更新提示；latest 来自 releases/latest、不会是预发布版，
+    // 预发布之间的先后无需比较
+    return "-" in current && "-" !in latest
 }
