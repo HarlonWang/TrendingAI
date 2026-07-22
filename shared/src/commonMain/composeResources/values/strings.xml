@@ -161,7 +161,12 @@
     <string name="sign_in_value_star">Star repos you like with one tap</string>
     <string name="sign_in_value_chat">More AI chats a day, plus in-depth overviews</string>
     <string name="sign_in_value_profile">Your GitHub profile and network activity</string>
-    <string name="sign_in_value_footer">You&apos;ll be taken to your browser to sign in with GitHub — it only takes a moment.</string>
+    <string name="sign_in_value_footer">You&apos;ll be taken to your browser to sign in — it only takes a moment.</string>
+    <string name="sign_in_method_title">Sign in to TrendingAI</string>
+    <string name="sign_in_method_github">Continue with GitHub</string>
+    <string name="sign_in_method_github_desc">Authorize in your browser</string>
+    <string name="sign_in_method_email">Continue with email</string>
+    <string name="sign_in_method_email_desc">We&apos;ll send a verification code — no password needed</string>
     <string name="sign_in_value_dismiss">Not now</string>
     <string name="sign_in_hint_title">Sign-in not completed</string>
     <string name="sign_in_hint_connectivity">GitHub sign-in needs to reach github.com. Please check your connection and try again.</string>
@@ -173,6 +178,12 @@
     <string name="profile_following">Following</string>
     <string name="profile_repos">Repos</string>
     <string name="profile_pro_badge">PRO</string>
+    <string name="profile_quota_title">AI credits</string>
+    <string name="profile_quota_remaining">%1$d of %2$d credits left today</string>
+    <string name="profile_quota_reset_hours">Resets in ~%1$d h</string>
+    <string name="profile_quota_reset_soon">Resets within an hour</string>
+    <string name="profile_quota_rates">Chat 1 · Search 3 · Research 10</string>
+    <string name="profile_quota_error">Couldn&apos;t load credits right now</string>
     <string name="profile_pro_badge_desc">Pro member</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>

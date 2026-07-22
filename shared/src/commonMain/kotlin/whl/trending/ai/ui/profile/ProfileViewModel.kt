@@ -21,6 +21,7 @@ import whl.trending.ai.data.local.globalLastDataCache
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
+import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.remote.GithubApi
 import whl.trending.ai.data.remote.GithubUser
 import whl.trending.ai.data.repository.UserRepository
@@ -36,6 +37,10 @@ data class ProfileUiState(
     val isRefreshing: Boolean = false,
     val user: MeUser? = null,
     val isError: Boolean = false,
+    /** credits 余额（账户页配额卡）；加载中/失败为 null，失败态由 [quotaError] 区分 */
+    val quota: QuotaResponse? = null,
+    /** quota 拉取失败且无旧值可展示：配额卡显示错误占位，不影响页面其余部分 */
+    val quotaError: Boolean = false,
     /** GitHub 实时计数；token 不可用或请求失败时为 null（UI 隐藏计数行） */
     val githubUser: GithubUser? = null,
     /** 最近一年贡献日历；加载中或不可用时为 null（UI 隐藏热力图） */
@@ -116,6 +121,9 @@ class ProfileViewModel(
     }
 
     fun load() {
+        // 余额每次进页都拉实时值（独立协程，不受下方跳过逻辑影响）：
+        // 聊天消耗发生在页面之外，跳过整页重载时余额仍需刷新
+        viewModelScope.launch { loadQuota() }
         // 已加载过且数据健在（非错误态）则跳过：用于从子页返回时不重拉
         val current = _uiState.value
         if (hasLoaded && current.user != null && !current.isError) return
@@ -291,8 +299,24 @@ class ProfileViewModel(
     fun refresh() {
         loadJob?.cancel()
         feedLoadJob?.cancel()
+        viewModelScope.launch { loadQuota() }
         loadJob = viewModelScope.launch {
             refreshInternal()
+        }
+    }
+
+    /**
+     * 拉取 credits 余额：与整页加载解耦，失败只降级配额卡（保留旧值时不置错误态），
+     * 不影响档案与 feed。quota 不进 ProfileCache——余额要新鲜，SWR 快照对它是误导。
+     */
+    private suspend fun loadQuota() {
+        val token = authManager().getAccessToken()
+        try {
+            val quota = repository.fetchQuota(token)
+            _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            _uiState.value = _uiState.value.copy(quotaError = _uiState.value.quota == null)
         }
     }
 

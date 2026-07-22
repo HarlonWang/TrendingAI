@@ -49,7 +49,8 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         LogtoConfig(
             endpoint = LOGTO_ENDPOINT,
             appId = LOGTO_APP_ID,
-            scopes = listOf("identities"),
+            // email：邮箱验证码登录的 email claim；对存量会话不追溯（老 token 无此授权，重登后才有）
+            scopes = listOf("identities", "email"),
             resources = null,
             usingPersistStorage = true,
         ),
@@ -63,30 +64,55 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override val isSupported: Boolean = true
 
     override fun signIn(source: String) {
+        // 不直接拉起授权：发布待选请求，App 根部 SignInMethodChooserHost 弹选择器后回调双参重载。
+        // 不在此置 LoggingIn / 上报 start——选择器被划掉不产生任何漏斗事件，start 仍指「浏览器流程已拉起」。
+        SignInChooserBus.request(source)
+    }
+
+    override fun signIn(source: String, method: SignInMethod) {
         val activity = activityRef.get() ?: return
         _authState.value = AuthState.LoggingIn
         // 漏斗起点事件：start 数减去 success/canceled/error 终态数 = 无终态的静默流失
         // （典型如用户停在授权页直接杀进程，SDK 回调永远不会到达）。
-        trackEvent("sign_in_start", mapOf("source" to source))
+        val methodProp = method.name.lowercase()
+        trackEvent("sign_in_start", mapOf("source" to source, "method" to methodProp))
+        // 可达性探测（异步、不阻塞）：托管页在 Custom Tab 里加载失败时 SDK 收不到回调、只会表现为
+        // 用户取消——auth_probe 把这个观测盲区显性化，是「继续 Logto vs 自研」决策的直接判据。
+        trackAuthProbe(methodProp)
         // 登录耗时起点：单调时钟，不受系统时间/时区调整影响；source 同理用局部变量随闭包捕获，
         // 配置变更重建 Activity 后回调即便落在旧实例也仍读到本次登录的起点（见 SignInFailureBus）。
         val signInStartedAt = SystemClock.elapsedRealtime()
-        // directSignIn：授权端点直接 302 到 GitHub，跳过 Logto 托管登录页（海外 Cloudflare 边缘
-        // 无境内节点，SPA ~490KB、大陆单请求 ~1s，是登录取消漏斗的主要嫌疑）。target 需与
-        // Logto 控制台 GitHub connector 的 target 一致；不匹配时 Logto 回落到普通登录页，不会报错。
-        val signInOptions = SignInOptions(
-            redirectUri = REDIRECT_URI,
-            directSignIn = DirectSignInOptions(method = DirectSignInMethod.SOCIAL, target = "github"),
-        )
+        val signInOptions = when (method) {
+            // directSignIn：授权端点直接 302 到 GitHub，跳过 Logto 托管登录页（海外 Cloudflare 边缘
+            // 无境内节点，SPA ~490KB、大陆单请求 ~1s，是登录取消漏斗的主要嫌疑）。target 需与
+            // Logto 控制台 GitHub connector 的 target 一致；不匹配时 Logto 回落到普通登录页，不会报错。
+            SignInMethod.GITHUB -> SignInOptions(
+                redirectUri = REDIRECT_URI,
+                directSignIn = DirectSignInOptions(method = DirectSignInMethod.SOCIAL, target = "github"),
+            )
+            // 邮箱验证码：无 directSignIn 等价物，必须经托管页；first_screen + identifier 让托管页
+            // 直接落在邮箱输入屏，跳过页内的方式选择步骤。
+            SignInMethod.EMAIL -> SignInOptions(
+                redirectUri = REDIRECT_URI,
+                firstScreen = FIRST_SCREEN_IDENTIFIER_SIGN_IN,
+                identifiers = listOf(IDENTIFIER_EMAIL),
+            )
+        }
         logtoClient.signIn(activity, signInOptions) { logtoException ->
             // 从登录进入到本次回调的耗时：成功=登录总时长，失败=到失败的时长（取消即用户在授权页停留时长）。
             // 需结合事件/reason 解读：config/no_browser 等快失败耗时接近 0 属正常。
             val durationMs = SystemClock.elapsedRealtime() - signInStartedAt
             if (logtoException == null && logtoClient.isAuthenticated) {
                 _authState.value = AuthState.LoggedIn
+                // method 为选择器意图；托管页内切换方式的边角（邮箱屏仍可能展示社交按钮）不在客户端识别
                 trackEvent(
                     "sign_in_success",
-                    mapOf("source" to source, "duration_ms" to durationMs, "duration_bucket" to durationBucket(durationMs)),
+                    mapOf(
+                        "source" to source,
+                        "method" to methodProp,
+                        "duration_ms" to durationMs,
+                        "duration_bucket" to durationBucket(durationMs),
+                    ),
                 )
             } else {
                 _authState.value = AuthState.LoggedOut
@@ -99,13 +125,14 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
                             "sign_in_canceled",
                             mapOf(
                                 "source" to source,
+                                "method" to methodProp,
                                 "duration_ms" to durationMs,
                                 "duration_bucket" to durationBucket(durationMs),
                                 "cancel_kind" to if (durationMs < CANCEL_KIND_QUICK_THRESHOLD_MS) "quick" else "wait",
                             ),
                         )
                     } else {
-                        trackSignInError(props + ("source" to source) + ("duration_ms" to durationMs))
+                        trackSignInError(props + ("source" to source) + ("method" to methodProp) + ("duration_ms" to durationMs))
                     }
                     if (BuildConfig.DEBUG) {
                         Log.w(TAG, "sign_in failed: reason=$reason props=$props", logtoException)
@@ -163,6 +190,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         }
         globalSettingsManager.setUserAvatarUrl(null)
         globalSettingsManager.setGithubIdentity(null, null)
+        globalSettingsManager.setUserEmail(null)
         globalSettingsManager.setIsPro(false)
         globalSettingsManager.clearSelectedChatModel()
         GithubTokenProvider.shared.clear()
@@ -232,10 +260,63 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         }
     }.getOrNull()
 
+    /**
+     * 登录发起时的 Logto 端点可达性探测（异步 fire-and-forget）：托管页/授权端点在 Custom Tab 里
+     * 加载失败时 SDK 收不到任何回调，只会表现为「用户取消」——可达性失败被系统性伪装成取消，
+     * 76% 取消率只能靠推测归因大陆可达性就是这个盲区造成的。
+     * 分析口径：可达性失败占比 ≈ auth_probe 失败率，用「probe 失败 × cancel_kind=wait」交叉验证。
+     *
+     * 任何 HTTP 状态码（含 4xx/5xx）都算 ok——只测「链路能不能通」，不测服务对错。
+     */
+    private fun trackAuthProbe(method: String) {
+        thread(isDaemon = true, name = "auth-probe") {
+            val startedAt = SystemClock.elapsedRealtime()
+            val result = try {
+                val connection = URL(LOGTO_ENDPOINT).openConnection() as HttpURLConnection
+                try {
+                    connection.requestMethod = "HEAD"
+                    connection.connectTimeout = AUTH_PROBE_TIMEOUT_MS
+                    connection.readTimeout = AUTH_PROBE_TIMEOUT_MS
+                    connection.responseCode
+                    "ok"
+                } finally {
+                    connection.disconnect()
+                }
+            } catch (_: SocketTimeoutException) {
+                "timeout"
+            } catch (_: Exception) {
+                "fail"
+            }
+            val latencyMs = SystemClock.elapsedRealtime() - startedAt
+            trackEvent(
+                "auth_probe",
+                mapOf(
+                    "result" to result,
+                    "method" to method,
+                    "latency_bucket" to probeLatencyBucket(latencyMs),
+                ),
+            )
+        }
+    }
+
     companion object {
         private const val TAG = "LogtoAuth"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
         private const val CLOCK_PROBE_TIMEOUT_MS = 3_000
+        private const val AUTH_PROBE_TIMEOUT_MS = 5_000
+
+        /** 托管页 first_screen / identifier 参数值（Logto OIDC 授权端点约定） */
+        private const val FIRST_SCREEN_IDENTIFIER_SIGN_IN = "identifier:sign_in"
+        private const val IDENTIFIER_EMAIL = "email"
+
+        /** auth_probe 延迟分桶：粒度比登录耗时桶细——探测本身 5s 超时，关注的是「页面级资源会不会太慢」 */
+        private fun probeLatencyBucket(latencyMs: Long): String = when {
+            latencyMs < 300 -> "lt_300ms"
+            latencyMs < 1_000 -> "300_1000ms"
+            latencyMs < 2_500 -> "1000_2500ms"
+            latencyMs < 5_000 -> "2500_5000ms"
+            else -> "gte_5s"
+        }
 
         /**
          * 长短取消的分界：短于此为 `quick`（授权页正常加载后主动拒绝），长于此为 `wait`

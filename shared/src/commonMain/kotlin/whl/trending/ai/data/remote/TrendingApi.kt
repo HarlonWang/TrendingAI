@@ -8,6 +8,7 @@ import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.PicksResponse
+import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.SubscribeResponse
 import whl.trending.ai.data.model.TrendingResponse
@@ -154,6 +155,21 @@ open class TrendingApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<MeResponse>()
+    }
+
+    /**
+     * credits 余额查询（账户页配额卡）。X-Install-Id 必传（匿名记账主体）；
+     * 已登录再带 Bearer——服务端按 user 主体与档位返回。响应服务端禁缓存，每次都是实时余额。
+     */
+    open suspend fun fetchQuota(installId: String, accessToken: String?): QuotaResponse {
+        val response = client.get("$baseHost/api/quota") {
+            header("X-Install-Id", installId)
+            accessToken?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<QuotaResponse>()
     }
 
     /** 即时激活/对账：后端权威核对赞助并 upsert，返回最新 Pro 态。用户从 Sponsors 返回时调用。 */

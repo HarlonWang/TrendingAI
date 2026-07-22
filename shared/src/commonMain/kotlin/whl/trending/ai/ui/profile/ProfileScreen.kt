@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +26,9 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -96,6 +99,12 @@ import trendingai.shared.generated.resources.feed_unavailable
 import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_following
 import trendingai.shared.generated.resources.profile_load_failed
+import trendingai.shared.generated.resources.profile_quota_error
+import trendingai.shared.generated.resources.profile_quota_rates
+import trendingai.shared.generated.resources.profile_quota_remaining
+import trendingai.shared.generated.resources.profile_quota_reset_hours
+import trendingai.shared.generated.resources.profile_quota_reset_soon
+import trendingai.shared.generated.resources.profile_quota_title
 import trendingai.shared.generated.resources.profile_repos
 import trendingai.shared.generated.resources.profile_retry
 import trendingai.shared.generated.resources.profile_title
@@ -107,6 +116,7 @@ import trendingai.shared.generated.resources.time_just_now
 import trendingai.shared.generated.resources.time_minutes_ago
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.QuotaResponse
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -208,60 +218,70 @@ fun ProfileScreen(
                         onOpenRepos = onOpenRepos,
                     )
                 }
+                if (uiState.quota != null || uiState.quotaError) {
+                    item(key = "quota") {
+                        QuotaCard(quota = uiState.quota, quotaError = uiState.quotaError)
+                    }
+                }
+                // GitHub 档案模块（计数行在 header 内、热力图、动态流）整体只对有 GitHub 身份的
+                // 用户呈现；邮箱登录用户无 GitHub 身份，整块隐藏而非展示「动态不可用」占位
+                val hasGithub = uiState.user?.githubLogin != null
                 uiState.contributions?.let { calendar ->
                     item(key = "contributions") {
                         ContributionGraph(calendar, scrollState = contributionScrollState)
                         HorizontalDivider(thickness = 0.5.dp)
                     }
                 }
-                item(key = "feed_filter") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FilterChip(
-                            selected = uiState.highlightsOnly,
-                            onClick = { if (!uiState.highlightsOnly) viewModel.setFeedFilter(true) },
-                            label = { Text(stringResource(Res.string.feed_filter_highlights)) }
-                        )
-                        FilterChip(
-                            selected = !uiState.highlightsOnly,
-                            onClick = { if (uiState.highlightsOnly) viewModel.setFeedFilter(false) },
-                            label = { Text(stringResource(Res.string.feed_filter_all)) }
-                        )
-                        Spacer(Modifier.weight(1f))
-                        IconButton(onClick = { showRulesSheet = true }) {
-                            Icon(
-                                Icons.Outlined.Info,
-                                contentDescription = stringResource(Res.string.feed_rules_title),
+                if (hasGithub) {
+                    item(key = "feed_filter") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            FilterChip(
+                                selected = uiState.highlightsOnly,
+                                onClick = { if (!uiState.highlightsOnly) viewModel.setFeedFilter(true) },
+                                label = { Text(stringResource(Res.string.feed_filter_highlights)) }
                             )
+                            FilterChip(
+                                selected = !uiState.highlightsOnly,
+                                onClick = { if (uiState.highlightsOnly) viewModel.setFeedFilter(false) },
+                                label = { Text(stringResource(Res.string.feed_filter_all)) }
+                            )
+                            Spacer(Modifier.weight(1f))
+                            IconButton(onClick = { showRulesSheet = true }) {
+                                Icon(
+                                    Icons.Outlined.Info,
+                                    contentDescription = stringResource(Res.string.feed_rules_title),
+                                )
+                            }
                         }
                     }
-                }
-                if (uiState.feedUnavailable && uiState.feedItems.isEmpty()) {
-                    item(key = "feed_unavailable") {
-                        FeedNotice(stringResource(Res.string.feed_unavailable))
-                    }
-                } else if (uiState.feedItems.isEmpty() && uiState.feedEndReached) {
-                    item(key = "feed_empty") {
-                        FeedNotice(stringResource(Res.string.feed_empty))
-                    }
-                }
-                items(uiState.feedItems, key = { it.id }) { item ->
-                    GithubFeedRow(item = item, onClick = { uriHandler.openUri(item.targetUrl) })
-                    HorizontalDivider(thickness = 0.5.dp)
-                }
-                if (uiState.isFeedLoadingVisible) {
-                    item(key = "feed_loading") {
-                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            LoadingIndicator(modifier = Modifier.size(32.dp))
+                    if (uiState.feedUnavailable && uiState.feedItems.isEmpty()) {
+                        item(key = "feed_unavailable") {
+                            FeedNotice(stringResource(Res.string.feed_unavailable))
+                        }
+                    } else if (uiState.feedItems.isEmpty() && uiState.feedEndReached) {
+                        item(key = "feed_empty") {
+                            FeedNotice(stringResource(Res.string.feed_empty))
                         }
                     }
-                }
-                if (uiState.feedEndReached && uiState.feedItems.isNotEmpty()) {
-                    item(key = "feed_end") {
-                        FeedNotice(stringResource(Res.string.feed_end_notice))
+                    items(uiState.feedItems, key = { it.id }) { item ->
+                        GithubFeedRow(item = item, onClick = { uriHandler.openUri(item.targetUrl) })
+                        HorizontalDivider(thickness = 0.5.dp)
+                    }
+                    if (uiState.isFeedLoadingVisible) {
+                        item(key = "feed_loading") {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                LoadingIndicator(modifier = Modifier.size(32.dp))
+                            }
+                        }
+                    }
+                    if (uiState.feedEndReached && uiState.feedItems.isNotEmpty()) {
+                        item(key = "feed_end") {
+                            FeedNotice(stringResource(Res.string.feed_end_notice))
+                        }
                     }
                 }
             }
@@ -356,11 +376,30 @@ private fun ProfileHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        AsyncImage(
-            model = user.avatarUrl,
-            contentDescription = null,
-            modifier = Modifier.size(96.dp).clip(CircleShape)
-        )
+        if (user.avatarUrl != null) {
+            AsyncImage(
+                model = user.avatarUrl,
+                contentDescription = null,
+                modifier = Modifier.size(96.dp).clip(CircleShape)
+            )
+        } else {
+            // 邮箱登录用户无头像：显示名/邮箱首字母的圆形占位
+            val initial = (user.displayName ?: user.email ?: "?")
+                .firstOrNull()?.uppercase() ?: "?"
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    initial,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
         val isPro by globalSettingsManager.isPro.collectAsState(
             initial = globalSettingsManager.currentIsPro()
         )
@@ -370,7 +409,7 @@ private fun ProfileHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         ) {
             Text(
-                user.displayName ?: user.githubLogin.orEmpty(),
+                user.displayName ?: user.githubLogin ?: user.email.orEmpty(),
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -385,6 +424,14 @@ private fun ProfileHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        // 登录邮箱：与显示名不同时才展示（displayName 兜底到邮箱时避免同串重复）
+        user.email?.takeIf { it.isNotBlank() && it != user.displayName }?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         user.bio?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
         }
@@ -394,6 +441,62 @@ private fun ProfileHeader(
                 CountCell(gh.following, stringResource(Res.string.profile_following), onClick = onOpenFollowing)
                 CountCell(gh.publicRepos, stringResource(Res.string.profile_repos), onClick = onOpenRepos)
             }
+        }
+    }
+}
+
+/**
+ * 配额卡：credits 余额可见性（余额/每日额度/重置时间/费率说明）。
+ * quota 为 null 且 quotaError 时展示错误占位；数据加载由 ViewModel 与整页解耦，失败不影响其余部分。
+ */
+@Composable
+private fun QuotaCard(quota: QuotaResponse?, quotaError: Boolean) {
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(Res.string.profile_quota_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            if (quota == null) {
+                if (quotaError) {
+                    Text(
+                        stringResource(Res.string.profile_quota_error),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                return@Column
+            }
+            Text(
+                stringResource(Res.string.profile_quota_remaining, quota.balance, quota.dailyGrant),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            LinearProgressIndicator(
+                progress = {
+                    if (quota.dailyGrant <= 0) 0f
+                    else (quota.balance.toFloat() / quota.dailyGrant).coerceIn(0f, 1f)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            val resetHours = remember(quota.resetAt) { DateTimeUtils.hoursUntil(quota.resetAt) }
+            val resetText = when {
+                resetHours == null -> null
+                resetHours <= 1 -> stringResource(Res.string.profile_quota_reset_soon)
+                else -> stringResource(Res.string.profile_quota_reset_hours, resetHours)
+            }
+            Text(
+                listOfNotNull(resetText, stringResource(Res.string.profile_quota_rates))
+                    .joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
