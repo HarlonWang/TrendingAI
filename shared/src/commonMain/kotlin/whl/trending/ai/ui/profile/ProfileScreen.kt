@@ -403,13 +403,15 @@ private fun ProfileHeader(
         val isPro by globalSettingsManager.isPro.collectAsState(
             initial = globalSettingsManager.currentIsPro()
         )
+        // 标题回落链：显示名 → GitHub 用户名 → 邮箱。抽成变量供下方邮箱行去重复用。
+        val titleText = user.displayName ?: user.githubLogin ?: user.email.orEmpty()
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         ) {
             Text(
-                user.displayName ?: user.githubLogin ?: user.email.orEmpty(),
+                titleText,
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -424,8 +426,9 @@ private fun ProfileHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        // 登录邮箱：与显示名不同时才展示（displayName 兜底到邮箱时避免同串重复）
-        user.email?.takeIf { it.isNotBlank() && it != user.displayName }?.let {
+        // 登录邮箱：仅当标题没有回落到邮箱时才单独展示——displayName 与 githubLogin 均缺失
+        // （如后端 displayName 回填部署前建的老会话）时标题已是邮箱，避免头部重复两遍
+        user.email?.takeIf { it.isNotBlank() && it != titleText }?.let {
             Text(
                 it,
                 style = MaterialTheme.typography.bodyMedium,

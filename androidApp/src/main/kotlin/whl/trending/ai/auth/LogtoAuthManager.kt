@@ -13,6 +13,7 @@ import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.ProtocolException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
@@ -247,46 +248,51 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         }
     }
 
-    private fun measureClockOffsetMs(): Long? = runCatching {
+    /**
+     * HEAD 探测 Logto 端点：一次请求同时产出可达性分类与服务器时间，供 auth_probe（可达性）与
+     * 时钟偏移探测（Date 头）复用，避免两处几乎相同的样板各自漂移。
+     *
+     * 可达性分类刻意区分「链路可达」与「真不可达」：任意 HTTP 状态码（含 4xx/5xx）说明服务器
+     * 响应了 → ok；服务器/代理拒绝 HEAD 方法本身（ProtocolException）也说明链路是通的 → ok，
+     * 不算可达性失败（否则 auth_probe 失败率虚高，误导 Logto vs 自研的决策）；仅连接层失败
+     * （超时 / DNS / 连接重置等 IOException）才是真正不可达。
+     */
+    private fun probeEndpoint(timeoutMs: Int): EndpointProbe {
         val connection = URL(LOGTO_ENDPOINT).openConnection() as HttpURLConnection
-        try {
+        return try {
             connection.requestMethod = "HEAD"
-            connection.connectTimeout = CLOCK_PROBE_TIMEOUT_MS
-            connection.readTimeout = CLOCK_PROBE_TIMEOUT_MS
-            val serverDate = connection.getHeaderFieldDate("Date", 0L)
-            if (serverDate == 0L) null else serverDate - System.currentTimeMillis()
+            connection.connectTimeout = timeoutMs
+            connection.readTimeout = timeoutMs
+            connection.responseCode // 任意 HTTP 状态码都代表链路可达
+            EndpointProbe("ok", connection.getHeaderFieldDate("Date", 0L).takeIf { it != 0L })
+        } catch (_: SocketTimeoutException) {
+            EndpointProbe("timeout", null)
+        } catch (_: ProtocolException) {
+            EndpointProbe("ok", null) // HEAD 方法被拒 = 可达但方法不受支持，非可达性失败
+        } catch (_: Exception) {
+            EndpointProbe("fail", null) // 连接层失败：真正不可达
         } finally {
             connection.disconnect()
         }
-    }.getOrNull()
+    }
+
+    private class EndpointProbe(val result: String, val serverDate: Long?)
+
+    private fun measureClockOffsetMs(): Long? {
+        val serverDate = probeEndpoint(CLOCK_PROBE_TIMEOUT_MS).serverDate ?: return null
+        return serverDate - System.currentTimeMillis()
+    }
 
     /**
      * 登录发起时的 Logto 端点可达性探测（异步 fire-and-forget）：托管页/授权端点在 Custom Tab 里
      * 加载失败时 SDK 收不到任何回调，只会表现为「用户取消」——可达性失败被系统性伪装成取消，
      * 76% 取消率只能靠推测归因大陆可达性就是这个盲区造成的。
      * 分析口径：可达性失败占比 ≈ auth_probe 失败率，用「probe 失败 × cancel_kind=wait」交叉验证。
-     *
-     * 任何 HTTP 状态码（含 4xx/5xx）都算 ok——只测「链路能不能通」，不测服务对错。
      */
     private fun trackAuthProbe(method: String) {
         thread(isDaemon = true, name = "auth-probe") {
             val startedAt = SystemClock.elapsedRealtime()
-            val result = try {
-                val connection = URL(LOGTO_ENDPOINT).openConnection() as HttpURLConnection
-                try {
-                    connection.requestMethod = "HEAD"
-                    connection.connectTimeout = AUTH_PROBE_TIMEOUT_MS
-                    connection.readTimeout = AUTH_PROBE_TIMEOUT_MS
-                    connection.responseCode
-                    "ok"
-                } finally {
-                    connection.disconnect()
-                }
-            } catch (_: SocketTimeoutException) {
-                "timeout"
-            } catch (_: Exception) {
-                "fail"
-            }
+            val result = probeEndpoint(AUTH_PROBE_TIMEOUT_MS).result
             val latencyMs = SystemClock.elapsedRealtime() - startedAt
             trackEvent(
                 "auth_probe",

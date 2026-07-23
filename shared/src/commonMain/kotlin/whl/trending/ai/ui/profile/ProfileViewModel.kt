@@ -83,6 +83,8 @@ class ProfileViewModel(
     private var feedLoadJob: Job? = null
     /** 进行中的整页加载协程；重复进入页面时先取消，避免两个 load 并发交叉写 state 与分页游标 */
     private var loadJob: Job? = null
+    /** 进行中的余额拉取协程；每次重拉先取消在途请求，避免两次调用乱序返回时旧值覆盖新值 */
+    private var quotaJob: Job? = null
 
     /** 缓存当次会话的关注列表（load() 时重置） */
     private var followingInfo: FollowingInfo? = null
@@ -123,7 +125,7 @@ class ProfileViewModel(
     fun load() {
         // 余额每次进页都拉实时值（独立协程，不受下方跳过逻辑影响）：
         // 聊天消耗发生在页面之外，跳过整页重载时余额仍需刷新
-        viewModelScope.launch { loadQuota() }
+        reloadQuota()
         // 已加载过且数据健在（非错误态）则跳过：用于从子页返回时不重拉
         val current = _uiState.value
         if (hasLoaded && current.user != null && !current.isError) return
@@ -319,7 +321,7 @@ class ProfileViewModel(
     fun refresh() {
         loadJob?.cancel()
         feedLoadJob?.cancel()
-        viewModelScope.launch { loadQuota() }
+        reloadQuota()
         loadJob = viewModelScope.launch {
             refreshInternal()
         }
@@ -328,14 +330,23 @@ class ProfileViewModel(
     /**
      * 拉取 credits 余额：与整页加载解耦，失败只降级配额卡（保留旧值时不置错误态），
      * 不影响档案与 feed。quota 不进 ProfileCache——余额要新鲜，SWR 快照对它是误导。
+     * 自身串行：新请求先取消在途旧请求，避免两次调用乱序返回时旧值覆盖新值。
      */
+    private fun reloadQuota() {
+        quotaJob?.cancel()
+        quotaJob = viewModelScope.launch { loadQuota() }
+    }
+
     private suspend fun loadQuota() {
-        val token = authManager().getAccessToken()
+        // 账户页只在登录态可达；token 在刷新瞬态可能为 null，此时不请求——不带 Bearer 的
+        // /api/quota 会回落匿名档，用 5/5 覆盖登录/Pro 用户真实的 10/100。保留旧值等下次刷新。
+        val token = authManager().getAccessToken() ?: return
         try {
             val quota = repository.fetchQuota(token)
             _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
+            // 已有旧值时保留（stale-while-error），仅首次加载失败才显示错误占位
             _uiState.value = _uiState.value.copy(quotaError = _uiState.value.quota == null)
         }
     }

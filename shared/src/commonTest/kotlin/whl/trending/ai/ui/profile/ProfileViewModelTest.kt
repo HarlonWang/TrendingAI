@@ -41,12 +41,13 @@ class ProfileViewModelTest {
 
     private class FakeAuthManager : AuthManager {
         val state = MutableStateFlow<AuthState>(AuthState.LoggedIn)
+        @Volatile var token: String? = "token"
         override val isSupported: Boolean = true
         override val authState: StateFlow<AuthState> = state
         override fun signIn(source: String) {}
         override fun signIn(source: String, method: whl.trending.ai.auth.SignInMethod) {}
         override fun signOut() {}
-        override suspend fun getAccessToken(): String? = "token"
+        override suspend fun getAccessToken(): String? = token
     }
 
     private class FakeUserRepository(
@@ -212,6 +213,26 @@ class ProfileViewModelTest {
         assertEquals("octo", end.user?.githubLogin)
         assertEquals(8, end.quota?.balance)
         assertFalse(end.quotaError)
+    }
+
+    // 回归：token 刷新瞬态为 null 时，loadQuota 不得请求匿名档覆盖登录/Pro 用户已有的真实余额
+    @Test
+    fun quotaNotOverwrittenWhenTokenNull() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val cache = cache()
+        val auth = FakeAuthManager()
+
+        val vm = viewModel(cache, auth = auth)
+        vm.load()
+        advanceUntilIdle()
+        assertEquals(8, vm.uiState.value.quota?.balance) // 登录档余额
+
+        // 模拟刷新瞬态：token 变 null。此时重拉余额不应退到匿名档（5/5）覆盖登录档
+        auth.token = null
+        vm.refresh()
+        advanceUntilIdle()
+
+        assertEquals(8, vm.uiState.value.quota?.balance) // 旧登录档保留，未被匿名覆盖
     }
 
     @Test
