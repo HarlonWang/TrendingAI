@@ -35,6 +35,18 @@ object DateTimeUtils {
         }
     }
 
+    /**
+     * 距未来时刻的剩余整小时数（向上取整；已过期返回 0）。解析失败返回 null。
+     * 用于配额卡「约 N 小时后重置」——分钟级精度对每日重置没有意义，不做倒计时刷新。
+     */
+    fun hoursUntil(utcString: String, now: Instant = Clock.System.now()): Int? {
+        val instant = parseInstantOrNull(utcString) ?: return null
+        val diff = instant - now
+        if (diff.isNegative()) return 0
+        val whole = diff.inWholeHours
+        return if (diff - whole.hours > kotlin.time.Duration.ZERO) (whole + 1).toInt() else whole.toInt()
+    }
+
     private fun parseInstantOrNull(utcString: String): Instant? {
         if (utcString.isEmpty()) return null
         return try {

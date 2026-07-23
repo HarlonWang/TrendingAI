@@ -21,6 +21,7 @@ import whl.trending.ai.data.local.globalLastDataCache
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
+import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.remote.GithubApi
 import whl.trending.ai.data.remote.GithubUser
 import whl.trending.ai.data.repository.UserRepository
@@ -36,6 +37,10 @@ data class ProfileUiState(
     val isRefreshing: Boolean = false,
     val user: MeUser? = null,
     val isError: Boolean = false,
+    /** credits 余额（账户页配额卡）；加载中/失败为 null，失败态由 [quotaError] 区分 */
+    val quota: QuotaResponse? = null,
+    /** quota 拉取失败且无旧值可展示：配额卡显示错误占位，不影响页面其余部分 */
+    val quotaError: Boolean = false,
     /** GitHub 实时计数；token 不可用或请求失败时为 null（UI 隐藏计数行） */
     val githubUser: GithubUser? = null,
     /** 最近一年贡献日历；加载中或不可用时为 null（UI 隐藏热力图） */
@@ -78,6 +83,8 @@ class ProfileViewModel(
     private var feedLoadJob: Job? = null
     /** 进行中的整页加载协程；重复进入页面时先取消，避免两个 load 并发交叉写 state 与分页游标 */
     private var loadJob: Job? = null
+    /** 进行中的余额拉取协程；每次重拉先取消在途请求，避免两次调用乱序返回时旧值覆盖新值 */
+    private var quotaJob: Job? = null
 
     /** 缓存当次会话的关注列表（load() 时重置） */
     private var followingInfo: FollowingInfo? = null
@@ -116,6 +123,9 @@ class ProfileViewModel(
     }
 
     fun load() {
+        // 余额每次进页都拉实时值（独立协程，不受下方跳过逻辑影响）：
+        // 聊天消耗发生在页面之外，跳过整页重载时余额仍需刷新
+        reloadQuota()
         // 已加载过且数据健在（非错误态）则跳过：用于从子页返回时不重拉
         val current = _uiState.value
         if (hasLoaded && current.user != null && !current.isError) return
@@ -124,41 +134,61 @@ class ProfileViewModel(
         loadJob = viewModelScope.launch {
             val highlightsOnly = settingsManager.currentFeedHighlightsOnly()
 
+            // 整页重建期间保留 quota 字段：loadQuota 与本协程并行，quota 先到时若被下面的
+            // 整对象重建抹掉，配额卡会静默消失（登出重登后首次进页必现的竞态）。
+            // 读取放在写入时刻而非提前快照，尽量窄化与 loadQuota 写入交错的窗口。
+            fun freshState(build: (quota: QuotaResponse?, quotaError: Boolean) -> ProfileUiState) {
+                val s = _uiState.value
+                _uiState.value = build(s.quota, s.quotaError)
+            }
+
             // SWR：有缓存整页秒出（header/计数/热力图/feed）+ 顶部指示器自动刷新
             val cached = cache.get<ProfileCache>(ProfileCache.KEY)
             if (cached != null) {
-                _uiState.value = ProfileUiState(
-                    isLoading = false,
-                    user = cached.user,
-                    githubUser = cached.githubUser,
-                    contributions = cached.contributions,
-                    // feed 与档位绑定，档位不一致时不复用（只用 header 部分，feed 走加载态）
-                    feedItems = if (cached.highlightsOnly == highlightsOnly) cached.feedItems else emptyList(),
-                    highlightsOnly = highlightsOnly,
-                )
+                freshState { quota, quotaError ->
+                    ProfileUiState(
+                        isLoading = false,
+                        user = cached.user,
+                        githubUser = cached.githubUser,
+                        contributions = cached.contributions,
+                        // feed 与档位绑定，档位不一致时不复用（只用 header 部分，feed 走加载态）
+                        feedItems = if (cached.highlightsOnly == highlightsOnly) cached.feedItems else emptyList(),
+                        highlightsOnly = highlightsOnly,
+                        quota = quota,
+                        quotaError = quotaError,
+                    )
+                }
                 hasLoaded = true
                 refreshInternal()
                 return@launch
             }
 
-            _uiState.value = ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly)
+            freshState { quota, quotaError ->
+                ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+            }
             nextFeedPage = 1
             consumedRawCount = 0
             followingInfo = null
             ownRepoItems = emptyList()
             val token = authManager().getAccessToken()
             if (token == null) {
-                _uiState.value = ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly)
+                freshState { quota, quotaError ->
+                    ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                }
                 return@launch
             }
             val user = try {
                 repository.fetchMe(token)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.value = ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly)
+                freshState { quota, quotaError ->
+                    ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                }
                 return@launch
             }
-            _uiState.value = ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly)
+            freshState { quota, quotaError ->
+                ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+            }
             hasLoaded = true
             persistSnapshot()
             loadGithubData(user)
@@ -291,8 +321,33 @@ class ProfileViewModel(
     fun refresh() {
         loadJob?.cancel()
         feedLoadJob?.cancel()
+        reloadQuota()
         loadJob = viewModelScope.launch {
             refreshInternal()
+        }
+    }
+
+    /**
+     * 拉取 credits 余额：与整页加载解耦，失败只降级配额卡（保留旧值时不置错误态），
+     * 不影响档案与 feed。quota 不进 ProfileCache——余额要新鲜，SWR 快照对它是误导。
+     * 自身串行：新请求先取消在途旧请求，避免两次调用乱序返回时旧值覆盖新值。
+     */
+    private fun reloadQuota() {
+        quotaJob?.cancel()
+        quotaJob = viewModelScope.launch { loadQuota() }
+    }
+
+    private suspend fun loadQuota() {
+        // 账户页只在登录态可达；token 在刷新瞬态可能为 null，此时不请求——不带 Bearer 的
+        // /api/quota 会回落匿名档，用 5/5 覆盖登录/Pro 用户真实的 10/100。保留旧值等下次刷新。
+        val token = authManager().getAccessToken() ?: return
+        try {
+            val quota = repository.fetchQuota(token)
+            _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            // 已有旧值时保留（stale-while-error），仅首次加载失败才显示错误占位
+            _uiState.value = _uiState.value.copy(quotaError = _uiState.value.quota == null)
         }
     }
 

@@ -72,6 +72,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
     private val USER_GITHUB_LOGIN_KEY = "prefs_user_github_login"
     private val USER_GITHUB_USER_ID_KEY = "prefs_user_github_user_id"
+    private val USER_EMAIL_KEY = "prefs_user_email"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
@@ -244,6 +245,17 @@ class SettingsManager(private val settings: ObservableSettings) {
             settings.remove(USER_GITHUB_USER_ID_KEY)
         } else {
             settings.putLong(USER_GITHUB_USER_ID_KEY, userId)
+        }
+    }
+
+    /** 已登录用户邮箱缓存：/api/me 写入、登出清除。存量会话的 token 无 email scope 时为 null（不追溯）。 */
+    val userEmail: Flow<String?> = settings.getStringOrNullFlow(USER_EMAIL_KEY)
+
+    fun setUserEmail(email: String?) {
+        if (email.isNullOrBlank()) {
+            settings.remove(USER_EMAIL_KEY)
+        } else {
+            settings.putString(USER_EMAIL_KEY, email)
         }
     }
 

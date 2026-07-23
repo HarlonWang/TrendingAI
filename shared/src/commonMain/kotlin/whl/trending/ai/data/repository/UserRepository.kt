@@ -3,6 +3,7 @@ package whl.trending.ai.data.repository
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.MeUser
+import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.remote.TrendingApi
 
 // open：便于测试以子类替身注入（保持手动 DI，不引入 mock 框架）
@@ -15,6 +16,13 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
     open suspend fun fetchMe(accessToken: String): MeUser = fetchMeResponse(accessToken).user
 
     /**
+     * credits 余额（账户页配额卡）。X-Install-Id 恒传（匿名记账主体）；token 可空——
+     * 服务端据此定档。不做缓存：余额是每次请求都在变的个人数据，进页即拉实时值。
+     */
+    open suspend fun fetchQuota(accessToken: String?): QuotaResponse =
+        api.fetchQuota(globalSettingsManager.getOrCreateInstallId(), accessToken)
+
+    /**
      * 登录成功/应用启动（已登录）时调用：服务端建档 + 刷新 last_login_at，并缓存头像与 Pro 权益态。
      * 失败静默——下次打开 Profile 仍会重试，不阻塞登录主流程。
      */
@@ -24,6 +32,7 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
             val me = fetchMeResponse(accessToken)
             globalSettingsManager.setUserAvatarUrl(me.user.avatarUrl)
             globalSettingsManager.setGithubIdentity(me.user.githubLogin, me.user.githubUserId)
+            globalSettingsManager.setUserEmail(me.user.email)
             globalSettingsManager.setIsPro(me.pro)
             me.user
         } catch (e: Exception) {

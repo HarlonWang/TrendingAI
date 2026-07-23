@@ -162,7 +162,12 @@
     <string name="sign_in_value_star">一键 Star 喜欢的仓库</string>
     <string name="sign_in_value_chat">更多 AI 对话额度与深度解读</string>
     <string name="sign_in_value_profile">查看你的 GitHub 主页与关注动态</string>
-    <string name="sign_in_value_footer">将跳转浏览器完成 GitHub 授权，只需片刻。</string>
+    <string name="sign_in_value_footer">将跳转浏览器完成登录，只需片刻。</string>
+    <string name="sign_in_method_title">登录 TrendingAI</string>
+    <string name="sign_in_method_github">使用 GitHub 登录</string>
+    <string name="sign_in_method_github_desc">跳转浏览器完成授权</string>
+    <string name="sign_in_method_email">使用邮箱验证码登录</string>
+    <string name="sign_in_method_email_desc">验证码将发送至你的邮箱，无需密码</string>
     <string name="sign_in_value_dismiss">暂不</string>
     <string name="sign_in_hint_title">登录未完成</string>
     <string name="sign_in_hint_connectivity">GitHub 登录需要能正常访问 github.com，请检查网络后重试。</string>
@@ -175,6 +180,12 @@
     <string name="profile_repos">仓库</string>
     <string name="profile_pro_badge">PRO</string>
     <string name="profile_pro_badge_desc">Pro 会员</string>
+    <string name="profile_quota_title">AI 额度</string>
+    <string name="profile_quota_remaining">今日剩余 %1$d / %2$d</string>
+    <string name="profile_quota_reset_hours">约 %1$d 小时后重置</string>
+    <string name="profile_quota_reset_soon">1 小时内重置</string>
+    <string name="profile_quota_rates">对话 1 · 搜索 3 · 研究 10</string>
+    <string name="profile_quota_error">额度信息暂时无法获取</string>
     <string name="contrib_total">最近一年 %1$s 次贡献</string>
     <string name="contrib_less">少</string>
     <string name="contrib_more">多</string>
