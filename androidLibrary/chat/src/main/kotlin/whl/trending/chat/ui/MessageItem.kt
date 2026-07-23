@@ -18,6 +18,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.TravelExplore
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,16 +68,20 @@ import whl.trending.chat.model.Role
  * - 用户：右侧气泡（primaryContainer）
  * - 助手：左侧全宽 Markdown 渲染（无气泡，贴近 Claude/ChatGPT 风格）
  * 均支持长按选中复制；助手出错时展示错误与重试按钮。
+ *
+ * @param onResearchUpsell 非 null 时在消息尾部挂「深度调研此项目」升级入口
+ *   （仅解读消息会收到，可见性由 [whl.trending.chat.ResearchUpsellPolicy] 决定）
  */
 @Composable
 fun MessageItem(
     message: ChatMessage,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onResearchUpsell: (() -> Unit)? = null,
 ) {
     when (message.role) {
         Role.USER -> UserMessage(message, modifier)
-        Role.ASSISTANT -> AssistantMessage(message, onRetry, modifier)
+        Role.ASSISTANT -> AssistantMessage(message, onRetry, modifier, onResearchUpsell)
     }
 }
 
@@ -151,7 +157,12 @@ private fun UserImageThumb(path: String, onClick: () -> Unit, modifier: Modifier
 }
 
 @Composable
-private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier: Modifier) {
+private fun AssistantMessage(
+    message: ChatMessage,
+    onRetry: () -> Unit,
+    modifier: Modifier,
+    onResearchUpsell: (() -> Unit)? = null,
+) {
     Column(modifier = modifier.fillMaxWidth()) {
         val error = message.error
         if (error == null) {
@@ -240,6 +251,20 @@ private fun AssistantMessage(message: ChatMessage, onRetry: () -> Unit, modifier
                         modifier = Modifier.size(18.dp),
                     )
                 }
+            }
+            // 解读 → research 的升级漏斗：解读卡尾部一键发起对该项目的深度调研
+            if (onResearchUpsell != null) {
+                AssistChip(
+                    onClick = onResearchUpsell,
+                    label = { Text(stringResource(R.string.chat_action_research_upsell)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.TravelExplore,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                )
             }
         } else if (error.code == ChatError.CODE_QUOTA_DEVICE || error.code == ChatError.CODE_LOGIN_REQUIRED) {
             // 个人配额触顶 / 解读登录闸走专属卡片（登录 CTA / waitlist），全局熔断仍走普通错误文案

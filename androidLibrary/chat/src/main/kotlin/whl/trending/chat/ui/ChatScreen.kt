@@ -104,6 +104,16 @@ fun ChatScreen(
         }
     }
 
+    // README 详情页「深度调研」入口：只预选模式 + 预填主题，发送仍由用户确认——
+    // research 计价高（10 credits），不做自动触发（有别于解读入口的 auto 语义）
+    val researchPrefill = stringResource(R.string.chat_research_repo_prefill)
+    LaunchedEffect(entryKey) {
+        if (initialContext?.autoDeepResearch == true) {
+            viewModel.enableDeepResearch()
+            if (viewModel.uiState.value.input.isBlank()) viewModel.updateInput(researchPrefill)
+        }
+    }
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     fun closeDrawer() = scope.launch { drawerState.close() }
@@ -254,10 +264,13 @@ fun ChatScreen(
                     // 自动切到 MessageList，与「介绍这个项目」chip 的隐藏时机一致。
                     ChatWelcome(hasContext = initialContext != null)
                 } else {
+                    // topic 用预填调研主题而非按钮 CTA 文案：与 FAB 入口同构，后端拿到的是
+                    // 有内容的调研诉求（Sourcery 审查采纳）
                     MessageList(
                         messages = state.messages,
                         isSending = state.isSending,
                         onRetry = viewModel::retry,
+                        onResearchUpsell = { viewModel.sendRepoResearch(researchPrefill) },
                     )
                 }
             }
