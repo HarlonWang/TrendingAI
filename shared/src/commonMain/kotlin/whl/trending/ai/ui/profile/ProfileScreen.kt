@@ -226,13 +226,13 @@ fun ProfileScreen(
                 // GitHub 档案模块（计数行在 header 内、热力图、动态流）整体只对有 GitHub 身份的
                 // 用户呈现；邮箱登录用户无 GitHub 身份，整块隐藏而非展示「动态不可用」占位
                 val hasGithub = uiState.user?.githubLogin != null
-                uiState.contributions?.let { calendar ->
-                    item(key = "contributions") {
-                        ContributionGraph(calendar, scrollState = contributionScrollState)
-                        HorizontalDivider(thickness = 0.5.dp)
-                    }
-                }
                 if (hasGithub) {
+                    uiState.contributions?.let { calendar ->
+                        item(key = "contributions") {
+                            ContributionGraph(calendar, scrollState = contributionScrollState)
+                            HorizontalDivider(thickness = 0.5.dp)
+                        }
+                    }
                     item(key = "feed_filter") {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
