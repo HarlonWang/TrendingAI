@@ -30,6 +30,7 @@ import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
+import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.remote.GithubApi
 import whl.trending.ai.data.remote.GithubEventDto
 import whl.trending.ai.data.remote.GithubUser
@@ -50,8 +51,12 @@ class ProfileViewModelTest {
 
     private class FakeUserRepository(
         val onFetchMe: suspend () -> MeUser = { profileMeUser() },
+        val onFetchQuota: suspend () -> QuotaResponse = {
+            QuotaResponse(balance = 8, dailyGrant = 10, resetAt = "2026-07-24T00:00:00.000Z", tier = "user")
+        },
     ) : UserRepository() {
         override suspend fun fetchMe(accessToken: String): MeUser = onFetchMe()
+        override suspend fun fetchQuota(accessToken: String?): QuotaResponse = onFetchQuota()
     }
 
     private class FakeGithubApi : GithubApi() {
@@ -124,7 +129,7 @@ class ProfileViewModelTest {
         cache.put(ProfileCache.KEY, cachedSnapshot())
         val gate = CompletableDeferred<MeUser>()
 
-        val vm = viewModel(cache, repository = FakeUserRepository { gate.await() })
+        val vm = viewModel(cache, repository = FakeUserRepository(onFetchMe = { gate.await() }))
         vm.load()
         advanceUntilIdle()
 
@@ -172,7 +177,7 @@ class ProfileViewModelTest {
 
         val vm = viewModel(
             cache,
-            repository = FakeUserRepository { gate.await() },
+            repository = FakeUserRepository(onFetchMe = { gate.await() }),
             settingsManager = settings(highlightsOnly = false),
         )
         vm.load()
@@ -184,6 +189,29 @@ class ProfileViewModelTest {
         assertEquals(99, mid.contributions?.total)
         assertEquals(emptyList(), mid.feedItems)
         assertFalse(mid.highlightsOnly)
+    }
+
+    // 回归：登出重登后首次进页（无缓存路径），quota 先于 fetchMe 到达时，
+    // 整页状态重建不得把已写入的 quota 抹掉（否则配额卡静默消失，返回再进才出现）
+    @Test
+    fun quotaSurvivesFullPageLoadRace() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val cache = cache() // 无缓存：登出已清 ProfileCache
+        val gate = CompletableDeferred<MeUser>()
+
+        val vm = viewModel(cache, repository = FakeUserRepository(onFetchMe = { gate.await() }))
+        vm.load()
+        advanceUntilIdle() // quota 已返回，fetchMe 仍挂起
+
+        assertEquals(8, vm.uiState.value.quota?.balance)
+
+        gate.complete(profileMeUser())
+        advanceUntilIdle()
+
+        val end = vm.uiState.value
+        assertEquals("octo", end.user?.githubLogin)
+        assertEquals(8, end.quota?.balance)
+        assertFalse(end.quotaError)
     }
 
     @Test

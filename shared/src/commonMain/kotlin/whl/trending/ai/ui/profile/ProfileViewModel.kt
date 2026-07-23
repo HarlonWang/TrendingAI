@@ -132,41 +132,61 @@ class ProfileViewModel(
         loadJob = viewModelScope.launch {
             val highlightsOnly = settingsManager.currentFeedHighlightsOnly()
 
+            // 整页重建期间保留 quota 字段：loadQuota 与本协程并行，quota 先到时若被下面的
+            // 整对象重建抹掉，配额卡会静默消失（登出重登后首次进页必现的竞态）。
+            // 读取放在写入时刻而非提前快照，尽量窄化与 loadQuota 写入交错的窗口。
+            fun freshState(build: (quota: QuotaResponse?, quotaError: Boolean) -> ProfileUiState) {
+                val s = _uiState.value
+                _uiState.value = build(s.quota, s.quotaError)
+            }
+
             // SWR：有缓存整页秒出（header/计数/热力图/feed）+ 顶部指示器自动刷新
             val cached = cache.get<ProfileCache>(ProfileCache.KEY)
             if (cached != null) {
-                _uiState.value = ProfileUiState(
-                    isLoading = false,
-                    user = cached.user,
-                    githubUser = cached.githubUser,
-                    contributions = cached.contributions,
-                    // feed 与档位绑定，档位不一致时不复用（只用 header 部分，feed 走加载态）
-                    feedItems = if (cached.highlightsOnly == highlightsOnly) cached.feedItems else emptyList(),
-                    highlightsOnly = highlightsOnly,
-                )
+                freshState { quota, quotaError ->
+                    ProfileUiState(
+                        isLoading = false,
+                        user = cached.user,
+                        githubUser = cached.githubUser,
+                        contributions = cached.contributions,
+                        // feed 与档位绑定，档位不一致时不复用（只用 header 部分，feed 走加载态）
+                        feedItems = if (cached.highlightsOnly == highlightsOnly) cached.feedItems else emptyList(),
+                        highlightsOnly = highlightsOnly,
+                        quota = quota,
+                        quotaError = quotaError,
+                    )
+                }
                 hasLoaded = true
                 refreshInternal()
                 return@launch
             }
 
-            _uiState.value = ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly)
+            freshState { quota, quotaError ->
+                ProfileUiState(isLoading = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+            }
             nextFeedPage = 1
             consumedRawCount = 0
             followingInfo = null
             ownRepoItems = emptyList()
             val token = authManager().getAccessToken()
             if (token == null) {
-                _uiState.value = ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly)
+                freshState { quota, quotaError ->
+                    ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                }
                 return@launch
             }
             val user = try {
                 repository.fetchMe(token)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.value = ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly)
+                freshState { quota, quotaError ->
+                    ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                }
                 return@launch
             }
-            _uiState.value = ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly)
+            freshState { quota, quotaError ->
+                ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+            }
             hasLoaded = true
             persistSnapshot()
             loadGithubData(user)
