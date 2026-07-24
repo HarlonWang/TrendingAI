@@ -292,9 +292,11 @@ fun AccountScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         PullToRefreshBox(
-            isRefreshing = uiState.isRefreshing,
+            // 未接入登录的平台（iOS）：Hub 是纯设置页，身份/额度区块都已隐藏，下拉刷新会拉
+            // profile/quota 却无任何可见变化——短路成 no-op，避免无谓网络开销。
+            isRefreshing = authSupported && uiState.isRefreshing,
             state = pullToRefreshState,
-            onRefresh = { viewModel.refresh() },
+            onRefresh = { if (authSupported) viewModel.refresh() },
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
