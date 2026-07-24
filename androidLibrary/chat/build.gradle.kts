@@ -55,6 +55,7 @@ dependencies {
 
     implementation(libs.commonmark)
     implementation(libs.commonmark.ext.gfm.tables)
+    implementation(libs.highlights)
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

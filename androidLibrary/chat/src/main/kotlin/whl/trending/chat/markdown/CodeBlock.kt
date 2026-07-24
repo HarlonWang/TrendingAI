@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -22,45 +23,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.ClipData
+import dev.snipme.highlights.Highlights
+import dev.snipme.highlights.model.BoldHighlight
+import dev.snipme.highlights.model.ColorHighlight
+import dev.snipme.highlights.model.SyntaxLanguage
+import dev.snipme.highlights.model.SyntaxTheme
 import kotlinx.coroutines.launch
 
 /**
- * 代码块：等宽字体 + 横向滚动 + 语言标签 + 复制按钮 + 轻量语法高亮。
+ * 代码块：等宽字体 + 横向滚动 + 语言标签 + 复制按钮 + 语法高亮。
  *
- * 高亮为轻量正则方案，覆盖少数常见语言；未命中语言走通用（字符串/数字/注释）或纯文本。
- * 后续若需专业多语言高亮，可按 Claude 方案接入 JavaScriptEngine + highlight.js。
+ * 高亮由 `dev.snipme:highlights`（纯 KMP，真词法分析）产出 token 区间，
+ * 配色从 [SyntaxTheme] 映射回当前 M3 [ColorScheme]，随明暗主题联动、与全 app 色调统一。
  */
 @Composable
 fun CodeBlock(code: String, language: String) {
     val colors = MaterialTheme.colorScheme
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val highlighted = remember(
-        code,
-        language,
-        colors.primary,
-        colors.tertiary,
-        colors.secondary,
-        colors.outline,
-    ) {
-        SyntaxHighlighter.highlight(
-            code = code,
-            language = language,
-            keyword = colors.primary,
-            string = colors.tertiary,
-            number = colors.secondary,
-            comment = colors.outline,
-        )
+    val theme = m3SyntaxTheme(colors)
+    val highlighted = remember(code, language, theme) {
+        highlightCode(code = code, language = language, theme = theme)
     }
 
     Column(
@@ -104,70 +98,61 @@ fun CodeBlock(code: String, language: String) {
     }
 }
 
-/** 轻量正则语法高亮。 */
-private object SyntaxHighlighter {
+/** 把 M3 语义色映射成 highlights 的 [SyntaxTheme]（value 相等 → 可直接作 remember key）。 */
+private fun m3SyntaxTheme(colors: ColorScheme): SyntaxTheme = SyntaxTheme(
+    key = "m3",
+    code = colors.onSurface.toArgb(),
+    keyword = colors.primary.toArgb(),
+    string = colors.tertiary.toArgb(),
+    literal = colors.secondary.toArgb(),
+    comment = colors.outline.toArgb(),
+    metadata = colors.primary.toArgb(),
+    multilineComment = colors.outline.toArgb(),
+    // 标点/标记不特殊着色，跟随正文色，避免整段代码被染得过花
+    punctuation = colors.onSurface.toArgb(),
+    mark = colors.onSurface.toArgb(),
+)
 
-    private val KEYWORDS: Map<String, Set<String>> = mapOf(
-        "kotlin" to setOf(
-            "fun", "val", "var", "class", "object", "interface", "if", "else", "when", "for", "while",
-            "return", "import", "package", "private", "public", "internal", "override", "suspend", "data",
-            "sealed", "enum", "companion", "is", "as", "in", "null", "true", "false", "this", "by", "lateinit",
-        ),
-        "java" to setOf(
-            "public", "private", "protected", "class", "interface", "void", "int", "long", "boolean", "new",
-            "return", "if", "else", "for", "while", "import", "package", "static", "final", "this", "null",
-            "true", "false", "extends", "implements", "throws",
-        ),
-        "json" to setOf("true", "false", "null"),
-        "bash" to setOf("if", "then", "else", "fi", "for", "do", "done", "echo", "export", "cd", "function"),
-        "python" to setOf(
-            "def", "class", "import", "from", "return", "if", "elif", "else", "for", "while", "in", "is",
-            "None", "True", "False", "self", "lambda", "with", "as", "try", "except", "pass",
-        ),
-    )
+/** 常见语言短别名 → highlights 枚举（[SyntaxLanguage.getByName] 只按枚举全名精确匹配）。 */
+private val LANGUAGE_ALIASES = mapOf(
+    "kt" to SyntaxLanguage.KOTLIN, "kts" to SyntaxLanguage.KOTLIN,
+    "js" to SyntaxLanguage.JAVASCRIPT, "mjs" to SyntaxLanguage.JAVASCRIPT, "jsx" to SyntaxLanguage.JAVASCRIPT,
+    "ts" to SyntaxLanguage.TYPESCRIPT, "tsx" to SyntaxLanguage.TYPESCRIPT,
+    "py" to SyntaxLanguage.PYTHON,
+    "rb" to SyntaxLanguage.RUBY,
+    "rs" to SyntaxLanguage.RUST,
+    "sh" to SyntaxLanguage.SHELL, "bash" to SyntaxLanguage.SHELL, "zsh" to SyntaxLanguage.SHELL, "shell" to SyntaxLanguage.SHELL,
+    "c++" to SyntaxLanguage.CPP, "cc" to SyntaxLanguage.CPP, "cxx" to SyntaxLanguage.CPP,
+    "cs" to SyntaxLanguage.CSHARP,
+)
 
-    private val ALIASES = mapOf(
-        "kt" to "kotlin", "kts" to "kotlin",
-        "js" to "js", "javascript" to "js", "ts" to "js", "typescript" to "js",
-        "sh" to "bash", "shell" to "bash", "zsh" to "bash",
-        "py" to "python",
-    )
+private fun resolveLanguage(language: String): SyntaxLanguage {
+    val key = language.trim().lowercase()
+    if (key.isEmpty()) return SyntaxLanguage.DEFAULT
+    return LANGUAGE_ALIASES[key] ?: SyntaxLanguage.getByName(key) ?: SyntaxLanguage.DEFAULT
+}
 
-    // 通用：字符串、注释、数字
-    private val tokenRegex = Regex(
-        """(?<comment>//[^\n]*|#[^\n]*|/\*[\s\S]*?\*/)""" +
-            """|(?<string>"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)""" +
-            """|(?<number>\b\d+(?:\.\d+)?\b)""" +
-            """|(?<word>[A-Za-z_]\w*)""",
-    )
+/** 用 highlights 产出的 token 区间构建 [AnnotatedString]；解析异常时 `runCatching` 兜底为纯文本。 */
+private fun highlightCode(code: String, language: String, theme: SyntaxTheme): AnnotatedString {
+    val highlights = runCatching {
+        Highlights.Builder()
+            .code(code)
+            .language(resolveLanguage(language))
+            .theme(theme)
+            .build()
+            .getHighlights()
+    }.getOrDefault(emptyList())
 
-    fun highlight(
-        code: String,
-        language: String,
-        keyword: Color,
-        string: Color,
-        number: Color,
-        comment: Color,
-    ): AnnotatedString {
-        val lang = ALIASES[language.lowercase()] ?: language.lowercase()
-        val keywords = KEYWORDS[lang] ?: emptySet()
-        // js 没有内置关键字表也走通用高亮（字符串/数字/注释）
-        return buildAnnotatedString {
-            var last = 0
-            for (m in tokenRegex.findAll(code)) {
-                if (m.range.first > last) append(code.substring(last, m.range.first))
-                val value = m.value
-                val color = when {
-                    m.groups["comment"] != null -> comment
-                    m.groups["string"] != null -> string
-                    m.groups["number"] != null -> number
-                    m.groups["word"] != null && value in keywords -> keyword
-                    else -> null
-                }
-                if (color != null) withStyle(SpanStyle(color = color)) { append(value) } else append(value)
-                last = m.range.last + 1
+    return buildAnnotatedString {
+        append(code)
+        highlights.forEach { highlight ->
+            val start = highlight.location.start.coerceIn(0, code.length)
+            val end = highlight.location.end.coerceIn(start, code.length)
+            if (start == end) return@forEach
+            when (highlight) {
+                is ColorHighlight -> addStyle(SpanStyle(color = Color(highlight.rgb)), start, end)
+                is BoldHighlight -> addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
             }
-            if (last < code.length) append(code.substring(last))
         }
     }
 }
