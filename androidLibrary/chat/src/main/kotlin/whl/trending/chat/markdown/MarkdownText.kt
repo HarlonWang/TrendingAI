@@ -1,14 +1,19 @@
 package whl.trending.chat.markdown
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -23,6 +28,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
@@ -164,16 +170,30 @@ private fun ListBlock(node: Node, textStyle: TextStyle, ordered: Boolean, start:
 @Composable
 private fun MarkdownTable(table: TableBlock, textStyle: TextStyle, styles: InlineStyles) {
     val colors = MaterialTheme.colorScheme
-    Column {
-        table.childList().forEach { section ->
-            when (section) {
-                is TableHead -> section.childList().filterIsInstance<TableRow>().forEach { row ->
-                    TableRowView(row, textStyle.copy(fontWeight = FontWeight.Bold), styles)
-                    HorizontalDivider(color = colors.outlineVariant)
-                }
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.outlineVariant),
+    ) {
+        Column {
+            var bodyRow = 0
+            table.childList().forEach { section ->
+                when (section) {
+                    is TableHead -> section.childList().filterIsInstance<TableRow>().forEach { row ->
+                        TableRowView(
+                            row = row,
+                            textStyle = textStyle.copy(fontWeight = FontWeight.Bold),
+                            styles = styles,
+                            background = colors.surfaceContainerHighest,
+                        )
+                    }
 
-                is TableBody -> section.childList().filterIsInstance<TableRow>().forEach { row ->
-                    TableRowView(row, textStyle, styles)
+                    is TableBody -> section.childList().filterIsInstance<TableRow>().forEach { row ->
+                        // 斑马纹：奇数行加浅底，偶数行透明
+                        val zebra = if (bodyRow % 2 == 1) colors.surfaceContainerLow else Color.Transparent
+                        TableRowView(row, textStyle, styles, background = zebra)
+                        bodyRow++
+                    }
                 }
             }
         }
@@ -181,13 +201,20 @@ private fun MarkdownTable(table: TableBlock, textStyle: TextStyle, styles: Inlin
 }
 
 @Composable
-private fun TableRowView(row: TableRow, textStyle: TextStyle, styles: InlineStyles) {
-    Row {
+private fun TableRowView(row: TableRow, textStyle: TextStyle, styles: InlineStyles, background: Color) {
+    Row(Modifier.fillMaxWidth().background(background)) {
         row.childList().filterIsInstance<TableCell>().forEach { cell ->
+            // GFM 列对齐：直接取 commonmark 已解析的 TableCell.alignment
+            val align = when (cell.alignment) {
+                TableCell.Alignment.CENTER -> TextAlign.Center
+                TableCell.Alignment.RIGHT -> TextAlign.End
+                else -> TextAlign.Start
+            }
             Text(
                 buildInline(cell, styles),
                 style = textStyle,
-                modifier = Modifier.weight(1f).padding(horizontal = 4.dp, vertical = 2.dp),
+                textAlign = align,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 6.dp),
             )
         }
     }

@@ -30,6 +30,7 @@ aptabase = "0.0.8"
 coil = "3.5.0"
 material-kolor = "5.0.0"
 commonmark = "0.29.0"
+highlights = "1.1.0"
 kmp-webview = "0.1.7"
 logto = "3.0.0-beta"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
@@ -81,6 +82,7 @@ coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.re
 material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "material-kolor" }
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+highlights = { module = "dev.snipme:highlights", version.ref = "highlights" }
 kmp-webview = { module = "wang.harlon:kmp-webview", version.ref = "kmp-webview" }
 logto-android = { module = "io.logto.sdk:android", version.ref = "logto" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
