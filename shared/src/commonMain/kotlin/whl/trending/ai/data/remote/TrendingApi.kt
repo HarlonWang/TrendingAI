@@ -2,6 +2,8 @@ package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.AppConfigResponse
+import whl.trending.ai.data.model.FavoriteItem
+import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.model.ChatModelsResponse
@@ -18,10 +20,12 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -199,6 +203,50 @@ open class TrendingApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<ChatModelsResponse>().models
+    }
+
+    // ---- 收藏云同步（设计稿 2026-07-24-favorites-cloud-sync，B 档）----
+    // 全部经 Bearer 鉴权；调用方（FavoriteRepository）负责传入 externalId 已回填的条目。
+
+    /** 拉取该用户全量收藏。非 2xx 抛 [ApiException]，供调用方在失败时保留本地、不覆盖。 */
+    open suspend fun fetchFavorites(accessToken: String): List<FavoriteItem> {
+        val response = client.get("$baseHost/api/favorites") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<FavoritesResponse>().favorites
+    }
+
+    /** upsert 单条收藏（幂等）。返回是否成功，失败由调用方入队重试。 */
+    open suspend fun putFavorite(accessToken: String, item: FavoriteItem): Boolean {
+        val response = client.put("$baseHost/api/favorites") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            contentType(ContentType.Application.Json)
+            setBody(item)
+        }
+        return response.status.value in 200..299
+    }
+
+    /** 删一条收藏（幂等，服务端不存在也 200）。 */
+    open suspend fun deleteFavorite(accessToken: String, source: String, externalId: String): Boolean {
+        val response = client.delete("$baseHost/api/favorites") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            parameter("source", source)
+            parameter("external_id", externalId)
+        }
+        return response.status.value in 200..299
+    }
+
+    /** 批量 upsert（登录首次合并本地收藏）。 */
+    open suspend fun batchPutFavorites(accessToken: String, items: List<FavoriteItem>): Boolean {
+        val response = client.post("$baseHost/api/favorites/batch") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            contentType(ContentType.Application.Json)
+            setBody(FavoritesResponse(items))
+        }
+        return response.status.value in 200..299
     }
 
     open suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {

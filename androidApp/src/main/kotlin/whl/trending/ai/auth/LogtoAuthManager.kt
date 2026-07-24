@@ -29,6 +29,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import whl.trending.ai.BuildConfig
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.repository.globalFavoriteRepository
 
 /**
  * Logto 实现：OIDC PKCE 登录，token 存储/刷新由 SDK 托管。
@@ -194,6 +195,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         globalSettingsManager.setUserEmail(null)
         globalSettingsManager.setIsPro(false)
         globalSettingsManager.clearSelectedChatModel()
+        globalFavoriteRepository.onSignOut()
         GithubTokenProvider.shared.clear()
         FollowingProvider.shared.clear()
         OwnRepoEventsProvider.shared.clear()

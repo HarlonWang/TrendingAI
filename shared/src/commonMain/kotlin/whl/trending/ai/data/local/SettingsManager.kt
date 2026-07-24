@@ -18,6 +18,7 @@ import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
 import whl.trending.ai.data.model.FavoriteItem
+import whl.trending.ai.data.model.PendingFavoriteOp
 
 enum class ThemeMode(val title: String) {
     FOLLOW_SYSTEM("跟随系统"),
@@ -67,6 +68,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val LAST_SEEN_WHATSNEW_KEY = "prefs_last_seen_whatsnew_version"
     private val FAVORITES_KEY = "prefs_favorites"
+    private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
+    private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
@@ -211,9 +214,49 @@ class SettingsManager(private val settings: ObservableSettings) {
         trackEvent("favorite_toggle", mapOf("on" to false))
     }
 
+    /** 当前收藏快照（同步引擎读本地态用）。 */
+    fun currentFavorites(): List<FavoriteItem> = getCurrentFavorites()
+
     private fun getCurrentFavorites(): List<FavoriteItem> {
         val json = settings.getStringOrNull(FAVORITES_KEY) ?: return emptyList()
         return runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }
+    }
+
+    /**
+     * 用服务端全量列表覆盖本地收藏缓存（云同步「打开时全量拉取」用）。
+     * 非用户手势，不埋点；与 [addFavorite]/[removeFavorite] 的手势写入区分。
+     */
+    fun replaceFavorites(items: List<FavoriteItem>) {
+        settings.putString(FAVORITES_KEY, Json.encodeToString(items))
+    }
+
+    // ---- 云同步状态：待同步 op 队列 + 首次登录合并标记 ----
+
+    fun getPendingFavoriteOps(): List<PendingFavoriteOp> {
+        val json = settings.getStringOrNull(FAVORITES_PENDING_KEY) ?: return emptyList()
+        return runCatching { Json.decodeFromString<List<PendingFavoriteOp>>(json) }.getOrElse { emptyList() }
+    }
+
+    fun setPendingFavoriteOps(ops: List<PendingFavoriteOp>) {
+        if (ops.isEmpty()) settings.remove(FAVORITES_PENDING_KEY)
+        else settings.putString(FAVORITES_PENDING_KEY, Json.encodeToString(ops))
+    }
+
+    /** 是否已完成本次登录的首次合并（true 后走增量 op flush，false 时走全量 batch 合并）。 */
+    fun favoritesMerged(): Boolean = settings.getBoolean(FAVORITES_MERGED_KEY, false)
+
+    fun setFavoritesMerged(value: Boolean) {
+        settings.putBoolean(FAVORITES_MERGED_KEY, value)
+    }
+
+    /**
+     * 登出时清空账号收藏与同步状态：收藏已安全存于该账号云端，清本地避免账号间数据串味
+     * （下个账号登录时不会把上一个账号的收藏 batch 合并上去）。匿名重新收藏从空开始。
+     */
+    fun clearFavoritesOnSignOut() {
+        settings.remove(FAVORITES_KEY)
+        settings.remove(FAVORITES_PENDING_KEY)
+        settings.remove(FAVORITES_MERGED_KEY)
     }
 
     /** 已登录用户头像 URL 缓存：TopBar 入口同步展示用；登出时清空 */
