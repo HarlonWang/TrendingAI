@@ -37,8 +37,7 @@ class FavoriteRepository(
         val resolved = if (item.externalId.isBlank()) item.copy(externalId = item.resolvedExternalId) else item
         settings.addFavorite(resolved)
         if (canSyncOps()) {
-            enqueue(PendingFavoriteOp("add", resolved.url, resolved.source, resolved.externalId, resolved))
-            scope.launch { flushQuietly() }
+            scope.launch { pushOp(PendingFavoriteOp("add", resolved.url, resolved.source, resolved.externalId, resolved)) }
         }
     }
 
@@ -47,8 +46,7 @@ class FavoriteRepository(
         val existing = settings.currentFavorites().firstOrNull { it.url == url }
         settings.removeFavorite(url)
         if (existing != null && canSyncOps()) {
-            enqueue(PendingFavoriteOp("delete", url, existing.source, existing.resolvedExternalId, null))
-            scope.launch { flushQuietly() }
+            scope.launch { pushOp(PendingFavoriteOp("delete", url, existing.source, existing.resolvedExternalId, null)) }
         }
     }
 
@@ -79,7 +77,15 @@ class FavoriteRepository(
         }
     }
 
-    /** 登出清理：清空本地收藏 + 同步状态，避免账号间串味。由登出流程调用。 */
+    /**
+     * 登出清理：清空本地收藏 + 同步状态，避免账号间串味。由登出流程调用。
+     *
+     * 取舍：会一并清掉未 flush 成功的 pending op。极端场景「离线新增一条收藏（flush 失败留队列）
+     * → 立即登出」下，该条既未上云也被清除 → 丢失。不在此做 best-effort flush，因为：
+     * (1) 该场景前提是离线，flush 同样发不出去；(2) 登出流程开头已吊销凭证，此刻已无有效 token。
+     * 唯一能不丢的做法是「登出不清、留到下次登录再传」，但那会重开要防的账号串味。
+     * 详见设计稿 §6.2。
+     */
     fun onSignOut() {
         settings.clearFavoritesOnSignOut()
     }
@@ -93,18 +99,26 @@ class FavoriteRepository(
      */
     private fun canSyncOps(): Boolean = settings.favoritesMerged()
 
-    private fun enqueue(op: PendingFavoriteOp) {
-        // 同一 (op,url) 去重合并：保留最新一条，避免同键 op 堆积
+    /**
+     * 入队一条 op 并尝试 flush，全程持 [mutex]——与 [sync] 串行化。
+     * 关键：pending 键的读-改-写只允许在 mutex 内发生（enqueue/flush/sync 都在锁内），
+     * 否则主线程 enqueue 与后台 flush 并行 RMW 同一 prefs 键会 lost-update、静默丢一条收藏。
+     */
+    private suspend fun pushOp(op: PendingFavoriteOp) {
+        mutex.withLock {
+            enqueueLocked(op)
+            val token = tokenProvider() ?: return@withLock // 匿名/无 token：留队列，下次 sync 再推
+            runCatching { flushPending(token) }
+        }
+    }
+
+    /** 必须在 [mutex] 内调用。同一 (op,url) 去重合并：保留最新一条，避免同键 op 堆积。 */
+    private fun enqueueLocked(op: PendingFavoriteOp) {
         val kept = settings.getPendingFavoriteOps().filterNot { it.op == op.op && it.url == op.url }
         settings.setPendingFavoriteOps(kept + op)
     }
 
-    private suspend fun flushQuietly() {
-        val token = tokenProvider() ?: return
-        mutex.withLock { runCatching { flushPending(token) } }
-    }
-
-    /** 逐条推送队列；成功的移出队列，遇失败保留剩余（含当前）待下次重试。 */
+    /** 逐条推送队列；成功的移出队列，遇失败保留剩余（含当前）待下次重试。必须在 [mutex] 内调用。 */
     private suspend fun flushPending(token: String) {
         val ops = settings.getPendingFavoriteOps()
         if (ops.isEmpty()) return
