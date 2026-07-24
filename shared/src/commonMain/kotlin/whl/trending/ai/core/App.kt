@@ -10,6 +10,7 @@ import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
 import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
+import whl.trending.ai.ui.settings.AppSettingsScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
@@ -38,6 +39,7 @@ import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
 data object Appearance
+data object AppSettings
 data object About
 data object Feedback
 data object Subscribe
@@ -189,7 +191,15 @@ fun App() {
                                 onNavigateToFeedback = { backStack.add(Feedback) },
                                 onNavigateToSubscribe = { backStack.add(Subscribe) },
                                 onNavigateToAppearance = { backStack.add(Appearance) },
+                                onNavigateToAppSettings = { backStack.add(AppSettings) },
                                 onNavigateToAbout = { backStack.add(About) },
+                            )
+                        }
+
+                        is AppSettings -> NavEntry(key) {
+                            AppSettingsScreen(
+                                onBack = { backStack.safePop() },
+                                onNavigateToFeedback = { backStack.add(Feedback) },
                             )
                         }
 

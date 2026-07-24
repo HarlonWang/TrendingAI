@@ -193,6 +193,8 @@
     <string name="account_pro_active">You&apos;re a Pro member — thanks for the support!</string>
     <string name="account_github_entry">GitHub profile</string>
     <string name="account_github_entry_desc">Contributions &amp; network activity</string>
+    <string name="settings_group_general">General</string>
+    <string name="app_settings_entry_desc">Language, default tab, link opening</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>
