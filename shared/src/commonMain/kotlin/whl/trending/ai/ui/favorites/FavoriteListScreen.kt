@@ -1,6 +1,7 @@
 package whl.trending.ai.ui.favorites
 
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.picks.SourceTag
@@ -121,7 +122,7 @@ fun FavoriteListScreen(
                     FavoriteCard(
                         item = item,
                         onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl) },
-                        onRemove = { globalSettingsManager.removeFavorite(item.url) }
+                        onRemove = { globalFavoriteRepository.remove(item.url) }
                     )
                     if (index < favorites.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

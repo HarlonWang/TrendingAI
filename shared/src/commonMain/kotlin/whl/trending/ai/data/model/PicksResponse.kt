@@ -22,6 +22,8 @@ data class PicksMetadata(
 data class PickItem(
     val rank: Int = 0,
     val source: String = "",
+    /** 与后端 contents 对齐的内容标识；供收藏云同步作唯一键 */
+    val externalId: String = "",
     val title: String = "",
     val url: String = "",
     val phUrl: String? = null,

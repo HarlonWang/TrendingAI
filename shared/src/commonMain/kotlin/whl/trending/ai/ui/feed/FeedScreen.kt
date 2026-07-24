@@ -39,6 +39,7 @@ import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.core.platform.shareText
@@ -120,9 +121,9 @@ fun FeedScreen(
                             onOpenUrl = onOpenUrl,
                             onToggleFavorite = {
                                 if (item.url in favoriteUrls) {
-                                    globalSettingsManager.removeFavorite(item.url)
+                                    globalFavoriteRepository.remove(item.url)
                                 } else {
-                                    globalSettingsManager.addFavorite(
+                                    globalFavoriteRepository.add(
                                         FavoriteItem(
                                             url = item.url,
                                             title = item.title,
@@ -130,7 +131,8 @@ fun FeedScreen(
                                             description = item.description,
                                             summary = item.summary,
                                             savedAt = Clock.System.now().toEpochMilliseconds(),
-                                            openUrl = item.openUrl
+                                            openUrl = item.openUrl,
+                                            externalId = item.externalId
                                         )
                                     )
                                 }

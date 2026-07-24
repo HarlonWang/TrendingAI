@@ -111,6 +111,7 @@ import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
@@ -298,16 +299,17 @@ private fun RepoList(
                         onStar = onStarRepo?.let { star -> { star(repo) } },
                         onToggleFavorite = {
                             if (repo.url in favoriteUrls) {
-                                globalSettingsManager.removeFavorite(repo.url)
+                                globalFavoriteRepository.remove(repo.url)
                             } else {
-                                globalSettingsManager.addFavorite(
+                                globalFavoriteRepository.add(
                                     FavoriteItem(
                                         url = repo.url,
                                         title = "${repo.author}/${repo.repoName}",
                                         source = "github",
                                         description = repo.description.takeIf { it.isNotBlank() },
                                         summary = repo.aiSummaries.firstOrNull()?.content,
-                                        savedAt = Clock.System.now().toEpochMilliseconds()
+                                        savedAt = Clock.System.now().toEpochMilliseconds(),
+                                        externalId = "${repo.author}/${repo.repoName}"
                                     )
                                 )
                             }

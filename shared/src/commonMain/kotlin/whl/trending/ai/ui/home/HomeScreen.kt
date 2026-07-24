@@ -78,6 +78,7 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.data.repository.UserRepository
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
@@ -146,11 +147,13 @@ fun HomeScreen(
     val userAvatarUrl by globalSettingsManager.userAvatarUrl.collectAsState(null)
     val userRepository = remember { UserRepository() }
 
-    // 应用启动且已登录：服务端建档/刷新 last_login_at + 同步头像（幂等，失败静默）
+    // 应用启动且已登录：服务端建档/刷新 last_login_at + 同步头像 + 同步收藏（幂等，失败静默）
     LaunchedEffect(authState) {
         val state = authState
         if (state is AuthState.LoggedIn) {
-            userRepository.syncMe(authManager.getAccessToken())
+            val token = authManager.getAccessToken()
+            userRepository.syncMe(token)
+            globalFavoriteRepository.sync(token)
         }
     }
 
