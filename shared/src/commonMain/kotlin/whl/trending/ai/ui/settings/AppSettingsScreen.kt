@@ -1,23 +1,5 @@
 package whl.trending.ai.ui.settings
 
-import whl.trending.ai.data.local.AppLanguage
-import whl.trending.ai.data.local.SummaryLanguage
-import whl.trending.ai.data.local.ThemeMode
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.isIosPlatform
-import whl.trending.ai.core.platform.openAppSettings
-import whl.trending.ai.core.platform.getSystemLanguage
-import whl.trending.ai.core.platform.getSystemLanguageDisplayName
-import whl.trending.ai.core.isValidEmail
-import whl.trending.ai.core.ProSponsor
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.data.remote.ApiException
-import whl.trending.ai.data.repository.TrendingRepository
-import whl.trending.ai.ui.home.HomeTab
-import whl.trending.ai.notification.globalDailyPicksNotifier
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,34 +11,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,92 +37,82 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about
-import trendingai.shared.generated.resources.about_us
-import trendingai.shared.generated.resources.about_us_desc
-import trendingai.shared.generated.resources.appearance
+import trendingai.shared.generated.resources.app_language_desc
 import trendingai.shared.generated.resources.app_settings
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.close
-import trendingai.shared.generated.resources.daily_picks_notification
-import trendingai.shared.generated.resources.daily_picks_notification_desc
-import trendingai.shared.generated.resources.notification_permission_denied
 import trendingai.shared.generated.resources.default_home_tab
 import trendingai.shared.generated.resources.default_home_tab_desc
+import trendingai.shared.generated.resources.feedback_email_invalid
+import trendingai.shared.generated.resources.feedback_email_placeholder
+import trendingai.shared.generated.resources.feedback_error
+import trendingai.shared.generated.resources.feedback_rate_limit
 import trendingai.shared.generated.resources.hackernews_title
-import trendingai.shared.generated.resources.producthunt_title
-import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.app_language_desc
-import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
+import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
-import trendingai.shared.generated.resources.personalization
-import trendingai.shared.generated.resources.settings
-import trendingai.shared.generated.resources.subscription_reminders
-
-import trendingai.shared.generated.resources.favorites
-import trendingai.shared.generated.resources.feedback
-import trendingai.shared.generated.resources.feedback_desc
-import trendingai.shared.generated.resources.subscribe_title
-import trendingai.shared.generated.resources.subscribe_desc
+import trendingai.shared.generated.resources.picks_title
+import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.summary_lang_capture_identity_note
+import trendingai.shared.generated.resources.summary_lang_capture_label
+import trendingai.shared.generated.resources.summary_lang_capture_message
+import trendingai.shared.generated.resources.summary_lang_capture_title
 import trendingai.shared.generated.resources.summary_language
 import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.summary_language_sponsor
-import trendingai.shared.generated.resources.summary_lang_capture_title
-import trendingai.shared.generated.resources.summary_lang_capture_message
-import trendingai.shared.generated.resources.summary_lang_capture_label
-import trendingai.shared.generated.resources.summary_lang_capture_identity_note
-import trendingai.shared.generated.resources.cancel
-import trendingai.shared.generated.resources.feedback_error
-import trendingai.shared.generated.resources.feedback_rate_limit
-import trendingai.shared.generated.resources.feedback_email_placeholder
-import trendingai.shared.generated.resources.feedback_email_invalid
+import whl.trending.ai.auth.AuthState
+import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.core.isValidEmail
+import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.core.platform.getSystemLanguageDisplayName
+import whl.trending.ai.core.platform.isIosPlatform
+import whl.trending.ai.core.platform.openAppSettings
+import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.AppLanguage
+import whl.trending.ai.data.local.SummaryLanguage
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.remote.ApiException
+import whl.trending.ai.data.repository.TrendingRepository
+import whl.trending.ai.ui.home.HomeTab
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+/**
+ * 应用设置子页：从账户 Hub 的「应用设置」入口进入。承接原设置页「应用设置」组——
+ * 界面语言 / 摘要语言 / 默认首页 / 外链打开方式，都是低频、工具性偏好，从 Hub 折叠到此处
+ * 以缩短 Hub 主列表。摘要语言的意图采集 + 赞助流程一并随「摘要语言」项收在这里。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
+fun AppSettingsScreen(
     onBack: () -> Unit,
-    onNavigateToFavorites: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
-    onNavigateToSubscribe: () -> Unit = {},
-    onNavigateToAppearance: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {}
 ) {
     val isIos = isIosPlatform()
-    val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(SummaryLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
     )
-    var showSummaryLanguageDialog by remember { mutableStateOf(false) }
-    // 语言采集流程：点「赞助 Pro」→ 采集期望语言（复用反馈接口提交）→ 成功后跳赞助页
-    // 登录用户带上 GitHub 身份（便于与赞助对齐 + 后续通知）；未登录则收邮箱
     val authState by globalAuthManager.authState.collectAsState()
     val isLoggedIn = authState is AuthState.LoggedIn
+    var showSummaryLanguageDialog by remember { mutableStateOf(false) }
     var showLangCaptureDialog by remember { mutableStateOf(false) }
-    val dailyPicksNotificationEnabled by globalSettingsManager.dailyPicksNotificationEnabled.collectAsState(
-        remember { globalSettingsManager.currentDailyPicksNotificationEnabled() }
-    )
-    val snackbarHostState = remember { SnackbarHostState() }
-    val settingsScope = rememberCoroutineScope()
-    val permissionDeniedMsg = stringResource(Res.string.notification_permission_denied)
-    val openSystemSettingsLabel = stringResource(Res.string.open_system_settings)
 
     if (showSummaryLanguageDialog) {
         AlertDialog(
@@ -167,7 +129,6 @@ fun SettingsScreen(
             },
             dismissButton = {
                 Row {
-                    // 中性关闭按钮：只想看说明的用户有静默出口，不被迫进反馈/赞助流程
                     TextButton(onClick = { showSummaryLanguageDialog = false }) {
                         Text(stringResource(Res.string.close))
                     }
@@ -190,107 +151,18 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.settings)) },
+                title = { Text(stringResource(Res.string.app_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                     }
-                }
+                },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            // 分组 1: 个性化
-            item { SettingsHeader(stringResource(Res.string.personalization)) }
-            // 外观：深色模式 + 主题色收进二级页
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.appearance)) },
-                    supportingContent = { Text(themeModeText(themeMode)) },
-                    leadingContent = { Icon(Icons.Default.Palette, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_appearance")
-                        onNavigateToAppearance()
-                    }
-                )
-            }
-            // 我的收藏
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.favorites)) },
-                    leadingContent = { Icon(Icons.Default.Favorite, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_favorites")
-                        onNavigateToFavorites()
-                    }
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            // 分组 2: 订阅与提醒——每日 Picks 的两条触达通道（邮件 / 本地通知）
-            item { SettingsHeader(stringResource(Res.string.subscription_reminders)) }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.subscribe_title)) },
-                    supportingContent = { Text(stringResource(Res.string.subscribe_desc)) },
-                    leadingContent = { Icon(Icons.Default.Email, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_subscribe")
-                        onNavigateToSubscribe()
-                    }
-                )
-            }
-            // 每日精选提醒：本地定时通知（WorkManager），全渠道可用；iOS 未支持则隐藏
-            if (globalDailyPicksNotifier.isSupported) {
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
-                        supportingContent = { Text(stringResource(Res.string.daily_picks_notification_desc)) },
-                        leadingContent = { Icon(Icons.Default.Notifications, null) },
-                        trailingContent = {
-                            Switch(
-                                checked = dailyPicksNotificationEnabled,
-                                onCheckedChange = { enabled ->
-                                    trackEvent(
-                                        "settings_daily_picks_notification",
-                                        mapOf("enabled" to enabled.toString())
-                                    )
-                                    if (enabled) {
-                                        settingsScope.launch {
-                                            // 先确权再落设置：权限被拒时开关保持关闭，引导去系统设置
-                                            val granted = globalDailyPicksNotifier.enable()
-                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
-                                            if (!granted) {
-                                                val result = snackbarHostState.showSnackbar(
-                                                    message = permissionDeniedMsg,
-                                                    actionLabel = openSystemSettingsLabel,
-                                                )
-                                                if (result == SnackbarResult.ActionPerformed) {
-                                                    openAppSettings()
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        globalDailyPicksNotifier.disable()
-                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
-                                    }
-                                }
-                            )
-                        }
-                    )
-                }
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            // 分组 3: 应用设置
-            item { SettingsHeader(stringResource(Res.string.app_settings)) }
-            // 应用语言：只管界面文案，与摘要语言解耦；iOS 由系统的按 App 语言设置接管，跳系统设置
-            item {
+    ) { padding ->
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
+            item(key = "app_language") {
                 var expanded by remember { mutableStateOf(false) }
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.language_settings)) },
@@ -333,9 +205,8 @@ fun SettingsScreen(
                     }
                 )
             }
-            // 摘要语言：独立决定 AI 摘要/解读的请求语言，两端都是应用内下拉；
-            // 行点击弹说明（含「更多语言」引导采集 + 赞助流程）
-            item {
+            // 摘要语言：独立决定 AI 摘要/解读的请求语言；行点击弹说明（含「更多语言」引导采集 + 赞助）
+            item(key = "summary_language") {
                 var expanded by remember { mutableStateOf(false) }
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.summary_language)) },
@@ -372,7 +243,7 @@ fun SettingsScreen(
                 )
             }
             // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
-            item {
+            item(key = "default_home_tab") {
                 var expanded by remember { mutableStateOf(false) }
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.default_home_tab)) },
@@ -404,8 +275,8 @@ fun SettingsScreen(
                     }
                 )
             }
-            // 外链打开方式：行点击与开关同为切换，说明并入 supporting，不再弹对话框
-            item {
+            // 外链打开方式：行点击与开关同为切换
+            item(key = "open_links") {
                 val toggleOpenLinks = { enabled: Boolean ->
                     trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
                     globalSettingsManager.setOpenLinksInCustomTab(enabled)
@@ -421,33 +292,6 @@ fun SettingsScreen(
                         )
                     },
                     modifier = Modifier.clickable { toggleOpenLinks(!openLinksInCustomTab) }
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            // 分组 4: 关于
-            item { SettingsHeader(stringResource(Res.string.about)) }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.feedback)) },
-                    supportingContent = { Text(stringResource(Res.string.feedback_desc)) },
-                    leadingContent = { Icon(Icons.Default.Feedback, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_feedback")
-                        onNavigateToFeedback()
-                    }
-                )
-            }
-            // 关于我们：官网/联系作者/捐赠/隐私政策收进二级页
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.about_us)) },
-                    supportingContent = { Text(stringResource(Res.string.about_us_desc)) },
-                    leadingContent = { Icon(Icons.Default.Info, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_about")
-                        onNavigateToAbout()
-                    }
                 )
             }
         }
@@ -482,19 +326,9 @@ private fun homeTabOptionText(tab: HomeTab): String = when (tab) {
     HomeTab.Picks -> stringResource(Res.string.picks_title)
 }
 
-@Composable
-fun SettingsHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
-}
-
 /**
  * 摘要语言意图采集弹窗：期望语言（+ 未登录的选填邮箱）经反馈接口提交，成功后跳赞助页。
- * 状态自持有——挂载即全新、关闭即丢弃，宿主只管 show 标记，无需在打开前手动重置各字段。
+ * 状态自持有——挂载即全新、关闭即丢弃。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -556,7 +390,6 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                     val lang = langInput.trim()
                     if (lang.isEmpty()) return@TextButton
                     val email = langEmail.trim()
-                    // 未登录：邮箱选填，但填了就必须格式正确
                     if (!isLoggedIn && email.isNotEmpty() && !isValidEmail(email)) {
                         langEmailInvalid = true
                         return@TextButton
@@ -564,8 +397,6 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                     langSubmitting = true
                     langError = null
                     scope.launch {
-                        // 身份直接读 syncMe 落好的本地缓存：免一次串行 /api/me 往返；id 可能缺失（后端
-                        // 兜底 username 建档时无数字 id），缺就只带 login，别写出「id null」污染赞助匹配
                         val identityLine = if (isLoggedIn) {
                             val login = globalSettingsManager.currentGithubLogin()
                             val userId = globalSettingsManager.currentGithubUserId()

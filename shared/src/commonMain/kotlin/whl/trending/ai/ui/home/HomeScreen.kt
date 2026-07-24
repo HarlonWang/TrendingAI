@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,16 +71,13 @@ import trendingai.shared.generated.resources.history_trending
 import trendingai.shared.generated.resources.period_daily
 import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
-import trendingai.shared.generated.resources.settings
-import trendingai.shared.generated.resources.profile_title
-import trendingai.shared.generated.resources.sign_in
+import trendingai.shared.generated.resources.account_title
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.data.repository.UserRepository
-import whl.trending.ai.ui.common.SignInValueDialog
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
@@ -104,11 +100,10 @@ enum class HomeTab {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSettings: () -> Unit,
+    onNavigateToAccount: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onNavigateToChat: () -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {},
-    onNavigateToProfile: () -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {}
 ) {
     // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
@@ -128,8 +123,6 @@ fun HomeScreen(
     }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     var showHistorySheet by rememberSaveable { mutableStateOf(false) }
-    // 未登录点头像不直接拉起网页授权，先弹登录价值说明（见 SignInValueDialog）
-    var showSignInValueDialog by rememberSaveable { mutableStateOf(false) }
 
     val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
     val trendingUiState by trendingViewModel.uiState.collectAsState()
@@ -184,18 +177,16 @@ fun HomeScreen(
                     scrollBehavior = scrollBehavior,
                     onTitleClick = { showFilterSheet = true },
                     onHistoryClick = { showHistorySheet = true },
-                    onNavigateToSettings = onNavigateToSettings,
-                    showAuthEntry = authManager.isSupported,
                     authState = authState,
                     userAvatarUrl = userAvatarUrl,
-                    onProfileClick = {
-                        if (authState is AuthState.LoggedIn) onNavigateToProfile() else showSignInValueDialog = true
-                    },
+                    onNavigateToAccount = onNavigateToAccount,
                 )
                 HomeTab.Picks -> PicksTopBar(
                     date = picksUiState?.picks?.metadata?.date,
                     scrollBehavior = scrollBehavior,
-                    onNavigateToSettings = onNavigateToSettings
+                    authState = authState,
+                    userAvatarUrl = userAvatarUrl,
+                    onNavigateToAccount = onNavigateToAccount,
                 )
                 HomeTab.HackerNews -> {
                     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -210,7 +201,9 @@ fun HomeScreen(
                             )
                         },
                         scrollBehavior = scrollBehavior,
-                        onNavigateToSettings = onNavigateToSettings
+                        authState = authState,
+                        userAvatarUrl = userAvatarUrl,
+                        onNavigateToAccount = onNavigateToAccount,
                     )
                 }
                 HomeTab.ProductHunt -> {
@@ -229,7 +222,9 @@ fun HomeScreen(
                             )
                         },
                         scrollBehavior = scrollBehavior,
-                        onNavigateToSettings = onNavigateToSettings
+                        authState = authState,
+                        userAvatarUrl = userAvatarUrl,
+                        onNavigateToAccount = onNavigateToAccount,
                     )
                 }
             }
@@ -331,16 +326,6 @@ fun HomeScreen(
         }
     }
 
-    if (showSignInValueDialog) {
-        SignInValueDialog(
-            source = "home_avatar",
-            onConfirm = {
-                showSignInValueDialog = false
-                authManager.signIn("home_avatar")
-            },
-            onDismiss = { showSignInValueDialog = false },
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -355,11 +340,9 @@ private fun TrendingTopBar(
     scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     onTitleClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    showAuthEntry: Boolean,
     authState: AuthState,
     userAvatarUrl: String?,
-    onProfileClick: () -> Unit,
+    onNavigateToAccount: () -> Unit,
 ) {
     val periodLabel = when (selectedPeriod) {
         "daily" -> stringResource(Res.string.period_daily)
@@ -447,32 +430,37 @@ private fun TrendingTopBar(
                     }
                 }
             }
-            if (showAuthEntry) {
-                IconButton(onClick = onProfileClick, enabled = authState !is AuthState.LoggingIn) {
-                    when {
-                        authState is AuthState.LoggedIn && userAvatarUrl != null -> AsyncImage(
-                            model = userAvatarUrl,
-                            contentDescription = stringResource(Res.string.profile_title),
-                            modifier = Modifier.size(28.dp).clip(CircleShape)
-                        )
-                        authState is AuthState.LoggingIn -> LoadingIndicator(
-                            modifier = Modifier.size(24.dp)
-                        )
-                        else -> Icon(
-                            Icons.Default.AccountCircle,
-                            contentDescription = stringResource(Res.string.sign_in)
-                        )
-                    }
-                }
-            }
             IconButton(onClick = onHistoryClick) {
                 Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
             }
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
-            }
+            AccountAction(authState, userAvatarUrl, onNavigateToAccount)
         }
     )
+}
+
+/**
+ * 顶栏账户入口：统一账户中心（Hub）的唯一入口，各 tab 顶栏共用。已登录且有头像显示头像，
+ * 登录中显示加载态，其余（含未登录 / iOS 未接入）显示账户图标——点击一律进 Hub（内含设置与登录引导）。
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AccountAction(authState: AuthState, userAvatarUrl: String?, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = authState !is AuthState.LoggingIn) {
+        when {
+            authState is AuthState.LoggedIn && userAvatarUrl != null -> AsyncImage(
+                model = userAvatarUrl,
+                contentDescription = stringResource(Res.string.account_title),
+                modifier = Modifier.size(28.dp).clip(CircleShape)
+            )
+            authState is AuthState.LoggingIn -> LoadingIndicator(
+                modifier = Modifier.size(24.dp)
+            )
+            else -> Icon(
+                Icons.Default.AccountCircle,
+                contentDescription = stringResource(Res.string.account_title)
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -480,7 +468,9 @@ private fun TrendingTopBar(
 private fun PicksTopBar(
     date: String?,
     scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
-    onNavigateToSettings: () -> Unit
+    authState: AuthState,
+    userAvatarUrl: String?,
+    onNavigateToAccount: () -> Unit,
 ) {
     TopAppBar(
         scrollBehavior = scrollBehavior,
@@ -501,9 +491,7 @@ private fun PicksTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
-            }
+            AccountAction(authState, userAvatarUrl, onNavigateToAccount)
         }
     )
 }
@@ -514,7 +502,9 @@ private fun FeedTopBar(
     title: String,
     navigationIcon: @Composable () -> Unit,
     scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
-    onNavigateToSettings: () -> Unit
+    authState: AuthState,
+    userAvatarUrl: String?,
+    onNavigateToAccount: () -> Unit,
 ) {
     TopAppBar(
         scrollBehavior = scrollBehavior,
@@ -530,9 +520,7 @@ private fun FeedTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
-            }
+            AccountAction(authState, userAvatarUrl, onNavigateToAccount)
         }
     )
 }
