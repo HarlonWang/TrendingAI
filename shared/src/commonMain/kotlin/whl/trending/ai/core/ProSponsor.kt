@@ -30,6 +30,7 @@ object ProSponsor {
     const val SOURCE_MODEL_LOCKED = "model_locked"
     const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
     const val SOURCE_SETTINGS_DONATE = "settings_donate"
+    const val SOURCE_ACCOUNT = "account"
 
     /** upsell 曝光埋点（何时算一次曝光由调用方定义：挂载去重或每次展开）。 */
     fun trackUpsellShown(source: String) {

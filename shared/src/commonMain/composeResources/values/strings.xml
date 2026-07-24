@@ -186,6 +186,19 @@
     <string name="profile_quota_rates">Chat 1 · Search 3 · Research 10</string>
     <string name="profile_quota_error">Couldn&apos;t load credits right now</string>
     <string name="profile_pro_badge_desc">Pro member</string>
+    <!-- Account hub -->
+    <string name="account_title">Account</string>
+    <string name="account_signed_out_title">Not signed in</string>
+    <string name="account_signed_out_prompt">Sign in to sync your data and unlock more daily credits</string>
+    <string name="account_plan_title">Plan &amp; usage</string>
+    <string name="account_tier_free">Free</string>
+    <string name="account_tier_pro">Pro</string>
+    <string name="account_upgrade_cta">Upgrade to Pro</string>
+    <string name="account_upgrade_hint">Pro perks attach to the GitHub account you sponsor with.</string>
+    <string name="account_signin_for_more">Sign in to get 10 credits a day</string>
+    <string name="account_pro_active">You&apos;re a Pro member — thanks for the support!</string>
+    <string name="account_github_entry">GitHub profile</string>
+    <string name="account_github_entry_desc">Contributions &amp; network activity</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>

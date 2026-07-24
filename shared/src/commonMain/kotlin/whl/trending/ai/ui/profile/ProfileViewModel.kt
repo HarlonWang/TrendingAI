@@ -36,6 +36,12 @@ data class ProfileUiState(
     /** 下拉刷新中：与首屏 [isLoading] 区分，刷新时保留旧内容、仅显示下拉指示器 */
     val isRefreshing: Boolean = false,
     val user: MeUser? = null,
+    /**
+     * 是否已登录。账户 Hub 对未登录用户同样可达（展示登录引导 + 匿名额度 + 设置项），
+     * 故 [user] == null 有两种含义：未登录（loggedIn=false，正常匿名态）
+     * 或登录态加载失败（[isError]=true）。UI 据此区分「登录引导」与「重试」。
+     */
+    val loggedIn: Boolean = false,
     val isError: Boolean = false,
     /** credits 余额（账户页配额卡）；加载中/失败为 null，失败态由 [quotaError] 区分 */
     val quota: QuotaResponse? = null,
@@ -99,15 +105,32 @@ class ProfileViewModel(
     private var hasLoaded = false
 
     init {
-        // 监听登出：清空缓存数据并复位 hasLoaded，兜底换账号串号
+        // 监听登录态变化，实时反映到 Hub（Hub 常驻可达，登录/登出可能在停留期间发生）：
+        // - 登出：清空缓存与档案，复位后以匿名态重载（拉匿名额度、显示登录引导）；
+        // - 登录：复位 hasLoaded 后重载，拉 /api/me 与真实额度。
+        // 只对「转变」反应，跳过初始发射——首帧加载交给 Screen 的 load()，避免双重加载。
         viewModelScope.launch {
+            var prev: AuthState? = null
             authManager().authState.collect { state ->
-                if (state is AuthState.LoggedOut) {
-                    hasLoaded = false
-                    loadJob?.cancel()
-                    feedLoadJob?.cancel()
-                    _uiState.value = ProfileUiState()
-                    cache.remove(ProfileCache.KEY)
+                val changed = prev != null && prev != state
+                prev = state
+                if (!changed) return@collect
+                when (state) {
+                    is AuthState.LoggedOut -> {
+                        hasLoaded = false
+                        loadJob?.cancel()
+                        feedLoadJob?.cancel()
+                        // 落回匿名态（非 loading，展示登录引导）而非 ProfileUiState() 的首屏 loading；
+                        // 只补拉匿名档额度，不走整页 load()（无需 fetchMe，token 此时应为 null）
+                        _uiState.value = ProfileUiState(isLoading = false, loggedIn = false)
+                        cache.remove(ProfileCache.KEY)
+                        reloadQuota()
+                    }
+                    is AuthState.LoggedIn -> {
+                        hasLoaded = false
+                        load()
+                    }
+                    is AuthState.LoggingIn -> Unit
                 }
             }
         }
@@ -148,6 +171,7 @@ class ProfileViewModel(
                 freshState { quota, quotaError ->
                     ProfileUiState(
                         isLoading = false,
+                        loggedIn = true,
                         user = cached.user,
                         githubUser = cached.githubUser,
                         contributions = cached.contributions,
@@ -172,9 +196,13 @@ class ProfileViewModel(
             ownRepoItems = emptyList()
             val token = authManager().getAccessToken()
             if (token == null) {
+                // 未登录是 Hub 的正常态（展示登录引导 + 匿名额度）；仅当 authState 声称已登录
+                // 却拿不到 token 才算异常（可重试）。匿名额度由上面的 reloadQuota 拉取。
+                val loggedIn = authManager().authState.value is AuthState.LoggedIn
                 freshState { quota, quotaError ->
-                    ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                    ProfileUiState(isLoading = false, isError = loggedIn, loggedIn = false, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
                 }
+                hasLoaded = !loggedIn
                 return@launch
             }
             val user = try {
@@ -182,12 +210,12 @@ class ProfileViewModel(
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 freshState { quota, quotaError ->
-                    ProfileUiState(isLoading = false, isError = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                    ProfileUiState(isLoading = false, isError = true, loggedIn = true, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
                 }
                 return@launch
             }
             freshState { quota, quotaError ->
-                ProfileUiState(isLoading = false, user = user, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                ProfileUiState(isLoading = false, loggedIn = true, user = user, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
             }
             hasLoaded = true
             persistSnapshot()
@@ -338,9 +366,11 @@ class ProfileViewModel(
     }
 
     private suspend fun loadQuota() {
-        // 账户页只在登录态可达；token 在刷新瞬态可能为 null，此时不请求——不带 Bearer 的
-        // /api/quota 会回落匿名档，用 5/5 覆盖登录/Pro 用户真实的 10/100。保留旧值等下次刷新。
-        val token = authManager().getAccessToken() ?: return
+        // Hub 对未登录用户可达：匿名用户按 install-id 拉匿名档额度（5/日），token 传 null 即可。
+        // 唯一要防的是「登录态但 token 处于刷新瞬态暂为 null」——此时不请求，否则不带 Bearer 的
+        // /api/quota 会回落匿名档、用 5 覆盖登录/Pro 用户真实的 10/100。保留旧值等下次刷新。
+        val token = authManager().getAccessToken()
+        if (token == null && authManager().authState.value is AuthState.LoggedIn) return
         try {
             val quota = repository.fetchQuota(token)
             _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
@@ -360,7 +390,9 @@ class ProfileViewModel(
         ownRepoItems = emptyList()
         val token = authManager().getAccessToken()
         if (token == null) {
-            _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
+            // 未登录下拉刷新：额度由 refresh() 的 reloadQuota 刷新，这里落回匿名态，不报错
+            val loggedIn = authManager().authState.value is AuthState.LoggedIn
+            _uiState.value = _uiState.value.copy(isRefreshing = false, isError = loggedIn, loggedIn = false, user = null)
             return
         }
         val user = try {
@@ -373,6 +405,7 @@ class ProfileViewModel(
         // 旧内容保留到此刻才清空 feed，随后由 loadGithubData 重新填充，避免下拉时列表闪空
         _uiState.value = _uiState.value.copy(
             isRefreshing = false,
+            loggedIn = true,
             user = user,
             feedItems = emptyList(),
             feedEndReached = false,
