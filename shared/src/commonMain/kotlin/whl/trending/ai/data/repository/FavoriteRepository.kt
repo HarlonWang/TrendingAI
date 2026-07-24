@@ -78,6 +78,20 @@ class FavoriteRepository(
     }
 
     /**
+     * 触发一次同步，运行在仓库自有 [scope] 上（**不绑定任何 Compose composition**）。
+     * 必须用它、而非在 composable 的 LaunchedEffect 里直接 await [sync]——否则用户登录后
+     * 一旦离开当前屏（如登录发生在账户页、随即进"我的收藏"），composition 退出会取消协程
+     * （LeftCompositionCancellationException），[sync] 半途中断、[replaceFavorites] 不执行，
+     * 云端收藏拉不下来。token 由自身 [tokenProvider] 取，调用方无需持有。
+     */
+    fun requestSync() {
+        scope.launch {
+            val token = tokenProvider() ?: return@launch
+            sync(token)
+        }
+    }
+
+    /**
      * 登出清理：清空本地收藏 + 同步状态，避免账号间串味。由登出流程调用。
      *
      * 取舍：会一并清掉未 flush 成功的 pending op。极端场景「离线新增一条收藏（flush 失败留队列）

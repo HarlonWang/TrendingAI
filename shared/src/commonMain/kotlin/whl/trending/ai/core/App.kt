@@ -22,8 +22,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import whl.trending.ai.auth.AuthState
+import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,6 +72,17 @@ internal fun MutableList<Any>.safePop() {
 @Preview
 fun App() {
     val backStack = remember { mutableStateListOf<Any>(Home) }
+
+    // 收藏云同步触发：放在 App 根部而非 HomeScreen——登录常发生在账户页（Home 已被覆盖、
+    // 其 LaunchedEffect 已随 NavEntry 销毁），只挂 HomeScreen 会导致「账户页登录→进我的收藏」
+    // 这条主路径永远不触发同步。根部 composition 全程存活，登录态一变即触发；实际同步在
+    // 仓库自有 scope 上跑（requestSync），不受任何屏切换取消。
+    val authState by globalAuthManager.authState.collectAsState()
+    LaunchedEffect(authState) {
+        if (authState is AuthState.LoggedIn) {
+            globalFavoriteRepository.requestSync()
+        }
+    }
 
     // 外链统一出口：默认走系统浏览器（Custom Tabs / SFSafariViewController），
     // 用户在设置中关闭、或设备无浏览器可承接时，兜底进应用内 WebView。

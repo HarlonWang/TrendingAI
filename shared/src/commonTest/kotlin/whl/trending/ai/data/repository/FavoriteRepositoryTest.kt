@@ -2,6 +2,9 @@ package whl.trending.ai.data.repository
 
 import com.russhwolf.settings.MapSettings
 import com.russhwolf.settings.ObservableSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.model.FavoriteItem
@@ -167,6 +170,34 @@ class FavoriteRepositoryTest {
     // 注：add()/remove() 的手势路径会触发 favorite_toggle 埋点（Aptabase），
     // 在纯 JVM host-test 中未初始化会 NPE，故不在此单测；其本地写入 + 入队逻辑
     // 由上面的「在途 pending 保留」「flush 增量」用例间接覆盖（构造同一 PendingFavoriteOp 形态）。
+
+    // 回归：requestSync 必须在仓库自有 scope 上把同步跑到底（拉取并覆盖本地），
+    // 而非绑定调用方（Compose composition）——否则登录后切屏会取消协程、拉取半途中断。
+    @Test
+    fun requestSync_在独立scope上跑完整拉取覆盖() = runTest {
+        settings.setFavoritesMerged(true)
+        settings.replaceFavorites(emptyList())
+        api.seedServer(gh("a/b"), gh("c/d"))
+        val repo = FavoriteRepository(settings, api, tokenProvider = { "tok" }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+
+        repo.requestSync()
+        advanceUntilIdle()
+
+        assertEquals(setOf("a/b", "c/d"), settings.currentFavorites().map { it.externalId }.toSet())
+    }
+
+    @Test
+    fun requestSync_token为null时不动本地() = runTest {
+        settings.setFavoritesMerged(true)
+        settings.replaceFavorites(listOf(gh("x/y")))
+        val repo = FavoriteRepository(settings, api, tokenProvider = { null }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+
+        repo.requestSync()
+        advanceUntilIdle()
+
+        assertEquals(0, api.getCount)
+        assertEquals(listOf("x/y"), settings.currentFavorites().map { it.externalId })
+    }
 
     @Test
     fun onSignOut_清空收藏与同步状态() = runTest {
