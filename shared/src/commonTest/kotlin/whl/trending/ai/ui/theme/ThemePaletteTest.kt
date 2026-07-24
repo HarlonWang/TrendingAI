@@ -8,8 +8,8 @@ import kotlin.test.assertTrue
 class ThemePaletteTest {
 
     @Test
-    fun palette_has_ten_seeds() {
-        assertEquals(10, PRESET_PALETTE.size)
+    fun palette_has_six_seeds() {
+        assertEquals(6, PRESET_PALETTE.size)
     }
 
     @Test
