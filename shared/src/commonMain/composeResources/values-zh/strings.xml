@@ -158,17 +158,11 @@
     <string name="sign_in">登录</string>
     <string name="sign_out">退出登录</string>
     <string name="sign_out_confirm">确定要退出登录吗？</string>
-    <string name="sign_in_value_title">登录解锁更多功能</string>
-    <string name="sign_in_value_star">一键 Star 喜欢的仓库</string>
-    <string name="sign_in_value_chat">更多 AI 对话额度与深度解读</string>
-    <string name="sign_in_value_profile">查看你的 GitHub 主页与关注动态</string>
-    <string name="sign_in_value_footer">将跳转浏览器完成登录，只需片刻。</string>
     <string name="sign_in_method_title">登录 TrendingAI</string>
     <string name="sign_in_method_github">使用 GitHub 登录</string>
     <string name="sign_in_method_github_desc">跳转浏览器完成授权</string>
     <string name="sign_in_method_email">使用邮箱验证码登录</string>
     <string name="sign_in_method_email_desc">验证码将发送至你的邮箱，无需密码</string>
-    <string name="sign_in_value_dismiss">暂不</string>
     <string name="sign_in_hint_title">登录未完成</string>
     <string name="sign_in_hint_connectivity">GitHub 登录需要能正常访问 github.com，请检查网络后重试。</string>
     <string name="sign_in_hint_clock_skew">设备时间与实际时间偏差超过一分钟，登录安全校验无法通过。请在系统设置中开启「自动设置时间」后重试。</string>
