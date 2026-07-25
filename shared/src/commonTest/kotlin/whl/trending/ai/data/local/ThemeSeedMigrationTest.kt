@@ -16,10 +16,13 @@ class ThemeSeedMigrationTest {
 
     private val presetArgbs = PRESET_PALETTE.map { it.argb }.toSet()
 
-    /** 旧版本里已被删掉的 5 个预设色 */
+    /**
+     * 旧版本里已被删掉、且没有再补回来的预设色。
+     * teal(00897B) 不在此列——埋点显示青蓝系需求占改色用户 35%，它已作为预设补回，
+     * 选过它的老用户会命中预设表、不再走迁移。
+     */
     private val removedLegacySeeds = listOf(
         0xFFF4511EL, // orange
-        0xFF00897BL, // teal
         0xFF0288D1L, // cyan
         0xFF3F51B5L, // indigo
         0xFFC2185BL, // pink

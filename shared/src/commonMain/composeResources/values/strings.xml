@@ -143,6 +143,7 @@
     <string name="theme_color_crimson">Crimson</string>
     <string name="theme_color_amber">Amber</string>
     <string name="theme_color_green">Green</string>
+    <string name="theme_color_teal">Teal</string>
     <string name="theme_color_blue">Blue</string>
     <string name="theme_color_graphite">Graphite</string>
     <string name="theme_color_custom">Custom</string>

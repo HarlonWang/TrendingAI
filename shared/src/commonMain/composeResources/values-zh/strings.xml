@@ -143,6 +143,7 @@
     <string name="theme_color_crimson">朱砂</string>
     <string name="theme_color_amber">琥珀</string>
     <string name="theme_color_green">绿</string>
+    <string name="theme_color_teal">青绿</string>
     <string name="theme_color_blue">蓝</string>
     <string name="theme_color_graphite">石墨</string>
     <string name="theme_color_custom">自定义</string>

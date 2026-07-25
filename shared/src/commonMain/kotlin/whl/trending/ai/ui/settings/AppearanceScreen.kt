@@ -200,12 +200,15 @@ private fun SwatchGrid(
     onSelect: (ThemeSeed) -> Unit,
     onOpenColorLab: () -> Unit,
 ) {
+    // 7 个预设 + 自定义共 8 颗，一行放不下（会挤成 7+1，第二行孤零零一颗）。
+    // 固定每行 4 颗排成 4+4，两行等长，也给未来增删预设留了余地。
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        maxItemsInEachRow = 4,
     ) {
         PRESET_PALETTE.forEach { seed ->
             ThemeSwatch(
