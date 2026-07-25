@@ -95,7 +95,7 @@ data class ThemeSnapshot(
 )
 
 /** 自定义色历史保留条数：够覆盖一次调色过程中的反复试错，又不至于把调色台塞满 */
-private const val CUSTOM_HISTORY_LIMIT = 8
+private const val CUSTOM_HISTORY_LIMIT = 10
 
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {

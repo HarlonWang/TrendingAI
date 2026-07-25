@@ -66,10 +66,10 @@ class CustomThemeHistoryTest {
         repeat(12) { m.pushCustomThemeHistory(CustomThemeEntry(0xFF000000L + it)) }
 
         val history = m.currentCustomThemeHistory()
-        assertEquals(8, history.size)
-        // 留下的是最近 8 条，最新在前
+        assertEquals(10, history.size)
+        // 留下的是最近 10 条，最新在前
         assertEquals(0xFF00000BL, history.first().seedArgb)
-        assertEquals(0xFF000004L, history.last().seedArgb)
+        assertEquals(0xFF000002L, history.last().seedArgb)
     }
 
 
