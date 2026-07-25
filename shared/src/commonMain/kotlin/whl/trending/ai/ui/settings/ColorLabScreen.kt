@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -43,7 +44,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -145,6 +145,24 @@ fun ColorLabScreen(onBack: () -> Unit) {
     //      它同时也是撤销按钮的可用性判据（没改过就没有可撤销的东西）。
     var pendingWrite by remember { mutableStateOf(0) }
 
+    // 撤销：把主题整体写回进入这一刻的状态，面板同步回填
+    val discardChanges = {
+        globalSettingsManager.restoreThemeSnapshot(entrySnapshot)
+        val restored = resolveThemeConfig(
+            seedArgb = entrySnapshot.seedArgb,
+            isCustom = entrySnapshot.isCustom,
+            styleStorage = entrySnapshot.style,
+            contrastStorage = entrySnapshot.contrast,
+        )
+        hsv = argbToHsv(restored.seedArgb)
+        style = restored.style
+        contrast = restored.contrast
+        hexText = formatHexColor(restored.seedArgb)
+        hexError = false
+        // 同时取消挂起的防抖写，否则刚撤销的改动又被写回去
+        pendingWrite = 0
+    }
+
     LaunchedEffect(pendingWrite) {
         if (pendingWrite == 0) return@LaunchedEffect
         delay(PERSIST_DEBOUNCE_MS)
@@ -197,6 +215,19 @@ fun ColorLabScreen(onBack: () -> Unit) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(Res.string.back),
+                        )
+                    }
+                },
+                actions = {
+                    // 撤销放顶栏而非页尾：这一页从预览卡到对比度有一屏多，按钮搁在最下面时
+                    // 用户正在上方拖色相、最需要反悔的那一刻反而看不见也够不着。
+                    IconButton(
+                        onClick = { discardChanges() },
+                        enabled = pendingWrite > 0,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Undo,
+                            contentDescription = stringResource(Res.string.color_lab_discard),
                         )
                     }
                 },
@@ -314,34 +345,6 @@ fun ColorLabScreen(onBack: () -> Unit) {
                 },
             )
 
-            Spacer(Modifier.height(24.dp))
-
-            TextButton(
-                // 没改过就没有可撤销的东西；禁用比让用户点了没反应更清楚
-                enabled = pendingWrite > 0,
-                onClick = {
-                    // 整体写回进入这一刻的状态：进来时是森绿预设就回森绿，是某个自定义色
-                    // 就回那个色。撤销掉的配置不进历史——清零 pendingWrite 后 onDispose
-                    // 本来就不记，这正是「我不要这次改动」应有的结果。
-                    globalSettingsManager.restoreThemeSnapshot(entrySnapshot)
-                    val restored = resolveThemeConfig(
-                        seedArgb = entrySnapshot.seedArgb,
-                        isCustom = entrySnapshot.isCustom,
-                        styleStorage = entrySnapshot.style,
-                        contrastStorage = entrySnapshot.contrast,
-                    )
-                    hsv = argbToHsv(restored.seedArgb)
-                    style = restored.style
-                    contrast = restored.contrast
-                    hexText = formatHexColor(restored.seedArgb)
-                    hexError = false
-                    // 同时取消挂起的防抖写，否则刚撤销的改动又被写回去
-                    pendingWrite = 0
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) {
-                Text(stringResource(Res.string.color_lab_discard))
-            }
 
             Spacer(Modifier.height(24.dp))
         }
