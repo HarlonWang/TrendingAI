@@ -1,10 +1,12 @@
 package whl.trending.ai.ui.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -57,6 +61,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -581,20 +586,38 @@ private fun RecentRow(
         history.forEach { entry ->
             val color = Color(entry.seedArgb)
             val selected = entry == current
-            Surface(
-                selected = selected,
-                onClick = { onPick(entry) },
-                shape = CircleShape,
-                color = color,
-                border = if (selected) {
-                    BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
-                } else {
-                    null
-                },
+            // 选中态不能靠 primary 描边：选中的那颗恰好就是当前主题色的来源，
+            // 描边与填充同源、几乎融为一体。改成 onSurface 高对比外圈 + 一圈间隙 + 勾，
+            // 与外观页色卡是同一套视觉语言。间隙常驻，选中时只是多画一道圈，布局不跳。
+            Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .semantics { role = Role.RadioButton },
-            ) {}
+                    .size(40.dp)
+                    .then(
+                        if (selected) {
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .padding(4.dp)
+                    .clip(CircleShape)
+                    .background(color)
+                    .selectable(
+                        selected = selected,
+                        role = Role.RadioButton,
+                        onClick = { onPick(entry) },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (selected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (color.luminance() < 0.5f) Color.White else Color.Black,
+                    )
+                }
+            }
         }
     }
 }
