@@ -146,7 +146,6 @@
     <string name="theme_color_blue">Blue</string>
     <string name="theme_color_graphite">Graphite</string>
     <string name="theme_color_custom">Custom</string>
-    <string name="color_lab_entry">Custom…</string>
     <string name="color_lab_title">Custom Color</string>
     <string name="color_lab_hex">Hex</string>
     <string name="color_lab_hex_invalid">Enter 6 hex digits, e.g. 6750A4</string>

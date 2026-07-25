@@ -146,7 +146,6 @@
     <string name="theme_color_blue">蓝</string>
     <string name="theme_color_graphite">石墨</string>
     <string name="theme_color_custom">自定义</string>
-    <string name="color_lab_entry">自定义…</string>
     <string name="color_lab_title">自定义主题色</string>
     <string name="color_lab_hex">色值</string>
     <string name="color_lab_hex_invalid">请输入 6 位十六进制色值，如 6750A4</string>
