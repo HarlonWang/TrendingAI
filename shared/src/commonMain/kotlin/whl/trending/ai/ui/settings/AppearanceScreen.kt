@@ -5,10 +5,14 @@ import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.theme.Hsv
+import whl.trending.ai.ui.theme.MorphPolygonShape
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import whl.trending.ai.ui.theme.ThemeSeed
+import whl.trending.ai.ui.theme.SwatchShapes
 import whl.trending.ai.ui.theme.hsvToArgb
+import whl.trending.ai.ui.theme.rememberMorph
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +29,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,6 +37,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,9 +55,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -206,28 +213,26 @@ private fun SwatchGrid(
     onSelect: (ThemeSeed) -> Unit,
     onOpenColorLab: () -> Unit,
 ) {
-    // 7 个预设 + 自定义共 8 颗，一行放不下（会挤成 7+1，第二行孤零零一颗）。
-    // 固定每行 4 颗排成 4+4，两行等长，也给未来增删预设留了余地。
-    // 用 SpaceBetween 让两端贴边、与上方通栏的分段按钮左右对齐，避免右侧空出一大片。
+    // 固定间距左对齐，排不下自然换行——不锁每行颗数，色卡增减时不用跟着调布局。
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        maxItemsInEachRow = 4,
     ) {
         PRESET_PALETTE.forEach { seed ->
-            ThemeSwatch(
-                color = Color(seed.argb),
+            val color = Color(seed.argb)
+            MorphSwatch(
                 name = stringResource(seed.nameRes),
+                brush = SolidColor(color),
+                contentTint = if (color.luminance() < 0.5f) Color.White else Color.Black,
+                idleIcon = null,
                 // 自定义色可能恰好等于某个预设的色值，此时预设不该跟着一起显示选中
                 selected = !isCustomSelected && seed.argb == selected,
                 onClick = { onSelect(seed) },
             )
         }
-        // 调色台入口就是色板行末尾这颗圆：入口和结果在同一处，
-        // 用户从这里进去、调完回来看到它变成自己的颜色并选中，认知是连贯的。
         CustomSwatch(
             customSeed = customSeed,
             selected = isCustomSelected,
@@ -237,90 +242,97 @@ private fun SwatchGrid(
 }
 
 /**
- * 色板行末尾的自定义档。没调过色时是一圈色轮渐变 + 加号，调过之后就显示用户自己的颜色，
- * 让「多出来的那一档从哪来」这件事不需要额外解释。
+ * 色板末尾的自定义档，同时也是调色台入口：入口和结果在同一处，
+ * 用户从这里进去、调完回来看到它变成自己的颜色并选中，认知是连贯的。
+ * 没调过色时是一圈色轮渐变 + 加号，一眼看出「这颗是随便挑颜色」。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CustomSwatch(
     customSeed: Long?,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val name = stringResource(Res.string.theme_color_custom)
-    // 色轮：沿圆周铺满色相，一眼看出「这颗是随便挑颜色」的入口
     val wheel = remember {
         Brush.sweepGradient(
             (0..360 step 30).map { Color(hsvToArgb(Hsv(it.toFloat(), 0.85f, 0.95f))) }
         )
     }
+    val color = customSeed?.let { Color(it) }
 
-    Box(
-        modifier = Modifier
-            .size(SWATCH_SIZE)
-            .clip(CircleShape)
-            .then(
-                if (customSeed == null) {
-                    Modifier.background(wheel)
-                } else {
-                    Modifier.background(Color(customSeed))
-                }
-            )
-            .selectable(
-                selected = selected,
-                role = Role.RadioButton,
-                onClick = onClick,
-            )
-            .semantics { contentDescription = name },
-        contentAlignment = Alignment.Center,
-    ) {
-        when {
-            selected -> Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = null,
-                tint = if (customSeed != null && Color(customSeed).luminance() < 0.5f) {
-                    Color.White
-                } else {
-                    Color.Black
-                },
-            )
-            customSeed == null -> Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                tint = Color.White,
-            )
-        }
-    }
+    MorphSwatch(
+        name = stringResource(Res.string.theme_color_custom),
+        brush = color?.let { SolidColor(it) } ?: wheel,
+        // 色轮档底色浅深都有，白色勾/加号在任何一段色相上都看得清
+        contentTint = if (color == null || color.luminance() < 0.5f) Color.White else Color.Black,
+        idleIcon = if (customSeed == null) Icons.Default.Add else null,
+        selected = selected,
+        onClick = onClick,
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 主题色卡：M3 Expressive 的多边形色卡，选中时形状从 9 瓣饼干形变成太阳形并微微放大，
+ * 勾随形变弹入——用形状变化而不是描边来表达选中，和全 app 的 Expressive 取向一致。
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ThemeSwatch(
-    color: Color,
+private fun MorphSwatch(
     name: String,
+    brush: Brush,
+    contentTint: Color,
+    idleIcon: ImageVector?,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Surface(
-        selected = selected,
-        onClick = onClick,
-        shape = CircleShape,
-        color = color,
-        modifier = Modifier
-            .size(SWATCH_SIZE)
-            .semantics {
-                contentDescription = name
-                role = Role.RadioButton
-            },
-    ) {
-        if (selected) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(
+    val morph = rememberMorph(SwatchShapes.idle, SwatchShapes.selected)
+    val progress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+    )
+    val swatchScale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+    )
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(SWATCH_SIZE)
+                .scale(swatchScale)
+                // shape 依赖 progress，形变过程中每帧都是新实例，这是 morph 的固有代价
+                .clip(MorphPolygonShape(morph, progress))
+                .background(brush)
+                .selectable(
+                    selected = selected,
+                    role = Role.RadioButton,
+                    onClick = onClick,
+                )
+                .semantics { contentDescription = name },
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                selected -> Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = if (color.luminance() < 0.5f) Color.White else Color.Black,
+                    modifier = Modifier.scale(progress),
+                    tint = contentTint,
+                )
+                idleIcon != null -> Icon(
+                    imageVector = idleIcon,
+                    contentDescription = null,
+                    tint = contentTint,
                 )
             }
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
     }
 }
