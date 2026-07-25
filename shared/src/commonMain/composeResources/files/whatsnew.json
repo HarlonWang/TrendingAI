@@ -1,19 +1,21 @@
 {
-  "version": "0.22.0-beta.1",
+  "version": "0.22.0-beta.2",
   "zh": [
-    "AI 对话支持多会话：历史会话随时切换，退出后自动恢复",
-    "AI 对话新增联网搜索，回答附带来源链接",
-    "新增 Deep Research 深度研究模式，可生成完整调研报告",
-    "登录简化为一步直达 GitHub 授权，失败时给出更明确的提示",
-    "Product Hunt 条目的点击、分享、收藏均直达原帖",
-    "分享按钮移出菜单独立展示；修复每日提醒可能不准时的问题"
+    "新增邮箱验证码登录；GitHub 登录一步直达授权页，失败提示更明确",
+    "个人中心重构为统一账户中心，可查看 AI 用量配额",
+    "收藏支持云端同步，换设备或重装后自动恢复",
+    "AI 对话支持多会话切换、联网搜索（回答附来源），新增 Deep Research 深度研究模式",
+    "AI 回答的代码高亮与表格排版升级，阅读更清晰",
+    "主题配色重做，支持自定义主题色与配色历史",
+    "Product Hunt 条目点击/分享/收藏直达原帖；分享按钮独立展示；修复每日提醒不准时"
   ],
   "en": [
-    "AI chat now supports multiple sessions: switch between conversations anytime, with automatic restore",
-    "Web search in AI chat, with source links in answers",
-    "New Deep Research mode for generating in-depth research reports",
-    "Simplified sign-in that goes straight to GitHub authorization, with clearer error messages",
-    "Product Hunt items now link directly to the original post for view, share, and favorite",
-    "Share button is now shown directly on cards; fixed daily reminder timing drift"
+    "New email verification code sign-in; GitHub sign-in goes straight to the authorization page, with clearer error messages",
+    "Profile rebuilt into a unified account center, where you can check your AI usage quota",
+    "Favorites now sync to the cloud and restore automatically after switching devices or reinstalling",
+    "AI chat supports multiple sessions and web search (answers include sources), plus a new Deep Research mode",
+    "Upgraded code highlighting and table layout in AI answers for easier reading",
+    "Reworked theme colors, with custom accent colors and a color history",
+    "Product Hunt items link directly to the original post for view, share, and favorite; share button now shown directly on cards; fixed daily reminder timing drift"
   ]
 }
