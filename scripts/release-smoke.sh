@@ -17,16 +17,18 @@ echo "==> 构建 r2 release"
 echo "==> 定位 $AVD 模拟器"
 serial=""
 for s in $(adb devices | awk 'NR>1 && $2=="device" {print $1}'); do
-  name=$(adb -s "$s" emu avd name 2>/dev/null | head -1 | tr -d '\r')
-  [ "$name" = "$AVD" ] && serial="$s" && break
+  # 真机不认 emu 命令（pipefail 下赋值即非零），且不匹配时 [ ] && 串联同样会被 set -e 判定失败——
+  # 两处都必须兜住，否则真机在线就会让脚本在这里静默退出
+  name=$(adb -s "$s" emu avd name 2>/dev/null | head -1 | tr -d '\r') || name=""
+  if [ "$name" = "$AVD" ]; then serial="$s"; break; fi
 done
 if [ -z "$serial" ]; then
   echo "==> $AVD 未在线，启动中"
   "$SDK/emulator/emulator" -avd "$AVD" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
   for _ in $(seq 1 60); do
     for s in $(adb devices | awk 'NR>1 && $2=="device" {print $1}'); do
-      name=$(adb -s "$s" emu avd name 2>/dev/null | head -1 | tr -d '\r')
-      [ "$name" = "$AVD" ] && serial="$s" && break 2
+      name=$(adb -s "$s" emu avd name 2>/dev/null | head -1 | tr -d '\r') || name=""
+      if [ "$name" = "$AVD" ]; then serial="$s"; break 2; fi
     done
     sleep 3
   done
