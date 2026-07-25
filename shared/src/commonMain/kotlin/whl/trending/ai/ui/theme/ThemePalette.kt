@@ -24,10 +24,13 @@ data class ThemeSeed(
     val id: String,
     val nameRes: StringResource,
     val argb: Long,
-    // 生成整套 colorScheme 的算法风格。默认 TonalSpot（M3 标准、柔和收敛），
-    // 个别预设覆盖为更有性格的风格，让各预设彼此对比拉满：
-    //   Vibrant   → 保留高饱和，强调色更鲜艳抢眼
-    //   Monochrome→ 整套压成灰阶，做黑/灰中性档
+    // 生成整套 colorScheme 的算法风格，统一用 TonalSpot（M3 标准、彩度收敛），
+    // 只有石墨档覆盖为 Monochrome 压成灰阶。
+    //
+    // 彩色档曾用 Vibrant 来拉开各预设的观感差异，现已改回：Vibrant 会把 primaryContainer
+    // 的彩度从 47 拉到 74、明度推到 tone 91，出来是荧光色，与 tone 44 的色卡对不上号——
+    // 用户在色板上看到深森绿，选中后整页却是亮黄绿。色板按 HCT 归一化后色相本就均匀铺开，
+    // 差异化不再需要靠 style 制造。
     val style: PaletteStyle = PaletteStyle.TonalSpot,
 )
 
@@ -64,16 +67,16 @@ private fun seed(hue: Double, chroma: Double = SWATCH_CHROMA, tone: Double = SWA
 val PRESET_PALETTE: List<ThemeSeed> = listOf(
     // 品牌紫保持原色值：它是 app 图标色，也是所有存量用户的默认档，不为色板整齐而改
     ThemeSeed("default",  Res.string.theme_color_default,  DEFAULT_SEED_ARGB),
-    ThemeSeed("plum",     Res.string.theme_color_plum,     seed(hue(1)),  PaletteStyle.Vibrant),   // 331° 梅红
-    ThemeSeed("berry",    Res.string.theme_color_berry,    seed(hue(2)),  PaletteStyle.Vibrant),   //   4° 莓红
-    ThemeSeed("rust",     Res.string.theme_color_rust,     seed(hue(3)),  PaletteStyle.Vibrant),   //  36° 赭红
-    ThemeSeed("mustard",  Res.string.theme_color_mustard,  seed(hue(4)),  PaletteStyle.Vibrant),   //  69° 芥末
-    ThemeSeed("olive",    Res.string.theme_color_olive,    seed(hue(5)),  PaletteStyle.Vibrant),   // 102° 橄榄
-    ThemeSeed("forest",   Res.string.theme_color_forest,   seed(hue(6)),  PaletteStyle.Vibrant),   // 134° 森绿
-    ThemeSeed("pine",     Res.string.theme_color_pine,     seed(hue(7)),  PaletteStyle.Vibrant),   // 167° 松绿
-    ThemeSeed("peacock",  Res.string.theme_color_peacock,  seed(hue(8)),  PaletteStyle.Vibrant),   // 200° 孔雀
-    ThemeSeed("steel",    Res.string.theme_color_steel,    seed(hue(9)),  PaletteStyle.Vibrant),   // 233° 钢蓝
-    ThemeSeed("indigo",   Res.string.theme_color_indigo,   seed(hue(10)), PaletteStyle.Vibrant),   // 265° 靛蓝
+    ThemeSeed("plum",     Res.string.theme_color_plum,     seed(hue(1))),   // 331° 梅红
+    ThemeSeed("berry",    Res.string.theme_color_berry,    seed(hue(2))),   //   4° 莓红
+    ThemeSeed("rust",     Res.string.theme_color_rust,     seed(hue(3))),   //  36° 赭红
+    ThemeSeed("mustard",  Res.string.theme_color_mustard,  seed(hue(4))),   //  69° 芥末
+    ThemeSeed("olive",    Res.string.theme_color_olive,    seed(hue(5))),   // 102° 橄榄
+    ThemeSeed("forest",   Res.string.theme_color_forest,   seed(hue(6))),   // 134° 森绿
+    ThemeSeed("pine",     Res.string.theme_color_pine,     seed(hue(7))),   // 167° 松绿
+    ThemeSeed("peacock",  Res.string.theme_color_peacock,  seed(hue(8))),   // 200° 孔雀
+    ThemeSeed("steel",    Res.string.theme_color_steel,    seed(hue(9))),   // 233° 钢蓝
+    ThemeSeed("indigo",   Res.string.theme_color_indigo,   seed(hue(10))),   // 265° 靛蓝
     // 中性三档：同一 tone，靠低彩度与彩色档拉开，暖(棕)/冷(蓝灰)/纯灰(石墨) 各一
     ThemeSeed("brown",    Res.string.theme_color_brown,    seed(40.0, chroma = 16.0)),
     ThemeSeed("slate",    Res.string.theme_color_slate,    seed(230.0, chroma = 14.0)),
