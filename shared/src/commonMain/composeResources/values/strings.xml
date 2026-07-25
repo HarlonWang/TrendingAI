@@ -9,6 +9,7 @@
     <string name="theme_follow_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_amoled">AMOLED</string>
     <string name="appearance">Appearance</string>
     <string name="app_settings">App Settings</string>
     <string name="subscription_reminders">Subscription &amp; Reminders</string>
@@ -145,6 +146,13 @@
     <string name="theme_color_green">Green</string>
     <string name="theme_color_teal">Teal</string>
     <string name="theme_color_blue">Blue</string>
+    <string name="theme_color_orange">Orange</string>
+    <string name="theme_color_lime">Lime</string>
+    <string name="theme_color_cyan">Cyan</string>
+    <string name="theme_color_indigo">Indigo</string>
+    <string name="theme_color_pink">Rose</string>
+    <string name="theme_color_brown">Brown</string>
+    <string name="theme_color_slate">Slate</string>
     <string name="theme_color_graphite">Graphite</string>
     <string name="theme_color_custom">Custom</string>
     <string name="color_lab_title">Custom Color</string>

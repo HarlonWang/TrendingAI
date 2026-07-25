@@ -21,10 +21,15 @@ import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 
+/**
+ * 持久化存的是 ordinal，新档位只能追加在末尾，否则老用户的选择会错位。
+ * AMOLED 是深色的变体：同一套深色配色，但背景压到纯黑，OLED 屏上省电。
+ */
 enum class ThemeMode(val title: String) {
     FOLLOW_SYSTEM("跟随系统"),
     LIGHT("浅色"),
-    DARK("深色")
+    DARK("深色"),
+    AMOLED("纯黑")
 }
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L

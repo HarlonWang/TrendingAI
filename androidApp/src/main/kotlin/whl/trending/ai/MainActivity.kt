@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
             val isDark = when (themeMode) {
                 ThemeMode.FOLLOW_SYSTEM -> isSystemDark
                 ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
+                ThemeMode.DARK, ThemeMode.AMOLED -> true
             }
 
             DisposableEffect(isDark) {

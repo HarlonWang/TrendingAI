@@ -9,6 +9,7 @@
     <string name="theme_follow_system">跟随系统</string>
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
+    <string name="theme_amoled">纯黑</string>
     <string name="appearance">外观</string>
     <string name="app_settings">应用设置</string>
     <string name="subscription_reminders">订阅与提醒</string>
@@ -145,6 +146,13 @@
     <string name="theme_color_green">绿</string>
     <string name="theme_color_teal">青绿</string>
     <string name="theme_color_blue">蓝</string>
+    <string name="theme_color_orange">橙</string>
+    <string name="theme_color_lime">青柠</string>
+    <string name="theme_color_cyan">青蓝</string>
+    <string name="theme_color_indigo">靛蓝</string>
+    <string name="theme_color_pink">玫红</string>
+    <string name="theme_color_brown">棕</string>
+    <string name="theme_color_slate">蓝灰</string>
     <string name="theme_color_graphite">石墨</string>
     <string name="theme_color_custom">自定义</string>
     <string name="color_lab_title">自定义主题色</string>

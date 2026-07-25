@@ -9,23 +9,25 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * 主题色从 10 档收拢到 6 档后的升级兼容：选过被删档位的老用户不能出现
- * 「App 是橙色的，设置页里一个圆都没选中」这种状态。
+ * 预设色表变更时的升级兼容：当前生效色若不在预设表内，必须原样落进自定义档，
+ * 否则老用户会看到「App 是橙色的，设置页里一颗都没选中」这种状态。
  */
 class ThemeSeedMigrationTest {
 
     private val presetArgbs = PRESET_PALETTE.map { it.argb }.toSet()
 
     /**
-     * 旧版本里已被删掉、且没有再补回来的预设色。
-     * teal(00897B) 不在此列——埋点显示青蓝系需求占改色用户 35%，它已作为预设补回，
-     * 选过它的老用户会命中预设表、不再走迁移。
+     * 预设表外的色值。
+     *
+     * 当前预设表已全量收录 10 个历史预设色，所以现实中没有哪个老用户会真的走进迁移分支；
+     * 这些用例守的是机制本身——将来若再精简色板，被删档位必须能原样落进自定义档。
+     * 用一批从未做过预设的色值来验证，避免哪天某个颜色被收录进表就悄悄失效。
      */
-    private val removedLegacySeeds = listOf(
-        0xFFF4511EL, // orange
-        0xFF0288D1L, // cyan
-        0xFF3F51B5L, // indigo
-        0xFFC2185BL, // pink
+    private val nonPresetSeeds = listOf(
+        0xFF00BCD4L, // M2 Cyan 500
+        0xFF795548L, // M2 Brown 500
+        0xFF9C27B0L, // M2 Purple 500
+        0xFF607D8BL, // M2 Blue Grey 500
     )
 
     private fun managerWith(vararg entries: Pair<String, Any>): Pair<SettingsManager, MapSettings> {
@@ -42,13 +44,13 @@ class ThemeSeedMigrationTest {
     }
 
     @Test
-    fun removed_preset_seed_becomes_custom_theme_with_same_color() {
-        removedLegacySeeds.forEach { legacy ->
+    fun non_preset_seed_becomes_custom_theme_with_same_color() {
+        nonPresetSeeds.forEach { legacy ->
             val (manager, _) = managerWith("prefs_seed_color" to legacy)
 
             manager.migrateLegacySeedIfNeeded(presetArgbs)
 
-            assertTrue(manager.currentThemeCustom(), "被删档位 ${legacy.toString(16)} 应迁到自定义档")
+            assertTrue(manager.currentThemeCustom(), "表外色值 ${legacy.toString(16)} 应迁到自定义档")
             assertEquals(legacy, manager.currentCustomSeedColor())
             // 关键：生效色一个像素都不变，用户升级后看不出差别
             assertEquals(legacy, manager.currentSeedColor())
@@ -104,7 +106,7 @@ class ThemeSeedMigrationTest {
 
     @Test
     fun migration_is_idempotent_across_launches() {
-        val (manager, _) = managerWith("prefs_seed_color" to 0xFFC2185BL)
+        val (manager, _) = managerWith("prefs_seed_color" to 0xFF00BCD4L)
 
         manager.migrateLegacySeedIfNeeded(presetArgbs)
         // 用户升级后又主动选了预设，下次启动再跑迁移不能把他拽回自定义档
@@ -113,7 +115,7 @@ class ThemeSeedMigrationTest {
 
         assertFalse(manager.currentThemeCustom())
         assertEquals(PRESET_PALETTE.first().argb, manager.currentSeedColor())
-        // 自定义色仍留着，用户点回第 7 颗圆就能找回原来的粉色
-        assertEquals(0xFFC2185BL, manager.currentCustomSeedColor())
+        // 自定义色仍留着，用户点回色板末尾那颗就能找回原来的颜色
+        assertEquals(0xFF00BCD4L, manager.currentCustomSeedColor())
     }
 }

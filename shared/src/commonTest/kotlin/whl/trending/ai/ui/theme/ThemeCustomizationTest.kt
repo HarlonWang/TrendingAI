@@ -205,8 +205,9 @@ class ThemeCustomizationTest {
 
     @Test
     fun unknown_preset_seed_falls_back_to_soft() {
-        // 历史版本残留的旧色值（比如已删掉的橙色档）不该让主题崩成异常配置
-        val config = resolveThemeConfig(0xFFF4511EL, isCustom = false)
+        // 预设表外的色值（历史残留、或用户手改配置）不该让主题崩成异常配置。
+        // 当前预设表已收录全部历史色，这里用一个从未做过预设的色值来守这条回落路径。
+        val config = resolveThemeConfig(0xFF00BCD4L, isCustom = false)
         assertEquals(ThemeStyleOption.SOFT, config.style)
         assertEquals(ThemeContrastOption.STANDARD, config.contrast)
     }

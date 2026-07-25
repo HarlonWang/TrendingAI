@@ -13,6 +13,7 @@ import whl.trending.ai.ui.theme.hsvToArgb
 import whl.trending.ai.ui.theme.rememberMorph
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,12 +30,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -42,9 +47,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -65,6 +67,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -72,6 +75,7 @@ import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.dark_mode
 import trendingai.shared.generated.resources.theme_color
+import trendingai.shared.generated.resources.theme_amoled
 import trendingai.shared.generated.resources.theme_color_custom
 import trendingai.shared.generated.resources.theme_dark
 import trendingai.shared.generated.resources.theme_follow_system
@@ -126,29 +130,13 @@ fun AppearanceScreen(
                     modifier = Modifier.padding(start = 16.dp)
                 )
             }
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ThemeMode.entries.forEachIndexed { index, mode ->
-                    SegmentedButton(
-                        selected = themeMode == mode,
-                        onClick = {
-                            trackEvent("settings_theme_change", mapOf("theme" to mode.name.lowercase()))
-                            globalSettingsManager.setThemeMode(mode)
-                        },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = ThemeMode.entries.size
-                        ),
-                        label = {
-                            Text(
-                                text = themeModeText(mode),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    )
-                }
-            }
+            ThemeModeGrid(
+                selected = themeMode,
+                onSelect = { mode ->
+                    trackEvent("settings_theme_change", mapOf("theme" to mode.name.lowercase()))
+                    globalSettingsManager.setThemeMode(mode)
+                },
+            )
 
             Spacer(Modifier.height(20.dp))
 
@@ -167,31 +155,37 @@ fun AppearanceScreen(
                     modifier = Modifier.padding(start = 16.dp)
                 )
             }
-            SwatchGrid(
-                selected = seedColor,
-                isCustomSelected = isCustom,
-                customSeed = customSeed,
-                onSelect = { seed ->
-                    trackEvent("settings_seed_color", mapOf("seed" to seed.id))
-                    globalSettingsManager.setSeedColor(seed.argb)
-                },
-                onOpenColorLab = {
-                    trackEvent("settings_seed_color", mapOf("seed" to "custom"))
-                    // 已调过色就先把它应用上，再进调色台——点击只有一种结果，
-                    // 不做「选中态下再点才是编辑」那种要靠猜的二段交互
-                    globalSettingsManager.selectCustomTheme()
-                    onNavigateToColorLab()
-                },
-            )
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                SwatchGrid(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+                    selected = seedColor,
+                    isCustomSelected = isCustom,
+                    customSeed = customSeed,
+                    onSelect = { seed ->
+                        trackEvent("settings_seed_color", mapOf("seed" to seed.id))
+                        globalSettingsManager.setSeedColor(seed.argb)
+                    },
+                    onOpenColorLab = {
+                        trackEvent("settings_seed_color", mapOf("seed" to "custom"))
+                        // 已调过色就先把它应用上，再进调色台——点击只有一种结果，
+                        // 不做「选中态下再点才是编辑」那种要靠猜的二段交互
+                        globalSettingsManager.selectCustomTheme()
+                        onNavigateToColorLab()
+                    },
+                )
+            }
         }
     }
 }
 
 /**
- * 色卡直径。56dp 而非常见的 40dp：四列撑满通栏后圆若太小会显得松散，
- * 放大既让色相更好辨认，也把触控目标抬到 M3 建议的 48dp 之上。
+ * 色卡直径。48dp 是 M3 建议的最小触控目标，五列等宽排布下也不至于把列挤破。
  */
-private val SWATCH_SIZE = 56.dp
+private val SWATCH_SIZE = 48.dp
 
 /** ThemeMode → 展示文案，设置一级页外观入口与本页分段按钮共用 */
 @Composable
@@ -200,6 +194,7 @@ internal fun themeModeText(mode: ThemeMode): String {
         ThemeMode.FOLLOW_SYSTEM -> Res.string.theme_follow_system
         ThemeMode.LIGHT -> Res.string.theme_light
         ThemeMode.DARK -> Res.string.theme_dark
+        ThemeMode.AMOLED -> Res.string.theme_amoled
     }
     return stringResource(labelRes)
 }
@@ -207,23 +202,26 @@ internal fun themeModeText(mode: ThemeMode): String {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SwatchGrid(
+    modifier: Modifier = Modifier,
     selected: Long,
     isCustomSelected: Boolean,
     customSeed: Long?,
     onSelect: (ThemeSeed) -> Unit,
     onOpenColorLab: () -> Unit,
 ) {
-    // 固定间距左对齐，排不下自然换行——不锁每行颗数，色卡增减时不用跟着调布局。
+    // 每行 5 列、各列等宽：14 个预设 + 自定义正好 5×3 满排，不留缺角。
     FlowRow(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        maxItemsInEachRow = 5,
     ) {
         PRESET_PALETTE.forEach { seed ->
             val color = Color(seed.argb)
             MorphSwatch(
+                modifier = Modifier.weight(1f),
                 name = stringResource(seed.nameRes),
                 brush = SolidColor(color),
                 contentTint = if (color.luminance() < 0.5f) Color.White else Color.Black,
@@ -234,6 +232,7 @@ private fun SwatchGrid(
             )
         }
         CustomSwatch(
+            modifier = Modifier.weight(1f),
             customSeed = customSeed,
             selected = isCustomSelected,
             onClick = onOpenColorLab,
@@ -248,6 +247,7 @@ private fun SwatchGrid(
  */
 @Composable
 private fun CustomSwatch(
+    modifier: Modifier = Modifier,
     customSeed: Long?,
     selected: Boolean,
     onClick: () -> Unit,
@@ -260,6 +260,7 @@ private fun CustomSwatch(
     val color = customSeed?.let { Color(it) }
 
     MorphSwatch(
+        modifier = modifier,
         name = stringResource(Res.string.theme_color_custom),
         brush = color?.let { SolidColor(it) } ?: wheel,
         // 色轮档底色浅深都有，白色勾/加号在任何一段色相上都看得清
@@ -277,6 +278,7 @@ private fun CustomSwatch(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun MorphSwatch(
+    modifier: Modifier = Modifier,
     name: String,
     brush: Brush,
     contentTint: Color,
@@ -294,7 +296,10 @@ private fun MorphSwatch(
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
     )
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Box(
             modifier = Modifier
                 .size(SWATCH_SIZE)
@@ -328,11 +333,98 @@ private fun MorphSwatch(
         Text(
             text = name,
             style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             color = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
         )
+    }
+}
+
+/**
+ * 深色模式选择：2×2 卡片而非扁扁的分段按钮。
+ * 图标 + 文字的卡片把上半屏撑起来，也让「纯黑」这种需要解释的档位有地方放图标。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ThemeModeGrid(
+    selected: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        maxItemsInEachRow = 2,
+    ) {
+        ThemeMode.entries.forEach { mode ->
+            ThemeModeCard(
+                modifier = Modifier.weight(1f),
+                mode = mode,
+                selected = mode == selected,
+                onClick = { onSelect(mode) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeModeCard(
+    modifier: Modifier = Modifier,
+    mode: ThemeMode,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val icon = when (mode) {
+        ThemeMode.FOLLOW_SYSTEM -> Icons.Default.BrightnessAuto
+        ThemeMode.LIGHT -> Icons.Default.LightMode
+        ThemeMode.DARK -> Icons.Default.DarkMode
+        ThemeMode.AMOLED -> Icons.Default.Contrast
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Surface(
+        selected = selected,
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            },
+        ),
+        modifier = modifier.semantics { role = Role.RadioButton },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(icon, contentDescription = null, tint = contentColor)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = themeModeText(mode),
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+            )
+        }
     }
 }

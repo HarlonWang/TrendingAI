@@ -39,7 +39,7 @@ fun TrendingTheme(content: @Composable () -> Unit) {
     val isDark = when (themeMode) {
         ThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
+        ThemeMode.DARK, ThemeMode.AMOLED -> true
     }
 
     // 自定义档用用户在调色台里存的风格/对比度；预设档用 PRESET_PALETTE 钦定的搭配
@@ -51,6 +51,8 @@ fun TrendingTheme(content: @Composable () -> Unit) {
     val state = rememberDynamicMaterialThemeState(
         seedColor = Color(seedArgb),
         isDark = isDark,
+        // 纯黑档把 background/surface 压到全黑，OLED 屏上这些像素直接熄灭
+        isAmoled = themeMode == ThemeMode.AMOLED,
         style = resolved.style.style,
         contrastLevel = resolved.contrast.level,
         // M3 Expressive 的 2025 色规：同一 seed 出来的配色更饱和、层次更强。
