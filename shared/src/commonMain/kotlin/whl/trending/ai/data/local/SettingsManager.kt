@@ -272,12 +272,16 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 恢复默认主题：只把生效档切回默认紫，**不动**自定义色与历史。
+     * 恢复默认主题：切回默认紫，并清掉自定义档本身（色板末尾那颗圆变回色轮加号）。
      *
-     * 用户点它的意图是「回到默认的样子」，不是「销毁我调过的色」——历史留着，
-     * 他随时能从调色台的最近使用里取回。
+     * **历史不动**——这是这个操作能安全存在的前提：用户点它的意图是「回到没调过色的
+     * 样子」，不是「销毁我调过的所有色」，随时能从调色台的最近使用里整组取回。
+     * 若连历史一起清，就回到了单槽位时代那个一点即永久丢失的老问题。
      */
     fun clearCustomTheme() {
+        settings.remove(THEME_CUSTOM_SEED_KEY)
+        settings.remove(THEME_STYLE_KEY)
+        settings.remove(THEME_CONTRAST_KEY)
         settings.putLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
         settings.putBoolean(THEME_CUSTOM_KEY, false)
     }

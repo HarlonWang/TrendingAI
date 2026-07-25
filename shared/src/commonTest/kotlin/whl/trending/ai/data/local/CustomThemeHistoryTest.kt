@@ -4,6 +4,7 @@ import com.russhwolf.settings.MapSettings
 import whl.trending.ai.ui.theme.PRESET_PALETTE
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -74,8 +75,9 @@ class CustomThemeHistoryTest {
     }
 
     @Test
-    fun reset_to_default_keeps_history_and_custom_color() {
-        // 「恢复默认」的意图是回到默认的样子，不是销毁调过的色
+    fun reset_to_default_clears_custom_slot_but_keeps_history() {
+        // 「恢复默认」= 回到没调过色的样子：自定义档被清掉，但历史留着，
+        // 用户随时能从最近使用里整组取回——这是这个操作能安全存在的前提
         val m = manager()
         m.setCustomTheme(0xFFD219ABL, "vivid", "high")
         m.pushCustomThemeHistory(CustomThemeEntry(0xFFD219ABL, "vivid", "high"))
@@ -84,8 +86,10 @@ class CustomThemeHistoryTest {
 
         assertEquals(DEFAULT_SEED_ARGB, m.currentSeedColor())
         assertTrue(!m.currentThemeCustom())
-        // 自定义色与历史都还在，用户能从最近使用里取回
-        assertEquals(0xFFD219ABL, m.currentCustomSeedColor())
+        // 自定义档本身清掉：色板末尾那颗圆变回色轮加号
+        assertNull(m.currentCustomSeedColor())
+        assertEquals(DEFAULT_THEME_STYLE_STORAGE, m.currentThemeStyle())
+        // 历史完好，是唯一的找回路径
         assertEquals(
             listOf(CustomThemeEntry(0xFFD219ABL, "vivid", "high")),
             m.currentCustomThemeHistory(),
