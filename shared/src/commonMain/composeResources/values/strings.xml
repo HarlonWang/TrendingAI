@@ -170,7 +170,7 @@
     <string name="color_lab_contrast_standard">Standard</string>
     <string name="color_lab_contrast_medium">Medium</string>
     <string name="color_lab_contrast_high">High</string>
-    <string name="color_lab_reset">Reset to default</string>
+    <string name="color_lab_discard">Discard changes</string>
     <string name="color_lab_preview_title">Preview</string>
     <string name="color_lab_preview_item">Trending repository</string>
     <string name="color_lab_preview_desc">AI summary shows up in a card like this.</string>

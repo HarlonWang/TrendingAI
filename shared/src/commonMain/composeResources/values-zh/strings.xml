@@ -170,7 +170,7 @@
     <string name="color_lab_contrast_standard">标准</string>
     <string name="color_lab_contrast_medium">中</string>
     <string name="color_lab_contrast_high">高</string>
-    <string name="color_lab_reset">恢复默认</string>
+    <string name="color_lab_discard">撤销修改</string>
     <string name="color_lab_preview_title">预览</string>
     <string name="color_lab_preview_item">热门仓库</string>
     <string name="color_lab_preview_desc">AI 摘要会显示在这样的卡片里。</string>

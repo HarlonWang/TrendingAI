@@ -79,7 +79,7 @@ import trendingai.shared.generated.resources.color_lab_preview_desc
 import trendingai.shared.generated.resources.color_lab_preview_item
 import trendingai.shared.generated.resources.color_lab_preview_title
 import trendingai.shared.generated.resources.color_lab_recent
-import trendingai.shared.generated.resources.color_lab_reset
+import trendingai.shared.generated.resources.color_lab_discard
 import trendingai.shared.generated.resources.color_lab_saturation_value
 import trendingai.shared.generated.resources.color_lab_style
 import trendingai.shared.generated.resources.color_lab_title
@@ -120,6 +120,9 @@ fun ColorLabScreen(onBack: () -> Unit) {
         )
     }
 
+    // 进入这一刻的完整状态，「撤销修改」按它整体写回
+    val entrySnapshot = remember { globalSettingsManager.currentThemeSnapshot() }
+
     val history by globalSettingsManager.customThemeHistory.collectAsState(
         remember { globalSettingsManager.currentCustomThemeHistory() }
     )
@@ -133,7 +136,8 @@ fun ColorLabScreen(onBack: () -> Unit) {
     // 落盘节拍器：每次用户交互 +1，触发一次防抖写入；0 表示「没有待写的改动」。
     // 用它而不是直接监听 (色值, 风格, 对比度)，是为了守住两条语义：
     //   1. 只进来看看、什么都没动 → 不该被写成自定义档；
-    //   2. 点「恢复默认」后把它清零 → 连带取消挂起的写，否则恢复完又被写回自定义。
+    //   2. 点「撤销修改」后把它清零 → 连带取消挂起的写，否则刚撤销的改动又被写回去；
+    //      它同时也是撤销按钮的可用性判据（没改过就没有可撤销的东西）。
     var pendingWrite by remember { mutableStateOf(0) }
 
     LaunchedEffect(pendingWrite) {
@@ -308,37 +312,30 @@ fun ColorLabScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             TextButton(
+                // 没改过就没有可撤销的东西；禁用比让用户点了没反应更清楚
+                enabled = pendingWrite > 0,
                 onClick = {
-                    // 先把手上这套配置记进历史再清除：下面会把 pendingWrite 清零，
-                    // 离开时的 onDispose 就不会再记了——不在这里补，用户刚调好的色
-                    // 会连同自定义档一起消失，且在「最近使用」里也找不到。
-                    if (pendingWrite > 0) {
-                        globalSettingsManager.pushCustomThemeHistory(
-                            CustomThemeEntry(
-                                hsvToArgb(hsv),
-                                style.storageValue,
-                                contrast.storageValue,
-                            )
-                        )
-                    }
-                    globalSettingsManager.clearCustomTheme()
-                    // 面板回到清除后真正生效的那一档：用户可能是从某个预设档进来的，
-                    // 清掉自定义后仍该停在他的预设上，而不是一律显示默认紫
-                    val effective = resolveThemeConfig(
-                        seedArgb = globalSettingsManager.currentSeedColor(),
-                        isCustom = false,
+                    // 整体写回进入这一刻的状态：进来时是森绿预设就回森绿，是某个自定义色
+                    // 就回那个色。撤销掉的配置不进历史——清零 pendingWrite 后 onDispose
+                    // 本来就不记，这正是「我不要这次改动」应有的结果。
+                    globalSettingsManager.restoreThemeSnapshot(entrySnapshot)
+                    val restored = resolveThemeConfig(
+                        seedArgb = entrySnapshot.seedArgb,
+                        isCustom = entrySnapshot.isCustom,
+                        styleStorage = entrySnapshot.style,
+                        contrastStorage = entrySnapshot.contrast,
                     )
-                    hsv = argbToHsv(effective.seedArgb)
-                    style = effective.style
-                    contrast = effective.contrast
-                    hexText = formatHexColor(effective.seedArgb)
+                    hsv = argbToHsv(restored.seedArgb)
+                    style = restored.style
+                    contrast = restored.contrast
+                    hexText = formatHexColor(restored.seedArgb)
                     hexError = false
-                    // 清零以取消挂起的防抖写，否则刚恢复的档又会被写回自定义
+                    // 同时取消挂起的防抖写，否则刚撤销的改动又被写回去
                     pendingWrite = 0
                 },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
-                Text(stringResource(Res.string.color_lab_reset))
+                Text(stringResource(Res.string.color_lab_discard))
             }
 
             Spacer(Modifier.height(24.dp))

@@ -85,6 +85,15 @@ data class CustomThemeEntry(
     val contrast: String = DEFAULT_THEME_CONTRAST_STORAGE,
 )
 
+/** 进入调色台那一刻的完整主题状态，「撤销修改」按它整体写回 */
+data class ThemeSnapshot(
+    val seedArgb: Long,
+    val isCustom: Boolean,
+    val style: String,
+    val contrast: String,
+    val customSeed: Long?,
+)
+
 /** 自定义色历史保留条数：够覆盖一次调色过程中的反复试错，又不至于把调色台塞满 */
 private const val CUSTOM_HISTORY_LIMIT = 8
 
@@ -204,6 +213,33 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
+     * 进入调色台时的完整主题状态快照，供「撤销修改」整体写回。
+     *
+     * 调色台是实时生效的——拖一下色相整个 App 立刻变，按返回键并不会撤销。
+     * 用户调坏了却记不起原来是什么色，这份快照就是他唯一的退路。
+     */
+    fun currentThemeSnapshot(): ThemeSnapshot = ThemeSnapshot(
+        seedArgb = currentSeedColor(),
+        isCustom = currentThemeCustom(),
+        style = currentThemeStyle(),
+        contrast = currentThemeContrast(),
+        customSeed = currentCustomSeedColor(),
+    )
+
+    /** 把主题状态整体写回快照那一刻，用于撤销一次调色台编辑 */
+    fun restoreThemeSnapshot(snapshot: ThemeSnapshot) {
+        settings.putLong(SEED_COLOR_KEY, snapshot.seedArgb)
+        settings.putBoolean(THEME_CUSTOM_KEY, snapshot.isCustom)
+        settings.putString(THEME_STYLE_KEY, snapshot.style)
+        settings.putString(THEME_CONTRAST_KEY, snapshot.contrast)
+        // 进入前没有自定义色就把 key 抹掉，否则本次编辑产生的那个会留下来，
+        // 外观页末尾那颗圆仍显示成一个已经被撤销掉的颜色
+        val customSeed = snapshot.customSeed
+        if (customSeed == null) settings.remove(THEME_CUSTOM_SEED_KEY)
+        else settings.putLong(THEME_CUSTOM_SEED_KEY, customSeed)
+    }
+
+    /**
      * 调色台落盘：四项一起写，避免中间态让主题闪烁成半套配置。
      * 不在这里入历史——拖动过程每 120ms 就落一次盘，会把历史冲成一堆中间色；
      * 由调色台在离开时记一条最终值。
@@ -240,24 +276,6 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(THEME_CUSTOM_HISTORY_KEY, Json.encodeToString(updated))
     }
 
-    /**
-     * 恢复默认主题：切回默认紫，并清掉自定义档本身（色板末尾那颗圆变回色轮加号）。
-     *
-     * **历史不动**——这是这个操作能安全存在的前提：用户点它的意图是「回到没调过色的
-     * 样子」，不是「销毁我调过的所有色」，随时能从调色台的最近使用里整组取回。
-     * 若连历史一起清，就回到了单槽位时代那个一点即永久丢失的老问题。
-     */
-    fun clearCustomTheme() {
-        // 只有当前生效的就是自定义档时才需要切回默认紫。用户从某个预设档进调色台、
-        // 什么都没改就点了这个按钮，不该顺手把他的预设选择也改掉。
-        if (settings.getBoolean(THEME_CUSTOM_KEY, false)) {
-            settings.putLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
-        }
-        settings.remove(THEME_CUSTOM_SEED_KEY)
-        settings.remove(THEME_STYLE_KEY)
-        settings.remove(THEME_CONTRAST_KEY)
-        settings.putBoolean(THEME_CUSTOM_KEY, false)
-    }
 
     init {
         // 摘要语言一次性迁移：旧版本摘要语言复用 App 语言设置，升级后首次构造时
