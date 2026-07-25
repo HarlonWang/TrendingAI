@@ -85,12 +85,6 @@ data class CustomThemeEntry(
     val contrast: String = DEFAULT_THEME_CONTRAST_STORAGE,
 )
 
-/**
- * 主题色迁移的版本号。色板每次发生「档位被删」的变更时 +1，让迁移对所有安装重跑一轮，
- * 把当前生效但已不在预设表内的 seed 搬进自定义档。
- */
-const val THEME_SEED_MIGRATION_VERSION: Int = 1
-
 /** 自定义色历史保留条数：够覆盖一次调色过程中的反复试错，又不至于把调色台塞满 */
 private const val CUSTOM_HISTORY_LIMIT = 8
 
@@ -101,7 +95,6 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_CUSTOM_KEY = "prefs_theme_custom"
     private val THEME_CUSTOM_SEED_KEY = "prefs_theme_custom_seed"
     private val THEME_CUSTOM_HISTORY_KEY = "prefs_theme_custom_history"
-    private val THEME_MIGRATION_KEY = "prefs_theme_seed_migration"
     private val THEME_STYLE_KEY = "prefs_theme_style"
     private val THEME_CONTRAST_KEY = "prefs_theme_contrast"
     private val LANGUAGE_KEY = "prefs_language"
@@ -196,40 +189,6 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun currentCustomSeedColor(): Long? = settings.getLongOrNull(THEME_CUSTOM_SEED_KEY)
 
-    /**
-     * 主题色一次性迁移：把旧版本选中、但在当前预设表里已不存在的 seed 搬进自定义档。
-     *
-     * 预设从 10 色收拢到 6 色后，选过被删档位（橙/青绿/青蓝/靛蓝/粉）的老用户升级上来，
-     * App 主色不会变（[seedColor] 还在），但外观页会一个圆都不选中——他看到的是
-     * 「App 是橙色的，设置里却没有橙色」，再点任意一颗就永久失去原来的颜色。
-     * 原样搬成自定义档后颜色一个像素都不变，色板行末尾那颗圆直接显示成他原来的色。
-     *
-     * 幂等靠独立的版本号哨兵 [THEME_MIGRATION_KEY]，不借用任何业务 key——
-     * 业务 key 会被 [setSeedColor]、[clearCustomTheme] 等日常操作写脏，那样一次发版后
-     * 哨兵就被点亮，下次再精简色板时迁移会被整体跳过，守不住被删的档位。
-     * 将来色板再变，把 [THEME_SEED_MIGRATION_VERSION] +1 即可让迁移重跑一轮。
-     *
-     * @param presetArgbs 当前预设表的全部色值，由 UI 层传入，避免 data 层反向依赖 ui 层。
-     */
-    fun migrateLegacySeedIfNeeded(presetArgbs: Set<Long>) {
-        if (settings.getInt(THEME_MIGRATION_KEY, 0) >= THEME_SEED_MIGRATION_VERSION) return
-        // 先落标记再干活：无论下面走哪条分支，本轮迁移都算跑过了
-        settings.putInt(THEME_MIGRATION_KEY, THEME_SEED_MIGRATION_VERSION)
-        // 已经在用自定义档的用户不碰：他的色本来就不在预设表内，但那是他自己调的，
-        // 再"搬进自定义档"只会把他的风格/对比度冲成默认值
-        if (settings.getBoolean(THEME_CUSTOM_KEY, false)) return
-        // 从没选过主题色的用户（含全新安装）不需要迁移，保持默认档
-        val seed = settings.getLongOrNull(SEED_COLOR_KEY) ?: return
-        if (seed in presetArgbs) return
-        settings.putLong(THEME_CUSTOM_SEED_KEY, seed)
-        // 旧版本所有预设都跑 TonalSpot + 标准对比度，照搬即可保持观感不变
-        settings.putString(THEME_STYLE_KEY, DEFAULT_THEME_STYLE_STORAGE)
-        settings.putString(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
-        settings.putBoolean(THEME_CUSTOM_KEY, true)
-        // 一并入历史：老用户并不知道「自定义」那档装的是他原来的颜色，
-        // 万一被后续操作覆盖，至少还能从最近使用里找回来
-        pushCustomThemeHistory(CustomThemeEntry(seed))
-    }
 
     /** 选中某个预设档：写 seed 的同时清掉自定义标志，风格/对比度回到预设钦定的搭配 */
     fun setSeedColor(argb: Long) {
@@ -262,8 +221,7 @@ class SettingsManager(private val settings: ObservableSettings) {
      *
      * 调色本身就是试错过程，只留一个「当前自定义色」的话，调错一次、或点一下恢复默认，
      * 之前调好的就永久没了。取色类 UI 普遍保留最近用过的颜色，这里照同一结构做。
-     * 老用户迁移进来的旧色也会入历史，因此不会被后续任何操作抹掉。
-     */
+         */
     val customThemeHistory: Flow<List<CustomThemeEntry>> =
         settings.getStringOrNullFlow(THEME_CUSTOM_HISTORY_KEY).map { decodeHistory(it) }
 
