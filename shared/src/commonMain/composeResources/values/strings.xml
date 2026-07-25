@@ -158,6 +158,7 @@
     <string name="color_lab_title">Custom Color</string>
     <string name="color_lab_hex">Hex</string>
     <string name="color_lab_hex_invalid">Enter 6 hex digits, e.g. 6750A4</string>
+    <string name="color_lab_recent">Recent</string>
     <string name="color_lab_style">Style</string>
     <string name="color_lab_style_soft">Soft</string>
     <string name="color_lab_style_vivid">Vivid</string>

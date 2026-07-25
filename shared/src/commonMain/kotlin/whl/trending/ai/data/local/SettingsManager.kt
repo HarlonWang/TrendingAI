@@ -12,6 +12,7 @@ import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -73,12 +74,27 @@ enum class SummaryLanguage(val isoCode: String?) {
     }
 }
 
+/**
+ * 一条自定义主题记录。风格/对比度存字符串（`ThemeStyleOption.storageValue` 等），
+ * 不引用 ui 层的枚举，避免 data 层反向依赖。
+ */
+@Serializable
+data class CustomThemeEntry(
+    val seedArgb: Long,
+    val style: String = DEFAULT_THEME_STYLE_STORAGE,
+    val contrast: String = DEFAULT_THEME_CONTRAST_STORAGE,
+)
+
+/** 自定义色历史保留条数：够覆盖一次调色过程中的反复试错，又不至于把调色台塞满 */
+private const val CUSTOM_HISTORY_LIMIT = 8
+
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val SEED_COLOR_KEY = "prefs_seed_color"
     private val THEME_CUSTOM_KEY = "prefs_theme_custom"
     private val THEME_CUSTOM_SEED_KEY = "prefs_theme_custom_seed"
+    private val THEME_CUSTOM_HISTORY_KEY = "prefs_theme_custom_history"
     private val THEME_STYLE_KEY = "prefs_theme_style"
     private val THEME_CONTRAST_KEY = "prefs_theme_contrast"
     private val LANGUAGE_KEY = "prefs_language"
@@ -199,6 +215,9 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(THEME_STYLE_KEY, DEFAULT_THEME_STYLE_STORAGE)
         settings.putString(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
         settings.putBoolean(THEME_CUSTOM_KEY, true)
+        // 一并入历史：老用户并不知道「自定义」那档装的是他原来的颜色，
+        // 万一被后续操作覆盖，至少还能从最近使用里找回来
+        pushCustomThemeHistory(CustomThemeEntry(seed))
     }
 
     /** 选中某个预设档：写 seed 的同时清掉自定义标志，风格/对比度回到预设钦定的搭配 */
@@ -214,7 +233,11 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putBoolean(THEME_CUSTOM_KEY, true)
     }
 
-    /** 调色台落盘：四项一起写，避免中间态让主题闪烁成半套配置 */
+    /**
+     * 调色台落盘：四项一起写，避免中间态让主题闪烁成半套配置。
+     * 不在这里入历史——拖动过程每 120ms 就落一次盘，会把历史冲成一堆中间色；
+     * 由调色台在离开时记一条最终值。
+     */
     fun setCustomTheme(argb: Long, styleStorage: String, contrastStorage: String) {
         settings.putLong(SEED_COLOR_KEY, argb)
         settings.putLong(THEME_CUSTOM_SEED_KEY, argb)
@@ -223,11 +246,38 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putBoolean(THEME_CUSTOM_KEY, true)
     }
 
-    /** 恢复默认主题：回到默认紫这个预设档，同时抹掉自定义色，让「自定义」那颗圆消失 */
+    /**
+     * 自定义色历史，最新在前。
+     *
+     * 调色本身就是试错过程，只留一个「当前自定义色」的话，调错一次、或点一下恢复默认，
+     * 之前调好的就永久没了。取色类 UI 普遍保留最近用过的颜色，这里照同一结构做。
+     * 老用户迁移进来的旧色也会入历史，因此不会被后续任何操作抹掉。
+     */
+    val customThemeHistory: Flow<List<CustomThemeEntry>> =
+        settings.getStringOrNullFlow(THEME_CUSTOM_HISTORY_KEY).map { decodeHistory(it) }
+
+    fun currentCustomThemeHistory(): List<CustomThemeEntry> =
+        decodeHistory(settings.getStringOrNull(THEME_CUSTOM_HISTORY_KEY))
+
+    private fun decodeHistory(json: String?): List<CustomThemeEntry> {
+        if (json.isNullOrEmpty()) return emptyList()
+        return runCatching { Json.decodeFromString<List<CustomThemeEntry>>(json) }.getOrElse { emptyList() }
+    }
+
+    /** 记一条自定义配置：完全相同的组合提到最前而非重复入列，超出上限截断 */
+    fun pushCustomThemeHistory(entry: CustomThemeEntry) {
+        val updated = (listOf(entry) + currentCustomThemeHistory().filterNot { it == entry })
+            .take(CUSTOM_HISTORY_LIMIT)
+        settings.putString(THEME_CUSTOM_HISTORY_KEY, Json.encodeToString(updated))
+    }
+
+    /**
+     * 恢复默认主题：只把生效档切回默认紫，**不动**自定义色与历史。
+     *
+     * 用户点它的意图是「回到默认的样子」，不是「销毁我调过的色」——历史留着，
+     * 他随时能从调色台的最近使用里取回。
+     */
     fun clearCustomTheme() {
-        settings.remove(THEME_CUSTOM_SEED_KEY)
-        settings.remove(THEME_STYLE_KEY)
-        settings.remove(THEME_CONTRAST_KEY)
         settings.putLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
         settings.putBoolean(THEME_CUSTOM_KEY, false)
     }

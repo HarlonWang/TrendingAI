@@ -158,6 +158,7 @@
     <string name="color_lab_title">自定义主题色</string>
     <string name="color_lab_hex">色值</string>
     <string name="color_lab_hex_invalid">请输入 6 位十六进制色值，如 6750A4</string>
+    <string name="color_lab_recent">最近使用</string>
     <string name="color_lab_style">风格</string>
     <string name="color_lab_style_soft">柔和</string>
     <string name="color_lab_style_vivid">鲜艳</string>

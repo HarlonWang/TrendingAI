@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +58,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -71,11 +78,13 @@ import trendingai.shared.generated.resources.color_lab_preview_chip
 import trendingai.shared.generated.resources.color_lab_preview_desc
 import trendingai.shared.generated.resources.color_lab_preview_item
 import trendingai.shared.generated.resources.color_lab_preview_title
+import trendingai.shared.generated.resources.color_lab_recent
 import trendingai.shared.generated.resources.color_lab_reset
 import trendingai.shared.generated.resources.color_lab_saturation_value
 import trendingai.shared.generated.resources.color_lab_style
 import trendingai.shared.generated.resources.color_lab_title
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.CustomThemeEntry
 import whl.trending.ai.data.local.DEFAULT_SEED_ARGB
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.theme.Hsv
@@ -112,6 +121,10 @@ fun ColorLabScreen(onBack: () -> Unit) {
         )
     }
 
+    val history by globalSettingsManager.customThemeHistory.collectAsState(
+        remember { globalSettingsManager.currentCustomThemeHistory() }
+    )
+
     var hsv by remember { mutableStateOf(argbToHsv(initial.seedArgb)) }
     var style by remember { mutableStateOf(initial.style) }
     var contrast by remember { mutableStateOf(initial.contrast) }
@@ -137,12 +150,18 @@ fun ColorLabScreen(onBack: () -> Unit) {
     // 埋点只在离开时上报一次最终配置：拖动过程中的中间值没有分析价值。
     // 只看看没改的用户不上报，否则「用过调色台」的量会被逛一圈的人稀释。
     // 不记具体色值——那是用户的个人偏好，聚合后也说明不了什么。
+    val finalSeed by rememberUpdatedState(hsvToArgb(hsv))
     val finalStyle by rememberUpdatedState(style)
     val finalContrast by rememberUpdatedState(contrast)
     val touched by rememberUpdatedState(pendingWrite > 0)
     DisposableEffect(Unit) {
         onDispose {
             if (!touched) return@onDispose
+            // 历史在离开时记一条最终值，而不是每次防抖落盘都记——
+            // 拖动过程每 120ms 就落一次盘，那样历史会被一堆中间色冲满
+            globalSettingsManager.pushCustomThemeHistory(
+                CustomThemeEntry(finalSeed, finalStyle.storageValue, finalContrast.storageValue)
+            )
             trackEvent(
                 "settings_custom_theme",
                 mapOf(
@@ -240,6 +259,23 @@ fun ColorLabScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            if (history.isNotEmpty()) {
+                Spacer(Modifier.height(24.dp))
+                SectionLabel(stringResource(Res.string.color_lab_recent))
+                RecentRow(
+                    history = history,
+                    current = CustomThemeEntry(hsvToArgb(hsv), style.storageValue, contrast.storageValue),
+                    onPick = { entry ->
+                        hsv = argbToHsv(entry.seedArgb)
+                        style = ThemeStyleOption.fromStorage(entry.style)
+                        contrast = ThemeContrastOption.fromStorage(entry.contrast)
+                        hexText = formatHexColor(entry.seedArgb)
+                        hexError = false
+                        pendingWrite++
+                    },
+                )
+            }
+
             Spacer(Modifier.height(24.dp))
 
             SectionLabel(stringResource(Res.string.color_lab_style))
@@ -266,7 +302,8 @@ fun ColorLabScreen(onBack: () -> Unit) {
 
             TextButton(
                 onClick = {
-                    // 恢复默认 = 回到「默认紫」预设档，并抹掉自定义色（外观页那颗自定义圆随之消失）
+                    // 恢复默认 = 把生效档切回默认紫；调过的色与历史都留着，
+                    // 用户随时能从上面的「最近使用」里取回
                     globalSettingsManager.clearCustomTheme()
                     val restored = resolveThemeConfig(DEFAULT_SEED_ARGB, isCustom = false)
                     hsv = argbToHsv(DEFAULT_SEED_ARGB)
@@ -497,6 +534,48 @@ private fun ContrastRow(
                     )
                 },
             )
+        }
+    }
+}
+
+/**
+ * 最近使用过的自定义配置。
+ *
+ * 调色是试错过程：只留一个「当前自定义色」的话，调错一次或点一下恢复默认，之前调好的
+ * 就永久没了。取色类 UI 普遍保留最近颜色，这里照同一结构做——每次离开调色台记一条，
+ * 点一下即可整组取回（颜色 + 风格 + 对比度）。
+ */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun RecentRow(
+    history: List<CustomThemeEntry>,
+    current: CustomThemeEntry,
+    onPick: (CustomThemeEntry) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        history.forEach { entry ->
+            val color = Color(entry.seedArgb)
+            val selected = entry == current
+            Surface(
+                selected = selected,
+                onClick = { onPick(entry) },
+                shape = CircleShape,
+                color = color,
+                border = if (selected) {
+                    BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+                } else {
+                    null
+                },
+                modifier = Modifier
+                    .size(36.dp)
+                    .semantics { role = Role.RadioButton },
+            ) {}
         }
     }
 }
