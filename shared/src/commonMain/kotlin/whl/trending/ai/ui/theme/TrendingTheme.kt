@@ -20,7 +20,12 @@ import whl.trending.ai.data.local.globalSettingsManager
 @Composable
 fun TrendingTheme(content: @Composable () -> Unit) {
     val initialMode = remember { globalSettingsManager.currentThemeMode() }
-    val initialSeed = remember { globalSettingsManager.currentSeedColor() }
+    val initialSeed = remember {
+        // 在读取任何主题字段之前先跑一次遗留迁移：预设表由这里传进去，
+        // 免得 data 层为了判断「是不是预设色」反向依赖 ui 层。
+        globalSettingsManager.migrateLegacySeedIfNeeded(PRESET_PALETTE.map { it.argb }.toSet())
+        globalSettingsManager.currentSeedColor()
+    }
     val initialCustom = remember { globalSettingsManager.currentThemeCustom() }
     val initialStyle = remember { globalSettingsManager.currentThemeStyle() }
     val initialContrast = remember { globalSettingsManager.currentThemeContrast() }
