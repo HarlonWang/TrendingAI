@@ -85,7 +85,6 @@ import trendingai.shared.generated.resources.color_lab_style
 import trendingai.shared.generated.resources.color_lab_title
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.CustomThemeEntry
-import whl.trending.ai.data.local.DEFAULT_SEED_ARGB
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.theme.Hsv
 import whl.trending.ai.ui.theme.ThemeContrastOption
@@ -147,9 +146,6 @@ fun ColorLabScreen(onBack: () -> Unit) {
         )
     }
 
-    // 埋点只在离开时上报一次最终配置：拖动过程中的中间值没有分析价值。
-    // 只看看没改的用户不上报，否则「用过调色台」的量会被逛一圈的人稀释。
-    // 不记具体色值——那是用户的个人偏好，聚合后也说明不了什么。
     val finalSeed by rememberUpdatedState(hsvToArgb(hsv))
     val finalStyle by rememberUpdatedState(style)
     val finalContrast by rememberUpdatedState(contrast)
@@ -157,11 +153,22 @@ fun ColorLabScreen(onBack: () -> Unit) {
     DisposableEffect(Unit) {
         onDispose {
             if (!touched) return@onDispose
+            // 补一次落盘：防抖写挂在 LaunchedEffect 上，用户改完立刻返回时那个协程会
+            // 随页面一起被取消，settings 里还是旧值——而下面照样记历史、发埋点，
+            // 就出现「最近使用里有这个色，主题却没变」。这里的写入与防抖写等价、幂等。
+            globalSettingsManager.setCustomTheme(
+                finalSeed,
+                finalStyle.storageValue,
+                finalContrast.storageValue,
+            )
             // 历史在离开时记一条最终值，而不是每次防抖落盘都记——
             // 拖动过程每 120ms 就落一次盘，那样历史会被一堆中间色冲满
             globalSettingsManager.pushCustomThemeHistory(
                 CustomThemeEntry(finalSeed, finalStyle.storageValue, finalContrast.storageValue)
             )
+            // 埋点同样只在离开时上报一次：拖动中的中间值没有分析价值，
+            // 只看看没改的用户不上报，否则「用过调色台」的量会被逛一圈的人稀释。
+            // 不记具体色值——那是用户的个人偏好，聚合后也说明不了什么。
             trackEvent(
                 "settings_custom_theme",
                 mapOf(
@@ -302,16 +309,31 @@ fun ColorLabScreen(onBack: () -> Unit) {
 
             TextButton(
                 onClick = {
-                    // 恢复默认 = 把生效档切回默认紫；调过的色与历史都留着，
-                    // 用户随时能从上面的「最近使用」里取回
+                    // 先把手上这套配置记进历史再清除：下面会把 pendingWrite 清零，
+                    // 离开时的 onDispose 就不会再记了——不在这里补，用户刚调好的色
+                    // 会连同自定义档一起消失，且在「最近使用」里也找不到。
+                    if (pendingWrite > 0) {
+                        globalSettingsManager.pushCustomThemeHistory(
+                            CustomThemeEntry(
+                                hsvToArgb(hsv),
+                                style.storageValue,
+                                contrast.storageValue,
+                            )
+                        )
+                    }
                     globalSettingsManager.clearCustomTheme()
-                    val restored = resolveThemeConfig(DEFAULT_SEED_ARGB, isCustom = false)
-                    hsv = argbToHsv(DEFAULT_SEED_ARGB)
-                    style = restored.style
-                    contrast = restored.contrast
-                    hexText = formatHexColor(DEFAULT_SEED_ARGB)
+                    // 面板回到清除后真正生效的那一档：用户可能是从某个预设档进来的，
+                    // 清掉自定义后仍该停在他的预设上，而不是一律显示默认紫
+                    val effective = resolveThemeConfig(
+                        seedArgb = globalSettingsManager.currentSeedColor(),
+                        isCustom = false,
+                    )
+                    hsv = argbToHsv(effective.seedArgb)
+                    style = effective.style
+                    contrast = effective.contrast
+                    hexText = formatHexColor(effective.seedArgb)
                     hexError = false
-                    // 清零以取消挂起的防抖写，否则刚恢复的默认档又会被写回自定义
+                    // 清零以取消挂起的防抖写，否则刚恢复的档又会被写回自定义
                     pendingWrite = 0
                 },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
