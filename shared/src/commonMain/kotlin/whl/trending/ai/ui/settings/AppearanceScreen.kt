@@ -180,6 +180,12 @@ fun AppearanceScreen(
     }
 }
 
+/**
+ * 色卡直径。56dp 而非常见的 40dp：四列撑满通栏后圆若太小会显得松散，
+ * 放大既让色相更好辨认，也把触控目标抬到 M3 建议的 48dp 之上。
+ */
+private val SWATCH_SIZE = 56.dp
+
 /** ThemeMode → 展示文案，设置一级页外观入口与本页分段按钮共用 */
 @Composable
 internal fun themeModeText(mode: ThemeMode): String {
@@ -202,11 +208,12 @@ private fun SwatchGrid(
 ) {
     // 7 个预设 + 自定义共 8 颗，一行放不下（会挤成 7+1，第二行孤零零一颗）。
     // 固定每行 4 颗排成 4+4，两行等长，也给未来增删预设留了余地。
+    // 用 SpaceBetween 让两端贴边、与上方通栏的分段按钮左右对齐，避免右侧空出一大片。
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalArrangement = Arrangement.spacedBy(16.dp),
         maxItemsInEachRow = 4,
     ) {
@@ -250,7 +257,7 @@ private fun CustomSwatch(
 
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(SWATCH_SIZE)
             .clip(CircleShape)
             .then(
                 if (customSeed == null) {
@@ -300,7 +307,7 @@ private fun ThemeSwatch(
         shape = CircleShape,
         color = color,
         modifier = Modifier
-            .size(40.dp)
+            .size(SWATCH_SIZE)
             .semantics {
                 contentDescription = name
                 role = Role.RadioButton
