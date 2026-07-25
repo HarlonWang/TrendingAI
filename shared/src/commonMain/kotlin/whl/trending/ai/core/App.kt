@@ -12,6 +12,7 @@ import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
 import whl.trending.ai.ui.settings.AppSettingsScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
+import whl.trending.ai.ui.settings.ColorLabScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
@@ -44,6 +45,7 @@ import whl.trending.ai.ui.common.WhatsNewHost
 
 data object Home
 data object Appearance
+data object ColorLab
 data object AppSettings
 data object About
 data object Feedback
@@ -146,6 +148,17 @@ fun App() {
 
                         is Appearance -> NavEntry(key) {
                             AppearanceScreen(
+                                onBack = {
+                                    backStack.safePop()
+                                },
+                                onNavigateToColorLab = {
+                                    backStack.add(ColorLab)
+                                }
+                            )
+                        }
+
+                        is ColorLab -> NavEntry(key) {
+                            ColorLabScreen(
                                 onBack = {
                                     backStack.safePop()
                                 }

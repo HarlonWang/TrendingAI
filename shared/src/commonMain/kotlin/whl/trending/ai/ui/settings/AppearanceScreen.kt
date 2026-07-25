@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -38,10 +39,12 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,17 +58,28 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.color_lab_entry
 import trendingai.shared.generated.resources.dark_mode
 import trendingai.shared.generated.resources.theme_color
+import trendingai.shared.generated.resources.theme_color_custom
 import trendingai.shared.generated.resources.theme_dark
 import trendingai.shared.generated.resources.theme_follow_system
 import trendingai.shared.generated.resources.theme_light
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearanceScreen(onBack: () -> Unit) {
+fun AppearanceScreen(
+    onBack: () -> Unit,
+    onNavigateToColorLab: () -> Unit,
+) {
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val seedColor by globalSettingsManager.seedColor.collectAsState(DEFAULT_SEED_ARGB)
+    val isCustom by globalSettingsManager.themeCustom.collectAsState(
+        remember { globalSettingsManager.currentThemeCustom() }
+    )
+    val customSeed by globalSettingsManager.customSeedColor.collectAsState(
+        remember { globalSettingsManager.currentCustomSeedColor() }
+    )
 
     Scaffold(
         topBar = {
@@ -144,11 +158,31 @@ fun AppearanceScreen(onBack: () -> Unit) {
             }
             SwatchGrid(
                 selected = seedColor,
+                isCustomSelected = isCustom,
+                customSeed = customSeed,
                 onSelect = { seed ->
                     trackEvent("settings_seed_color", mapOf("seed" to seed.id))
                     globalSettingsManager.setSeedColor(seed.argb)
-                }
+                },
+                onSelectCustom = {
+                    trackEvent("settings_seed_color", mapOf("seed" to "custom"))
+                    globalSettingsManager.selectCustomTheme()
+                },
             )
+
+            Spacer(Modifier.height(8.dp))
+
+            // 调色台入口：刻意做成一行朴素文字按钮而非卡片/开关——
+            // 绝大多数用户在上面那排圆点就选完了，这行只需要「想找的人找得到」。
+            TextButton(onClick = onNavigateToColorLab) {
+                Icon(
+                    Icons.Default.Palette,
+                    null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(Res.string.color_lab_entry))
+            }
         }
     }
 }
@@ -168,7 +202,10 @@ internal fun themeModeText(mode: ThemeMode): String {
 @Composable
 private fun SwatchGrid(
     selected: Long,
+    isCustomSelected: Boolean,
+    customSeed: Long?,
     onSelect: (ThemeSeed) -> Unit,
+    onSelectCustom: () -> Unit,
 ) {
     FlowRow(
         modifier = Modifier
@@ -179,9 +216,20 @@ private fun SwatchGrid(
     ) {
         PRESET_PALETTE.forEach { seed ->
             ThemeSwatch(
-                seed = seed,
-                selected = seed.argb == selected,
+                color = Color(seed.argb),
+                name = stringResource(seed.nameRes),
+                // 自定义色可能恰好等于某个预设的色值，此时预设不该跟着一起显示选中
+                selected = !isCustomSelected && seed.argb == selected,
                 onClick = { onSelect(seed) },
+            )
+        }
+        // 只有调过色的用户才多这一颗圆；没调过的人色板行就是干净的 6 个
+        customSeed?.let { argb ->
+            ThemeSwatch(
+                color = Color(argb),
+                name = stringResource(Res.string.theme_color_custom),
+                selected = isCustomSelected,
+                onClick = onSelectCustom,
             )
         }
     }
@@ -190,12 +238,11 @@ private fun SwatchGrid(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemeSwatch(
-    seed: ThemeSeed,
+    color: Color,
+    name: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val color = Color(seed.argb)
-    val name = stringResource(seed.nameRes)
     Surface(
         selected = selected,
         onClick = onClick,

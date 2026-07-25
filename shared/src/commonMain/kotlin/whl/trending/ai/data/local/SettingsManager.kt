@@ -6,6 +6,7 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.coroutines.getBooleanFlow
 import com.russhwolf.settings.coroutines.getIntFlow
 import com.russhwolf.settings.coroutines.getLongFlow
+import com.russhwolf.settings.coroutines.getLongOrNullFlow
 import com.russhwolf.settings.coroutines.getStringFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,14 @@ enum class ThemeMode(val title: String) {
 }
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
+
+/**
+ * 自定义主题的风格/对比度缺省持久化值，字面量对应 `ThemeStyleOption.SOFT` /
+ * `ThemeContrastOption.STANDARD`。这里刻意不引用 ui 层的枚举，避免 data.local 反向依赖 UI；
+ * 两侧的对应关系由 ThemeCustomizationTest 断言守住。
+ */
+const val DEFAULT_THEME_STYLE_STORAGE: String = "soft"
+const val DEFAULT_THEME_CONTRAST_STORAGE: String = "standard"
 
 /** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
 private const val DEFAULT_HOME_TAB_NAME = "GitHub"
@@ -63,6 +72,10 @@ enum class SummaryLanguage(val isoCode: String?) {
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val SEED_COLOR_KEY = "prefs_seed_color"
+    private val THEME_CUSTOM_KEY = "prefs_theme_custom"
+    private val THEME_CUSTOM_SEED_KEY = "prefs_theme_custom_seed"
+    private val THEME_STYLE_KEY = "prefs_theme_style"
+    private val THEME_CONTRAST_KEY = "prefs_theme_contrast"
     private val LANGUAGE_KEY = "prefs_language"
     private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
@@ -120,8 +133,70 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun currentSeedColor(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
 
+    /**
+     * 是否处于「自定义主题」状态。
+     *
+     * 用显式标志而非「seed 是否命中预设表」来判断：用户完全可能在调色台里把颜色
+     * 调到与某个预设一模一样，靠反查会误判成预设档，连带丢掉他调的风格与对比度。
+     */
+    val themeCustom: Flow<Boolean> = settings.getBooleanFlow(THEME_CUSTOM_KEY, false)
+
+    fun currentThemeCustom(): Boolean = settings.getBoolean(THEME_CUSTOM_KEY, false)
+
+    /** 自定义档的风格，存 [ThemeStyleOption.storageValue] 字符串（不存 ordinal，便于以后插档） */
+    val themeStyle: Flow<String> =
+        settings.getStringFlow(THEME_STYLE_KEY, DEFAULT_THEME_STYLE_STORAGE)
+
+    fun currentThemeStyle(): String =
+        settings.getString(THEME_STYLE_KEY, DEFAULT_THEME_STYLE_STORAGE)
+
+    /** 自定义档的对比度，存 [ThemeContrastOption.storageValue] 字符串 */
+    val themeContrast: Flow<String> =
+        settings.getStringFlow(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
+
+    fun currentThemeContrast(): String =
+        settings.getString(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
+
+    /**
+     * 用户调过的自定义色，独立于当前生效的 [seedColor] 保存。
+     *
+     * 有它，切回预设档之后外观页仍能显示「自定义」那颗圆、一点即回到原来调好的配色；
+     * 没有它，自定义色会被预设 seed 覆盖掉，用户想回去只能重调一遍。
+     * null 表示从没进过调色台。
+     */
+    val customSeedColor: Flow<Long?> = settings.getLongOrNullFlow(THEME_CUSTOM_SEED_KEY)
+
+    fun currentCustomSeedColor(): Long? = settings.getLongOrNull(THEME_CUSTOM_SEED_KEY)
+
+    /** 选中某个预设档：写 seed 的同时清掉自定义标志，风格/对比度回到预设钦定的搭配 */
     fun setSeedColor(argb: Long) {
         settings.putLong(SEED_COLOR_KEY, argb)
+        settings.putBoolean(THEME_CUSTOM_KEY, false)
+    }
+
+    /** 重新选中自定义档：把之前调好的色恢复为生效 seed；没调过则什么都不做 */
+    fun selectCustomTheme() {
+        val custom = settings.getLongOrNull(THEME_CUSTOM_SEED_KEY) ?: return
+        settings.putLong(SEED_COLOR_KEY, custom)
+        settings.putBoolean(THEME_CUSTOM_KEY, true)
+    }
+
+    /** 调色台落盘：四项一起写，避免中间态让主题闪烁成半套配置 */
+    fun setCustomTheme(argb: Long, styleStorage: String, contrastStorage: String) {
+        settings.putLong(SEED_COLOR_KEY, argb)
+        settings.putLong(THEME_CUSTOM_SEED_KEY, argb)
+        settings.putString(THEME_STYLE_KEY, styleStorage)
+        settings.putString(THEME_CONTRAST_KEY, contrastStorage)
+        settings.putBoolean(THEME_CUSTOM_KEY, true)
+    }
+
+    /** 恢复默认主题：回到默认紫这个预设档，同时抹掉自定义色，让「自定义」那颗圆消失 */
+    fun clearCustomTheme() {
+        settings.remove(THEME_CUSTOM_SEED_KEY)
+        settings.remove(THEME_STYLE_KEY)
+        settings.remove(THEME_CONTRAST_KEY)
+        settings.putLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
+        settings.putBoolean(THEME_CUSTOM_KEY, false)
     }
 
     init {
