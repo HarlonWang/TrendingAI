@@ -6,11 +6,13 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.coroutines.getBooleanFlow
 import com.russhwolf.settings.coroutines.getIntFlow
 import com.russhwolf.settings.coroutines.getLongFlow
+import com.russhwolf.settings.coroutines.getLongOrNullFlow
 import com.russhwolf.settings.coroutines.getStringFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -20,13 +22,26 @@ import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 
+/**
+ * 持久化存的是 ordinal，新档位只能追加在末尾，否则老用户的选择会错位。
+ * AMOLED 是深色的变体：同一套深色配色，但背景压到纯黑，OLED 屏上省电。
+ */
 enum class ThemeMode(val title: String) {
     FOLLOW_SYSTEM("跟随系统"),
     LIGHT("浅色"),
-    DARK("深色")
+    DARK("深色"),
+    AMOLED("纯黑")
 }
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
+
+/**
+ * 自定义主题的风格/对比度缺省持久化值，字面量对应 `ThemeStyleOption.SOFT` /
+ * `ThemeContrastOption.STANDARD`。这里刻意不引用 ui 层的枚举，避免 data.local 反向依赖 UI；
+ * 两侧的对应关系由 ThemeCustomizationTest 断言守住。
+ */
+const val DEFAULT_THEME_STYLE_STORAGE: String = "soft"
+const val DEFAULT_THEME_CONTRAST_STORAGE: String = "standard"
 
 /** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
 private const val DEFAULT_HOME_TAB_NAME = "GitHub"
@@ -59,10 +74,38 @@ enum class SummaryLanguage(val isoCode: String?) {
     }
 }
 
+/**
+ * 一条自定义主题记录。风格/对比度存字符串（`ThemeStyleOption.storageValue` 等），
+ * 不引用 ui 层的枚举，避免 data 层反向依赖。
+ */
+@Serializable
+data class CustomThemeEntry(
+    val seedArgb: Long,
+    val style: String = DEFAULT_THEME_STYLE_STORAGE,
+    val contrast: String = DEFAULT_THEME_CONTRAST_STORAGE,
+)
+
+/** 进入调色台那一刻的完整主题状态，「撤销修改」按它整体写回 */
+data class ThemeSnapshot(
+    val seedArgb: Long,
+    val isCustom: Boolean,
+    val style: String,
+    val contrast: String,
+    val customSeed: Long?,
+)
+
+/** 自定义色历史保留条数：够覆盖一次调色过程中的反复试错，又不至于把调色台塞满 */
+private const val CUSTOM_HISTORY_LIMIT = 10
+
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_KEY = "prefs_theme_mode"
     private val SEED_COLOR_KEY = "prefs_seed_color"
+    private val THEME_CUSTOM_KEY = "prefs_theme_custom"
+    private val THEME_CUSTOM_SEED_KEY = "prefs_theme_custom_seed"
+    private val THEME_CUSTOM_HISTORY_KEY = "prefs_theme_custom_history"
+    private val THEME_STYLE_KEY = "prefs_theme_style"
+    private val THEME_CONTRAST_KEY = "prefs_theme_contrast"
     private val LANGUAGE_KEY = "prefs_language"
     private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
@@ -120,9 +163,119 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun currentSeedColor(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
 
+    /**
+     * 是否处于「自定义主题」状态。
+     *
+     * 用显式标志而非「seed 是否命中预设表」来判断：用户完全可能在调色台里把颜色
+     * 调到与某个预设一模一样，靠反查会误判成预设档，连带丢掉他调的风格与对比度。
+     */
+    val themeCustom: Flow<Boolean> = settings.getBooleanFlow(THEME_CUSTOM_KEY, false)
+
+    fun currentThemeCustom(): Boolean = settings.getBoolean(THEME_CUSTOM_KEY, false)
+
+    /** 自定义档的风格，存 [ThemeStyleOption.storageValue] 字符串（不存 ordinal，便于以后插档） */
+    val themeStyle: Flow<String> =
+        settings.getStringFlow(THEME_STYLE_KEY, DEFAULT_THEME_STYLE_STORAGE)
+
+    fun currentThemeStyle(): String =
+        settings.getString(THEME_STYLE_KEY, DEFAULT_THEME_STYLE_STORAGE)
+
+    /** 自定义档的对比度，存 [ThemeContrastOption.storageValue] 字符串 */
+    val themeContrast: Flow<String> =
+        settings.getStringFlow(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
+
+    fun currentThemeContrast(): String =
+        settings.getString(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
+
+    /**
+     * 用户调过的自定义色，独立于当前生效的 [seedColor] 保存。
+     *
+     * 有它，切回预设档之后外观页仍能显示「自定义」那颗圆、一点即回到原来调好的配色；
+     * 没有它，自定义色会被预设 seed 覆盖掉，用户想回去只能重调一遍。
+     * null 表示从没进过调色台。
+     */
+    val customSeedColor: Flow<Long?> = settings.getLongOrNullFlow(THEME_CUSTOM_SEED_KEY)
+
+    fun currentCustomSeedColor(): Long? = settings.getLongOrNull(THEME_CUSTOM_SEED_KEY)
+
+
+    /** 选中某个预设档：写 seed 的同时清掉自定义标志，风格/对比度回到预设钦定的搭配 */
     fun setSeedColor(argb: Long) {
         settings.putLong(SEED_COLOR_KEY, argb)
+        settings.putBoolean(THEME_CUSTOM_KEY, false)
     }
+
+    /** 重新选中自定义档：把之前调好的色恢复为生效 seed；没调过则什么都不做 */
+    fun selectCustomTheme() {
+        val custom = settings.getLongOrNull(THEME_CUSTOM_SEED_KEY) ?: return
+        settings.putLong(SEED_COLOR_KEY, custom)
+        settings.putBoolean(THEME_CUSTOM_KEY, true)
+    }
+
+    /**
+     * 进入调色台时的完整主题状态快照，供「撤销修改」整体写回。
+     *
+     * 调色台是实时生效的——拖一下色相整个 App 立刻变，按返回键并不会撤销。
+     * 用户调坏了却记不起原来是什么色，这份快照就是他唯一的退路。
+     */
+    fun currentThemeSnapshot(): ThemeSnapshot = ThemeSnapshot(
+        seedArgb = currentSeedColor(),
+        isCustom = currentThemeCustom(),
+        style = currentThemeStyle(),
+        contrast = currentThemeContrast(),
+        customSeed = currentCustomSeedColor(),
+    )
+
+    /** 把主题状态整体写回快照那一刻，用于撤销一次调色台编辑 */
+    fun restoreThemeSnapshot(snapshot: ThemeSnapshot) {
+        settings.putLong(SEED_COLOR_KEY, snapshot.seedArgb)
+        settings.putBoolean(THEME_CUSTOM_KEY, snapshot.isCustom)
+        settings.putString(THEME_STYLE_KEY, snapshot.style)
+        settings.putString(THEME_CONTRAST_KEY, snapshot.contrast)
+        // 进入前没有自定义色就把 key 抹掉，否则本次编辑产生的那个会留下来，
+        // 外观页末尾那颗圆仍显示成一个已经被撤销掉的颜色
+        val customSeed = snapshot.customSeed
+        if (customSeed == null) settings.remove(THEME_CUSTOM_SEED_KEY)
+        else settings.putLong(THEME_CUSTOM_SEED_KEY, customSeed)
+    }
+
+    /**
+     * 调色台落盘：四项一起写，避免中间态让主题闪烁成半套配置。
+     * 不在这里入历史——拖动过程每 120ms 就落一次盘，会把历史冲成一堆中间色；
+     * 由调色台在离开时记一条最终值。
+     */
+    fun setCustomTheme(argb: Long, styleStorage: String, contrastStorage: String) {
+        settings.putLong(SEED_COLOR_KEY, argb)
+        settings.putLong(THEME_CUSTOM_SEED_KEY, argb)
+        settings.putString(THEME_STYLE_KEY, styleStorage)
+        settings.putString(THEME_CONTRAST_KEY, contrastStorage)
+        settings.putBoolean(THEME_CUSTOM_KEY, true)
+    }
+
+    /**
+     * 自定义色历史，最新在前。
+     *
+     * 调色本身就是试错过程，只留一个「当前自定义色」的话，调错一次、或点一下恢复默认，
+     * 之前调好的就永久没了。取色类 UI 普遍保留最近用过的颜色，这里照同一结构做。
+         */
+    val customThemeHistory: Flow<List<CustomThemeEntry>> =
+        settings.getStringOrNullFlow(THEME_CUSTOM_HISTORY_KEY).map { decodeHistory(it) }
+
+    fun currentCustomThemeHistory(): List<CustomThemeEntry> =
+        decodeHistory(settings.getStringOrNull(THEME_CUSTOM_HISTORY_KEY))
+
+    private fun decodeHistory(json: String?): List<CustomThemeEntry> {
+        if (json.isNullOrEmpty()) return emptyList()
+        return runCatching { Json.decodeFromString<List<CustomThemeEntry>>(json) }.getOrElse { emptyList() }
+    }
+
+    /** 记一条自定义配置：完全相同的组合提到最前而非重复入列，超出上限截断 */
+    fun pushCustomThemeHistory(entry: CustomThemeEntry) {
+        val updated = (listOf(entry) + currentCustomThemeHistory().filterNot { it == entry })
+            .take(CUSTOM_HISTORY_LIMIT)
+        settings.putString(THEME_CUSTOM_HISTORY_KEY, Json.encodeToString(updated))
+    }
+
 
     init {
         // 摘要语言一次性迁移：旧版本摘要语言复用 App 语言设置，升级后首次构造时
