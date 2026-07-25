@@ -9,6 +9,7 @@ import trendingai.shared.generated.resources.color_lab_contrast_standard
 import trendingai.shared.generated.resources.color_lab_style_bold
 import trendingai.shared.generated.resources.color_lab_style_faithful
 import trendingai.shared.generated.resources.color_lab_style_mono
+import trendingai.shared.generated.resources.color_lab_style_neutral
 import trendingai.shared.generated.resources.color_lab_style_soft
 import trendingai.shared.generated.resources.color_lab_style_vivid
 import kotlin.math.abs
@@ -29,6 +30,7 @@ enum class ThemeStyleOption(
     VIVID("vivid", PaletteStyle.Vibrant, Res.string.color_lab_style_vivid),
     BOLD("bold", PaletteStyle.Expressive, Res.string.color_lab_style_bold),
     FAITHFUL("faithful", PaletteStyle.Fidelity, Res.string.color_lab_style_faithful),
+    MUTED("muted", PaletteStyle.Neutral, Res.string.color_lab_style_neutral),
     MONO("mono", PaletteStyle.Monochrome, Res.string.color_lab_style_mono),
     ;
 

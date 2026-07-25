@@ -24,8 +24,8 @@ data class ThemeSeed(
     val id: String,
     val nameRes: StringResource,
     val argb: Long,
-    // 生成整套 colorScheme 的算法风格，统一用 TonalSpot（M3 标准、彩度收敛），
-    // 只有石墨档覆盖为 Monochrome 压成灰阶。
+    // 生成整套 colorScheme 的算法风格。彩色档统一用 TonalSpot（M3 标准、彩度收敛到 32），
+    // 中性档改用 Neutral / Monochrome，避免低彩度 seed 被 TonalSpot 拉高彩度。
     //
     // 彩色档曾用 Vibrant 来拉开各预设的观感差异，现已改回：Vibrant 会把 primaryContainer
     // 的彩度从 47 拉到 74、明度推到 tone 91，出来是荧光色，与 tone 44 的色卡对不上号——
@@ -77,8 +77,10 @@ val PRESET_PALETTE: List<ThemeSeed> = listOf(
     ThemeSeed("peacock",  Res.string.theme_color_peacock,  seed(hue(8))),   // 200° 孔雀
     ThemeSeed("steel",    Res.string.theme_color_steel,    seed(hue(9))),   // 233° 钢蓝
     ThemeSeed("indigo",   Res.string.theme_color_indigo,   seed(hue(10))),   // 265° 靛蓝
-    // 中性三档：同一 tone，靠低彩度与彩色档拉开，暖(棕)/冷(蓝灰)/纯灰(石墨) 各一
-    ThemeSeed("brown",    Res.string.theme_color_brown,    seed(40.0, chroma = 16.0)),
-    ThemeSeed("slate",    Res.string.theme_color_slate,    seed(230.0, chroma = 14.0)),
+    // 中性三档：同一 tone，靠低彩度与彩色档拉开，暖(棕)/冷(蓝灰)/纯灰(石墨) 各一。
+    // 走 Neutral 而非 TonalSpot：TonalSpot 把 primary 彩度钉死在 32，会把 chroma 13 的
+    // 灰蓝 seed 拉成明亮天蓝（A8E2FE），色卡与实际配色对不上；Neutral 保持低彩度（8）。
+    ThemeSeed("brown",    Res.string.theme_color_brown,    seed(40.0, chroma = 16.0), PaletteStyle.Neutral),
+    ThemeSeed("slate",    Res.string.theme_color_slate,    seed(230.0, chroma = 14.0), PaletteStyle.Neutral),
     ThemeSeed("graphite", Res.string.theme_color_graphite, seed(280.0, chroma = 2.0, tone = 30.0), PaletteStyle.Monochrome),
 )

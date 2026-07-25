@@ -163,6 +163,7 @@
     <string name="color_lab_style_vivid">Vivid</string>
     <string name="color_lab_style_bold">Bold</string>
     <string name="color_lab_style_faithful">Faithful</string>
+    <string name="color_lab_style_neutral">Muted</string>
     <string name="color_lab_style_mono">Mono</string>
     <string name="color_lab_contrast">Contrast</string>
     <string name="color_lab_contrast_standard">Standard</string>

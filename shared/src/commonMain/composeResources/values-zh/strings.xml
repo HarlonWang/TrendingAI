@@ -163,6 +163,7 @@
     <string name="color_lab_style_vivid">鲜艳</string>
     <string name="color_lab_style_bold">张扬</string>
     <string name="color_lab_style_faithful">忠实</string>
+    <string name="color_lab_style_neutral">素雅</string>
     <string name="color_lab_style_mono">单色</string>
     <string name="color_lab_contrast">对比度</string>
     <string name="color_lab_contrast_standard">标准</string>
