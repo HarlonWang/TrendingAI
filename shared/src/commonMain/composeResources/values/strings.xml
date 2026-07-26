@@ -219,7 +219,7 @@
     <string name="account_upgrade_cta">Upgrade to Pro</string>
     <string name="account_upgrade_hint">More daily credits · tied to your sponsoring GitHub account</string>
     <string name="account_link_github">Link GitHub</string>
-    <string name="account_link_github_desc">Unlocks starring and following; also required to claim Pro perks</string>
+    <string name="account_link_github_desc">Unlocks starring, following and other GitHub features</string>
     <string name="account_link_required_title">Link GitHub first</string>
     <string name="account_link_required_message">Pro perks are granted through GitHub Sponsors and need a GitHub account linked to yours. You signed in with email, so sponsoring now would not take effect automatically.</string>
     <string name="account_link_sponsor_anyway">Sponsor anyway</string>
