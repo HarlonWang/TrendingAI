@@ -2,6 +2,8 @@ package whl.trending.ai.core
 
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import whl.trending.ai.auth.LOGTO_ENDPOINT
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.openUrl
@@ -51,9 +53,18 @@ object AccountLink {
             Clock.System.now().toEpochMilliseconds() - openedAt < REFRESH_WINDOW.inWholeMilliseconds
     }
 
-    /** 确认身份已带上 GitHub 后调用，结束窗口。 */
+    /**
+     * 关联成功信号。刷新身份的是 Activity 的 ON_RESUME（见 MainActivity），而账户页的
+     * [ProfileViewModel] 早已组合完毕、不会自己重拉——没有这个信号，Logto 那边绑好了，
+     * 界面却仍停在「关联 GitHub」。
+     */
+    private val _linked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val linked: SharedFlow<Unit> = _linked
+
+    /** 确认身份已带上 GitHub 后调用：结束窗口并通知界面重载。 */
     fun markLinked() {
         trackEvent("account_link_success")
         globalSettingsManager.clearAccountLinkOpenedAt()
+        _linked.tryEmit(Unit)
     }
 }
