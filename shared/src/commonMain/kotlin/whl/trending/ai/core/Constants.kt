@@ -24,8 +24,9 @@ object Constants {
      * 独占，回跳会被当成 OAuth 登录回调解析。改用 `show_success=true` 让成功页停留，
      * 用户手动返回 app，由 ON_RESUME 触发身份刷新（与赞助页回来对账同一套机制）。
      *
-     * `ui_locales` 必传：实测 Custom Tab 里 Logto 不认浏览器的 Accept-Language，
-     * 不传会让中文用户看到英文页面。
+     * `ui_locales` 必传——但只有账户中心需要。Logto 后台「登录与账户 → 内容 → 语言」
+     * 的自动检测只覆盖登录体验（所以 SDK 的 signIn 从来不用传语言参数，登录页自动是
+     * 中文），账户中心的 account 系列页面不走那条路径，不传就按默认语言 English 渲染。
      */
     fun accountLinkGithubUrl(endpoint: String, uiLocale: String): String =
         "$endpoint/account/social/$LOGTO_GITHUB_CONNECTOR_ID?show_success=true&ui_locales=$uiLocale"

@@ -39,7 +39,9 @@ object AccountLink {
 
     /**
      * Logto 页面语言：跟 App 语言走，「跟随系统」时回落到系统语言。
-     * 中文必须给 `zh-CN`——实测传裸 `zh` 时 Logto 匹配不到语言包，静默回落英文。
+     *
+     * 中文必须给 `zh-CN`：Logto 语言库里没有裸 `zh`，匹配不上就按后台配置的
+     * 「检测不到就用默认语言」回落成 English，且没有任何报错。
      */
     private fun uiLocale(): String {
         val iso = globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
