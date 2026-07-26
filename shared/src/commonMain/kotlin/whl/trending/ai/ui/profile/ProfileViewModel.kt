@@ -15,6 +15,7 @@ import whl.trending.ai.auth.FollowingProvider
 import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.AccountLink
 import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalLastDataCache
@@ -132,6 +133,15 @@ class ProfileViewModel(
                     }
                     is AuthState.LoggingIn -> Unit
                 }
+            }
+        }
+
+        // 关联 GitHub 成功：身份变了但登录态没变，authState 不会发射，只能靠这个信号。
+        // MainActivity 在 ON_RESUME 里已用 fresh 请求刷过服务端缓存，这里普通重载即可拿到新身份。
+        viewModelScope.launch {
+            AccountLink.linked.collect {
+                hasLoaded = false
+                load()
             }
         }
     }

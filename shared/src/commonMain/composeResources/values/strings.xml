@@ -203,10 +203,10 @@
     <string name="profile_repos">Repos</string>
     <string name="profile_pro_badge">PRO</string>
     <string name="profile_quota_title">AI credits</string>
-    <string name="profile_quota_remaining">%1$d of %2$d credits left today</string>
+    <string name="profile_quota_used">%1$s used</string>
+    <string name="profile_quota_exhausted">Daily limit reached</string>
     <string name="profile_quota_reset_hours">Resets in ~%1$d h</string>
     <string name="profile_quota_reset_soon">Resets within an hour</string>
-    <string name="profile_quota_rates">Chat 1 · Search 3 · Research 10</string>
     <string name="profile_quota_error">Couldn&apos;t load credits right now</string>
     <string name="profile_pro_badge_desc">Pro member</string>
     <!-- Account hub -->
@@ -218,6 +218,11 @@
     <string name="account_tier_pro">Pro</string>
     <string name="account_upgrade_cta">Upgrade to Pro</string>
     <string name="account_upgrade_hint">More daily credits · tied to your sponsoring GitHub account</string>
+    <string name="account_link_github">Link GitHub</string>
+    <string name="account_link_github_desc">Unlocks starring, following and other GitHub features</string>
+    <string name="account_link_required_title">Link GitHub first</string>
+    <string name="account_link_required_message">Pro perks are granted through GitHub Sponsors and need a GitHub account linked to yours. You signed in with email, so sponsoring now would not take effect automatically.</string>
+    <string name="account_link_sponsor_anyway">Sponsor anyway</string>
     <string name="account_signin_for_more">Sign in to get 10 credits a day</string>
     <string name="account_pro_active">You&apos;re a Pro member — thanks for the support!</string>
     <string name="account_github_entry">GitHub profile</string>

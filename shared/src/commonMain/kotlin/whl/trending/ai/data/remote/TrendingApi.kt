@@ -151,8 +151,12 @@ open class TrendingApi {
         }
     }
 
-    open suspend fun fetchMe(accessToken: String): MeResponse {
-        val response = client.get("$baseHost/api/me") {
+    /**
+     * [fresh] = true 时带 `?fresh=1`：让服务端绕过 userinfo claims 的 10 分钟缓存重新拉取。
+     * 仅用于刚在账户中心关联身份后——否则读到的仍是关联前的 identities，UI 会以为没绑上。
+     */
+    open suspend fun fetchMe(accessToken: String, fresh: Boolean = false): MeResponse {
+        val response = client.get("$baseHost/api/me${if (fresh) "?fresh=1" else ""}") {
             header(HttpHeaders.Authorization, "Bearer $accessToken")
         }
         if (response.status.value !in 200..299) {

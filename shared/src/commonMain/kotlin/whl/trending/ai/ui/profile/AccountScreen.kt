@@ -34,7 +34,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
@@ -62,6 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,6 +75,11 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
+import trendingai.shared.generated.resources.account_link_github
+import trendingai.shared.generated.resources.account_link_github_desc
+import trendingai.shared.generated.resources.account_link_required_message
+import trendingai.shared.generated.resources.account_link_required_title
+import trendingai.shared.generated.resources.account_link_sponsor_anyway
 import trendingai.shared.generated.resources.account_plan_title
 import trendingai.shared.generated.resources.account_pro_active
 import trendingai.shared.generated.resources.account_signed_out_prompt
@@ -94,8 +102,8 @@ import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.profile_load_failed
 import trendingai.shared.generated.resources.profile_quota_error
-import trendingai.shared.generated.resources.profile_quota_rates
-import trendingai.shared.generated.resources.profile_quota_remaining
+import trendingai.shared.generated.resources.profile_quota_exhausted
+import trendingai.shared.generated.resources.profile_quota_used
 import trendingai.shared.generated.resources.profile_quota_reset_hours
 import trendingai.shared.generated.resources.profile_quota_reset_soon
 import trendingai.shared.generated.resources.profile_followers
@@ -108,8 +116,10 @@ import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
 import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscription_reminders
+import kotlin.math.roundToInt
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.trackEvent
@@ -158,6 +168,7 @@ fun AccountScreen(
     )
 
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var showLinkGithubDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val settingsScope = rememberCoroutineScope()
@@ -182,6 +193,32 @@ fun AccountScreen(
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
                     Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
+
+    // 邮箱用户点「升级 Pro」时的拦截：Pro 权益以 GitHub 账户为发放主体，不先关联就会
+    // 「钱付了但权益对不上」。次按钮保留直接前往赞助页——有人只是想单纯支持，不图权益。
+    if (showLinkGithubDialog) {
+        AlertDialog(
+            onDismissRequest = { showLinkGithubDialog = false },
+            title = { Text(stringResource(Res.string.account_link_required_title)) },
+            text = { Text(stringResource(Res.string.account_link_required_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLinkGithubDialog = false
+                    AccountLink.openLinkGithubPage(AccountLink.SOURCE_UPGRADE_DIALOG)
+                }) {
+                    Text(stringResource(Res.string.account_link_github))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showLinkGithubDialog = false
+                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
+                }) {
+                    Text(stringResource(Res.string.account_link_sponsor_anyway))
                 }
             },
         )
@@ -236,15 +273,28 @@ fun AccountScreen(
                             quotaError = uiState.quotaError,
                             loggedIn = uiState.loggedIn,
                             isPro = isPro,
-                            onUpgrade = { ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT) },
+                            onUpgrade = {
+                                // 没有 GitHub 身份就直奔赞助页 = 让用户白花钱，先引导关联
+                                if (uiState.user?.githubUserId == null) showLinkGithubDialog = true
+                                else ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
+                            },
                             onSignIn = { globalAuthManager.signIn("account_hub") },
                         )
                     }
 
-                    // ③ GitHub 主页入口卡（仅 GitHub 用户）
+                    // ③ GitHub 区：已关联给主页入口，未关联给关联入口。
+                    // 两处条件刻意不对称——githubUserId 是「是否已关联」的权威（Pro 判定同源），
+                    // githubLogin 才是能展示的名字。中间态（有 id 无 login，资料未同步）两块都不显示，
+                    // 好过让已关联的用户看到「关联 GitHub」或让主页卡显示 @null。
                     if (uiState.user?.githubLogin != null) {
                         item(key = "github_entry") {
                             GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
+                        }
+                    } else if (uiState.loggedIn && uiState.user?.githubUserId == null) {
+                        item(key = "link_github") {
+                            LinkGithubCard(onClick = {
+                                AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)
+                            })
                         }
                     }
 
@@ -530,17 +580,36 @@ private fun PlanUsageCard(
 
             when {
                 quota != null -> {
+                    // 只讲「用掉了多大比例」和「何时重置」，不透出余额绝对值与单价：
+                    // 用户无从算计单价，后端调价/调额度也不必跟着改文案（改了就会说谎）。
+                    val usedRatio = remember(quota.balance, quota.dailyGrant) {
+                        if (quota.dailyGrant <= 0) 0f
+                        else ((quota.dailyGrant - quota.balance).toFloat() / quota.dailyGrant)
+                            .coerceIn(0f, 1f)
+                    }
+                    val exhausted = quota.balance <= 0
                     Text(
-                        stringResource(Res.string.profile_quota_remaining, quota.balance, quota.dailyGrant),
+                        if (exhausted) stringResource(Res.string.profile_quota_exhausted)
+                        else stringResource(
+                            Res.string.profile_quota_used,
+                            "${(usedRatio * 100).roundToInt()}%",
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    LinearProgressIndicator(
-                        progress = {
-                            if (quota.dailyGrant <= 0) 0f
-                            else (quota.balance.toFloat() / quota.dailyGrant).coerceIn(0f, 1f)
-                        },
-                        // 用 secondary 而非 primary：满格时整条主题色过重，抢走卡片焦点
-                        color = MaterialTheme.colorScheme.secondary,
+                    // 加粗到 8dp（默认 4dp）。振幅用组件默认函数：≤10% 与 ≥95% 自动收平成
+                    // 直线——逼近上限时正好是红色直线，比红色波浪更像警示，不必自定义。
+                    val barStroke = with(LocalDensity.current) {
+                        Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                    }
+                    LinearWavyProgressIndicator(
+                        // 走「已用」方向：没用过时是空条（视觉最轻），越用越长；
+                        // 逼近上限才转 error 红，让「该升级了」的信号在需要时自己浮现。
+                        progress = { usedRatio },
+                        color = if (usedRatio >= 0.9f) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.secondary,
+                        stroke = barStroke,
+                        trackStroke = barStroke,
+                        // 保持默认容器高度：振幅按容器高度等比放大，撑高后波形会夸张到喧宾夺主
                         modifier = Modifier.fillMaxWidth(),
                     )
                     val resetHours = remember(quota.resetAt) { DateTimeUtils.hoursUntil(quota.resetAt) }
@@ -549,12 +618,13 @@ private fun PlanUsageCard(
                         resetHours <= 1 -> stringResource(Res.string.profile_quota_reset_soon)
                         else -> stringResource(Res.string.profile_quota_reset_hours, resetHours)
                     }
-                    Text(
-                        listOfNotNull(resetText, stringResource(Res.string.profile_quota_rates))
-                            .joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (resetText != null) {
+                        Text(
+                            resetText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 quotaError -> Text(
@@ -628,6 +698,32 @@ private fun TierPillFree() {
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}
+
+/**
+ * 关联 GitHub 入口卡（仅无 GitHub 身份的用户可见）。与 [GithubEntryCard] 同一套列表行语言，
+ * 占据它的位置——一个账户在这里要么是「已连接的 GitHub」，要么是「去连接」。
+ */
+@Composable
+private fun LinkGithubCard(onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(stringResource(Res.string.account_link_github)) },
+        supportingContent = {
+            Text(
+                stringResource(Res.string.account_link_github_desc),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingContent = {
+            Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
+        },
+        trailingContent = {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        },
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.clickable(onClick = onClick),
     )
 }
 

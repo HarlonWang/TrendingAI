@@ -11,7 +11,8 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
 
     // 真正的测试注入点：覆写此方法即可同时影响 fetchMe 与 syncMe（二者都经它取数）。
     // 注意：只覆写下面的 fetchMe 不影响 syncMe——syncMe 直接调 fetchMeResponse，会打真网络。
-    open suspend fun fetchMeResponse(accessToken: String): MeResponse = api.fetchMe(accessToken)
+    open suspend fun fetchMeResponse(accessToken: String, fresh: Boolean = false): MeResponse =
+        api.fetchMe(accessToken, fresh)
 
     open suspend fun fetchMe(accessToken: String): MeUser = fetchMeResponse(accessToken).user
 
@@ -26,10 +27,10 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
      * 登录成功/应用启动（已登录）时调用：服务端建档 + 刷新 last_login_at，并缓存头像与 Pro 权益态。
      * 失败静默——下次打开 Profile 仍会重试，不阻塞登录主流程。
      */
-    suspend fun syncMe(accessToken: String?): MeUser? {
+    suspend fun syncMe(accessToken: String?, fresh: Boolean = false): MeUser? {
         if (accessToken == null) return null
         return try {
-            val me = fetchMeResponse(accessToken)
+            val me = fetchMeResponse(accessToken, fresh)
             globalSettingsManager.setUserAvatarUrl(me.user.avatarUrl)
             globalSettingsManager.setGithubIdentity(me.user.githubLogin, me.user.githubUserId)
             globalSettingsManager.setUserEmail(me.user.email)
