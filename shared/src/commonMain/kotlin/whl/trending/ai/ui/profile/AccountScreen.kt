@@ -539,6 +539,8 @@ private fun PlanUsageCard(
                             if (quota.dailyGrant <= 0) 0f
                             else (quota.balance.toFloat() / quota.dailyGrant).coerceIn(0f, 1f)
                         },
+                        // 用 secondary 而非 primary：满格时整条主题色过重，抢走卡片焦点
+                        color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     val resetHours = remember(quota.resetAt) { DateTimeUtils.hoursUntil(quota.resetAt) }
@@ -567,33 +569,55 @@ private fun PlanUsageCard(
                 ) { LoadingIndicator(modifier = Modifier.size(24.dp)) }
             }
 
-            // CTA
-            Spacer(Modifier.height(4.dp))
+            // CTA：Pro 致谢 / 匿名登录引导。Free 登录态的升级入口在卡片底部独立成行（见下）
             when {
-                isPro -> Text(
-                    stringResource(Res.string.account_pro_active),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                loggedIn -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Button(onClick = onUpgrade, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(Res.string.account_upgrade_cta))
-                    }
+                isPro -> {
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        stringResource(Res.string.account_upgrade_hint),
+                        stringResource(Res.string.account_pro_active),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                else -> FilledTonalButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.account_signin_for_more))
+                !loggedIn -> {
+                    Spacer(Modifier.height(4.dp))
+                    FilledTonalButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(Res.string.account_signin_for_more))
+                    }
                 }
             }
+        }
+
+        // Free 登录态的升级入口：卡片底部整行可点，与「GitHub 主页」同一套列表行语言。
+        // 刻意不做填充按钮——带动词的行 + 尾部箭头已足够表达动作，视觉权重却低两档。
+        if (loggedIn && !isPro) {
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text(stringResource(Res.string.account_upgrade_cta)) },
+                supportingContent = {
+                    // 限一行：换行会把这行撑得比「GitHub 主页」还高，反而重新变显眼
+                    Text(
+                        stringResource(Res.string.account_upgrade_hint),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
+                modifier = Modifier.clickable(onClick = onUpgrade),
+            )
         }
     }
 }
 
-/** Free 档小徽章（与金色 ProBadge 区分，采用中性容器色）。 */
+/**
+ * Free 档小徽章（与金色 ProBadge 区分，采用中性容器色）。
+ * 纯状态标识、不可点：pill 表达「你现在处于什么档」，动作交给卡片底部那行升级入口。
+ */
 @Composable
 private fun TierPillFree() {
     Text(

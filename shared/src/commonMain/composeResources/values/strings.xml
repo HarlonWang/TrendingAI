@@ -217,7 +217,7 @@
     <string name="account_tier_free">Free</string>
     <string name="account_tier_pro">Pro</string>
     <string name="account_upgrade_cta">Upgrade to Pro</string>
-    <string name="account_upgrade_hint">Pro perks attach to the GitHub account you sponsor with.</string>
+    <string name="account_upgrade_hint">More daily credits · tied to your sponsoring GitHub account</string>
     <string name="account_signin_for_more">Sign in to get 10 credits a day</string>
     <string name="account_pro_active">You&apos;re a Pro member — thanks for the support!</string>
     <string name="account_github_entry">GitHub profile</string>

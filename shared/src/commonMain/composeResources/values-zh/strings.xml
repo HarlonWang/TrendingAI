@@ -217,7 +217,7 @@
     <string name="account_tier_free">免费版</string>
     <string name="account_tier_pro">Pro</string>
     <string name="account_upgrade_cta">升级 Pro</string>
-    <string name="account_upgrade_hint">Pro 权益绑定你赞助所用的 GitHub 账户。</string>
+    <string name="account_upgrade_hint">提升每日额度 · 绑定赞助的 GitHub 账户</string>
     <string name="account_signin_for_more">登录即可获得每日 10 次额度</string>
     <string name="account_pro_active">你已是 Pro 会员，感谢支持！</string>
     <string name="account_github_entry">GitHub 主页</string>
