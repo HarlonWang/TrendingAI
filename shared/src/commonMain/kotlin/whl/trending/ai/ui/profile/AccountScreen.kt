@@ -286,7 +286,7 @@ fun AccountScreen(
                         item(key = "github_entry") {
                             GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
                         }
-                    } else if (uiState.user?.githubUserId == null) {
+                    } else if (uiState.loggedIn && uiState.user?.githubUserId == null) {
                         item(key = "link_github") {
                             LinkGithubCard(onClick = {
                                 AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)

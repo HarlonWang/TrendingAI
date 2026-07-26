@@ -35,9 +35,14 @@ object AccountLink {
         openUrl(Constants.accountLinkGithubUrl(LOGTO_ENDPOINT, uiLocale()))
     }
 
-    /** Logto 页面语言：跟 App 语言走，「跟随系统」时回落到系统语言。 */
-    private fun uiLocale(): String =
-        globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
+    /**
+     * Logto 页面语言：跟 App 语言走，「跟随系统」时回落到系统语言。
+     * 中文必须给 `zh-CN`——实测传裸 `zh` 时 Logto 匹配不到语言包，静默回落英文。
+     */
+    private fun uiLocale(): String {
+        val iso = globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
+        return if (iso.startsWith("zh")) "zh-CN" else iso
+    }
 
     /** 是否处于「刚打开过关联页」的窗口内——没去关联过的用户回前台零后端请求。 */
     fun shouldRefreshIdentity(): Boolean {
