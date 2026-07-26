@@ -99,8 +99,8 @@ import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.profile_load_failed
 import trendingai.shared.generated.resources.profile_quota_error
-import trendingai.shared.generated.resources.profile_quota_rates
-import trendingai.shared.generated.resources.profile_quota_remaining
+import trendingai.shared.generated.resources.profile_quota_exhausted
+import trendingai.shared.generated.resources.profile_quota_used
 import trendingai.shared.generated.resources.profile_quota_reset_hours
 import trendingai.shared.generated.resources.profile_quota_reset_soon
 import trendingai.shared.generated.resources.profile_followers
@@ -113,6 +113,7 @@ import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
 import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscription_reminders
+import kotlin.math.roundToInt
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.AccountLink
@@ -576,17 +577,28 @@ private fun PlanUsageCard(
 
             when {
                 quota != null -> {
+                    // 只讲「用掉了多大比例」和「何时重置」，不透出余额绝对值与单价：
+                    // 用户无从算计单价，后端调价/调额度也不必跟着改文案（改了就会说谎）。
+                    val usedRatio = remember(quota.balance, quota.dailyGrant) {
+                        if (quota.dailyGrant <= 0) 0f
+                        else ((quota.dailyGrant - quota.balance).toFloat() / quota.dailyGrant)
+                            .coerceIn(0f, 1f)
+                    }
+                    val exhausted = quota.balance <= 0
                     Text(
-                        stringResource(Res.string.profile_quota_remaining, quota.balance, quota.dailyGrant),
+                        if (exhausted) stringResource(Res.string.profile_quota_exhausted)
+                        else stringResource(
+                            Res.string.profile_quota_used,
+                            "${(usedRatio * 100).roundToInt()}%",
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     LinearProgressIndicator(
-                        progress = {
-                            if (quota.dailyGrant <= 0) 0f
-                            else (quota.balance.toFloat() / quota.dailyGrant).coerceIn(0f, 1f)
-                        },
-                        // 用 secondary 而非 primary：满格时整条主题色过重，抢走卡片焦点
-                        color = MaterialTheme.colorScheme.secondary,
+                        // 进度条走「已用」方向：没用过时是空条（视觉最轻），越用越长；
+                        // 逼近上限才转 error 红，让「该升级了」的信号在需要时自己浮现。
+                        progress = { usedRatio },
+                        color = if (usedRatio >= 0.9f) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     val resetHours = remember(quota.resetAt) { DateTimeUtils.hoursUntil(quota.resetAt) }
@@ -595,12 +607,13 @@ private fun PlanUsageCard(
                         resetHours <= 1 -> stringResource(Res.string.profile_quota_reset_soon)
                         else -> stringResource(Res.string.profile_quota_reset_hours, resetHours)
                     }
-                    Text(
-                        listOfNotNull(resetText, stringResource(Res.string.profile_quota_rates))
-                            .joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (resetText != null) {
+                        Text(
+                            resetText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 quotaError -> Text(

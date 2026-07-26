@@ -203,10 +203,10 @@
     <string name="profile_repos">Repos</string>
     <string name="profile_pro_badge">PRO</string>
     <string name="profile_quota_title">AI credits</string>
-    <string name="profile_quota_remaining">%1$d of %2$d credits left today</string>
+    <string name="profile_quota_used">%1$s used</string>
+    <string name="profile_quota_exhausted">Daily limit reached</string>
     <string name="profile_quota_reset_hours">Resets in ~%1$d h</string>
     <string name="profile_quota_reset_soon">Resets within an hour</string>
-    <string name="profile_quota_rates">Chat 1 · Search 3 · Research 10</string>
     <string name="profile_quota_error">Couldn&apos;t load credits right now</string>
     <string name="profile_pro_badge_desc">Pro member</string>
     <!-- Account hub -->

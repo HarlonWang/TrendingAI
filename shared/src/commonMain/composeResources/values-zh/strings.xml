@@ -204,10 +204,10 @@
     <string name="profile_pro_badge">PRO</string>
     <string name="profile_pro_badge_desc">Pro 会员</string>
     <string name="profile_quota_title">AI 额度</string>
-    <string name="profile_quota_remaining">今日剩余 %1$d / %2$d</string>
+    <string name="profile_quota_used">已用 %1$s</string>
+    <string name="profile_quota_exhausted">今日额度已用完</string>
     <string name="profile_quota_reset_hours">约 %1$d 小时后重置</string>
     <string name="profile_quota_reset_soon">1 小时内重置</string>
-    <string name="profile_quota_rates">对话 1 · 搜索 3 · 研究 10</string>
     <string name="profile_quota_error">额度信息暂时无法获取</string>
     <!-- 账户中心 -->
     <string name="account_title">账户</string>
