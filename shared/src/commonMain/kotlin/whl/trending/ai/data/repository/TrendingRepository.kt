@@ -48,9 +48,8 @@ open class TrendingRepository(private val api: TrendingApi = TrendingApi()) {
         email: String,
         source: String,
         lang: String,
-        newsletter: Boolean? = null,
     ): Result<SubscribeResponse> {
-        return api.submitSubscribe(email, source, lang, newsletter)
+        return api.submitSubscribe(email, source, lang)
     }
 
     suspend fun cancelSubscribe(email: String): Result<SubscribeResponse> {
