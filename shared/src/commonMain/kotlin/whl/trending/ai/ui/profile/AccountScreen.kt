@@ -34,7 +34,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
@@ -62,6 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -593,12 +596,20 @@ private fun PlanUsageCard(
                         ),
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    LinearProgressIndicator(
-                        // 进度条走「已用」方向：没用过时是空条（视觉最轻），越用越长；
+                    // 加粗到 8dp（默认 4dp）。振幅用组件默认函数：≤10% 与 ≥95% 自动收平成
+                    // 直线——逼近上限时正好是红色直线，比红色波浪更像警示，不必自定义。
+                    val barStroke = with(LocalDensity.current) {
+                        Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                    }
+                    LinearWavyProgressIndicator(
+                        // 走「已用」方向：没用过时是空条（视觉最轻），越用越长；
                         // 逼近上限才转 error 红，让「该升级了」的信号在需要时自己浮现。
                         progress = { usedRatio },
                         color = if (usedRatio >= 0.9f) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.secondary,
+                        stroke = barStroke,
+                        trackStroke = barStroke,
+                        // 保持默认容器高度：振幅按容器高度等比放大，撑高后波形会夸张到喧宾夺主
                         modifier = Modifier.fillMaxWidth(),
                     )
                     val resetHours = remember(quota.resetAt) { DateTimeUtils.hoursUntil(quota.resetAt) }
