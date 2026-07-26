@@ -72,6 +72,11 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
+import trendingai.shared.generated.resources.account_link_github
+import trendingai.shared.generated.resources.account_link_github_desc
+import trendingai.shared.generated.resources.account_link_required_message
+import trendingai.shared.generated.resources.account_link_required_title
+import trendingai.shared.generated.resources.account_link_sponsor_anyway
 import trendingai.shared.generated.resources.account_plan_title
 import trendingai.shared.generated.resources.account_pro_active
 import trendingai.shared.generated.resources.account_signed_out_prompt
@@ -110,6 +115,7 @@ import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscription_reminders
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.trackEvent
@@ -158,6 +164,7 @@ fun AccountScreen(
     )
 
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var showLinkGithubDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val settingsScope = rememberCoroutineScope()
@@ -182,6 +189,32 @@ fun AccountScreen(
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
                     Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
+
+    // 邮箱用户点「升级 Pro」时的拦截：Pro 权益以 GitHub 账户为发放主体，不先关联就会
+    // 「钱付了但权益对不上」。次按钮保留直接前往赞助页——有人只是想单纯支持，不图权益。
+    if (showLinkGithubDialog) {
+        AlertDialog(
+            onDismissRequest = { showLinkGithubDialog = false },
+            title = { Text(stringResource(Res.string.account_link_required_title)) },
+            text = { Text(stringResource(Res.string.account_link_required_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLinkGithubDialog = false
+                    AccountLink.openLinkGithubPage(AccountLink.SOURCE_UPGRADE_DIALOG)
+                }) {
+                    Text(stringResource(Res.string.account_link_github))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showLinkGithubDialog = false
+                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
+                }) {
+                    Text(stringResource(Res.string.account_link_sponsor_anyway))
                 }
             },
         )
@@ -236,15 +269,28 @@ fun AccountScreen(
                             quotaError = uiState.quotaError,
                             loggedIn = uiState.loggedIn,
                             isPro = isPro,
-                            onUpgrade = { ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT) },
+                            onUpgrade = {
+                                // 没有 GitHub 身份就直奔赞助页 = 让用户白花钱，先引导关联
+                                if (uiState.user?.githubUserId == null) showLinkGithubDialog = true
+                                else ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
+                            },
                             onSignIn = { globalAuthManager.signIn("account_hub") },
                         )
                     }
 
-                    // ③ GitHub 主页入口卡（仅 GitHub 用户）
+                    // ③ GitHub 区：已关联给主页入口，未关联给关联入口。
+                    // 两处条件刻意不对称——githubUserId 是「是否已关联」的权威（Pro 判定同源），
+                    // githubLogin 才是能展示的名字。中间态（有 id 无 login，资料未同步）两块都不显示，
+                    // 好过让已关联的用户看到「关联 GitHub」或让主页卡显示 @null。
                     if (uiState.user?.githubLogin != null) {
                         item(key = "github_entry") {
                             GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
+                        }
+                    } else if (uiState.user?.githubUserId == null) {
+                        item(key = "link_github") {
+                            LinkGithubCard(onClick = {
+                                AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)
+                            })
                         }
                     }
 
@@ -628,6 +674,32 @@ private fun TierPillFree() {
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}
+
+/**
+ * 关联 GitHub 入口卡（仅无 GitHub 身份的用户可见）。与 [GithubEntryCard] 同一套列表行语言，
+ * 占据它的位置——一个账户在这里要么是「已连接的 GitHub」，要么是「去连接」。
+ */
+@Composable
+private fun LinkGithubCard(onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(stringResource(Res.string.account_link_github)) },
+        supportingContent = {
+            Text(
+                stringResource(Res.string.account_link_github_desc),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingContent = {
+            Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
+        },
+        trailingContent = {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        },
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.clickable(onClick = onClick),
     )
 }
 

@@ -122,6 +122,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
+    private val ACCOUNT_LINK_OPENED_AT_KEY = "prefs_account_link_opened_at"
     private val SELECTED_CHAT_MODEL_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
@@ -295,6 +296,11 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     val appLanguage: Flow<AppLanguage> = settings.getIntFlow(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
         .map { AppLanguage.entries.getOrElse(it) { AppLanguage.FOLLOW_SYSTEM } }
+
+    /** 同步读当前 App 语言，供非 Compose 上下文使用（如拼外链的 ui_locales 参数）。 */
+    fun currentAppLanguage(): AppLanguage = AppLanguage.entries.getOrElse(
+        settings.getInt(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
+    ) { AppLanguage.FOLLOW_SYSTEM }
 
     fun setLanguage(language: AppLanguage) {
         settings.putInt(LANGUAGE_KEY, language.ordinal)
@@ -473,6 +479,20 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun clearSponsorPageOpenedAt() {
         settings.putLong(SPONSOR_PAGE_OPENED_AT_KEY, 0L)
+    }
+
+    /**
+     * 最近一次打开 Logto 账户中心「关联 GitHub」页的时间戳（epoch millis），0 表示无待刷新的绑定意图。
+     * 与赞助时间戳分开：两者回前台后要做的事不同（绑定要先刷身份，赞助只需对账 Pro）。
+     */
+    fun currentAccountLinkOpenedAt(): Long = settings.getLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
+
+    fun setAccountLinkOpenedAt(time: Long) {
+        settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, time)
+    }
+
+    fun clearAccountLinkOpenedAt() {
+        settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
     }
 
     /** 选中的聊天模型 id：发请求时透传（服务端仍按 tier 强制）。默认免费 gpt-5.4。 */

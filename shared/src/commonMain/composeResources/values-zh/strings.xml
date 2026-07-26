@@ -218,6 +218,11 @@
     <string name="account_tier_pro">Pro</string>
     <string name="account_upgrade_cta">升级 Pro</string>
     <string name="account_upgrade_hint">提升每日额度 · 绑定赞助的 GitHub 账户</string>
+    <string name="account_link_github">关联 GitHub</string>
+    <string name="account_link_github_desc">关联后可领取 Pro 权益，并使用 star、关注等 GitHub 功能</string>
+    <string name="account_link_required_title">需要先关联 GitHub</string>
+    <string name="account_link_required_message">Pro 权益通过 GitHub Sponsors 发放，需要你的账户关联 GitHub。你当前用邮箱登录，直接赞助不会自动生效。</string>
+    <string name="account_link_sponsor_anyway">仍要前往赞助</string>
     <string name="account_signin_for_more">登录即可获得每日 10 次额度</string>
     <string name="account_pro_active">你已是 Pro 会员，感谢支持！</string>
     <string name="account_github_entry">GitHub 主页</string>
