@@ -23,23 +23,20 @@ object ProSponsor {
     private val RECONCILE_WINDOW = 30.minutes
 
     /**
-     * upsell 漏斗的 source 词汇——曝光（pro_upsell_shown）与点击（pro_upsell_clicked）共用，
-     * 集中在此避免各入口自造事件名导致漏斗无法统一查询。新增赞助入口时在这里登记。
+     * upsell 点击（pro_upsell_clicked）的 source 词汇，集中在此避免各入口自造事件名
+     * 导致漏斗无法统一查询。新增赞助入口时在这里登记。
+     *
+     * 2026-07-26 起 chat 侧不再做 Pro 引导（配额触顶卡与模型锁定弹窗都降为纯提示），
+     * 曝光埋点 pro_upsell_shown 随之下线——赞助入口只剩设置页与账户页，均为用户主动点击，
+     * 「曝光」无从定义。历史 shown 事件的数据边界止于此日期，做漏斗时注意。
      */
-    const val SOURCE_CHAT_QUOTA = "chat_quota"
-    const val SOURCE_MODEL_LOCKED = "model_locked"
     const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
     const val SOURCE_SETTINGS_DONATE = "settings_donate"
     const val SOURCE_ACCOUNT = "account"
 
-    /** upsell 曝光埋点（何时算一次曝光由调用方定义：挂载去重或每次展开）。 */
-    fun trackUpsellShown(source: String) {
-        trackEvent("pro_upsell_shown", mapOf("source" to source))
-    }
-
     /**
      * 打开赞助页统一入口。[upsellSource] 非空时上报统一的 pro_upsell_clicked——各入口
-     * 不再自报点击事件，shown→clicked→refreshPro 漏斗才能按同一词汇横向对比。
+     * 不再自报点击事件，clicked→refreshPro 漏斗才能按同一词汇横向对比。
      */
     fun openSponsorPage(upsellSource: String? = null) {
         upsellSource?.let { trackEvent("pro_upsell_clicked", mapOf("source" to it)) }

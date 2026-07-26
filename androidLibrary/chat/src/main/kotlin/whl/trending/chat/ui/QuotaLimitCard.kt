@@ -1,74 +1,47 @@
 package whl.trending.chat.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.ProSponsor
-import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.chat.R
 import whl.trending.chat.model.ChatError
 
 /**
  * 个人配额触顶卡片（`quota_device`）与详细解读登录闸卡片（`login_required`），按档位分形态：
- * - 匿名触顶：登录 CTA（转化点）+ waitlist 次按钮
+ * - 匿名触顶：登录 CTA（转化点）
  * - 匿名触顶后完成登录：提示已解锁，给重试按钮直接续聊
- * - 登录触顶：waitlist CTA（付费意愿温度计）
+ * - 登录触顶：纯提示，无 CTA
  * - 解读登录闸（匿名点未缓存条目）：复用匿名触顶卡形态，文案换「生成解读需登录」口径；
  *   登录成功后与触顶卡同样给重试按钮续上生成
  *
  * 全局熔断（`quota_global`）不走本卡片，仍是普通错误文案——语义上与个人额度承诺切开。
  *
- * @param isDetail 由解读消息触发（驱动 waitlist 埋点前缀 detail_summary_*）
+ * 登录档触顶不做 Pro 引导（2026-07-26 起）：撞墙时刻推销转化低、观感差，Pro 信息统一
+ * 留在账户页由用户主动了解。匿名档的登录 CTA 保留——那是身份引导，不是付费引导。
+ *
+ * 文案刻意不写具体数字：后端配额是 credits 账本（chat=1 / search=3 / research=10），
+ * 一次深度调研就吃掉登录档一天的额度，任何写死的「每天 N 条」都会立刻变成谎话。
  */
 @Composable
 internal fun QuotaLimitCard(
     error: ChatError,
     onRetry: () -> Unit,
-    isDetail: Boolean = false,
 ) {
     val authState by globalAuthManager.authState.collectAsState()
     val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
     val isLoginGate = error.code == ChatError.CODE_LOGIN_REQUIRED
-    val waitlistEvent = if (isDetail) "detail_summary_waitlist_click" else "chat_quota_waitlist_click"
-    var showWaitlistDialog by remember { mutableStateOf(false) }
-
-    if (showWaitlistDialog) {
-        WaitlistDialog(onDismiss = { showWaitlistDialog = false })
-    }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
@@ -107,25 +80,8 @@ internal fun QuotaLimitCard(
                 QuotaText(R.string.chat_quota_pro_exceeded)
             }
             isUserTier -> {
-                // 付费漏斗第一级（曝光）：登录触顶卡带 Pro CTA 渲染。去重靠 LaunchedEffect(Unit)。
-                LaunchedEffect(Unit) {
-                    ProSponsor.trackUpsellShown(ProSponsor.SOURCE_CHAT_QUOTA)
-                }
-                QuotaText(R.string.chat_pro_upsell_message)
-                Button(onClick = {
-                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_CHAT_QUOTA)
-                }) {
-                    Text(stringResource(R.string.chat_pro_cta))
-                }
-                // 次按钮：付不了国际卡的人 → waitlist（捕获支付摩擦样本）
-                TextButton(onClick = {
-                    trackEvent(waitlistEvent, mapOf("tier" to ChatError.TIER_USER))
-                    showWaitlistDialog = true
-                }) {
-                    Text(stringResource(R.string.chat_quota_waitlist_cta))
-                }
-                // 激活延迟提示（人工兜底可能有延迟）
-                QuotaText(R.string.chat_pro_activation_hint)
+                // 登录档触顶：与 Pro 触顶同为纯提示，不推销、不外跳
+                QuotaText(R.string.chat_quota_user_exceeded)
             }
             authState == AuthState.LoggedIn -> {
                 if (error.authDegraded) {
@@ -150,12 +106,6 @@ internal fun QuotaLimitCard(
                         Text(stringResource(R.string.chat_quota_login_cta))
                     }
                 }
-                TextButton(onClick = {
-                    trackEvent(waitlistEvent, mapOf("tier" to ChatError.TIER_ANONYMOUS))
-                    showWaitlistDialog = true
-                }) {
-                    Text(stringResource(R.string.chat_quota_waitlist_cta))
-                }
             }
         }
     }
@@ -169,96 +119,3 @@ private fun QuotaText(resId: Int) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
-
-/** Pro waitlist 登记：邮箱写入 subscribers（source=pro_waitlist），复用邮件订阅通道。 */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun WaitlistDialog(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var email by remember {
-        mutableStateOf(globalSettingsManager.currentSubscribedEmail().orEmpty())
-    }
-    // 每日邮件严格 opt-in：默认不勾选，登记 waitlist 不自动开通 newsletter
-    var wantsNewsletter by remember { mutableStateOf(false) }
-    var isSubmitting by remember { mutableStateOf(false) }
-    val successText = stringResource(R.string.chat_waitlist_success)
-    val errorText = stringResource(R.string.chat_waitlist_error)
-
-    AlertDialog(
-        onDismissRequest = { if (!isSubmitting) onDismiss() },
-        title = { Text(stringResource(R.string.chat_waitlist_title)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.chat_waitlist_message))
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text(stringResource(R.string.chat_waitlist_email_hint)) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp),
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .clickable(enabled = !isSubmitting) { wantsNewsletter = !wantsNewsletter },
-                ) {
-                    Checkbox(
-                        checked = wantsNewsletter,
-                        onCheckedChange = { wantsNewsletter = it },
-                        enabled = !isSubmitting,
-                    )
-                    Text(
-                        text = stringResource(R.string.chat_waitlist_newsletter_optin),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = !isSubmitting && isValidEmail(email),
-                onClick = {
-                    isSubmitting = true
-                    scope.launch {
-                        val result = TrendingRepository.shared.subscribe(
-                            email.trim(),
-                            "pro_waitlist",
-                            // 与 SubscribeViewModel 同口径：同一 subscribers 表不留两种 lang 推导
-                            globalSettingsManager.currentContentLang(),
-                            newsletter = wantsNewsletter,
-                        )
-                        isSubmitting = false
-                        if (result.isSuccess) {
-                            trackEvent("chat_quota_waitlist_submitted")
-                            // 顺带开通了 newsletter：同步本地订阅态，订阅页才能识别已订阅、给出退订入口
-                            if (wantsNewsletter) {
-                                globalSettingsManager.setSubscribedEmail(email.trim())
-                            }
-                            Toast.makeText(context, successText, Toast.LENGTH_SHORT).show()
-                            onDismiss()
-                        } else {
-                            Toast.makeText(context, errorText, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-            ) {
-                if (isSubmitting) {
-                    LoadingIndicator(modifier = Modifier.size(24.dp))
-                } else {
-                    Text(stringResource(R.string.chat_waitlist_submit))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(enabled = !isSubmitting, onClick = onDismiss) {
-                Text(stringResource(R.string.chat_waitlist_cancel))
-            }
-        },
-    )
-}
-

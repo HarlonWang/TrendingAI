@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.model.resolveEffectiveChatModel
@@ -31,9 +30,12 @@ import whl.trending.chat.R
 
 /**
  * 常驻模型选择器（对所有用户透出）。默认显示免费 gpt-5.4；Pro 专属项对免费用户锁定，
- * 点锁定项 → 说明弹窗（自费背景 + 赞助解锁路径）→ 确认后跳 Sponsors（第二个、更早的转化入口）。
+ * 点锁定项 → 纯告知弹窗（说明该模型属于 Pro，可继续用默认模型），不外跳赞助页。
  *
- * 只有一个可选模型时不渲染（无从选择、也无 Pro 项可 upsell）。
+ * 2026-07-26 起此处不再承担 Pro 转化：与配额触顶卡同一决策——功能受限的当下推销观感差，
+ * Pro 信息统一留在账户页由用户主动了解。
+ *
+ * 只有一个可选模型时不渲染（无从选择，锁定项也无从触达）。
  */
 @Composable
 internal fun ModelPicker(
@@ -46,8 +48,7 @@ internal fun ModelPicker(
     val selectedId by globalSettingsManager.selectedChatModel
         .collectAsState(initial = globalSettingsManager.currentSelectedChatModel())
     var expanded by remember { mutableStateOf(false) }
-    // 点锁定项弹说明页（个人自费背景 + 赞助解锁路径），确认后才外跳赞助——比直跳更不生硬，
-    // 也让 pro_upsell_clicked 的语义从「误触锁定项」变成「看完说明后确认去赞助」
+    // 点锁定项弹纯告知弹窗：说明这是 Pro 模型、默认模型仍可用，单按钮关闭，不外跳
     var unlockDialogModel by remember { mutableStateOf<ChatModelOption?>(null) }
 
     unlockDialogModel?.let { model ->
@@ -56,14 +57,6 @@ internal fun ModelPicker(
             title = { Text(stringResource(R.string.chat_model_unlock_title)) },
             text = { Text(stringResource(R.string.chat_model_unlock_message, model.name)) },
             confirmButton = {
-                TextButton(onClick = {
-                    unlockDialogModel = null
-                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_MODEL_LOCKED)
-                }) {
-                    Text(stringResource(R.string.chat_model_unlock_confirm))
-                }
-            },
-            dismissButton = {
                 TextButton(onClick = { unlockDialogModel = null }) {
                     Text(stringResource(R.string.chat_model_unlock_dismiss))
                 }
@@ -85,19 +78,10 @@ internal fun ModelPicker(
     val current = models.firstOrNull { it.id == selectedId }?.takeIf { !(it.proOnly && !isPro) }
         ?: models.firstOrNull { !it.proOnly }
         ?: models.first()
-    val hasLocked = models.any { it.proOnly && !isPro }
 
     Box(modifier) {
         AssistChip(
-            onClick = {
-                expanded = true
-                // 模型入口 upsell 曝光：每次展开下拉、且存在锁定项，各算一次曝光（类广告 impression）。
-                // 语义与 chat_quota（LaunchedEffect(Unit) 每次挂载去重一次）不同——model_locked 是「每次看」，
-                // 对比 shown→clicked 漏斗时需按 source 分开看，勿直接横比。
-                if (hasLocked) {
-                    ProSponsor.trackUpsellShown(ProSponsor.SOURCE_MODEL_LOCKED)
-                }
-            },
+            onClick = { expanded = true },
             label = { Text(current.name) },
             trailingIcon = {
                 Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
