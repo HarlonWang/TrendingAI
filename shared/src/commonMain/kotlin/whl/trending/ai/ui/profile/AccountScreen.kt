@@ -56,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -117,6 +119,7 @@ import trendingai.shared.generated.resources.sign_out_confirm
 import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscription_reminders
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.minutes
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.AccountLink
@@ -612,11 +615,24 @@ private fun PlanUsageCard(
                         // 保持默认容器高度：振幅按容器高度等比放大，撑高后波形会夸张到喧宾夺主
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    val resetHours = remember(quota.resetAt) { DateTimeUtils.hoursUntil(quota.resetAt) }
+                    // 每分钟自算：resetAt 一整天恒定，用它做 remember key 会把小时数冻在进页面
+                    // 那一刻（停留久了显示偏大，且下拉刷新也救不回来——quota 内容不变时本卡片
+                    // 整个被 skip）。produceState 自带 state，重组由它自己触发。
+                    val resetHours by produceState(
+                        initialValue = DateTimeUtils.hoursUntil(quota.resetAt),
+                        key1 = quota.resetAt,
+                    ) {
+                        while (true) {
+                            value = DateTimeUtils.hoursUntil(quota.resetAt)
+                            delay(1.minutes)
+                        }
+                    }
+                    // 委托属性不能智能转换，先落到局部 val
+                    val hours = resetHours
                     val resetText = when {
-                        resetHours == null -> null
-                        resetHours <= 1 -> stringResource(Res.string.profile_quota_reset_soon)
-                        else -> stringResource(Res.string.profile_quota_reset_hours, resetHours)
+                        hours == null -> null
+                        hours <= 1 -> stringResource(Res.string.profile_quota_reset_soon)
+                        else -> stringResource(Res.string.profile_quota_reset_hours, hours)
                     }
                     if (resetText != null) {
                         Text(
