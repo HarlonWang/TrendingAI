@@ -1,6 +1,8 @@
 package whl.trending.ai.ui.subscribe
 
 import whl.trending.ai.data.model.SubscribeStatus
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,11 +27,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -93,9 +93,9 @@ fun SubscribeScreen(
         }
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.subscribe_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

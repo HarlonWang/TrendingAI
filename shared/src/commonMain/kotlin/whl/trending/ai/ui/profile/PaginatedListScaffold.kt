@@ -20,9 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -36,6 +34,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.list_load_failed
 import trendingai.shared.generated.resources.profile_retry
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 
 /**
  * GitHub 下钻列表的通用骨架：TopAppBar + loading/error/empty/列表 四态 + 触底翻页。
@@ -65,9 +65,9 @@ fun <T> PaginatedListScaffold(
         if (shouldLoadMore) onLoadMore()
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
