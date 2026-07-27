@@ -1,21 +1,17 @@
 {
-  "version": "0.22.0-beta.3",
+  "version": "0.22.0",
   "zh": [
-    "新增邮箱验证码登录；GitHub 登录一步直达授权页，失败提示更明确",
-    "个人中心重构为统一账户中心：可查看 AI 用量与额度重置时间；邮箱账号可关联 GitHub，解锁 star、关注等需要 GitHub 身份的功能",
-    "收藏支持云端同步，换设备或重装后自动恢复",
-    "AI 对话支持多会话切换、联网搜索（回答附来源），新增 Deep Research 深度研究模式",
-    "AI 回答的代码高亮与表格排版升级，阅读更清晰",
-    "主题配色重做，支持自定义主题色与配色历史",
-    "Product Hunt 条目点击/分享/收藏直达原帖；分享按钮独立展示；修复每日提醒不准时、额度重置倒计时不刷新"
+    "新增邮箱验证码登录；邮箱账号可关联 GitHub",
+    "个人中心重构为统一账户中心：可查看 AI 用量",
+    "收藏支持云端同步（需登录）",
+    "AI 对话新增多会话切换、联网搜索与 Deep Research",
+    "AI 回答的代码高亮与表格排版升级；主题配色重做，支持自定义"
   ],
   "en": [
-    "New email verification code sign-in; GitHub sign-in goes straight to the authorization page, with clearer error messages",
-    "Profile rebuilt into a unified account center: check your AI usage and when the quota resets; email accounts can now link a GitHub account to unlock starring, following, and other GitHub-backed features",
-    "Favorites now sync to the cloud and restore automatically after switching devices or reinstalling",
-    "AI chat supports multiple sessions and web search (answers include sources), plus a new Deep Research mode",
-    "Upgraded code highlighting and table layout in AI answers for easier reading",
-    "Reworked theme colors, with custom accent colors and a color history",
-    "Product Hunt items link directly to the original post for view, share, and favorite; share button now shown directly on cards; fixed daily reminder timing drift and a quota reset countdown that never refreshed"
+    "Email code sign-in added; email accounts can link a GitHub account",
+    "Profile rebuilt into a unified account center, with AI usage at a glance",
+    "Favorites now sync to the cloud (sign-in required)",
+    "AI chat adds multi-session switching, web search, and Deep Research",
+    "Better code highlighting and tables in answers; reworked themes with custom colors"
   ]
 }

@@ -1,0 +1,5 @@
+• Email code sign-in added; email accounts can link a GitHub account
+• Profile rebuilt into a unified account center, with AI usage at a glance
+• Favorites now sync to the cloud (sign-in required)
+• AI chat adds multi-session switching, web search, and Deep Research
+• Better code highlighting and tables in answers; reworked themes with custom colors

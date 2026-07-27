@@ -56,7 +56,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           # 获取 commit 记录（同时供后面 Release Notes 步骤复用）
-          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | grep -v "${{ github.ref_name }}" | head -n 1)
+          # 正则尾部的 $ 是关键：只取正式版 tag 作基准，预发布（-beta.N 等）一律排除。
+          # 灰度期发 0.22.0-beta.2 时基准仍是 0.21.0，与手写 whatsnew 的「相对上个正式版累计」
+          # 口径一致；转正时也不会把自家 beta 当基准。此前靠 grep -v 非锚定匹配连带过滤同号
+          # beta（0.22.0 恰是 0.22.0-beta.3 的子串）纯属巧合，版本号一旦与 beta 不同名即失效。
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${{ github.ref_name }}$" | head -n 1)
           if [ -n "$PREVIOUS_TAG" ]; then
             COMMIT_LOGS=$(git log "$PREVIOUS_TAG"..HEAD --no-merges --oneline)
           else
@@ -204,8 +208,9 @@ jobs:
           unzip -q diffuse.zip
           chmod +x diffuse-0.3.0/bin/diffuse
 
-          # 2. 获取上一个 Tag
-          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | grep -v "${{ github.ref_name }}" | head -n 1)
+          # 2. 获取上一个 Tag（同上：$ 锚定，只拿正式版作 diff 基准。预发布 Release 未必带
+          #    APK 资产，拿它当基准既下载不到、diff 出来也只反映 beta 间的增量而非整版变化）
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${{ github.ref_name }}$" | head -n 1)
           
           NEW_APK=$(find androidApp/build/outputs/apk/github/release -name "*.apk" | head -n 1)
           
