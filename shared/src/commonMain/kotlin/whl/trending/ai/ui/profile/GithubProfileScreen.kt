@@ -29,9 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -97,6 +95,8 @@ import trendingai.shared.generated.resources.time_hours_ago
 import trendingai.shared.generated.resources.time_just_now
 import trendingai.shared.generated.resources.time_minutes_ago
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 
 /**
  * GitHub 开发者档案子页：从账户 Hub 的「GitHub 主页」入口卡进入。
@@ -133,9 +133,9 @@ fun GithubProfileScreen(
         if (shouldLoadMore) viewModel.loadMoreFeed()
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.account_github_entry)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

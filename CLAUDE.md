@@ -23,6 +23,25 @@
     ```
     不传 `indicator` 会回落到默认的 `CircularProgressIndicator`，与全 app 的 `LoadingIndicator` 风格不一致。参照 `Picks/Feed/Trending/Profile` 各 Screen 的写法。
 
+- **页面骨架统一**：所有页面用 `whl.trending.ai.ui.common` 的 `TrendingScaffold` + `TrendingTopAppBar`，**不直接用 `Scaffold` + `TopAppBar`**。
+
+  ```kotlin
+  TrendingScaffold(
+      topBar = {
+          TrendingTopAppBar(
+              title = { Text(stringResource(Res.string.xxx)) },
+              navigationIcon = { /* 返回键 */ },
+          )
+      },
+  ) { padding -> /* content */ }
+  ```
+
+  - 效果：内容滚动时顶栏底色从 `surface` 过渡到 `surfaceContainer`（M3 的 scrolledContainerColor），把顶栏和滚上来的内容分开。全 app 统一为 `pinnedScrollBehavior`——顶栏只变色、不折叠隐藏。
+  - `scrollBehavior` 的创建、`Modifier.nestedScroll` 挂载、传给 `TopAppBar` 这三步都封在组件内部，经 `LocalTopAppBarScrollBehavior` 送达。**页面不要自己 `remember` behavior，也不要把它当参数往下传**——顶栏常被拆成独立的私有 composable（首页四个 tab 各一个），手工传参只要漏一处，那一页就静默失去变色，正是 0.22.0 前的状态。
+  - 顶栏拆成子 composable 时，子函数里直接调 `TrendingTopAppBar` 即可，不需要任何参数透传。
+  - `TrendingScaffold` 只透传各页实际用到的 `Scaffold` 参数，缺什么补什么。
+  - **唯一例外是 `ReadmeScreen`**：正文是 WebView，滚动不经过 Compose 的 nestedScroll，收不到变色事件，因此保留原生 `Scaffold` + 写死 `containerColor = surfaceContainer`。改动那一页时别"顺手统一"回来。
+
 ## 发布前冒烟（必做）
 
 **打 tag 前必须跑 `scripts/release-smoke.sh` 并看到 PASS。** 它构建 r2 渠道 release 包（与线上同样开 R8 minify）、安装到 Pixel_9_2 模拟器、启动并检查崩溃日志与进程存活。日常开发全用 debug 包（不混淆），R8 裁剪类问题只有 release 包能暴露——0.20.0 曾因此启动即崩、发布后才发现（room 2.6.1 老 keep 规则 + R8 full mode 裁掉 WorkDatabase_Impl 构造器）。FAIL 时禁止发布，先按崩溃堆栈排查。

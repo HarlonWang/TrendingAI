@@ -32,10 +32,7 @@ import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -78,6 +74,8 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.data.repository.UserRepository
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
@@ -162,10 +160,7 @@ fun HomeScreen(
         }
     }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+    TrendingScaffold(
         topBar = {
             when (selectedTab) {
                 HomeTab.GitHub -> TrendingTopBar(
@@ -175,8 +170,7 @@ fun HomeScreen(
                     selectedBatch = trendingUiState.selectedBatch,
                     newOnly = trendingUiState.newOnly,
                     onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
-                    scrollBehavior = scrollBehavior,
-                    onTitleClick = { showFilterSheet = true },
+                                onTitleClick = { showFilterSheet = true },
                     onHistoryClick = { showHistorySheet = true },
                     authState = authState,
                     userAvatarUrl = userAvatarUrl,
@@ -184,8 +178,7 @@ fun HomeScreen(
                 )
                 HomeTab.Picks -> PicksTopBar(
                     date = picksUiState?.picks?.metadata?.date,
-                    scrollBehavior = scrollBehavior,
-                    authState = authState,
+                                authState = authState,
                     userAvatarUrl = userAvatarUrl,
                     onNavigateToAccount = onNavigateToAccount,
                 )
@@ -201,8 +194,7 @@ fun HomeScreen(
                                 tint = Color.Unspecified
                             )
                         },
-                        scrollBehavior = scrollBehavior,
-                        authState = authState,
+                                        authState = authState,
                         userAvatarUrl = userAvatarUrl,
                         onNavigateToAccount = onNavigateToAccount,
                     )
@@ -222,8 +214,7 @@ fun HomeScreen(
                                 tint = Color.Unspecified
                             )
                         },
-                        scrollBehavior = scrollBehavior,
-                        authState = authState,
+                                        authState = authState,
                         userAvatarUrl = userAvatarUrl,
                         onNavigateToAccount = onNavigateToAccount,
                     )
@@ -338,7 +329,6 @@ private fun TrendingTopBar(
     selectedBatch: String?,
     newOnly: Boolean,
     onToggleNewOnly: () -> Unit,
-    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     onTitleClick: () -> Unit,
     onHistoryClick: () -> Unit,
     authState: AuthState,
@@ -352,7 +342,7 @@ private fun TrendingTopBar(
         else -> selectedPeriod
     }
 
-    TopAppBar(
+    TrendingTopAppBar(
         title = {
             Column(
                 modifier = Modifier
@@ -388,7 +378,6 @@ private fun TrendingTopBar(
                 )
             }
         },
-        scrollBehavior = scrollBehavior,
         navigationIcon = {
             Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Icon(
@@ -468,13 +457,11 @@ private fun AccountAction(authState: AuthState, userAvatarUrl: String?, onClick:
 @Composable
 private fun PicksTopBar(
     date: String?,
-    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     authState: AuthState,
     userAvatarUrl: String?,
     onNavigateToAccount: () -> Unit,
 ) {
-    TopAppBar(
-        scrollBehavior = scrollBehavior,
+    TrendingTopAppBar(
         title = {
             Column {
                 Text(
@@ -502,13 +489,11 @@ private fun PicksTopBar(
 private fun FeedTopBar(
     title: String,
     navigationIcon: @Composable () -> Unit,
-    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
     authState: AuthState,
     userAvatarUrl: String?,
     onNavigateToAccount: () -> Unit,
 ) {
-    TopAppBar(
-        scrollBehavior = scrollBehavior,
+    TrendingTopAppBar(
         title = {
             Text(
                 text = title,

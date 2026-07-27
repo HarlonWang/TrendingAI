@@ -11,6 +11,8 @@ import whl.trending.ai.ui.theme.ThemeSeed
 import whl.trending.ai.ui.theme.SwatchShapes
 import whl.trending.ai.ui.theme.hsvToArgb
 import whl.trending.ai.ui.theme.rememberMorph
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -46,10 +48,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -96,9 +96,9 @@ fun AppearanceScreen(
         remember { globalSettingsManager.currentCustomSeedColor() }
     )
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.appearance)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

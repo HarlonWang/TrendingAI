@@ -4,6 +4,8 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.picks.SourceTag
 import whl.trending.ai.core.platform.trackEvent
 import androidx.compose.runtime.LaunchedEffect
@@ -31,12 +33,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,19 +69,16 @@ fun FavoriteListScreen(
     onOpenUrl: (url: String) -> Unit = {}
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     LaunchedEffect(Unit) {
         val items = globalSettingsManager.favorites.first()
         trackEvent("favorite_list_view", mapOf("count" to items.size))
     }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.favorites)) },
-                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))

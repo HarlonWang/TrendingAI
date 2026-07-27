@@ -18,9 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.DetailSummaryPolicy
 import whl.trending.chat.R
@@ -137,9 +137,9 @@ fun ChatScreen(
             )
         },
     ) {
-        Scaffold(
+        TrendingScaffold(
             topBar = {
-                TopAppBar(
+                TrendingTopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(

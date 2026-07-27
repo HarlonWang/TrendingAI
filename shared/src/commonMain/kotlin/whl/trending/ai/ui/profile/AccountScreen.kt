@@ -40,14 +40,12 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -131,6 +129,8 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.ui.settings.themeModeText
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 
 /**
  * 账户中心（统一 Hub）：应用「关于我」的唯一入口，替代原独立的个人主页 + 设置页。
@@ -227,9 +227,9 @@ fun AccountScreen(
         )
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = {
                     Text(stringResource(if (authSupported) Res.string.account_title else Res.string.settings))
                 },

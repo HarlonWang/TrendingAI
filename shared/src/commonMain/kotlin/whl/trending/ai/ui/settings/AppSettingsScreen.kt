@@ -28,11 +28,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -89,6 +87,8 @@ import whl.trending.ai.data.local.SummaryLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
 
 /**
@@ -148,9 +148,9 @@ fun AppSettingsScreen(
         LanguageCaptureDialog(isLoggedIn = isLoggedIn, onDismiss = { showLangCaptureDialog = false })
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.app_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

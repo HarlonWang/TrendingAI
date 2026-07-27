@@ -5,6 +5,8 @@ import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.githubLogoPainter
 import whl.trending.ai.update.globalUpdateChecker
 
@@ -37,10 +39,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,9 +88,9 @@ fun AboutScreen(
         DonateDialog(onDismiss = { showDonateDialog = false })
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.about_us)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

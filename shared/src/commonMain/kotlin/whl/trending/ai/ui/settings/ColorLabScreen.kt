@@ -38,13 +38,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -91,6 +89,8 @@ import trendingai.shared.generated.resources.color_lab_title
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.CustomThemeEntry
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.theme.Hsv
 import whl.trending.ai.ui.theme.ThemeContrastOption
 import whl.trending.ai.ui.theme.ThemeStyleOption
@@ -206,9 +206,9 @@ fun ColorLabScreen(onBack: () -> Unit) {
         }
     }
 
-    Scaffold(
+    TrendingScaffold(
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.color_lab_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

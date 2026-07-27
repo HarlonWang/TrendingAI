@@ -213,6 +213,9 @@ fun ReadmeScreen(
                         )
                     }
                 },
+                // 全 app 唯一不走 TrendingScaffold + TrendingTopAppBar 的页面：正文是 WebView，
+                // 它的滚动不经过 Compose 的 nestedScroll，滚动驱动的顶栏变色在这里根本收不到事件。
+                // 故直接固定成滚动后的色值，视觉上与其他页滚起来之后保持一致。别按统一规范改回去。
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
