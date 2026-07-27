@@ -168,11 +168,11 @@ class ChatViewModel(
         }
         val images = state.pendingImages
         _uiState.update { it.copy(input = "", pendingImages = emptyList()) }
-        sendMessage(text, images)
+        sendMessage(text, images, from = "input")
     }
 
     /** 发送一段指定文本（如快捷按钮的预设问题），不依赖输入框；发送中或空白则忽略。 */
-    fun sendText(text: String) = sendMessage(text, emptyList())
+    fun sendText(text: String) = sendMessage(text, emptyList(), from = "quick_reply")
 
     /**
      * 「一键详细解读」：插入一条 user 消息（chip 文案），走 detail 管线流式生成解读。
@@ -191,15 +191,13 @@ class ChatViewModel(
         }
     }
 
-    private fun sendMessage(text: String, images: List<String>) {
+    private fun sendMessage(text: String, images: List<String>, from: String) {
         if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
         if (_chatMode.value == ChatMode.DeepResearch) {
             sendResearch(text)
             return
         }
-        if (images.isNotEmpty()) {
-            track("chat_send_with_images", mapOf("image_count" to images.size.toString()))
-        }
+        trackChatSend(from, images.size)
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             val threadId = ensureThreadForSend(text)
@@ -223,8 +221,33 @@ class ChatViewModel(
         }
         val threadId = _currentThreadId.value
         updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
+        // 重试 CHAT 会重打 /api/chat，后端 chat_logs 随之再记一行，埋点跟着报才对得上账；
+        // DETAIL_SUMMARY 走独立端点、不入该表，故不报。
+        if (message.kind == MessageKind.CHAT) {
+            val resent = messagesByThread[threadId]?.lastOrNull { it.role == Role.USER }
+            trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
+        }
         _uiState.update { it.copy(isSending = true) }
         launchRequest(threadId, message.kind, activeContext)
+    }
+
+    /**
+     * chat 管线的发送埋点。落点与后端 `chat_logs` 的写入时机对齐——那边记在配额检查之前，
+     * 被限流 / 上游报错的请求同样留痕，所以这里也在发出前记，两侧行数可直接对账，
+     * 残差只剩上报丢失一项。detail / research 各有独立事件与端点，不并入本事件。
+     *
+     * [from]：`input`（输入框）/ `quick_reply`（预设气泡）/ `retry`（重试）。
+     */
+    private fun trackChatSend(from: String, imageCount: Int) {
+        track(
+            "chat_send",
+            mapOf(
+                "from" to from,
+                "image_count" to imageCount.toString(),
+                // 与后端 hasContext（context && context.title）等价：ChatContext.title 非空
+                "has_context" to (activeContext != null).toString(),
+            ),
+        )
     }
 
     // ---- 会话管理（抽屉） ----
