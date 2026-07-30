@@ -48,8 +48,36 @@ import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.common.ItemActionMenu
 import whl.trending.ai.ui.common.aiShareText
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import kotlin.time.Clock
+
+/** 缩略图显示尺寸；请求像素按 3x 屏取整，避免高密度屏上发虚。 */
+private val THUMBNAIL_SIZE = 48.dp
+private const val THUMBNAIL_REQUEST_PX = 144
+
+/** 大图卡片里贴在标题左侧的产品 logo。 */
+private val LOGO_SIZE = 24.dp
+private const val LOGO_REQUEST_PX = 72
+
+/**
+ * 主视觉请求宽度。列表里图块实际宽度不到 1000px，这里只要 720：
+ * 实测 20 条 720 宽合计约 1.1MB，再往上翻倍的流量换不来肉眼可见的清晰度。
+ */
+private const val HERO_REQUEST_PX = 720
+
+/** 主视觉比例：加载完成前的占位值，以及夹住极端长图/宽图用的上下界。 */
+private const val HERO_PLACEHOLDER_RATIO = 16f / 9f
+private const val HERO_MIN_RATIO = 0.75f
+private const val HERO_MAX_RATIO = 3f
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -156,19 +184,181 @@ private fun FeedItemCard(
     onOpenUrl: (url: String) -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .clickable {
-                trackItemClick(
-                    source = item.source,
-                    rank = index + 1,
-                    title = item.title
+    val heroImage = item.heroImageUrl(HERO_REQUEST_PX)
+    val clickModifier = Modifier.clickable {
+        trackItemClick(
+            source = item.source,
+            rank = index + 1,
+            title = item.title
+        )
+        onOpenUrl(item.openUrl)
+    }
+
+    if (heroImage != null) {
+        // Product Hunt：logo 收进标题行，主视觉跟着 AI 摘要走（见 FeedItemBody）
+        Column(
+            modifier = clickModifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                item.thumbnailUrl(LOGO_REQUEST_PX)?.let { logo ->
+                    AsyncImage(
+                        model = logo,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(LOGO_SIZE)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
+                Text(
+                    text = item.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.W500,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                onOpenUrl(item.openUrl)
             }
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            FeedItemBody(
+                item = item,
+                isFavorite = isFavorite,
+                onToggleFavorite = onToggleFavorite,
+                heroImage = heroImage
+            )
+        }
+    } else {
+        Row(
+            modifier = clickModifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            FeedItemLeading(index = index, item = item)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = item.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.W500,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                FeedItemBody(
+                    item = item,
+                    isFavorite = isFavorite,
+                    onToggleFavorite = onToggleFavorite
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 标题以下的公共部分：描述、AI 摘要、元信息 + 操作菜单。
+ *
+ * [heroImage] 是 Product Hunt 的产品主视觉：有摘要时收进摘要块内部，
+ * 没摘要时单独成块——总之跟在描述之后，不再单独占卡片顶部。
+ */
+@Composable
+private fun FeedItemBody(
+    item: FeedItem,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    heroImage: String? = null
+) {
+    if (!item.description.isNullOrBlank()) {
+        Text(
+            text = item.description,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            maxLines = if (item.source == "producthunt") 2 else Int.MAX_VALUE,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    if (!item.summary.isNullOrBlank()) {
+        AiSummaryBox(
+            summary = item.summary,
+            media = heroImage?.let { url -> { HeroImage(url = url) } }
+        )
+    } else if (heroImage != null) {
+        HeroImage(
+            url = heroImage,
+            modifier = Modifier.clip(RoundedCornerShape(12.dp))
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(modifier = Modifier.weight(1f)) {
+            FeedItemMetadata(item = item)
+        }
+        val shareContent = aiShareText(item.title, item.summary, item.openUrl)
+        ItemActionMenu(
+            isFavorite = isFavorite,
+            onToggle = onToggleFavorite,
+            onShare = {
+                shareText(shareContent)
+                trackEvent(
+                    "share_to_ai",
+                    mapOf(
+                        "source" to item.source,
+                        "has_summary" to !item.summary.isNullOrBlank(),
+                        "from" to "list"
+                    )
+                )
+            }
+        )
+    }
+}
+
+/**
+ * 产品主视觉。按图片实际比例排布，不裁成固定画幅——图库里既有 16:9 的演示图
+ * 也有接近方形的宣传图，统一裁会切掉半张。加载完成前用 16:9 占位，避免高度从
+ * 0 弹开；比例只在极端长图时才夹住，正常横图不受影响。
+ */
+@Composable
+private fun HeroImage(url: String, modifier: Modifier = Modifier) {
+    val painter = rememberAsyncImagePainter(url)
+    val state by painter.state.collectAsState()
+    val ratio = (state as? AsyncImagePainter.State.Success)
+        ?.painter
+        ?.intrinsicSize
+        ?.takeIf { it.width > 0f && it.height > 0f }
+        ?.let { (it.width / it.height).coerceIn(HERO_MIN_RATIO, HERO_MAX_RATIO) }
+        ?: HERO_PLACEHOLDER_RATIO
+
+    Image(
+        painter = painter,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(ratio)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    )
+}
+
+/**
+ * 列表项左侧的标识位：没有主视觉的 Product Hunt 条目（2026-07-30 之前入库）
+ * 退回产品 logo，其余来源保持排名序号。
+ */
+@Composable
+private fun FeedItemLeading(index: Int, item: FeedItem) {
+    val thumbnail = item.thumbnailUrl(THUMBNAIL_REQUEST_PX)
+    if (thumbnail != null) {
+        AsyncImage(
+            model = thumbnail,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(THUMBNAIL_SIZE)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        )
+    } else {
         Surface(
             modifier = Modifier.size(28.dp),
             shape = CircleShape,
@@ -177,53 +367,6 @@ private fun FeedItemCard(
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = "${index + 1}", fontSize = 12.sp, fontWeight = FontWeight.W500)
-            }
-        }
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = item.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.W500,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (!item.description.isNullOrBlank()) {
-                Text(
-                    text = item.description,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    maxLines = if (item.source == "producthunt") 2 else Int.MAX_VALUE,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (!item.summary.isNullOrBlank()) {
-                AiSummaryBox(summary = item.summary)
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    FeedItemMetadata(item = item)
-                }
-                val shareContent = aiShareText(item.title, item.summary, item.openUrl)
-                ItemActionMenu(
-                    isFavorite = isFavorite,
-                    onToggle = onToggleFavorite,
-                    onShare = {
-                        shareText(shareContent)
-                        trackEvent(
-                            "share_to_ai",
-                            mapOf(
-                                "source" to item.source,
-                                "has_summary" to !item.summary.isNullOrBlank(),
-                                "from" to "list"
-                            )
-                        )
-                    }
-                )
             }
         }
     }

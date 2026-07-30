@@ -37,6 +37,32 @@ data class FeedItem(
             "producthunt" -> extra?.phUrl?.takeIf { it.isNotBlank() } ?: url
             else -> url
         }
+
+    /**
+     * Product Hunt 产品缩略图，按显示尺寸向 imgix 请求裁剪版本。
+     * 原图动辄 100KB+ 且尺寸不一，带上 w/h/fit 后单张降到几 KB；
+     * auto=format 会把 svg/gif 一并栅格化成 png/webp，因此不需要额外的解码器依赖。
+     */
+    fun thumbnailUrl(px: Int): String? {
+        if (source != "producthunt") return null
+        val raw = extra?.thumbnailUrl?.takeIf { it.isNotBlank() } ?: return null
+        val separator = if ('?' in raw) "&" else "?"
+        return "$raw${separator}auto=format&w=$px&h=$px&fit=crop"
+    }
+
+    /**
+     * Product Hunt 产品主视觉，取图库首图。
+     * fit=max 只按宽度约束、不裁剪，原始比例交给调用方按图片实际尺寸排布。
+     * 原图大到 4MB，必须带尺寸参数；这里显式要 webp 而不是 auto=format——
+     * 图库多为界面截图，auto 会选无损 png，同尺寸下比 webp 大好几倍。
+     * 2026-07-30 之前入库的条目没有 gallery，返回 null 由调用方降级。
+     */
+    fun heroImageUrl(widthPx: Int): String? {
+        if (source != "producthunt") return null
+        val raw = extra?.gallery?.firstOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        val separator = if ('?' in raw) "&" else "?"
+        return "$raw${separator}fm=webp&q=70&w=$widthPx&fit=max"
+    }
 }
 
 @Serializable
@@ -44,5 +70,8 @@ data class FeedExtra(
     @SerialName("hn_url")
     val hnUrl: String? = null,
     @SerialName("ph_url")
-    val phUrl: String? = null
+    val phUrl: String? = null,
+    @SerialName("thumbnail_url")
+    val thumbnailUrl: String? = null,
+    val gallery: List<String> = emptyList()
 )
