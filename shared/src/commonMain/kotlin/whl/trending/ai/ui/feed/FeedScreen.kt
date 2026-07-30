@@ -60,13 +60,9 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import kotlin.time.Clock
 
-/** 缩略图显示尺寸；请求像素按 3x 屏取整，避免高密度屏上发虚。 */
-private val THUMBNAIL_SIZE = 48.dp
-private const val THUMBNAIL_REQUEST_PX = 144
-
-/** 大图卡片里贴在标题左侧的产品 logo。 */
-private val LOGO_SIZE = 24.dp
-private const val LOGO_REQUEST_PX = 72
+/** 左侧标识位尺寸，序号圆圈和产品 logo 共用；请求像素按 3x 屏取整，避免高密度屏上发虚。 */
+private val LEADING_SIZE = 28.dp
+private const val LEADING_REQUEST_PX = 84
 
 /**
  * 主视觉请求宽度。列表里图块实际宽度不到 1000px，这里只要 720：
@@ -194,62 +190,26 @@ private fun FeedItemCard(
         onOpenUrl(item.openUrl)
     }
 
-    if (heroImage != null) {
-        // Product Hunt：logo 收进标题行，主视觉跟着 AI 摘要走（见 FeedItemBody）
+    Row(
+        modifier = clickModifier.padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        FeedItemLeading(index = index, item = item)
         Column(
-            modifier = clickModifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                item.thumbnailUrl(LOGO_REQUEST_PX)?.let { logo ->
-                    AsyncImage(
-                        model = logo,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(LOGO_SIZE)
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
-                }
-                Text(
-                    text = item.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.W500,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            Text(
+                text = item.title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.W500,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             FeedItemBody(
                 item = item,
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
                 heroImage = heroImage
             )
-        }
-    } else {
-        Row(
-            modifier = clickModifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            FeedItemLeading(index = index, item = item)
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = item.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.W500,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                FeedItemBody(
-                    item = item,
-                    isFavorite = isFavorite,
-                    onToggleFavorite = onToggleFavorite
-                )
-            }
         }
     }
 }
@@ -342,25 +302,25 @@ private fun HeroImage(url: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * 列表项左侧的标识位：没有主视觉的 Product Hunt 条目（2026-07-30 之前入库）
- * 退回产品 logo，其余来源保持排名序号。
+ * 列表项左侧的标识位：Product Hunt 放产品 logo，其余来源放排名序号。
+ * 两者同尺寸同形状同位置，正下方不排内容——三个 tab 共用一套骨架。
  */
 @Composable
 private fun FeedItemLeading(index: Int, item: FeedItem) {
-    val thumbnail = item.thumbnailUrl(THUMBNAIL_REQUEST_PX)
-    if (thumbnail != null) {
+    val logo = item.thumbnailUrl(LEADING_REQUEST_PX)
+    if (logo != null) {
         AsyncImage(
-            model = thumbnail,
+            model = logo,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(THUMBNAIL_SIZE)
-                .clip(RoundedCornerShape(12.dp))
+                .size(LEADING_SIZE)
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         )
     } else {
         Surface(
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(LEADING_SIZE),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
