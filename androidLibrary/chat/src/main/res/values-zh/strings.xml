@@ -34,6 +34,7 @@
     <string name="chat_voice_input">语音输入</string>
     <string name="chat_voice_prompt">请开始说话</string>
     <string name="chat_voice_failed">当前设备暂不支持语音输入。</string>
+    <string name="chat_voice_blocked_toast">语音引擎需要麦克风权限才能识别。</string>
     <string name="chat_voice_guide_title">语音引擎需要麦克风权限</string>
     <string name="chat_voice_guide_message">本机负责语音输入的「%1$s」没有麦克风权限，无法完成识别。可在它的应用信息 → 权限管理里开启麦克风。也可以直接用键盘上的麦克风按钮。</string>
     <string name="chat_voice_guide_settings">去设置</string>

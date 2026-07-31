@@ -34,8 +34,9 @@
     <string name="chat_voice_input">Voice input</string>
     <string name="chat_voice_prompt">Speak now</string>
     <string name="chat_voice_failed">Voice input is unavailable on this device.</string>
+    <string name="chat_voice_blocked_toast">The voice engine needs microphone access to transcribe.</string>
     <string name="chat_voice_guide_title">Voice engine needs microphone access</string>
-    <string name="chat_voice_guide_message">"%1$s" — the app that handles voice input on this device — doesn\'t have microphone permission, so it can\'t transcribe your speech. Open its app info and grant microphone access under Permissions. You can also use the microphone key on your keyboard instead.</string>
+    <string name="chat_voice_guide_message">\"%1$s\" — the app that handles voice input on this device — doesn\'t have microphone permission, so it can\'t transcribe your speech. Open its app info and grant microphone access under Permissions. You can also use the microphone key on your keyboard instead.</string>
     <string name="chat_voice_guide_settings">Open settings</string>
     <string name="chat_voice_guide_dismiss">Got it</string>
     <string name="chat_attach">Add image</string>
