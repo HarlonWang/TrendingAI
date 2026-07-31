@@ -21,6 +21,7 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.App
 import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.core.ReconcileAction
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
@@ -138,8 +139,19 @@ class MainActivity : AppCompatActivity() {
         if (!globalSettingsManager.currentIsPro() && ProSponsor.shouldReconcile()) {
             lifecycleScope.launch {
                 val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
-                if (whl.trending.ai.data.repository.UserRepository().refreshPro(token) == true) {
-                    ProSponsor.markReconciled()
+                val result = whl.trending.ai.data.repository.UserRepository().refreshPro(token)
+                when (ProSponsor.reconcileAction(result)) {
+                    ReconcileAction.MARK_PRO -> ProSponsor.markReconciled()
+
+                    // 钱付了，但账户没关联 GitHub，权益无从匹配。一并结束对账窗口：引导已经给出，
+                    // 后续交给关联流程（分支①）补对账；不结束的话每次回前台都会再弹，比不提示还烦。
+                    ReconcileAction.GUIDE_LINK -> {
+                        ProSponsor.markReconciled()
+                        ProSponsor.signalNeedsGithubLink()
+                    }
+
+                    // 窗口留着，下次回前台再试
+                    ReconcileAction.STAY_SILENT -> Unit
                 }
             }
         }
