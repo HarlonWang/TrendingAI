@@ -1,5 +1,7 @@
 package whl.trending.ai.core
 
+import whl.trending.ai.ui.detail.DigestScreen
+import whl.trending.ai.ui.detail.DigestTarget
 import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
@@ -52,6 +54,20 @@ data object About
 data object Feedback
 data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
+
+/**
+ * HN / PH 条目的 AI 解读页。
+ *
+ * 路由 key 自带展示所需字段（标题、原文链接、列表那句摘要），故不需要为一个详情页
+ * 新增「查单条」接口——三个入口（Feed / Picks / 收藏）手里本来就有这些字段。
+ */
+data class ItemDigest(
+    val source: String,
+    val externalId: String,
+    val title: String,
+    val url: String,
+    val summary: String? = null,
+)
 data class WebPage(val url: String, val title: String)
 data object Favorites
 data object Profile
@@ -102,6 +118,19 @@ fun App() {
         }
     }
 
+    // HN / PH 条目进解读页（三个入口共用）；GitHub 条目仍走 RepoDetail
+    val openDigest: (DigestTarget) -> Unit = { target ->
+        backStack.add(
+            ItemDigest(
+                source = target.source,
+                externalId = target.externalId,
+                title = target.title,
+                url = target.url,
+                summary = target.summary,
+            ),
+        )
+    }
+
     TrendingTheme {
         CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
             ForceUpdateGate {
@@ -136,6 +165,7 @@ fun App() {
                                 onNavigateToDetail = { owner, repo ->
                                     backStack.add(RepoDetail(owner, repo))
                                 },
+                                onNavigateToDigest = openDigest,
                                 onNavigateToChat = {
                                     backStack.add(Chat(null))
                                 },
@@ -208,6 +238,7 @@ fun App() {
                                 onNavigateToDetail = { owner, repo ->
                                     backStack.add(RepoDetail(owner, repo))
                                 },
+                                onNavigateToDigest = openDigest,
                                 onOpenUrl = { url ->
                                     openExternalUrl(url, "")
                                 }
@@ -271,6 +302,21 @@ fun App() {
                                 owner = key.owner,
                                 repo = key.repo,
                                 onBack = { backStack.safePop() },
+                                onNavigateToChat = { context ->
+                                    backStack.add(Chat(context))
+                                }
+                            )
+                        }
+
+                        is ItemDigest -> NavEntry(key) {
+                            DigestScreen(
+                                source = key.source,
+                                externalId = key.externalId,
+                                title = key.title,
+                                url = key.url,
+                                summary = key.summary,
+                                onBack = { backStack.safePop() },
+                                onOpenUrl = { url -> openExternalUrl(url, key.title) },
                                 onNavigateToChat = { context ->
                                     backStack.add(Chat(context))
                                 }

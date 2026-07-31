@@ -26,8 +26,10 @@ import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.ui.common.globalMarkdownRenderer
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.ui.home.HomeTabRequest
+import whl.trending.chat.markdown.MarkdownText
 import whl.trending.chat.ui.ChatScreen
 import whl.trending.notifier.AndroidDailyPicksNotifier
 import whl.trending.notifier.EXTRA_OPEN_TAB
@@ -51,6 +53,12 @@ class MainActivity : AppCompatActivity() {
         // 注册 Android-only 的 ChatScreen 到 CMP 导航 slot（仿 UpdateWrapper 的依赖反转）
         globalChatScreen = { context, onBack ->
             ChatScreen(initialContext = context, onBack = onBack)
+        }
+
+        // 同一套依赖反转：把 chat 模块的 Markdown 渲染器交给 shared 的解读页用，
+        // 免得 commonMain 为渲染 Markdown 再引一套 KMP 库或自写一份
+        globalMarkdownRenderer = { markdown, modifier ->
+            MarkdownText(markdown = markdown, modifier = modifier)
         }
 
         lifecycleScope.launch {

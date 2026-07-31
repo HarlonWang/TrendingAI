@@ -60,12 +60,15 @@ import trendingai.shared.generated.resources.favorites_delete_confirm
 import trendingai.shared.generated.resources.favorites_empty
 import trendingai.shared.generated.resources.favorites_empty_hint
 import trendingai.shared.generated.resources.favorites_removed
+import whl.trending.ai.ui.detail.DigestTarget
+import whl.trending.ai.ui.detail.digestTarget
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteListScreen(
     onBack: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> },
+    onNavigateToDigest: (DigestTarget) -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {}
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
@@ -116,7 +119,7 @@ fun FavoriteListScreen(
                 ) { index, item ->
                     FavoriteCard(
                         item = item,
-                        onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl) },
+                        onClick = { handleFavoriteClick(item, onNavigateToDetail, onNavigateToDigest, onOpenUrl) },
                         onRemove = { globalFavoriteRepository.remove(item.url) }
                     )
                     if (index < favorites.lastIndex) {
@@ -131,6 +134,7 @@ fun FavoriteListScreen(
 private fun handleFavoriteClick(
     item: FavoriteItem,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onNavigateToDigest: (DigestTarget) -> Unit,
     onOpenUrl: (url: String) -> Unit
 ) {
     if (item.source == "github") {
@@ -140,7 +144,9 @@ private fun handleFavoriteClick(
             return
         }
     }
-    onOpenUrl(item.targetUrl)
+    // 存量收藏没有 externalId，解读页拿不到入参 → 保持原有的外开行为
+    val digestTarget = item.digestTarget()
+    if (digestTarget != null) onNavigateToDigest(digestTarget) else onOpenUrl(item.targetUrl)
 }
 
 @Composable

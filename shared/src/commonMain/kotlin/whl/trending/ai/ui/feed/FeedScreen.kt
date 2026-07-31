@@ -45,6 +45,8 @@ import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.detail.DigestTarget
+import whl.trending.ai.ui.detail.digestTarget
 import whl.trending.ai.ui.common.ItemActionMenu
 import whl.trending.ai.ui.common.aiShareText
 import androidx.compose.runtime.remember
@@ -80,7 +82,8 @@ private const val HERO_MAX_RATIO = 3f
 fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel,
-    onOpenUrl: (url: String) -> Unit
+    onOpenUrl: (url: String) -> Unit,
+    onNavigateToDigest: (DigestTarget) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -143,6 +146,7 @@ fun FeedScreen(
                             item = item,
                             isFavorite = item.url in favoriteUrls,
                             onOpenUrl = onOpenUrl,
+                            onNavigateToDigest = onNavigateToDigest,
                             onToggleFavorite = {
                                 if (item.url in favoriteUrls) {
                                     globalFavoriteRepository.remove(item.url)
@@ -178,16 +182,19 @@ private fun FeedItemCard(
     item: FeedItem,
     isFavorite: Boolean,
     onOpenUrl: (url: String) -> Unit,
+    onNavigateToDigest: (DigestTarget) -> Unit,
     onToggleFavorite: () -> Unit
 ) {
     val heroImage = item.heroImageUrl(HERO_REQUEST_PX)
+    val digestTarget = item.digestTarget()
     val clickModifier = Modifier.clickable {
         trackItemClick(
             source = item.source,
             rank = index + 1,
             title = item.title
         )
-        onOpenUrl(item.openUrl)
+        // HN/PH 进解读页，不再外开浏览器；缺 externalId 等异常条目仍回落外开
+        if (digestTarget != null) onNavigateToDigest(digestTarget) else onOpenUrl(item.openUrl)
     }
 
     Row(

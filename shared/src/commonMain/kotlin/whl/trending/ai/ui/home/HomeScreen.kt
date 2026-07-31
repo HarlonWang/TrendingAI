@@ -78,6 +78,7 @@ import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
+import whl.trending.ai.ui.detail.DigestTarget
 import whl.trending.ai.ui.picks.PicksScreen
 import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.core.platform.trackEvent
@@ -100,6 +101,7 @@ enum class HomeTab {
 fun HomeScreen(
     onNavigateToAccount: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onNavigateToDigest: (DigestTarget) -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {}
@@ -301,15 +303,18 @@ fun HomeScreen(
             HomeTab.HackerNews -> FeedScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = hnViewModel!!,
-                onOpenUrl = onOpenUrl
+                onOpenUrl = onOpenUrl,
+                onNavigateToDigest = onNavigateToDigest
             )
             HomeTab.ProductHunt -> FeedScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = phViewModel!!,
-                onOpenUrl = onOpenUrl
+                onOpenUrl = onOpenUrl,
+                onNavigateToDigest = onNavigateToDigest
             )
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
+                onNavigateToDigest = onNavigateToDigest,
                 onOpenUrl = onOpenUrl,
                 onNavigateToSubscribe = onNavigateToSubscribe,
                 modifier = Modifier.padding(innerPadding),

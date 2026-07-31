@@ -67,6 +67,8 @@ import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.PickItem
 import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.detail.DigestTarget
+import whl.trending.ai.ui.detail.digestTarget
 import whl.trending.ai.ui.common.aiShareText
 import androidx.compose.runtime.remember
 import kotlin.time.Clock
@@ -75,6 +77,7 @@ import kotlin.time.Clock
 @Composable
 fun PicksScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onNavigateToDigest: (DigestTarget) -> Unit,
     onOpenUrl: (url: String) -> Unit,
     onNavigateToSubscribe: () -> Unit,
     modifier: Modifier = Modifier,
@@ -151,7 +154,9 @@ fun PicksScreen(
                             trackEvent("picks_newsletter_banner_dismiss")
                             globalSettingsManager.setPicksNewsletterBannerDismissed(true)
                         },
-                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl) },
+                        onItemClick = { item, section ->
+                            handleItemClick(item, section, onNavigateToDetail, onNavigateToDigest, onOpenUrl)
+                        },
                     )
                 }
             }
@@ -163,6 +168,7 @@ private fun handleItemClick(
     item: PickItem,
     section: String,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onNavigateToDigest: (DigestTarget) -> Unit,
     onOpenUrl: (url: String) -> Unit
 ) {
     trackItemClick(
@@ -178,7 +184,9 @@ private fun handleItemClick(
             return
         }
     }
-    onOpenUrl(item.openUrl)
+    // 精选里的 HN/PH 条目与 HN/PH tab 保持同一去向，否则同一条目两处点击体验割裂
+    val digestTarget = item.digestTarget()
+    if (digestTarget != null) onNavigateToDigest(digestTarget) else onOpenUrl(item.openUrl)
 }
 
 @Composable
