@@ -224,8 +224,8 @@
     <string name="account_link_required_message">Pro 权益通过 GitHub Sponsors 发放，需要你的账户关联 GitHub。你当前用邮箱登录，直接赞助不会自动生效。</string>
     <string name="account_link_sponsor_anyway">仍要前往赞助</string>
     <string name="account_link_sponsor_note">Pro 权益绑定 GitHub 账号，赞助后需在账户页关联才生效</string>
-    <string name="sponsor_link_needed_title">赞助已收到，还差一步</string>
-    <string name="sponsor_link_needed_message">感谢支持！Pro 权益绑定在 GitHub 账号上，关联后立即生效。</string>
+    <string name="sponsor_link_needed_title">赞助前还差一步</string>
+    <string name="sponsor_link_needed_message">如果你刚完成赞助：Pro 权益绑定在 GitHub 账号上，关联后即可生效。</string>
     <string name="sponsor_link_needed_later">稍后</string>
     <string name="account_signin_for_more">登录即可获得更多每日额度</string>
     <string name="account_pro_active">你已是 Pro 会员，感谢支持！</string>
