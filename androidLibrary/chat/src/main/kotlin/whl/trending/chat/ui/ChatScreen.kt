@@ -1,5 +1,6 @@
 package whl.trending.chat.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -112,6 +115,13 @@ fun ChatScreen(
             viewModel.enableDeepResearch()
             if (viewModel.uiState.value.input.isBlank()) viewModel.updateInput(researchPrefill)
         }
+    }
+
+    // AI 一开始回复就收起键盘：把屏幕让给正文，用户不用先手动关键盘才能读回复。
+    // clearFocus 同时清焦点（而非只 hide），避免留下「键盘没了但光标还在闪」的中间态。
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(state.isSending) {
+        if (state.isSending) focusManager.clearFocus()
     }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -258,7 +268,13 @@ fun ChatScreen(
                 }
             },
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .padding(padding)
+                    // 点消息区/欢迎区收起键盘。detectTapGestures 走 Main pass，
+                    // 消息里的链接点击、列表滚动等子手势照常先消费，不会被这里抢走
+                    .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
+            ) {
                 if (state.messages.isEmpty()) {
                     // 尚无对话：展示欢迎区（实验性 + 每日额度说明）。发出第一条后 messages 非空，
                     // 自动切到 MessageList，与「介绍这个项目」chip 的隐藏时机一致。
