@@ -495,7 +495,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
     }
 
-    /** 选中的聊天模型 id：发请求时透传（服务端仍按 tier 强制）。默认免费 gpt-5.4。 */
+    /** 选中的聊天模型 id：发请求时透传（服务端仍按 tier 强制）。默认免费 gpt-5.6-luna。 */
     val selectedChatModel: Flow<String> = settings.getStringFlow(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
 
     fun currentSelectedChatModel(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
@@ -504,7 +504,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(SELECTED_CHAT_MODEL_KEY, id)
     }
 
-    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回落到默认 gpt-5.4）。 */
+    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回落到默认 gpt-5.6-luna）。 */
     fun clearSelectedChatModel() {
         settings.remove(SELECTED_CHAT_MODEL_KEY)
     }

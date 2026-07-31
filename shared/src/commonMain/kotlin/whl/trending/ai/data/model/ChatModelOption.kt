@@ -3,7 +3,7 @@ package whl.trending.ai.data.model
 import kotlinx.serialization.Serializable
 
 /** 免费默认模型（与后端 FREE_MODELS[0] 对齐）。选择器与请求兜底都用它。 */
-const val DEFAULT_CHAT_MODEL = "gpt-5.4"
+const val DEFAULT_CHAT_MODEL = "gpt-5.6-luna"
 
 /**
  * 一个可选聊天模型（来自 `GET /api/chat/models`，后端从 OpenAI 动态取）。

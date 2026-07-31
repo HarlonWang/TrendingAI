@@ -29,7 +29,7 @@ import whl.trending.ai.data.model.resolveEffectiveChatModel
 import whl.trending.chat.R
 
 /**
- * 常驻模型选择器（对所有用户透出）。默认显示免费 gpt-5.4；Pro 专属项对免费用户锁定，
+ * 常驻模型选择器（对所有用户透出）。默认显示免费 gpt-5.6-luna；Pro 专属项对免费用户锁定，
  * 点锁定项 → 纯告知弹窗（说明该模型属于 Pro，可继续用默认模型），不外跳赞助页。
  *
  * 2026-07-26 起此处不再承担 Pro 转化：与配额触顶卡同一决策——功能受限的当下推销观感差，
