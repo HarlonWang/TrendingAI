@@ -72,7 +72,7 @@ chat 输入区（`androidLibrary/chat/.../ui/ChatInputBar.kt`）当前只有三�
 升级到 B 的触发条件建议写死成三条，命中任意两条再启动：
 
 - `chat_voice_start` 的周触发用户数 / chat 周活用户数 ≥ 10%；
-- 识别不可用率（`chat_voice_unsupported` + `chat_voice_fail`）≥ 15%，说明设备侧能力确实不够；
+- 识别不可用率 ≥ 15%，说明设备侧能力确实不够（**口径已被下文〈埋点修正〉一节取代**，以那里为准）；
 - 有明确的质量反馈（识别不准导致改写/放弃发送，可用「识别完成但未发送」的比例近似）。
 
 ## 方案 A 的落地要点
@@ -86,7 +86,7 @@ chat 输入区（`androidLibrary/chat/.../ui/ChatInputBar.kt`）当前只有三�
 5. **埋点**（对齐 `docs/analytics-notes.md` 的口径，事件名 `chat_` 前缀）：
    - `chat_voice_start`——点击麦克风；
    - `chat_voice_result`，带 `chars` 分桶——识别返回非空；
-   - `chat_voice_cancel`——用户取消 / 返回空结果；
+   - `chat_voice_cancel`——用户取消 / 返回空结果（**实现时改名为 `chat_voice_empty`**，理由见下文）；
    - `chat_voice_unsupported`——探测失败（这条要**在按钮隐藏时也记一次**，否则永远看不到不可用设备的分母，只能记冷启动首次进 chat 时一次，避免刷量）。
 6. **UI 规范**：本方案不涉及加载态，若后续加「识别中」提示，按 CLAUDE.md 一律用 `LoadingIndicator`，禁用 `CircularProgressIndicator`。
 
@@ -117,7 +117,7 @@ chat 输入区（`androidLibrary/chat/.../ui/ChatInputBar.kt`）当前只有三�
 
 ### 失败信号无法区分（问题的根）
 
-`ACTION_RECOGNIZE_SPEECH` 的契约里，**用户主动取消**和**识别应用出错**回传的都是 `RESULT_CANCELED`。当前实现一律记 `chat_voice_cancel` 后静默返回，于是「用户改主意了」和「这台设备的语音输入彻底废了」在埋点里长得一模一样——而后者正是升级方案 B 的关键依据。
+`ACTION_RECOGNIZE_SPEECH` 的契约里，**用户主动取消**和**识别应用出错**回传的都是 `RESULT_CANCELED`。当时的实现一律记 `chat_voice_cancel`（现已改名 `chat_voice_empty`）后静默返回，于是「用户改主意了」和「这台设备的语音输入彻底废了」在埋点里长得一模一样——而后者正是升级方案 B 的关键依据。
 
 一个直觉的补救是**用耗时区分**（秒退即失败）。**实测证明它不成立**：小米的失败路径是弹一个 AlertDialog 等用户点「确定」，耗时取决于用户反应速度，2–5 秒都有可能，与正常说一句话完全重叠。这条路不要走。
 
@@ -141,11 +141,11 @@ private fun recognizerState(context: Context): Pair<String, Boolean>? {
 
 ```
 识别返回 null（RESULT_CANCELED）
-  ├── 目标包已有 RECORD_AUDIO  → 用户主动取消，静默，记 chat_voice_cancel
+  ├── 目标包已有 RECORD_AUDIO  → 排除权限原因，静默，记 chat_voice_empty
   └── 目标包仍无 RECORD_AUDIO  → 授权链没走通，记 chat_voice_blocked 并给引导
 ```
 
-今天这个 case 正好落在第二条分支上，且判据是确定性的、不依赖任何启发式。
+今天这个 case 正好落在第二条分支上。**但要说清楚这个判据的边界**：它在「未授权 → 不可能完成识别」这个方向是确定的，却区分不了「用户想授权但没走完」和「用户就是不想给」——两者都表现为未授权。所以它比耗时启发式可靠得多，但仍不是完全确定性的归因，UI 上因此要节流（见〈第二轮复审修正〉）。
 
 ### 引导 UI
 
@@ -155,7 +155,7 @@ private fun recognizerState(context: Context): Pair<String, Boolean>? {
 - **主按钮「去设置」**：`Settings.ACTION_APPLICATION_DETAILS_SETTINGS` + `Uri.parse("package:$pkg")` 跳该包的应用详情页。**这条待真机验证**——小米语音引擎没有 launcher 入口，应用详情页能否正常打开尚未实测，打不开就退化为纯文案指路（设置 → 应用管理 → 显示所有应用 → 系统语音引擎 → 权限）；
 - **次按钮「知道了」**：关闭；
 - **正文附一句降级建议**：「也可以直接用键盘上的麦克风按钮」。输入法的语音走的是另一条通道，不受该应用权限影响——这是最实用的兜底，而且本来就是用户今天在用的路径；
-- **频次控制**：同一会话最多弹一次（`rememberSaveable` 标记），之后失败只出 Toast，避免反复打扰。
+- **频次控制**：见〈第二轮复审修正〉——`rememberSaveable` 的作用域是单次 composition，退出 chat 再进就重置，最终改为进程级「连续第 2 次失败才弹 + 只弹一次」。
 
 ### 埋点修正
 
@@ -163,7 +163,7 @@ private fun recognizerState(context: Context): Pair<String, Boolean>? {
 
 | 事件 | 含义 |
 | :--- | :--- |
-| `chat_voice_empty` | 返回 null 且目标包**有**录音权限。**混合语义**：多数是用户主动取消，但也含引擎侧失败（离线、语言包缺失、内部错误）——Intent 不回传原因，无从区分。**不可当纯取消率用** |
+| `chat_voice_empty` | 返回 null 且**未落入 blocked**。带 `reason`：`has_permission`（目标包有权限，排除了权限原因）/ `unknown_target`（多引擎未设默认，目标包不确定）。**混合语义**：多数是用户主动取消，但也含引擎侧失败（离线、语言包缺失、内部错误）——Intent 不回传原因，无从区分。**不可当纯取消率用** |
 | `chat_voice_blocked` | 返回 null 且目标包**无**录音权限 → 授权链断了。带 `pkg` 与 `attempt`（第几次连续失败） |
 | `chat_voice_launch_failed` | `launch` 抛异常，与已上报的 `start` 配对，算完成率时从分母剔除 |
 | `chat_voice_unsupported` | 压根没有识别应用 |
@@ -228,6 +228,25 @@ GMS 设备上没有 MIUI 那道跳转确认，三道关只剩两道（权限 + �
 
 - 「有权限但识别失败（离线/语言包缺失/引擎内部错误）被静默」——判据在「有权限 → 排除权限原因」这个方向是确定的，问题在于 Intent 契约根本不回传失败原因，这是方案 A 的结构性局限而非判据错误。处理方式是**承认**而不是假装能区分：事件从 `chat_voice_cancel` 改名为 `chat_voice_empty`，只描述现象（返回空），分析时不可当纯取消率用。真要拿到失败原因只有方案 B。
 - 「`recognizer` 缓存后不复查安装/启用状态」——影响极小。主路径「点去设置授权后返回」变化的是**权限**，而权限在每次回调都实时查；用户在 chat 页停留期间安装/卸载语音引擎属于极端场景，不值得为它引入 lifecycle 观察。记为已知限制。
+
+### 第二轮复审修正
+
+第一轮修复引入了一个**比原问题更严重的回归**，记下来当教训：
+
+**引导弹窗停不下来。** 我把「同一会话只弹一次」改成「连续第 2 次失败才弹」时，只留了计数没留刹车：`voiceBlockedCount >= 2` 在 `++` 之后求值，而计数**只在识别成功时清零**——权限缺失的设备恰恰永远不会成功。结果是第 2 次之后每点一次麦克风都重弹模态。原来的实现虽然作用域错（`rememberSaveable` 退出 chat 就重置），至少还只弹一次。修法是补一个只增不减的 `voiceGuideShown` 进程级标记：引导的作用是告诉用户去哪修，说过一次就够了。
+
+**教训**：改节流逻辑时，「什么时候弹」和「什么时候不再弹」是两个独立条件，只写前者必然漏后者。
+
+其余本轮修正：
+
+- **不再硬编码 resolver 包名**。上轮判 `packageName == "android"`，但 ResolverActivity 在 Android 13+ 已模块化到 `com.android.intentresolver`，硬编码迟早失配。改用「`resolveActivity` 返回的包是否真在 `queryIntentActivities` 候选集里」——不在就是系统选择器，与它叫什么无关。这个判据还顺带正确处理了「用户设过默认引擎」的情况。
+- **`attempt` 维度差一**：上报取值在 `++` 之前，首次受阻记成 `attempt=0`，与「第几次连续失败」的语义差一位。计数改为先自增再上报。
+- **`@Preview` 被打断**：`globalSettingsManager` 依赖的 `appContext` 在 Layoutlib 下为 null，composition 期订阅直接 NPE，本文件的 `ChatInputBarPreview` 会整个挂掉。改为 `LocalInspectionMode.current` 时走常量分支。
+- **跳转失败的兜底文案**：原样复用了「当前设备暂不支持语音输入」，与用户刚读完的「是权限问题、可去设置修」直接打架。新增独立文案——失败的只是「跳转」，指路手动前往即可。
+- **`pkg == null` 时不再静默混入**：多引擎未设默认时目标包不确定，此前所有失败都短路成 `chat_voice_empty`，与「用户取消」混在一起看不见。UI 仍静默（没有可靠信息就不该猜），但埋点补 `reason=unknown_target` 维度，能把这类设备摘出来。
+- **探测结果进程级缓存**：`PackageManager` 是 binder 调用，落在 bottomBar 的 composition 路径上。异步化会引入「未探测/有/无」三态并让 `chat_voice_unsupported` 的上报时序变复杂，收益不值；改为进程内只查一次，多次进 chat 不再重复 IPC。
+
+**验证**（Pixel_9_2，`pm revoke com.google.android.tts RECORD_AUDIO` 复现）：第 1 次点击 → 仅 Toast；第 2 次 → 弹引导；**第 3 次 → 仅 Toast，模态不再出现**（回归修复的核心断言）。
 
 ## 明确不做
 

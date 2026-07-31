@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -125,8 +126,9 @@ private fun lengthBucket(chars: Int): String = when {
  */
 private data class Recognizer(val pkg: String?, val label: String?)
 
-/** ResolverActivity 所属包：系统选择器，不是真正的识别应用 */
-private const val ANDROID_RESOLVER_PKG = "android"
+/** 进程内缓存探测结果：PackageManager 是 binder 调用，各会话线共用一份即可 */
+private var cachedRecognizer: Recognizer? = null
+private var recognizerProbed = false
 
 /**
  * 「本机没有识别应用」进程内只上报一次的标记。
@@ -137,27 +139,49 @@ private const val ANDROID_RESOLVER_PKG = "android"
 private var unsupportedReported = false
 
 /**
- * 权限受阻的连续次数，进程内累计。
+ * 权限受阻的连续次数，进程内累计。识别成功后清零。
  *
  * 刻意不用 remember/rememberSaveable：那样只覆盖单次 composition，退出 chat 再进来就归零，
- * 「第二次才弹引导」的节流形同虚设。进程级计数才是用户感知里的「又失败了一次」。
- * 识别成功后清零，避免历史失败在很久之后突然把弹窗推出来。
+ * 「第二次才弹引导」的节流形同虚设。
  */
 private var voiceBlockedCount = 0
 
+/**
+ * 引导弹窗进程内是否已展示过。
+ *
+ * 单靠 [voiceBlockedCount] >= 2 判定会让弹窗**再也停不下来**：计数只在识别成功时清零，而
+ * 权限缺失的设备恰恰永远不会成功，于是第 2 次之后每次点麦克风都重弹模态。必须有一个只增
+ * 不减的「已经引导过了」标记兜底——引导的作用是告诉用户去哪修，说过一次就够了。
+ */
+private var voiceGuideShown = false
+
+/**
+ * 探测识别应用。结果进程内缓存——安装/卸载语音引擎属于极端场景，为它引入 lifecycle
+ * 观察不划算；但每次进 chat 都发 binder 调用同样没必要。
+ *
+ * 判定目标包时**不硬编码任何 resolver 包名**：ResolverActivity 在 Android 13+ 已从
+ * "android" 模块化到 "com.android.intentresolver"，硬编码迟早失配。改用「resolveActivity
+ * 返回的包是否真在候选集里」——不在就说明它是系统选择器，与它叫什么名字无关。
+ */
 private fun findRecognizer(context: Context): Recognizer? {
+    if (recognizerProbed) return cachedRecognizer
+    recognizerProbed = true
+    cachedRecognizer = probeRecognizer(context)
+    return cachedRecognizer
+}
+
+private fun probeRecognizer(context: Context): Recognizer? {
     val pm = context.packageManager
     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-    val resolved = intent.resolveActivity(pm) ?: return null
-    // 命中系统选择器说明装了多个引擎且没设默认：有能力，但目标包不确定
-    if (resolved.packageName == ANDROID_RESOLVER_PKG) {
-        val candidates = pm.queryIntentActivities(intent, 0)
-        // 选择器只有唯一候选时仍可确定目标（理论上不该出现，防御性处理）
-        val only = candidates.singleOrNull()?.activityInfo?.packageName
-            ?: return Recognizer(pkg = null, label = null)
-        return Recognizer(only, labelOf(pm, only))
-    }
-    return Recognizer(resolved.packageName, labelOf(pm, resolved.packageName))
+    val candidates = runCatching {
+        pm.queryIntentActivities(intent, 0).mapTo(mutableSetOf()) { it.activityInfo.packageName }
+    }.getOrDefault(emptySet())
+    if (candidates.isEmpty()) return null
+    // 用户设过默认 → resolveActivity 返回该应用；没设且有多个 → 返回选择器（不在候选集里）
+    val resolvedPkg = runCatching { intent.resolveActivity(pm)?.packageName }.getOrNull()
+    val target = resolvedPkg?.takeIf { it in candidates } ?: candidates.singleOrNull()
+    // target 为 null：有识别能力但目标不确定，按钮照常显示，只放弃基于包的判据与引导
+    return Recognizer(target, target?.let { labelOf(pm, it) })
 }
 
 private fun labelOf(pm: PackageManager, pkg: String): String = runCatching {
@@ -215,6 +239,7 @@ fun ChatInputBar(
     val failedText = stringResource(R.string.chat_image_processing_failed)
     val voiceFailedText = stringResource(R.string.chat_voice_failed)
     val voiceBlockedText = stringResource(R.string.chat_voice_blocked_toast)
+    val settingsUnavailableText = stringResource(R.string.chat_voice_settings_unavailable)
     val remaining = ChatViewModel.MAX_IMAGES_PER_MESSAGE - pendingImages.size - processingCount
 
     // 设备上的语音识别应用。Android 11+ 包可见性下，该查询依赖 manifest 里 <queries>
@@ -234,7 +259,13 @@ fun ChatInputBar(
     // 自行跟随系统。不能套用 ChatApi.resolveLang() 的 zh/en 二选一口径——那是后端只支持
     // 两种摘要语言所致，识别引擎支持的语言远不止两种，钉成 en-US 会让日语/德语用户
     // 被迫用英文引擎识别母语，比不传这个 extra 更糟。
-    val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
+    // Layoutlib 下 globalSettingsManager 依赖的 appContext 为 null，直接订阅会让本文件的
+    // @Preview 整个挂掉，故 Preview 走常量分支
+    val appLanguage = if (LocalInspectionMode.current) {
+        AppLanguage.FOLLOW_SYSTEM
+    } else {
+        globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM).value
+    }
     val voiceLocale = remember(appLanguage) {
         when (appLanguage) {
             AppLanguage.CHINESE -> "zh-CN"
@@ -256,18 +287,29 @@ fun ChatInputBar(
         // 区分，故事件名只描述现象，不当纯取消率用，见 spec 的埋点小节）。
         // **无**录音权限 → 授权链没走通，给引导。
         val pkg = recognizer?.pkg
-        if (pkg == null || hasRecordAudio(context, pkg)) {
-            trackEvent("chat_voice_empty")
-        } else {
-            trackEvent("chat_voice_blocked", mapOf("pkg" to pkg, "attempt" to voiceBlockedCount.toString()))
-            voiceBlockedCount++
-            // 首次失败只给 Toast：用户第一次点开、在识别应用的协议/授权页按返回是很正常的
-            // 「我再想想」，此时权限确实还没授，但立刻弹模态框既打扰又显得急躁。
-            // 连续第二次才升级为带「去设置」的引导——两次都失败基本可以排除「只是随手取消」。
-            if (voiceBlockedCount >= 2) {
-                showVoiceGuide = true
-            } else {
-                Toast.makeText(context, voiceBlockedText, Toast.LENGTH_SHORT).show()
+        when {
+            // 目标包不确定（多引擎未设默认）：无从判断原因，UI 静默——没有可靠信息就不该猜。
+            // 但埋点要能把这类设备摘出来，否则它们的失败会混进「用户取消」里看不见。
+            pkg == null -> trackEvent("chat_voice_empty", mapOf("reason" to "unknown_target"))
+            // 有权限 → 排除了权限原因。多数是用户主动取消，但也混有引擎侧失败（离线、语言包
+            // 缺失、内部错误）——Intent 契约不回传原因，无从区分，故事件名只描述现象。
+            hasRecordAudio(context, pkg) -> trackEvent("chat_voice_empty", mapOf("reason" to "has_permission"))
+            else -> {
+                voiceBlockedCount++
+                trackEvent(
+                    "chat_voice_blocked",
+                    mapOf("pkg" to pkg, "attempt" to voiceBlockedCount.toString()),
+                )
+                // 首次失败只给 Toast：用户第一次点开、在识别应用的授权页按返回是很正常的
+                // 「我再想想」，立刻弹模态既打扰又急躁。连续第二次才升级为带「去设置」的引导。
+                // voiceGuideShown 是必需的刹车：计数只在识别成功时清零，而权限缺失的设备永远
+                // 不会成功，没有这个标记就会每次点击都重弹模态。
+                if (voiceBlockedCount >= 2 && !voiceGuideShown) {
+                    voiceGuideShown = true
+                    showVoiceGuide = true
+                } else {
+                    Toast.makeText(context, voiceBlockedText, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -289,10 +331,12 @@ fun ChatInputBar(
                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                         Uri.fromParts("package", guidePkg, null),
                     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    // 极少数 ROM 不提供应用详情页：兜底 Toast，用户仍可走键盘语音
+                    // 极少数 ROM 不提供应用详情页。兜底文案不能用「设备不支持语音输入」——
+                    // 用户刚读完「是权限问题、可去设置修」，再告诉他设备不支持是自相矛盾的；
+                    // 这里失败的只是「跳转」，指路手动前往即可
                     runCatching { context.startActivity(intent) }
                         .onFailure {
-                            Toast.makeText(context, voiceFailedText, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, settingsUnavailableText, Toast.LENGTH_LONG).show()
                         }
                 }) {
                     Text(stringResource(R.string.chat_voice_guide_settings))
