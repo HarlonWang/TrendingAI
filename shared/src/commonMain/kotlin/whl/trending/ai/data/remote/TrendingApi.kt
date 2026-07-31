@@ -177,15 +177,18 @@ open class TrendingApi {
         return response.body<QuotaResponse>()
     }
 
-    /** 即时激活/对账：后端权威核对赞助并 upsert，返回最新 Pro 态。用户从 Sponsors 返回时调用。 */
-    open suspend fun refreshPro(accessToken: String): Boolean {
+    /**
+     * 即时激活/对账：后端权威核对赞助并 upsert，返回最新 Pro 态。用户从 Sponsors 返回时调用。
+     * 返回整个响应而非裸 Boolean——调用方要靠 `reason` 区分「没赞助」与「赞助了但没关联 GitHub」。
+     */
+    open suspend fun refreshPro(accessToken: String): ProRefreshResponse {
         val response = client.post("$baseHost/api/pro/refresh") {
             header(HttpHeaders.Authorization, "Bearer $accessToken")
         }
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
-        return response.body<ProRefreshResponse>().pro
+        return response.body<ProRefreshResponse>()
     }
 
     /** 应用级配置（min_version 强更开关等），冷启动拉取，失败由调用方静默处理。 */

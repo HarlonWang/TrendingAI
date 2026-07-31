@@ -64,6 +64,7 @@ import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.contact_author
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_alipay
+import trendingai.shared.generated.resources.account_link_sponsor_note
 import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.official_website
@@ -229,6 +230,14 @@ private fun DonateDialog(onDismiss: () -> Unit) {
                             text = stringResource(Res.string.donate_github_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // 权益前置条件写在入口处，而不是等赞助完再补救：赞助后的即时引导只覆盖
+                        // 「30 分钟内回到 app」的路径，隔天才打开、或换设备赞助的人接不到。
+                        Text(
+                            text = stringResource(Res.string.account_link_sponsor_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
                 }

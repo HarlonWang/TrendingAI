@@ -223,6 +223,10 @@
     <string name="account_link_required_title">Link GitHub first</string>
     <string name="account_link_required_message">Pro perks are granted through GitHub Sponsors and need a GitHub account linked to yours. You signed in with email, so sponsoring now would not take effect automatically.</string>
     <string name="account_link_sponsor_anyway">Sponsor anyway</string>
+    <string name="account_link_sponsor_note">Pro is tied to your GitHub account — link it after sponsoring to activate</string>
+    <string name="sponsor_link_needed_title">One more step</string>
+    <string name="sponsor_link_needed_message">If you just sponsored: Pro perks are tied to your GitHub account — link it to activate them.</string>
+    <string name="sponsor_link_needed_later">Later</string>
     <string name="account_signin_for_more">Sign in for more daily quota</string>
     <string name="account_pro_active">You&apos;re a Pro member — thanks for the support!</string>
     <string name="account_github_entry">GitHub profile</string>

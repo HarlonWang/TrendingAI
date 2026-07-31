@@ -2,9 +2,13 @@ package whl.trending.ai.core
 
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.ProRefreshResponse
 
 /**
  * Pro 赞助页统一入口 + 权益对账窗口。
@@ -55,4 +59,56 @@ object ProSponsor {
     fun markReconciled() {
         globalSettingsManager.clearSponsorPageOpenedAt()
     }
+
+    /**
+     * 「去过赞助页回来，账户却没关联 GitHub」信号。
+     *
+     * 注意这是**启发式**：合取的两个信号里，「去过赞助页」来自本地时间戳（[shouldReconcile]）
+     * 只能表达意图，「没关联 GitHub」才是后端事实——后端没有 github_user_id 可查，
+     * 无从知道这人到底付没付钱。因此宿主文案不得断言「赞助已收到」，详见 SponsorLinkHost。
+     *
+     * 这是 2026-07-29 首位赞助者被拦 48 分钟的修复面：当时对账返回的是裸 `pro:false`，
+     * 与「查证后确实没赞助」完全同形，客户端无从区分只能沉默，用户付完钱又连撞 8 次配额墙，
+     * 最后自己摸到账户页的「关联 GitHub」才解套。后端现在会带 `reason` 把两者分开。
+     *
+     * 走总线 + 根部宿主（`SponsorLinkHost`）而不是在对账处直接弹窗：对账发生在 Activity 的
+     * ON_RESUME，那里没有 composition，且用户从浏览器回来时可能停在任意页面。
+     * replay=1 保证「宿主尚未订阅就已 emit」不丢事件，代价是必须 [consumeNeedsGithubLink]。
+     */
+    private val _needsGithubLink = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
+    val needsGithubLink: SharedFlow<Unit> = _needsGithubLink.asSharedFlow()
+
+    fun signalNeedsGithubLink() {
+        _needsGithubLink.tryEmit(Unit)
+    }
+
+    /** 收到即消费：清 replay 缓存，避免重建的收集者（旋转/主题切换）把同一次事件再弹一遍。 */
+    fun consumeNeedsGithubLink() {
+        _needsGithubLink.resetReplayCache()
+    }
+
+    /**
+     * 对账结果该触发什么动作。抽成纯函数是因为它是 P0-4 的判定核心，
+     * 而调用点在 Activity 的 ON_RESUME 里、测不到。
+     *
+     * [STAY_SILENT] 覆盖 `not_sponsor`（确实没赞助）、`lookup_failed`（查不到）与请求失败：
+     * 这三种都**不该向用户断言任何事**，尤其查询失败时说「你没赞助」会把真赞助者气走。
+     */
+    fun reconcileAction(result: ProRefreshResponse?): ReconcileAction = when {
+        result?.pro == true -> ReconcileAction.MARK_PRO
+        result?.reason == ProRefreshResponse.REASON_GITHUB_NOT_LINKED -> ReconcileAction.GUIDE_LINK
+        else -> ReconcileAction.STAY_SILENT
+    }
+}
+
+/** 见 [ProSponsor.reconcileAction]。 */
+enum class ReconcileAction {
+    /** 已是 Pro：结束对账窗口。 */
+    MARK_PRO,
+
+    /** 钱付了但没关联 GitHub：结束窗口并弹引导——唯一需要主动开口的分支。 */
+    GUIDE_LINK,
+
+    /** 什么都不做，窗口留着下次回前台再试。 */
+    STAY_SILENT,
 }
