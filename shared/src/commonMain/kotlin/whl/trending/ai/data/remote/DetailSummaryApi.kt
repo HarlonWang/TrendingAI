@@ -98,15 +98,19 @@ open class DetailSummaryApi(
     /**
      * 请求解读，增量经 [onDelta] 回调，返回全文。
      *
+     * [lang] 由调用方解析后传入，本层不自己去读设置：解读内容按语言缓存，
+     * 请求语言与缓存键必须来自同一次解析，否则「请求发出后用户改了摘要语言」
+     * 会让中文正文落在英文键上。
+     *
      * @throws DigestException 任何失败，携带分类后的 [DigestError]；
      *   中途断流按可重试处理，已渲染的部分由调用方丢弃
      */
     open suspend fun stream(
         source: String,
         externalId: String,
+        lang: String,
         onDelta: (String) -> Unit = {},
     ): DigestResult {
-        val lang = globalSettingsManager.currentContentLang()
         try {
             return client.preparePost("$baseUrl/detail-summary") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())

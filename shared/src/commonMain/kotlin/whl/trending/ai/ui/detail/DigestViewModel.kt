@@ -29,7 +29,7 @@ data class DigestUiState(
 
 /** 本地缓存载体：解读内容按 (source, externalId, lang) 固定，存下来再进页面即可秒开 */
 @Serializable
-private data class CachedDigest(val markdown: String)
+internal data class CachedDigest(val markdown: String)
 
 /**
  * 条目 AI 解读页的状态持有者。
@@ -44,6 +44,8 @@ class DigestViewModel(
     private val api: DetailSummaryApi = DetailSummaryApi.shared,
     private val settingsManager: SettingsManager = globalSettingsManager,
     private val cache: LastDataCache = globalLastDataCache,
+    /** 埋点出口。默认直连全局实现；单测注入空实现——它依赖平台 Settings，宿主机测试里会 NPE */
+    private val track: (String, Map<String, Any>) -> Unit = ::trackEvent,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DigestUiState())
@@ -65,34 +67,34 @@ class DigestViewModel(
         }
     }
 
-    private suspend fun cacheKey() = "digest_${source}_${externalId}_${settingsManager.currentContentLang()}"
+    private fun cacheKey(lang: String) = "digest_${source}_${externalId}_$lang"
 
     fun load() {
         job?.cancel()
         job = viewModelScope.launch {
-            val cached = cache.get<CachedDigest>(cacheKey())
+            // 语言只解析一次，请求与缓存键共用：生成一篇解读要几十秒，期间用户完全
+            // 可能去设置里改摘要语言，两次各解析一次会把中文正文写到英文键上
+            val lang = settingsManager.currentContentLang()
+            val key = cacheKey(lang)
+            val cached = cache.get<CachedDigest>(key)
             if (cached != null) {
                 _uiState.update { it.copy(markdown = cached.markdown, isStreaming = false, error = null) }
                 return@launch
             }
             _uiState.update { it.copy(markdown = "", isStreaming = true, error = null) }
             try {
-                val result = api.stream(source, externalId) { delta ->
+                val result = api.stream(source, externalId, lang) { delta ->
                     _uiState.update { it.copy(markdown = it.markdown + delta) }
                 }
-                cache.put(cacheKey(), CachedDigest(result.markdown))
-                _uiState.update { it.copy(isStreaming = false, error = null) }
-                trackEvent(
-                    "digest_generated",
-                    mapOf("source" to source, "cached" to result.cached),
-                )
+                cache.put(key, CachedDigest(result.markdown))
+                // 收尾以返回的全文为准，而不是留着 delta 累积的结果：两者本应一致，
+                // 但缓存里存的是全文，让屏幕与缓存有唯一同源
+                _uiState.update { it.copy(markdown = result.markdown, isStreaming = false, error = null) }
+                track("digest_generated", mapOf("source" to source, "cached" to result.cached))
             } catch (e: DigestException) {
                 // 断流时已渲染的半截内容一并丢弃：残篇比空白更容易被误当成完整解读
                 _uiState.update { it.copy(markdown = "", isStreaming = false, error = e.error) }
-                trackEvent(
-                    "digest_failed",
-                    mapOf("source" to source, "reason" to e.error.eventName()),
-                )
+                track("digest_failed", mapOf("source" to source, "reason" to e.error.eventName()))
             }
         }
     }
