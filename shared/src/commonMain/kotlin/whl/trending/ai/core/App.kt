@@ -65,7 +65,10 @@ data class ItemDigest(
     val source: String,
     val externalId: String,
     val title: String,
+    /** 条目原始链接，同时是收藏主键（与列表页、[whl.trending.ai.data.model.FavoriteItem] 一致） */
     val url: String,
+    /** 「查看原文」实际打开的地址：HN 为讨论页、PH 为原帖 */
+    val openUrl: String,
     val summary: String? = null,
 )
 data class WebPage(val url: String, val title: String)
@@ -126,6 +129,7 @@ fun App() {
                 externalId = target.externalId,
                 title = target.title,
                 url = target.url,
+                openUrl = target.openUrl,
                 summary = target.summary,
             ),
         )
@@ -314,6 +318,7 @@ fun App() {
                                 externalId = key.externalId,
                                 title = key.title,
                                 url = key.url,
+                                openUrl = key.openUrl,
                                 summary = key.summary,
                                 onBack = { backStack.safePop() },
                                 onOpenUrl = { url -> openExternalUrl(url, key.title) },

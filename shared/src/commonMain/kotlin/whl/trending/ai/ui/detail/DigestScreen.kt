@@ -90,6 +90,7 @@ fun DigestScreen(
     externalId: String,
     title: String,
     url: String,
+    openUrl: String,
     summary: String? = null,
     onBack: () -> Unit,
     onOpenUrl: (url: String) -> Unit = {},
@@ -136,7 +137,7 @@ fun DigestScreen(
                                     source = source,
                                     summary = summary,
                                     savedAt = Clock.System.now().toEpochMilliseconds(),
-                                    openUrl = url,
+                                    openUrl = openUrl,
                                     externalId = externalId,
                                 ),
                             )
@@ -149,7 +150,7 @@ fun DigestScreen(
                     }
                     // 分享给 AI 带的是列表那句摘要而不是解读全文：解读动辄上千字，
                     // 贴进别家 AI 的输入框只会被截断
-                    val shareContent = aiShareText(title, summary, url)
+                    val shareContent = aiShareText(title, summary, openUrl)
                     IconButton(onClick = {
                         shareText(shareContent)
                         trackEvent(
@@ -164,7 +165,7 @@ fun DigestScreen(
                     }
                     IconButton(onClick = {
                         trackEvent("digest_open_original", mapOf("source" to source))
-                        onOpenUrl(url)
+                        onOpenUrl(openUrl)
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
@@ -182,7 +183,7 @@ fun DigestScreen(
                             ChatContext(
                                 title = title,
                                 summary = summary,
-                                sourceUrl = url,
+                                sourceUrl = openUrl,
                                 source = source,
                                 externalId = externalId,
                             ),
@@ -225,11 +226,13 @@ fun DigestScreen(
 
                 uiState.isStreaming -> DigestPlaceholder()
 
-                uiState.error != null -> DigestErrorState(
-                    error = uiState.error!!,
+                // 兜底也走错误卡：三个分支都不命中意味着「不在加载、没有正文、也没有错误」，
+                // 这种状态本不该出现，真出现了给用户重试与看原文，比留一页空白强
+                else -> DigestErrorState(
+                    error = uiState.error ?: DigestError.Retryable(null),
                     onRetry = viewModel::retry,
                     onSignIn = viewModel::signIn,
-                    onOpenOriginal = { onOpenUrl(url) },
+                    onOpenOriginal = { onOpenUrl(openUrl) },
                 )
             }
         }

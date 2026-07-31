@@ -23,9 +23,16 @@ import whl.trending.ai.data.remote.DigestException
 
 data class DigestUiState(
     val markdown: String = "",
-    val isStreaming: Boolean = false,
+    /** 初值即 true：构造即 load()，首帧到状态落地之间不该出现「不加载也无内容」的空窗 */
+    val isStreaming: Boolean = true,
     val error: DigestError? = null,
 )
+
+/**
+ * 本地缓存版本位。服务端 bump prompt_version 让旧解读失效后，客户端这份本地缓存
+ * 不跟着换键的话，老用户永远读不到新解读——两边必须成对 bump。
+ */
+private const val DIGEST_CACHE_VERSION = 1
 
 /** 本地缓存载体：解读内容按 (source, externalId, lang) 固定，存下来再进页面即可秒开 */
 @Serializable
@@ -67,7 +74,7 @@ class DigestViewModel(
         }
     }
 
-    private fun cacheKey(lang: String) = "digest_${source}_${externalId}_$lang"
+    private fun cacheKey(lang: String) = "digest_v${DIGEST_CACHE_VERSION}_${source}_${externalId}_$lang"
 
     fun load() {
         job?.cancel()
@@ -77,7 +84,8 @@ class DigestViewModel(
             val lang = settingsManager.currentContentLang()
             val key = cacheKey(lang)
             val cached = cache.get<CachedDigest>(key)
-            if (cached != null) {
+            // 空内容不算命中：历史版本可能写进过空缓存，命中它会让页面永久空白且无重试入口
+            if (cached != null && cached.markdown.isNotBlank()) {
                 _uiState.update { it.copy(markdown = cached.markdown, isStreaming = false, error = null) }
                 return@launch
             }
@@ -85,6 +93,11 @@ class DigestViewModel(
             try {
                 val result = api.stream(source, externalId, lang) { delta ->
                     _uiState.update { it.copy(markdown = it.markdown + delta) }
+                }
+                // 服务端零 delta 走完（内容过滤拒答等）照样发 done:true，正文却是空的。
+                // 不拦下来就会：写入空缓存 → 页面永久空白 → 连重试入口都没有。
+                if (result.markdown.isBlank()) {
+                    throw DigestException(DigestError.Retryable("empty digest"))
                 }
                 cache.put(key, CachedDigest(result.markdown))
                 // 收尾以返回的全文为准，而不是留着 delta 累积的结果：两者本应一致，

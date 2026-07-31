@@ -2,6 +2,13 @@ package whl.trending.ai.data.model
 
 import kotlinx.serialization.Serializable
 
+/**
+ * 无法与服务端 contents 对齐时，用 url 派生的合成 external_id 前缀。
+ * 这种键只保证用户内唯一、不与 contents join，凡是要拿 external_id 去请求
+ * 服务端的调用方都必须先把它挡掉（如 [whl.trending.ai.ui.detail.digestTargetOf]）。
+ */
+const val SYNTHETIC_EXTERNAL_ID_PREFIX = "url:"
+
 @Serializable
 data class FavoriteItem(
     /** 收藏主键，同时用于本地判重与去重；恒为条目原始 url，不随打开地址变化 */
@@ -41,10 +48,10 @@ data class FavoriteItem(
                 if (parts.size >= 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
                     "${parts[0]}/${parts[1]}"
                 } else {
-                    "url:$url"
+                    "$SYNTHETIC_EXTERNAL_ID_PREFIX$url"
                 }
             } else {
-                "url:$url"
+                "$SYNTHETIC_EXTERNAL_ID_PREFIX$url"
             }
         }
 }

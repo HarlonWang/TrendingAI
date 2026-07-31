@@ -72,14 +72,14 @@ class DigestViewModelTest {
 
         assertEquals("### 解读", vm.uiState.value.markdown)
         assertEquals(false, vm.uiState.value.isStreaming)
-        assertTrue(store.files.keys.any { it.contains("digest_hackernews_49095865_zh") })
+        assertTrue(store.files.keys.any { it.contains("digest_v1_hackernews_49095865_zh") })
     }
 
     @Test
     fun cacheHitSkipsRequest() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val cache = cache(FakeCacheFileStore())
-        cache.put("digest_hackernews_49095865_zh", CachedDigest("缓存里的解读"))
+        cache.put("digest_v1_hackernews_49095865_zh", CachedDigest("缓存里的解读"))
         val api = FakeApi { error("解读已缓存，不应再请求") }
 
         val vm = viewModel(api, settings(), cache)
@@ -113,8 +113,43 @@ class DigestViewModelTest {
         advanceUntilIdle()
 
         val keys = store.files.keys
-        assertTrue(keys.any { it.contains("digest_hackernews_49095865_zh") }, "应写回请求时的 zh 键：$keys")
-        assertTrue(keys.none { it.contains("digest_hackernews_49095865_en") }, "不应写到 en 键：$keys")
+        assertTrue(keys.any { it.contains("digest_v1_hackernews_49095865_zh") }, "应写回请求时的 zh 键：$keys")
+        assertTrue(keys.none { it.contains("digest_v1_hackernews_49095865_en") }, "不应写到 en 键：$keys")
+    }
+
+    /**
+     * 服务端零 delta 走完（内容过滤拒答等）照样发 done:true。不拦下来就会写入空缓存，
+     * 之后每次进页面都命中空内容 → 永久空白且无重试入口，卸载重装才能恢复。
+     */
+    @Test
+    fun emptyDigestIsTreatedAsFailureAndNotCached() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = FakeCacheFileStore()
+        val vm = viewModel(
+            api = FakeApi { DigestResult("", cached = false) },
+            settings = settings(),
+            cache = cache(store),
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.error is DigestError.Retryable)
+        assertEquals(false, vm.uiState.value.isStreaming)
+        assertTrue(store.files.isEmpty(), "空正文不应落缓存：$store.files")
+    }
+
+    /** 历史版本可能已写进空缓存，命中它同样要当作未命中重新生成 */
+    @Test
+    fun blankCachedDigestIsIgnoredAndRegenerated() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val cache = cache(FakeCacheFileStore())
+        cache.put("digest_v1_hackernews_49095865_zh", CachedDigest(""))
+        val api = FakeApi { DigestResult("重新生成的解读", cached = false) }
+
+        val vm = viewModel(api, settings(), cache)
+        advanceUntilIdle()
+
+        assertEquals("重新生成的解读", vm.uiState.value.markdown)
+        assertEquals(listOf("zh"), api.langs)
     }
 
     @Test
