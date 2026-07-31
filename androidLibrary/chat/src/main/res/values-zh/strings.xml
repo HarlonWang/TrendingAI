@@ -31,6 +31,13 @@
     <string name="chat_error_auth_invalid">登录状态已过期，请退出后重新登录再继续。</string>
     <string name="chat_beta_badge">Beta</string>
     <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
+    <string name="chat_voice_input">语音输入</string>
+    <string name="chat_voice_prompt">请开始说话</string>
+    <string name="chat_voice_failed">当前设备暂不支持语音输入。</string>
+    <string name="chat_voice_guide_title">语音引擎需要麦克风权限</string>
+    <string name="chat_voice_guide_message">本机负责语音输入的「%1$s」没有麦克风权限，无法完成识别。可在它的应用信息 → 权限管理里开启麦克风。也可以直接用键盘上的麦克风按钮。</string>
+    <string name="chat_voice_guide_settings">去设置</string>
+    <string name="chat_voice_guide_dismiss">知道了</string>
     <string name="chat_attach">添加图片</string>
     <string name="chat_attach_camera">拍照</string>
     <string name="chat_attach_album">从相册选择</string>

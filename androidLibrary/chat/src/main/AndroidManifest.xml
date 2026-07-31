@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        语音输入的能力探测。Android 11+ 包可见性默认屏蔽跨应用查询，不声明这段，
+        ChatInputBar 里的 resolveActivity() 在装有识别应用的正常设备上也会返回 null，
+        表现为麦克风按钮永远不渲染。
+        注意查的是 **Activity**（RECOGNIZE_SPEECH），不是 SpeechRecognizer 用的
+        RecognitionService——本方案不申请 RECORD_AUDIO，录音在识别应用进程内完成。
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application>
         <!--
             离线 Demo 入口。不带 LAUNCHER intent-filter（避免给正式包多一个图标），
