@@ -3,6 +3,7 @@ package whl.trending.ai.data.repository
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.MeUser
+import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.remote.TrendingApi
 
@@ -45,13 +46,16 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
     /**
      * 即时对账 Pro 权益：调 /api/pro/refresh（后端 PAT 权威核对赞助）并刷新本地 isPro 缓存。
      * 用户从 Sponsors 页返回（ON_RESUME）时调用，实现「赞助完回来即生效」。失败静默返回 null。
+     *
+     * 返回整个响应而非裸 Boolean：调用方需要 `reason` 才能区分「查证没赞助」与
+     * 「赞助了但账户没关联 GitHub」——后者裸 false 会让用户对着无声的失败自己摸索。
      */
-    suspend fun refreshPro(accessToken: String?): Boolean? {
+    suspend fun refreshPro(accessToken: String?): ProRefreshResponse? {
         if (accessToken == null) return null
         return try {
-            val pro = api.refreshPro(accessToken)
-            globalSettingsManager.setIsPro(pro)
-            pro
+            val result = api.refreshPro(accessToken)
+            globalSettingsManager.setIsPro(result.pro)
+            result
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             null
