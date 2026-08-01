@@ -64,6 +64,13 @@ class ChatApi(
 
         /** 流式请求总时长上限：生成 2500~4000 字解读可能远超普通请求，放到 5 分钟 */
         private const val STREAM_REQUEST_TIMEOUT_MS = 300_000L
+
+        /**
+         * wire 序列化配置的唯一定义：请求编码（ContentNegotiation）与 wire 闸门测试
+         * （ChatApiWireTest）共用同一实例——改这里的配置（如 encodeDefaults/explicitNulls）
+         * 测试即变红。测试若自建配置相同的 Json 副本，配置漂移时闸门会静默失效。
+         */
+        internal val wireJson = Json { ignoreUnknownKeys = true }
     }
 
     /** content 两态：纯文本为 JSON string；末条带图 user 消息为 OpenAI 多模态 parts 数组 */
@@ -119,7 +126,7 @@ class ChatApi(
         val tier: String? = null,
     )
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = wireJson
 
     private val client = HttpClient(OkHttp) {
         install(ContentNegotiation) {
