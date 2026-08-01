@@ -17,7 +17,8 @@ import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.ai.data.model.ChatModelsResponse
+import whl.trending.ai.data.model.resolveDisplayedChatModel
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
@@ -51,18 +52,26 @@ class ChatViewModel(
     initialContext: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
     private val store: ChatStore? = null,
-    private val loadModels: suspend () -> List<ChatModelOption> = { ChatModelsProvider.get() },
+    private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
     private val track: (String, Map<String, String>) -> Unit = { name, props -> trackEvent(name, props) },
-    private val selectedModelId: () -> String? =
-        { runCatching { globalSettingsManager.currentSelectedChatModel() }.getOrNull() },
+    private val selectedModelId: () -> String? = {
+        // 留痕记「实际生效」而非「手选值」：未手选时手选值是空哨兵，实际用的是目录里的免费默认项
+        runCatching {
+            resolveDisplayedChatModel(
+                ChatModelsProvider.cachedOrEmpty(),
+                globalSettingsManager.currentSelectedChatModel(),
+                globalSettingsManager.currentIsPro(),
+            )?.id
+        }.getOrNull()
+    },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState(messages = initialMessages))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    // 可选模型目录（驱动模型选择器）。拉取失败保持空列表 → 选择器隐藏、退回默认模型。
-    private val _models = MutableStateFlow<List<ChatModelOption>>(emptyList())
-    val models: StateFlow<List<ChatModelOption>> = _models.asStateFlow()
+    // 可选模型目录 + 服务端默认（驱动模型选择器）。拉取失败保持空目录 → 选择器隐藏、请求不带 model。
+    private val _catalog = MutableStateFlow(ChatModelsResponse())
+    val catalog: StateFlow<ChatModelsResponse> = _catalog.asStateFlow()
 
     /** 会话列表（抽屉数据源）；纯内存模式恒为空 */
     val threads: StateFlow<List<ThreadSummary>> =
@@ -109,7 +118,7 @@ class ChatViewModel(
 
     init {
         viewModelScope.launch {
-            _models.value = runCatching { loadModels() }.getOrDefault(emptyList())
+            _catalog.value = runCatching { loadModels() }.getOrDefault(ChatModelsResponse())
         }
     }
 

@@ -77,7 +77,7 @@ class ChatViewModelStreamingTest {
     }
 
     private fun vm(engine: ChatEngine, track: (String, Map<String, String>) -> Unit = { _, _ -> }) =
-        ChatViewModel(engine, context, loadModels = { emptyList() }, track = track)
+        ChatViewModel(engine, context, loadModels = { whl.trending.ai.data.model.ChatModelsResponse() }, track = track)
 
     @Test
     fun `发送后流式定稿：assistant 消息内容为全文，isSending 复位`() = runTest(dispatcher) {

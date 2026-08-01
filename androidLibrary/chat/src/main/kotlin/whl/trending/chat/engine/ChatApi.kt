@@ -163,9 +163,10 @@ class ChatApi(
                         WireContext(it.title, it.summary, it.sourceUrl)
                     },
                     // 发送前按目录缓存解析实际生效模型（与选择器同一套判定），避免选择器未挂载时
-                    // 把过期的 Pro 专属选择原样发出；目录未拉到则透传，服务端仍按 tier 强制兜底
+                    // 把过期的 Pro 专属选择原样发出；未手选 / 选择失效解析为 null，此时字段被
+                    // encodeDefaults=false 省略，默认模型由服务端定（客户端不复述模型 id）
                     model = resolveEffectiveChatModel(
-                        ChatModelsProvider.cachedOrEmpty(),
+                        ChatModelsProvider.cachedOrEmpty().models,
                         globalSettingsManager.currentSelectedChatModel(),
                         globalSettingsManager.currentIsPro(),
                     ),

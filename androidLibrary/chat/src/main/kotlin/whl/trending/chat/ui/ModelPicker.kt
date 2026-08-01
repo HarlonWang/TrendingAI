@@ -24,12 +24,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.CHAT_MODEL_UNSET
 import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.ai.data.model.ChatModelsResponse
+import whl.trending.ai.data.model.catalogDefaultChatModel
+import whl.trending.ai.data.model.resolveDisplayedChatModel
 import whl.trending.ai.data.model.resolveEffectiveChatModel
 import whl.trending.chat.R
 
 /**
- * 常驻模型选择器（对所有用户透出）。默认显示免费 gpt-5.6-luna；Pro 专属项对免费用户锁定，
+ * 常驻模型选择器（对所有用户透出）。未手选时显示目录里的免费默认项；Pro 专属项对免费用户锁定，
  * 点锁定项 → 纯告知弹窗（说明该模型属于 Pro，可继续用默认模型），不外跳赞助页。
  *
  * 2026-07-26 起此处不再承担 Pro 转化：与配额触顶卡同一决策——功能受限的当下推销观感差，
@@ -39,9 +43,10 @@ import whl.trending.chat.R
  */
 @Composable
 internal fun ModelPicker(
-    models: List<ChatModelOption>,
+    catalog: ChatModelsResponse,
     modifier: Modifier = Modifier,
 ) {
+    val models = catalog.models
     if (models.size <= 1) return
 
     val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.currentIsPro())
@@ -64,20 +69,17 @@ internal fun ModelPicker(
         )
     }
 
-    // 自愈守卫：若持久化的选择对本用户已锁定（Pro 过期未登出、或上个 Pro 用户遗留），
-    // 复位到默认免费模型。判定与 ChatApi 发送共用 resolveEffectiveChatModel——
-    // 即使本组件未挂载，发送侧也会按同一规则兜底。
+    // 自愈守卫：若持久化的选择对本用户已锁定（Pro 过期未登出、或上个 Pro 用户遗留）或已下架，
+    // 清回未手选——不写入某个具体 id，默认是谁由服务端说了算。判定与 ChatApi 发送共用
+    // resolveEffectiveChatModel——即使本组件未挂载，发送侧也会按同一规则兜底。
     LaunchedEffect(models, isPro) {
-        val effective = resolveEffectiveChatModel(models, selectedId, isPro)
-        if (effective != selectedId) {
-            globalSettingsManager.setSelectedChatModel(effective)
+        if (selectedId != CHAT_MODEL_UNSET && resolveEffectiveChatModel(models, selectedId, isPro) == null) {
+            globalSettingsManager.clearSelectedChatModel()
         }
     }
 
     // 展示同样带 tier 守卫：锁定项永不显示为当前选择（覆盖自愈生效前的那一帧）
-    val current = models.firstOrNull { it.id == selectedId }?.takeIf { !(it.proOnly && !isPro) }
-        ?: models.firstOrNull { !it.proOnly }
-        ?: models.first()
+    val current = resolveDisplayedChatModel(catalog, selectedId, isPro) ?: return
 
     Box(modifier) {
         AssistChip(
@@ -104,10 +106,13 @@ internal fun ModelPicker(
                     } else null,
                     onClick = {
                         expanded = false
-                        if (locked) {
-                            unlockDialogModel = model
-                        } else {
-                            globalSettingsManager.setSelectedChatModel(model.id)
+                        when {
+                            locked -> unlockDialogModel = model
+                            // 选「默认项」记为未手选而非钉住这个 id：否则后端换默认模型时，
+                            // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
+                            model.id == catalogDefaultChatModel(catalog)?.id ->
+                                globalSettingsManager.clearSelectedChatModel()
+                            else -> globalSettingsManager.setSelectedChatModel(model.id)
                         }
                     },
                 )

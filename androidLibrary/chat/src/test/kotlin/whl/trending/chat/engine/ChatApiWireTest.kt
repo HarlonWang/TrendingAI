@@ -2,6 +2,7 @@ package whl.trending.chat.engine
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertFalse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -20,5 +21,27 @@ class ChatApiWireTest {
             ChatApi.ChatRequest(messages = emptyList(), lang = "zh", stream = true),
         )
         assertContains(body, "\"stream\":true")
+    }
+
+    /**
+     * 同一条 encodeDefaults=false 规则，这次是**指望**它省略：未手选模型时 model 解析为 null，
+     * 字段必须整个消失，让服务端按 tier 决定默认模型（免费白名单 / Pro 目录都回落 DEFAULT_MODEL）。
+     * 若哪天开了 encodeDefaults 或改用 explicitNulls 发出 `"model":null`，后端仍会兜底，
+     * 但「客户端不复述默认模型 id」的约定就断了——此测试是那道闸。
+     */
+    @Test
+    fun `未手选模型时请求体不带 model 字段`() {
+        val body = Json { ignoreUnknownKeys = true }.encodeToString(
+            ChatApi.ChatRequest(messages = emptyList(), lang = "zh", model = null, stream = true),
+        )
+        assertFalse(body.contains("\"model\""), "未手选却发了 model 字段: $body")
+    }
+
+    @Test
+    fun `手选模型时请求体照常带 model 字段`() {
+        val body = Json { ignoreUnknownKeys = true }.encodeToString(
+            ChatApi.ChatRequest(messages = emptyList(), lang = "zh", model = "gpt-6", stream = true),
+        )
+        assertContains(body, "\"model\":\"gpt-6\"")
     }
 }

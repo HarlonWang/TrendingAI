@@ -5,7 +5,6 @@ import whl.trending.ai.data.model.AppConfigResponse
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
-import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.ProRefreshResponse
@@ -200,13 +199,13 @@ open class TrendingApi {
         return response.body<AppConfigResponse>()
     }
 
-    /** 聊天可选模型目录（公开只读；后端从 OpenAI 动态取 + 缓存）。 */
-    open suspend fun fetchChatModels(): List<ChatModelOption> {
+    /** 聊天可选模型目录 + 服务端默认（公开只读；后端从 OpenAI 动态取 + 缓存）。 */
+    open suspend fun fetchChatModels(): ChatModelsResponse {
         val response = client.get("$baseHost/api/chat/models")
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
-        return response.body<ChatModelsResponse>().models
+        return response.body<ChatModelsResponse>()
     }
 
     // ---- 收藏云同步（设计稿 2026-07-24-favorites-cloud-sync，B 档）----
