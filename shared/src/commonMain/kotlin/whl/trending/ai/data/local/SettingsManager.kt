@@ -18,7 +18,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.model.DEFAULT_CHAT_MODEL
+import whl.trending.ai.data.model.CHAT_MODEL_UNSET
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 
@@ -495,16 +495,20 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
     }
 
-    /** 选中的聊天模型 id：发请求时透传（服务端仍按 tier 强制）。默认免费 gpt-5.6-luna。 */
-    val selectedChatModel: Flow<String> = settings.getStringFlow(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
+    /**
+     * 用户手选的聊天模型 id；[CHAT_MODEL_UNSET]（默认）= 未手选，请求不带 model、跟随服务端默认。
+     *
+     * 发请求时透传手选值：免费档服务端按白名单强制，Pro 档服务端尊重此选择。
+     */
+    val selectedChatModel: Flow<String> = settings.getStringFlow(SELECTED_CHAT_MODEL_KEY, CHAT_MODEL_UNSET)
 
-    fun currentSelectedChatModel(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, DEFAULT_CHAT_MODEL)
+    fun currentSelectedChatModel(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, CHAT_MODEL_UNSET)
 
     fun setSelectedChatModel(id: String) {
         settings.putString(SELECTED_CHAT_MODEL_KEY, id)
     }
 
-    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回落到默认 gpt-5.6-luna）。 */
+    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回到未手选、跟随服务端默认）。 */
     fun clearSelectedChatModel() {
         settings.remove(SELECTED_CHAT_MODEL_KEY)
     }

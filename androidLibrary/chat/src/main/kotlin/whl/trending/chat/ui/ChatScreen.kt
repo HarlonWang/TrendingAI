@@ -244,9 +244,9 @@ fun ChatScreen(
                     // 常驻模型选择器（≤1 个模型时自动隐藏）。research 模式下整个隐藏：
                     // 模型由服务端钉死，选择器留着会误导用户以为选的模型生效
                     if (mode != whl.trending.chat.model.ChatMode.DeepResearch) {
-                        val models by viewModel.models.collectAsState()
+                        val catalog by viewModel.catalog.collectAsState()
                         ModelPicker(
-                            models = models,
+                            catalog = catalog,
                             modifier = Modifier.padding(horizontal = 12.dp),
                         )
                     }

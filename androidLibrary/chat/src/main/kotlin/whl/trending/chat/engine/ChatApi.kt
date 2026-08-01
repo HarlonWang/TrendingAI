@@ -64,6 +64,13 @@ class ChatApi(
 
         /** 流式请求总时长上限：生成 2500~4000 字解读可能远超普通请求，放到 5 分钟 */
         private const val STREAM_REQUEST_TIMEOUT_MS = 300_000L
+
+        /**
+         * wire 序列化配置的唯一定义：请求编码（ContentNegotiation）与 wire 闸门测试
+         * （ChatApiWireTest）共用同一实例——改这里的配置（如 encodeDefaults/explicitNulls）
+         * 测试即变红。测试若自建配置相同的 Json 副本，配置漂移时闸门会静默失效。
+         */
+        internal val wireJson = Json { ignoreUnknownKeys = true }
     }
 
     /** content 两态：纯文本为 JSON string；末条带图 user 消息为 OpenAI 多模态 parts 数组 */
@@ -119,7 +126,7 @@ class ChatApi(
         val tier: String? = null,
     )
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = wireJson
 
     private val client = HttpClient(OkHttp) {
         install(ContentNegotiation) {
@@ -163,9 +170,10 @@ class ChatApi(
                         WireContext(it.title, it.summary, it.sourceUrl)
                     },
                     // 发送前按目录缓存解析实际生效模型（与选择器同一套判定），避免选择器未挂载时
-                    // 把过期的 Pro 专属选择原样发出；目录未拉到则透传，服务端仍按 tier 强制兜底
+                    // 把过期的 Pro 专属选择原样发出；未手选 / 选择失效解析为 null，此时字段被
+                    // encodeDefaults=false 省略，默认模型由服务端定（客户端不复述模型 id）
                     model = resolveEffectiveChatModel(
-                        ChatModelsProvider.cachedOrEmpty(),
+                        ChatModelsProvider.cachedOrEmpty().models,
                         globalSettingsManager.currentSelectedChatModel(),
                         globalSettingsManager.currentIsPro(),
                     ),
