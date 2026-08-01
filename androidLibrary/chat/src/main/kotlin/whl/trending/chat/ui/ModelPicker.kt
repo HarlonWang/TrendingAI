@@ -48,6 +48,9 @@ internal fun ModelPicker(
 ) {
     val models = catalog.models
     if (models.size <= 1) return
+    // 契约破损守卫：default 不可解析（缺失/悬空，正常不该发生）时整体缺席、不接受任何写入——
+    // 否则「点默认项记未手选」分支会静默失效，把用户的默认意图误写成钉住具体 id
+    val catalogDefault = catalogDefaultChatModel(catalog) ?: return
 
     val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.currentIsPro())
     val selectedId by globalSettingsManager.selectedChatModel
@@ -78,8 +81,9 @@ internal fun ModelPicker(
         }
     }
 
-    // 展示同样带 tier 守卫：锁定项永不显示为当前选择（覆盖自愈生效前的那一帧）
-    val current = resolveDisplayedChatModel(catalog, selectedId, isPro) ?: return
+    // 展示同样带 tier 守卫：锁定项永不显示为当前选择（覆盖自愈生效前的那一帧）。
+    // 上方守卫已保证 default 可解析，这里必非空；?: 仅作类型收窄
+    val current = resolveDisplayedChatModel(catalog, selectedId, isPro) ?: catalogDefault
 
     Box(modifier) {
         AssistChip(
@@ -110,7 +114,7 @@ internal fun ModelPicker(
                             locked -> unlockDialogModel = model
                             // 选「默认项」记为未手选而非钉住这个 id：否则后端换默认模型时，
                             // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
-                            model.id == catalogDefaultChatModel(catalog)?.id ->
+                            model.id == catalogDefault.id ->
                                 globalSettingsManager.clearSelectedChatModel()
                             else -> globalSettingsManager.setSelectedChatModel(model.id)
                         }
