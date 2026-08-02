@@ -18,14 +18,15 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
-import kotlin.coroutines.resume
 import org.jose4j.jwt.consumer.ErrorCodes
 import org.jose4j.jwt.consumer.InvalidJwtException
+import io.logto.sdk.core.exception.ResponseException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
 import whl.trending.ai.BuildConfig
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
@@ -46,6 +47,12 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
 
     /** 时钟偏差提示的进程级一次性标志（刷新路径专用；显式登录失败不受限，每次都给反馈） */
     private val clockSkewHinted = AtomicBoolean(false)
+
+    /** 会话失效处理的一次性标志：清理是幂等的，但提示/埋点只该发一次；重新登录成功后复位 */
+    private val sessionExpiredHandled = AtomicBoolean(false)
+
+    /** 在途的 token 获取（single-flight）：并发调用共享同一次 SDK 刷新，见 [getAccessToken] */
+    private val tokenFlight = AtomicReference<CompletableDeferred<String?>?>(null)
 
     private val logtoClient = LogtoClient(
         LogtoConfig(
@@ -106,6 +113,8 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             val durationMs = SystemClock.elapsedRealtime() - signInStartedAt
             if (logtoException == null && logtoClient.isAuthenticated) {
                 _authState.value = AuthState.LoggedIn
+                // 重登拿到全新 grant，之后若再次失效仍需完整走一遍会话失效处理
+                sessionExpiredHandled.set(false)
                 // method 为选择器意图；托管页内切换方式的边角（邮箱屏仍可能展示社交按钮）不在客户端识别
                 trackEvent(
                     "sign_in_success",
@@ -190,6 +199,12 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         } else {
             logtoClient.clearCredentials { /* 本地凭证已清除即视为登出 */ }
         }
+        clearLocalUserState()
+        trackEvent("sign_out")
+    }
+
+    /** 登出/会话失效共用的本地状态清理（幂等）：用户身份缓存、收藏同步、GitHub 数据源、登录态 */
+    private fun clearLocalUserState() {
         globalSettingsManager.setUserAvatarUrl(null)
         globalSettingsManager.setGithubIdentity(null, null)
         globalSettingsManager.setUserEmail(null)
@@ -200,33 +215,86 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         FollowingProvider.shared.clear()
         OwnRepoEventsProvider.shared.clear()
         _authState.value = AuthState.LoggedOut
-        trackEvent("sign_out")
     }
 
     override suspend fun getAccessToken(): String? {
         // 竞态由 SDK 的 CredentialGuard 兜底：登出后的在途刷新会以 NOT_AUTHENTICATED 收尾、不写回。
         if (!logtoClient.isAuthenticated) return null
-        return suspendCancellableCoroutine { cont ->
-            logtoClient.getAccessToken { exception, accessToken ->
-                exception?.let { maybeHintRefreshClockSkew(it) }
-                cont.resume(accessToken?.token)
+        // Single-flight：进一次账户页 quota/me 等会并发各要一次 token，access token 恰好过期时
+        // 若各自透传 SDK 就是多条并发 refresh 同时打到 Logto——轮换开启时这正是「持久化到已被
+        // 替换的旧 token → 下次 invalid_grant」的竞态源头（2026-08-01 事故）。收敛为同一时刻
+        // 至多一条真实刷新，后到者共享同一结果；SDK 内存缓存命中时回调同步返回，无额外开销。
+        while (true) {
+            tokenFlight.get()?.let { return it.await() }
+            val flight = CompletableDeferred<String?>()
+            if (tokenFlight.compareAndSet(null, flight)) {
+                logtoClient.getAccessToken { exception, accessToken ->
+                    exception?.let { onTokenRefreshFailure(it) }
+                    // 先撤下再 complete：此刻 token 已在 SDK 内存缓存，迟到者新开一轮也是同步命中
+                    tokenFlight.set(null)
+                    flight.complete(accessToken?.token)
+                }
+                return flight.await()
             }
         }
     }
 
     /**
-     * 静默刷新失败若是时钟偏差，重试/重登都救不回来（新 token 的 id_token 校验同样失败），而 app 仍
-     * 自认已登录、请求被服务端按匿名处理（authDegraded）——用户看到的「重试」提示是死循环。
-     * 弹一次时钟修复提示（复用 [SignInFailureBus] 的 CLOCK_SKEW 通道），进程内只弹一次防打扰
-     * （getAccessToken 每次请求都会调）。
+     * 静默刷新失败的归因、埋点与处置。登录流程失败有 sign_in_error 漏斗，这里是它的镜像——
+     * 没有本事件时，用户处于「僵尸登录态」（本地自认已登录、请求被服务端按匿名处理）完全不可见，
+     * 只能等用户报障后翻 Logto 审计日志（2026-08-01 事故里另一位用户失败一上午无人知晓）。
+     *
+     * 两类可行动失败就地处置：
+     * - 时钟偏差：重试/重登都救不回（新 token 的 id_token 校验同样失败），提示修时钟，进程内一次；
+     * - 会话失效（invalid_grant）：refresh token 在服务端已不存在，重试永远失败——原表现是账户页
+     *   「加载失败/重试」死循环。清会话降为登出态，引导重新登录（见 [handleSessionExpired]）。
      */
-    private fun maybeHintRefreshClockSkew(exception: LogtoException) {
+    private fun onTokenRefreshFailure(exception: LogtoException) {
+        // NOT_AUTHENTICATED：登出竞态的正常收尾（CredentialGuard），不是故障，不上报不处置
+        if (exception.message == LogtoException.Type.NOT_AUTHENTICATED.name) return
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
-        if (!isClockSkew(causeChain)) return
-        if (clockSkewHinted.compareAndSet(false, true)) {
-            trackEvent("token_refresh_clock_skew", emptyMap())
-            SignInFailureBus.emit(SignInFailureReason.CLOCK_SKEW)
+        val reason = when {
+            isClockSkew(causeChain) -> "clock_skew"
+            isSessionExpired(causeChain) -> "invalid_grant"
+            causeChain.any { it is SocketTimeoutException } -> "timeout"
+            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> "network"
+            else -> "other"
         }
+        trackEvent(
+            "token_refresh_failed",
+            mapOf("reason" to reason, "logto_type" to (exception.message ?: "unknown")),
+        )
+        when (reason) {
+            "clock_skew" -> if (clockSkewHinted.compareAndSet(false, true)) {
+                SignInFailureBus.emit(SignInFailureReason.CLOCK_SKEW)
+            }
+            "invalid_grant" -> handleSessionExpired()
+        }
+    }
+
+    /**
+     * 会话确定已死的判据：token 端点以 HTTP 400 + `error=invalid_grant` 拒绝 refresh（响应体如
+     * `{"error":"invalid_grant","error_detail":"refresh token not found"}`——吊销、有效期到期、
+     * 轮换竞态都落在这里）。**仅此一种情况允许清会话**：网络失败/超时/5xx 都可能是暂时的，
+     * 误清会把弱网（漫游）用户的好会话踢下线。
+     */
+    private fun isSessionExpired(causeChain: List<Throwable>): Boolean = causeChain.any {
+        it is ResponseException && it.responseCode == HTTP_BAD_REQUEST &&
+            it.responseContent?.contains("\"invalid_grant\"") == true
+    }
+
+    /**
+     * 会话失效处置：清 SDK 凭证 + 本地用户状态，降为登出态，经 [SignInFailureBus] 弹「重新登录」引导。
+     * 不走 [signOut]——不拉起浏览器 end-session（token 已死无可吊销，且不该在用户浏览内容时突然
+     * 弹出浏览器），也不上报 sign_out（这不是用户动作）。浏览器侧 Logto 会话通常仍在，
+     * 重新登录多为一跳静默回到原账号，摩擦很小。
+     */
+    private fun handleSessionExpired() {
+        if (!sessionExpiredHandled.compareAndSet(false, true)) return
+        logtoClient.clearCredentials { /* 本地凭证清除即生效 */ }
+        clearLocalUserState()
+        SignInFailureBus.emit(SignInFailureReason.SESSION_EXPIRED)
+        if (BuildConfig.DEBUG) Log.w(TAG, "session expired: credentials cleared, sign-in hint emitted")
     }
 
     /**
@@ -310,6 +378,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     companion object {
         private const val TAG = "LogtoAuth"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
+        private const val HTTP_BAD_REQUEST = 400
         private const val CLOCK_PROBE_TIMEOUT_MS = 3_000
         private const val AUTH_PROBE_TIMEOUT_MS = 5_000
 
