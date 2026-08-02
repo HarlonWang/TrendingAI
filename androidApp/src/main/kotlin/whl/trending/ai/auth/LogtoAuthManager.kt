@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import org.jose4j.jwt.consumer.ErrorCodes
 import org.jose4j.jwt.consumer.InvalidJwtException
+import org.json.JSONObject
 import io.logto.sdk.core.exception.ResponseException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -228,11 +229,20 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             tokenFlight.get()?.let { return it.await() }
             val flight = CompletableDeferred<String?>()
             if (tokenFlight.compareAndSet(null, flight)) {
-                logtoClient.getAccessToken { exception, accessToken ->
-                    exception?.let { onTokenRefreshFailure(it) }
-                    // 先撤下再 complete：此刻 token 已在 SDK 内存缓存，迟到者新开一轮也是同步命中
+                // okhttp 保证回调必达终态（onResponse/onFailure），无需自设超时；但「SDK 同步抛异常」
+                // 与「我们的失败处理自身抛异常」两条路径会让 flight 悬挂、拖死后续所有取 token——
+                // 都以 try/runCatching 兜住，保证 flight 必然 complete、tokenFlight 必然撤下。
+                try {
+                    logtoClient.getAccessToken { exception, accessToken ->
+                        runCatching { exception?.let { onTokenRefreshFailure(it) } }
+                        // 先撤下再 complete：此刻 token 已在 SDK 内存缓存，迟到者新开一轮也是同步命中
+                        tokenFlight.set(null)
+                        flight.complete(accessToken?.token)
+                    }
+                } catch (t: Throwable) {
                     tokenFlight.set(null)
-                    flight.complete(accessToken?.token)
+                    flight.complete(null)
+                    throw t
                 }
                 return flight.await()
             }
@@ -276,12 +286,16 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
      * 会话确定已死的判据：token 端点以 HTTP 400 + `error=invalid_grant` 拒绝 refresh（响应体如
      * `{"error":"invalid_grant","error_detail":"refresh token not found"}`——吊销、有效期到期、
      * 轮换竞态都落在这里）。**仅此一种情况允许清会话**：网络失败/超时/5xx 都可能是暂时的，
-     * 误清会把弱网（漫游）用户的好会话踢下线。
+     * 误清会把弱网（漫游）用户的好会话踢下线。error 字段按 JSON 解析而非子串匹配，
+     * 解析不出时保守地不清会话（宁可维持旧死循环也不误杀好会话）。
      */
     private fun isSessionExpired(causeChain: List<Throwable>): Boolean = causeChain.any {
-        it is ResponseException && it.responseCode == HTTP_BAD_REQUEST &&
-            it.responseContent?.contains("\"invalid_grant\"") == true
+        it is ResponseException && it.responseCode == HTTP_BAD_REQUEST && it.oidcError() == "invalid_grant"
     }
+
+    /** 从 OIDC token 端点错误响应体（RFC 6749 §5.2 JSON）提取 `error` 字段；非 JSON 时返回 null */
+    private fun ResponseException.oidcError(): String? =
+        responseContent?.let { runCatching { JSONObject(it).optString("error") }.getOrNull() }
 
     /**
      * 会话失效处置：清 SDK 凭证 + 本地用户状态，降为登出态，经 [SignInFailureBus] 弹「重新登录」引导。
