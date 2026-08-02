@@ -197,7 +197,7 @@
     <string name="sign_in_hint_clock_skew">设备时间与实际时间偏差超过一分钟，登录安全校验无法通过。请在系统设置中开启「自动设置时间」后重试。</string>
     <string name="sign_in_hint_dismiss">知道了</string>
     <string name="sign_in_hint_session_expired_title">登录已过期</string>
-    <string name="sign_in_hint_session_expired">登录状态已失效，收藏同步和会员功能已暂停。重新登录即可恢复。</string>
+    <string name="sign_in_hint_session_expired">登录状态已过期，重新登录后可继续使用账户相关功能。</string>
     <string name="sign_in_hint_relogin">重新登录</string>
     <string name="profile_load_failed">加载失败</string>
     <string name="profile_retry">重试</string>

@@ -197,7 +197,7 @@
     <string name="sign_in_hint_clock_skew">Your device clock is off by more than a minute, so the sign-in security check fails. Turn on automatic date &amp; time in system settings, then try again.</string>
     <string name="sign_in_hint_dismiss">Got it</string>
     <string name="sign_in_hint_session_expired_title">Session expired</string>
-    <string name="sign_in_hint_session_expired">Your sign-in has expired, so favorites sync and Pro features are paused. Sign in again to restore them.</string>
+    <string name="sign_in_hint_session_expired">Your sign-in has expired. Sign in again to keep using account features.</string>
     <string name="sign_in_hint_relogin">Sign in again</string>
     <string name="profile_load_failed">Failed to load profile</string>
     <string name="profile_retry">Retry</string>
