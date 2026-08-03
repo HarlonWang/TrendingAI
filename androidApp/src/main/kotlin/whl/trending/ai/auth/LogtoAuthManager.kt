@@ -1,6 +1,7 @@
 package whl.trending.ai.auth
 
 import android.app.Activity
+import android.app.Application
 import android.os.SystemClock
 import android.util.Log
 import io.logto.sdk.android.LogtoClient
@@ -19,13 +20,17 @@ import java.net.URL
 import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
-import kotlin.coroutines.resume
 import org.jose4j.jwt.consumer.ErrorCodes
 import org.jose4j.jwt.consumer.InvalidJwtException
+import org.json.JSONObject
+import io.logto.sdk.core.exception.ResponseException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import whl.trending.ai.BuildConfig
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
@@ -44,24 +49,8 @@ import whl.trending.ai.data.repository.globalFavoriteRepository
 class LogtoAuthManager(activity: Activity) : AuthManager {
     private val activityRef = WeakReference(activity)
 
-    /** 时钟偏差提示的进程级一次性标志（刷新路径专用；显式登录失败不受限，每次都给反馈） */
-    private val clockSkewHinted = AtomicBoolean(false)
+    private val logtoClient = obtainClient(activity.application)
 
-    private val logtoClient = LogtoClient(
-        LogtoConfig(
-            endpoint = LOGTO_ENDPOINT,
-            appId = LOGTO_APP_ID,
-            // email：邮箱验证码登录的 email claim；对存量会话不追溯（老 token 无此授权，重登后才有）
-            scopes = listOf("identities", "email"),
-            resources = null,
-            usingPersistStorage = true,
-        ),
-        activity.application,
-    )
-
-    private val _authState = MutableStateFlow<AuthState>(
-        if (logtoClient.isAuthenticated) AuthState.LoggedIn else AuthState.LoggedOut
-    )
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
     override val isSupported: Boolean = true
 
@@ -106,6 +95,8 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             val durationMs = SystemClock.elapsedRealtime() - signInStartedAt
             if (logtoException == null && logtoClient.isAuthenticated) {
                 _authState.value = AuthState.LoggedIn
+                // 重登拿到全新 grant，之后若再次失效仍需完整走一遍会话失效处理
+                sessionExpiredHandled.set(false)
                 // method 为选择器意图；托管页内切换方式的边角（邮箱屏仍可能展示社交按钮）不在客户端识别
                 trackEvent(
                     "sign_in_success",
@@ -162,15 +153,12 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
         val reason = when {
             logtoType == LogtoException.Type.USER_CANCELED.name -> SignInFailureReason.USER_CANCELED
-            // 时钟偏差：id_token 的 iat/exp 校验被 jose4j 拒绝（容差 60s）。必须先于网络类判定——
-            // 重试永远失败，通用提示会把用户引进死循环（2026-07-22 模拟器慢 63s 实测的坑）
-            isClockSkew(causeChain) -> SignInFailureReason.CLOCK_SKEW
-            causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
-            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
-            logtoType in NETWORK_LOGTO_TYPES -> SignInFailureReason.NETWORK
-            logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> SignInFailureReason.NO_BROWSER
-            logtoType in CONFIG_LOGTO_TYPES -> SignInFailureReason.CONFIG
-            else -> SignInFailureReason.OTHER
+            else -> connectivityReason(causeChain) ?: when {
+                logtoType in NETWORK_LOGTO_TYPES -> SignInFailureReason.NETWORK
+                logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> SignInFailureReason.NO_BROWSER
+                logtoType in CONFIG_LOGTO_TYPES -> SignInFailureReason.CONFIG
+                else -> SignInFailureReason.OTHER
+            }
         }
         val props = buildMap<String, Any> {
             put("reason", reason.name.lowercase())
@@ -190,6 +178,12 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         } else {
             logtoClient.clearCredentials { /* 本地凭证已清除即视为登出 */ }
         }
+        clearLocalUserState()
+        trackEvent("sign_out")
+    }
+
+    /** 登出/会话失效共用的本地状态清理（幂等）：用户身份缓存、收藏同步、GitHub 数据源、登录态 */
+    private fun clearLocalUserState() {
         globalSettingsManager.setUserAvatarUrl(null)
         globalSettingsManager.setGithubIdentity(null, null)
         globalSettingsManager.setUserEmail(null)
@@ -200,33 +194,126 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         FollowingProvider.shared.clear()
         OwnRepoEventsProvider.shared.clear()
         _authState.value = AuthState.LoggedOut
-        trackEvent("sign_out")
     }
 
     override suspend fun getAccessToken(): String? {
         // 竞态由 SDK 的 CredentialGuard 兜底：登出后的在途刷新会以 NOT_AUTHENTICATED 收尾、不写回。
         if (!logtoClient.isAuthenticated) return null
-        return suspendCancellableCoroutine { cont ->
-            logtoClient.getAccessToken { exception, accessToken ->
-                exception?.let { maybeHintRefreshClockSkew(it) }
-                cont.resume(accessToken?.token)
+        // 互斥串行：进一次账户页 quota/me 等会并发各要一次 token，access token 恰好过期时
+        // 若各自透传 SDK 就是多条并发 refresh 同时打到 Logto——轮换开启时这正是「持久化到已被
+        // 替换的旧 token → 下次 invalid_grant」的竞态源头（2026-08-01 事故）。串行化后同一时刻
+        // 至多一条真实刷新，后到者进锁时命中 SDK 内存缓存、同步返回，去重效果等价。
+        //
+        // 选 Mutex 而非共享 Deferred 的 single-flight：SDK 的解析/校验跑在 okhttp 回调内部，
+        // 一旦抛出（如 captive portal 对 token 端点返回 200+HTML，gson 解析必炸），我们的
+        // completion 永远不来——共享 Deferred 需要手工簿记（超时守卫/CAS 摘除/代际保护）才能
+        // 不泄漏，而锁 + 每调用方超时在结构上自愈：超时取消协程即释放锁，下一个调用者自然重来，
+        // 无任何跨协程共享状态可泄漏。
+        var timedOut = true
+        val token = withTimeoutOrNull(TOKEN_GUARD_TIMEOUT_MS) {
+            tokenMutex.withLock {
+                suspendCancellableCoroutine { cont ->
+                    logtoClient.getAccessToken { exception, accessToken ->
+                        runCatching { exception?.let { onTokenRefreshFailure(it) } }
+                        // 超时/取消后迟到的 resume 落在已取消的 continuation 上，被安全忽略
+                        cont.resume(accessToken?.token) { _, _, _ -> }
+                    }
+                }
+            }.also { timedOut = false }
+        }
+        // 走到这里的 null 分两种：SDK 正常失败（已在 onTokenRefreshFailure 归因上报）与超时。
+        // 超时=SDK 异步链断裂或极端慢网，单独上报；调用方视角与其他失败一致（拿不到 token）。
+        if (timedOut) {
+            trackEvent("token_refresh_failed", mapOf("reason" to "guard_timeout", "logto_type" to "none"))
+        }
+        return token
+    }
+
+    /**
+     * 静默刷新失败的归因、埋点与处置。登录流程失败有 sign_in_error 漏斗，这里是它的镜像——
+     * 没有本事件时，用户处于「僵尸登录态」（本地自认已登录、请求被服务端按匿名处理）完全不可见，
+     * 只能等用户报障后翻 Logto 审计日志（2026-08-01 事故里另一位用户失败一上午无人知晓）。
+     *
+     * 两类可行动失败就地处置：
+     * - 时钟偏差：重试/重登都救不回（新 token 的 id_token 校验同样失败），提示修时钟，进程内一次；
+     * - 会话失效（invalid_grant）：refresh token 在服务端已不存在，重试永远失败——原表现是账户页
+     *   「加载失败/重试」死循环。清会话降为登出态，引导重新登录（见 [handleSessionExpired]）。
+     */
+    private fun onTokenRefreshFailure(exception: LogtoException) {
+        // NOT_AUTHENTICATED 有两个来源（SDK 的 isAuthenticated 只看 idToken）：
+        // ① 登出竞态（isAuthenticated 已 false）：CredentialGuard 的正常收尾，不上报不处置；
+        // ② idToken 尚在而 refreshToken 缺失（两键分次 apply 落盘间进程被杀的部分写入、或
+        //    服务端未发 RT）：SDK 自认已登录却永远换不出 token——不处置就是零观测的永久僵尸
+        //    （账户页无限「加载失败/重试」）。按会话失效走同一条恢复路径：清会话 + 重登引导。
+        //    已知微窄边角：显式登出先清 RT 后清 idToken，在途刷新回调恰落其间会多弹一次
+        //    过期提示，窗口为微秒级且 sessionExpiredHandled 保证仅一次，不为其加锁。
+        if (exception.message == LogtoException.Type.NOT_AUTHENTICATED.name) {
+            if (!logtoClient.isAuthenticated) return
+            trackEvent(
+                "token_refresh_failed",
+                mapOf("reason" to "no_refresh_token", "logto_type" to LogtoException.Type.NOT_AUTHENTICATED.name),
+            )
+            handleSessionExpired()
+            return
+        }
+        val causeChain = generateSequence(exception.cause) { it.cause }.toList()
+        // invalid_grant（HTTP 400 拒绝）与连接层归因在异常形态上互斥，先后无行为差异
+        val reason = when {
+            isSessionExpired(causeChain) -> "invalid_grant"
+            else -> connectivityReason(causeChain)?.name?.lowercase() ?: "other"
+        }
+        trackEvent(
+            "token_refresh_failed",
+            mapOf("reason" to reason, "logto_type" to (exception.message ?: "unknown")),
+        )
+        when (reason) {
+            "clock_skew" -> if (clockSkewHinted.compareAndSet(false, true)) {
+                SignInFailureBus.emit(SignInFailureReason.CLOCK_SKEW)
             }
+            "invalid_grant" -> handleSessionExpired()
         }
     }
 
     /**
-     * 静默刷新失败若是时钟偏差，重试/重登都救不回来（新 token 的 id_token 校验同样失败），而 app 仍
-     * 自认已登录、请求被服务端按匿名处理（authDegraded）——用户看到的「重试」提示是死循环。
-     * 弹一次时钟修复提示（复用 [SignInFailureBus] 的 CLOCK_SKEW 通道），进程内只弹一次防打扰
-     * （getAccessToken 每次请求都会调）。
+     * 会话确定已死的判据：token 端点以 HTTP 400 + `error=invalid_grant` 拒绝 refresh（响应体如
+     * `{"error":"invalid_grant","error_detail":"refresh token not found"}`——吊销、有效期到期、
+     * 轮换竞态都落在这里）。**仅此一种情况允许清会话**：网络失败/超时/5xx 都可能是暂时的，
+     * 误清会把弱网（漫游）用户的好会话踢下线。error 字段按 JSON 解析而非子串匹配，
+     * 解析不出时保守地不清会话（宁可维持旧死循环也不误杀好会话）。
      */
-    private fun maybeHintRefreshClockSkew(exception: LogtoException) {
-        val causeChain = generateSequence(exception.cause) { it.cause }.toList()
-        if (!isClockSkew(causeChain)) return
-        if (clockSkewHinted.compareAndSet(false, true)) {
-            trackEvent("token_refresh_clock_skew", emptyMap())
-            SignInFailureBus.emit(SignInFailureReason.CLOCK_SKEW)
-        }
+    private fun isSessionExpired(causeChain: List<Throwable>): Boolean = causeChain.any {
+        it is ResponseException && it.responseCode == HTTP_BAD_REQUEST && it.oidcError() == "invalid_grant"
+    }
+
+    /** 从 OIDC token 端点错误响应体（RFC 6749 §5.2 JSON）提取 `error` 字段；非 JSON 时返回 null */
+    private fun ResponseException.oidcError(): String? =
+        responseContent?.let { runCatching { JSONObject(it).optString("error") }.getOrNull() }
+
+    /**
+     * 会话失效处置：清 SDK 凭证 + 本地用户状态，降为登出态，经 [SignInFailureBus] 弹「重新登录」引导。
+     * 不走 [signOut]——不拉起浏览器 end-session（token 已死无可吊销，且不该在用户浏览内容时突然
+     * 弹出浏览器），也不上报 sign_out（这不是用户动作）。浏览器侧 Logto 会话通常仍在，
+     * 重新登录多为一跳静默回到原账号，摩擦很小。
+     */
+    private fun handleSessionExpired() {
+        if (!sessionExpiredHandled.compareAndSet(false, true)) return
+        logtoClient.clearCredentials { /* 本地凭证清除即生效 */ }
+        clearLocalUserState()
+        SignInFailureBus.emit(SignInFailureReason.SESSION_EXPIRED)
+        if (BuildConfig.DEBUG) Log.w(TAG, "session expired: credentials cleared, sign-in hint emitted")
+    }
+
+    /**
+     * cause 链的连接层归因（时钟偏差/超时/网络），登录失败与静默刷新失败两条埋点链路共用——
+     * 口径必须一致，sign_in_error 与 token_refresh_failed 的 reason 分布才可横向对比。
+     * 时钟偏差必须先于网络类判定：重试永远失败，通用网络提示会把用户引进死循环
+     * （2026-07-22 模拟器慢 63s 实测的坑）。流程特有类型（取消/配置/invalid_grant 等）由调用方自判。
+     */
+    private fun connectivityReason(causeChain: List<Throwable>): SignInFailureReason? = when {
+        isClockSkew(causeChain) -> SignInFailureReason.CLOCK_SKEW
+        causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
+        causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
+        else -> null
     }
 
     /**
@@ -310,6 +397,60 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     companion object {
         private const val TAG = "LogtoAuth"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
+        private const val HTTP_BAD_REQUEST = 400
+
+        /**
+         * LogtoClient 进程级单例：manager 随每次 Activity.onCreate 重建（仅为刷新 activityRef），
+         * 但 client 持有内存 token 状态——RT 在构造时读入字段、AT 缓存只在内存。若 client 跟着
+         * 重建：①旧实例在途刷新与新实例刷新不互斥（轮换竞态跨实例复活）；②轮换后新实例仍拿
+         * 构造时的旧 RT → invalid_grant；③每次配置变更 AT 缓存丢失、白白多刷一次。故单例化。
+         */
+        @Volatile
+        private var sharedClient: LogtoClient? = null
+
+        private fun obtainClient(application: Application): LogtoClient =
+            sharedClient ?: synchronized(LogtoAuthManager::class.java) {
+                sharedClient ?: LogtoClient(
+                    LogtoConfig(
+                        endpoint = LOGTO_ENDPOINT,
+                        appId = LOGTO_APP_ID,
+                        // email：邮箱验证码登录的 email claim；对存量会话不追溯（老 token 无此授权，重登后才有）
+                        scopes = listOf("identities", "email"),
+                        resources = null,
+                        usingPersistStorage = true,
+                    ),
+                    application,
+                ).also {
+                    sharedClient = it
+                    // 登录态初始化只在首个 client 诞生时做一次；后续 manager 重建不得重置——
+                    // 否则会踩掉在途的 LoggingIn / 回调刚写入的终态
+                    _authState.value = if (it.isAuthenticated) AuthState.LoggedIn else AuthState.LoggedOut
+                }
+            }
+
+        /**
+         * 进程级登录态流：manager 随 Activity 重建，若 flow 留在实例上，落在旧实例的回调
+         * （登录成功写 LoggedIn / 会话失效写 LoggedOut）只会更新旧 flow，新实例与 UI 永远
+         * 看不到——SignInFailureBus 当年为失败事件专设进程级总线就是绕这个坑，状态流本身
+         * 提级后这一族「写错实例」问题整体消失。
+         */
+        private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedOut)
+
+        /** token 获取互斥锁：进程级——跨 manager 实例的并发调用也串行化，见 [getAccessToken] */
+        private val tokenMutex = Mutex()
+
+        /** 时钟偏差提示的进程级一次性标志（刷新路径专用；显式登录失败不受限，每次都给反馈） */
+        private val clockSkewHinted = AtomicBoolean(false)
+
+        /** 会话失效处理的一次性标志：清理是幂等的，但提示/埋点只该发一次；重新登录成功后复位 */
+        private val sessionExpiredHandled = AtomicBoolean(false)
+
+        /**
+         * token 获取的调用方超时：SDK 内部完整链路是 oidc-config + token 端点两跳网络请求，
+         * okhttp 默认超时兜底下正常路径远在 30s 内到达终态；超过即判定 SDK 异步链已断
+         * （回调不会再来），放弃本次并释放锁。误判代价仅为返回一次 null（等同现有失败路径）。
+         */
+        private const val TOKEN_GUARD_TIMEOUT_MS = 30_000L
         private const val CLOCK_PROBE_TIMEOUT_MS = 3_000
         private const val AUTH_PROBE_TIMEOUT_MS = 5_000
 

@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -76,14 +77,18 @@ internal fun MutableList<Any>.safePop() {
 fun App() {
     val backStack = remember { mutableStateListOf<Any>(Home) }
 
-    // 收藏云同步触发：放在 App 根部而非 HomeScreen——登录常发生在账户页（Home 已被覆盖、
-    // 其 LaunchedEffect 已随 NavEntry 销毁），只挂 HomeScreen 会导致「账户页登录→进我的收藏」
-    // 这条主路径永远不触发同步。根部 composition 全程存活，登录态一变即触发；实际同步在
+    // 收藏云同步 + 身份/Pro 态同步（syncMe）触发：放在 App 根部而非 HomeScreen——登录常发生在
+    // 账户页（Home 已被覆盖、其 LaunchedEffect 已随 NavEntry 销毁），只挂 HomeScreen 会导致
+    // 「账户页登录」这条主路径永远不触发。syncMe 是 setIsPro 的日常唯一写入点：曾只挂 Home，
+    // 账户页重登后本地 isPro 恒 false、Pro 用户被当免费档提示升级（2026-08-03，会话失效重登
+    // 成为常态路径后放大为必现）。根部 composition 全程存活，登录态一变即触发；收藏同步在
     // 仓库自有 scope 上跑（requestSync），不受任何屏切换取消。
     val authState by globalAuthManager.authState.collectAsState()
+    val userRepository = remember { UserRepository() }
     LaunchedEffect(authState) {
         if (authState is AuthState.LoggedIn) {
             globalFavoriteRepository.requestSync()
+            userRepository.syncMe(globalAuthManager.getAccessToken())
         }
     }
 

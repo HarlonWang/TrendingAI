@@ -73,7 +73,6 @@ import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
-import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.feed.FeedScreen
@@ -142,16 +141,10 @@ fun HomeScreen(
     val authManager = globalAuthManager
     val authState by authManager.authState.collectAsState()
     val userAvatarUrl by globalSettingsManager.userAvatarUrl.collectAsState(null)
-    val userRepository = remember { UserRepository() }
 
-    // 应用启动且已登录：服务端建档/刷新 last_login_at + 同步头像（幂等，失败静默）。
-    // 收藏云同步不在此触发——它挂在 App 根部（见 App.kt），以覆盖账户页登录等 Home 未激活的路径。
-    LaunchedEffect(authState) {
-        val state = authState
-        if (state is AuthState.LoggedIn) {
-            userRepository.syncMe(authManager.getAccessToken())
-        }
-    }
+    // syncMe（建档 + 头像/GitHub 身份/isPro 缓存）不在此触发——已随收藏同步一起挂在 App 根部
+    // （见 App.kt）：登录常发生在账户页，Home 的 LaunchedEffect 彼时已随 NavEntry 销毁，
+    // 挂这里会漏掉「账户页登录」主路径（isPro 不回写，Pro 用户被当免费档，2026-08-03 必现修复）。
 
     // 预热聊天模型目录：让选择器 chip 在用户首次进入 chat 前就绪，避免冷首拉导致 chip 迟迟不出现。
     LaunchedEffect(Unit) {

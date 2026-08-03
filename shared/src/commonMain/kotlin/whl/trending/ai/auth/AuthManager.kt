@@ -21,6 +21,13 @@ enum class SignInFailureReason {
 
     /** 设备时钟偏差超出 id_token 校验容差（Logto SDK 60s）：重试无用，提示修时间（见 SignInHintHost） */
     CLOCK_SKEW,
+
+    /**
+     * 静默刷新被 Logto 以 invalid_grant 拒绝——refresh token 在服务端已不存在（吊销/到期/轮换竞态）。
+     * 与登录流程失败不同：此时本地会话已被清除（见 LogtoAuthManager 的会话失效处理），
+     * 提示的目的是让用户知道「需要重新登录」，而不是对着账户页的失败态反复重试。
+     */
+    SESSION_EXPIRED,
     OTHER,
 }
 
