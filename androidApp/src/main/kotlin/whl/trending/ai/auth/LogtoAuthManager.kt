@@ -18,16 +18,18 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import org.jose4j.jwt.consumer.ErrorCodes
 import org.jose4j.jwt.consumer.InvalidJwtException
 import org.json.JSONObject
 import io.logto.sdk.core.exception.ResponseException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import whl.trending.ai.BuildConfig
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
@@ -52,8 +54,8 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     /** 会话失效处理的一次性标志：清理是幂等的，但提示/埋点只该发一次；重新登录成功后复位 */
     private val sessionExpiredHandled = AtomicBoolean(false)
 
-    /** 在途的 token 获取（single-flight）：并发调用共享同一次 SDK 刷新，见 [getAccessToken] */
-    private val tokenFlight = AtomicReference<CompletableDeferred<String?>?>(null)
+    /** token 获取互斥锁：并发调用串行化，同一时刻至多一条真实刷新，见 [getAccessToken] */
+    private val tokenMutex = Mutex()
 
     private val logtoClient = LogtoClient(
         LogtoConfig(
@@ -221,32 +223,34 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
     override suspend fun getAccessToken(): String? {
         // 竞态由 SDK 的 CredentialGuard 兜底：登出后的在途刷新会以 NOT_AUTHENTICATED 收尾、不写回。
         if (!logtoClient.isAuthenticated) return null
-        // Single-flight：进一次账户页 quota/me 等会并发各要一次 token，access token 恰好过期时
+        // 互斥串行：进一次账户页 quota/me 等会并发各要一次 token，access token 恰好过期时
         // 若各自透传 SDK 就是多条并发 refresh 同时打到 Logto——轮换开启时这正是「持久化到已被
-        // 替换的旧 token → 下次 invalid_grant」的竞态源头（2026-08-01 事故）。收敛为同一时刻
-        // 至多一条真实刷新，后到者共享同一结果；SDK 内存缓存命中时回调同步返回，无额外开销。
-        while (true) {
-            tokenFlight.get()?.let { return it.await() }
-            val flight = CompletableDeferred<String?>()
-            if (tokenFlight.compareAndSet(null, flight)) {
-                // okhttp 保证回调必达终态（onResponse/onFailure），无需自设超时；但「SDK 同步抛异常」
-                // 与「我们的失败处理自身抛异常」两条路径会让 flight 悬挂、拖死后续所有取 token——
-                // 都以 try/runCatching 兜住，保证 flight 必然 complete、tokenFlight 必然撤下。
-                try {
+        // 替换的旧 token → 下次 invalid_grant」的竞态源头（2026-08-01 事故）。串行化后同一时刻
+        // 至多一条真实刷新，后到者进锁时命中 SDK 内存缓存、同步返回，去重效果等价。
+        //
+        // 选 Mutex 而非共享 Deferred 的 single-flight：SDK 的解析/校验跑在 okhttp 回调内部，
+        // 一旦抛出（如 captive portal 对 token 端点返回 200+HTML，gson 解析必炸），我们的
+        // completion 永远不来——共享 Deferred 需要手工簿记（超时守卫/CAS 摘除/代际保护）才能
+        // 不泄漏，而锁 + 每调用方超时在结构上自愈：超时取消协程即释放锁，下一个调用者自然重来，
+        // 无任何跨协程共享状态可泄漏。
+        var timedOut = true
+        val token = withTimeoutOrNull(TOKEN_GUARD_TIMEOUT_MS) {
+            tokenMutex.withLock {
+                suspendCancellableCoroutine { cont ->
                     logtoClient.getAccessToken { exception, accessToken ->
                         runCatching { exception?.let { onTokenRefreshFailure(it) } }
-                        // 先撤下再 complete：此刻 token 已在 SDK 内存缓存，迟到者新开一轮也是同步命中
-                        tokenFlight.set(null)
-                        flight.complete(accessToken?.token)
+                        // 超时/取消后迟到的 resume 落在已取消的 continuation 上，被安全忽略
+                        cont.resume(accessToken?.token) { _, _, _ -> }
                     }
-                } catch (t: Throwable) {
-                    tokenFlight.set(null)
-                    flight.complete(null)
-                    throw t
                 }
-                return flight.await()
-            }
+            }.also { timedOut = false }
         }
+        // 走到这里的 null 分两种：SDK 正常失败（已在 onTokenRefreshFailure 归因上报）与超时。
+        // 超时=SDK 异步链断裂或极端慢网，单独上报；调用方视角与其他失败一致（拿不到 token）。
+        if (timedOut) {
+            trackEvent("token_refresh_failed", mapOf("reason" to "guard_timeout", "logto_type" to "none"))
+        }
+        return token
     }
 
     /**
@@ -393,6 +397,13 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         private const val TAG = "LogtoAuth"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
         private const val HTTP_BAD_REQUEST = 400
+
+        /**
+         * token 获取的调用方超时：SDK 内部完整链路是 oidc-config + token 端点两跳网络请求，
+         * okhttp 默认超时兜底下正常路径远在 30s 内到达终态；超过即判定 SDK 异步链已断
+         * （回调不会再来），放弃本次并释放锁。误判代价仅为返回一次 null（等同现有失败路径）。
+         */
+        private const val TOKEN_GUARD_TIMEOUT_MS = 30_000L
         private const val CLOCK_PROBE_TIMEOUT_MS = 3_000
         private const val AUTH_PROBE_TIMEOUT_MS = 5_000
 
