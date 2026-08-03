@@ -246,8 +246,22 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
      *   「加载失败/重试」死循环。清会话降为登出态，引导重新登录（见 [handleSessionExpired]）。
      */
     private fun onTokenRefreshFailure(exception: LogtoException) {
-        // NOT_AUTHENTICATED：登出竞态的正常收尾（CredentialGuard），不是故障，不上报不处置
-        if (exception.message == LogtoException.Type.NOT_AUTHENTICATED.name) return
+        // NOT_AUTHENTICATED 有两个来源（SDK 的 isAuthenticated 只看 idToken）：
+        // ① 登出竞态（isAuthenticated 已 false）：CredentialGuard 的正常收尾，不上报不处置；
+        // ② idToken 尚在而 refreshToken 缺失（两键分次 apply 落盘间进程被杀的部分写入、或
+        //    服务端未发 RT）：SDK 自认已登录却永远换不出 token——不处置就是零观测的永久僵尸
+        //    （账户页无限「加载失败/重试」）。按会话失效走同一条恢复路径：清会话 + 重登引导。
+        //    已知微窄边角：显式登出先清 RT 后清 idToken，在途刷新回调恰落其间会多弹一次
+        //    过期提示，窗口为微秒级且 sessionExpiredHandled 保证仅一次，不为其加锁。
+        if (exception.message == LogtoException.Type.NOT_AUTHENTICATED.name) {
+            if (!logtoClient.isAuthenticated) return
+            trackEvent(
+                "token_refresh_failed",
+                mapOf("reason" to "no_refresh_token", "logto_type" to LogtoException.Type.NOT_AUTHENTICATED.name),
+            )
+            handleSessionExpired()
+            return
+        }
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
         val reason = when {
             isClockSkew(causeChain) -> "clock_skew"
