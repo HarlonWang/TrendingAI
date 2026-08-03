@@ -1,6 +1,7 @@
 package whl.trending.ai.auth
 
 import android.app.Activity
+import android.app.Application
 import android.os.SystemClock
 import android.util.Log
 import io.logto.sdk.android.LogtoClient
@@ -48,26 +49,7 @@ import whl.trending.ai.data.repository.globalFavoriteRepository
 class LogtoAuthManager(activity: Activity) : AuthManager {
     private val activityRef = WeakReference(activity)
 
-    /** 时钟偏差提示的进程级一次性标志（刷新路径专用；显式登录失败不受限，每次都给反馈） */
-    private val clockSkewHinted = AtomicBoolean(false)
-
-    /** 会话失效处理的一次性标志：清理是幂等的，但提示/埋点只该发一次；重新登录成功后复位 */
-    private val sessionExpiredHandled = AtomicBoolean(false)
-
-    /** token 获取互斥锁：并发调用串行化，同一时刻至多一条真实刷新，见 [getAccessToken] */
-    private val tokenMutex = Mutex()
-
-    private val logtoClient = LogtoClient(
-        LogtoConfig(
-            endpoint = LOGTO_ENDPOINT,
-            appId = LOGTO_APP_ID,
-            // email：邮箱验证码登录的 email claim；对存量会话不追溯（老 token 无此授权，重登后才有）
-            scopes = listOf("identities", "email"),
-            resources = null,
-            usingPersistStorage = true,
-        ),
-        activity.application,
-    )
+    private val logtoClient = obtainClient(activity.application)
 
     private val _authState = MutableStateFlow<AuthState>(
         if (logtoClient.isAuthenticated) AuthState.LoggedIn else AuthState.LoggedOut
@@ -397,6 +379,39 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         private const val TAG = "LogtoAuth"
         private const val LOGTO_APP_ID = "lasqslwwdjbim73vgkapj"
         private const val HTTP_BAD_REQUEST = 400
+
+        /**
+         * LogtoClient 进程级单例：manager 随每次 Activity.onCreate 重建（仅为刷新 activityRef），
+         * 但 client 持有内存 token 状态——RT 在构造时读入字段、AT 缓存只在内存。若 client 跟着
+         * 重建：①旧实例在途刷新与新实例刷新不互斥（轮换竞态跨实例复活）；②轮换后新实例仍拿
+         * 构造时的旧 RT → invalid_grant；③每次配置变更 AT 缓存丢失、白白多刷一次。故单例化。
+         */
+        @Volatile
+        private var sharedClient: LogtoClient? = null
+
+        private fun obtainClient(application: Application): LogtoClient =
+            sharedClient ?: synchronized(LogtoAuthManager::class.java) {
+                sharedClient ?: LogtoClient(
+                    LogtoConfig(
+                        endpoint = LOGTO_ENDPOINT,
+                        appId = LOGTO_APP_ID,
+                        // email：邮箱验证码登录的 email claim；对存量会话不追溯（老 token 无此授权，重登后才有）
+                        scopes = listOf("identities", "email"),
+                        resources = null,
+                        usingPersistStorage = true,
+                    ),
+                    application,
+                ).also { sharedClient = it }
+            }
+
+        /** token 获取互斥锁：进程级——跨 manager 实例的并发调用也串行化，见 [getAccessToken] */
+        private val tokenMutex = Mutex()
+
+        /** 时钟偏差提示的进程级一次性标志（刷新路径专用；显式登录失败不受限，每次都给反馈） */
+        private val clockSkewHinted = AtomicBoolean(false)
+
+        /** 会话失效处理的一次性标志：清理是幂等的，但提示/埋点只该发一次；重新登录成功后复位 */
+        private val sessionExpiredHandled = AtomicBoolean(false)
 
         /**
          * token 获取的调用方超时：SDK 内部完整链路是 oidc-config + token 端点两跳网络请求，
