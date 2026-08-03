@@ -153,15 +153,12 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
         val reason = when {
             logtoType == LogtoException.Type.USER_CANCELED.name -> SignInFailureReason.USER_CANCELED
-            // 时钟偏差：id_token 的 iat/exp 校验被 jose4j 拒绝（容差 60s）。必须先于网络类判定——
-            // 重试永远失败，通用提示会把用户引进死循环（2026-07-22 模拟器慢 63s 实测的坑）
-            isClockSkew(causeChain) -> SignInFailureReason.CLOCK_SKEW
-            causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
-            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
-            logtoType in NETWORK_LOGTO_TYPES -> SignInFailureReason.NETWORK
-            logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> SignInFailureReason.NO_BROWSER
-            logtoType in CONFIG_LOGTO_TYPES -> SignInFailureReason.CONFIG
-            else -> SignInFailureReason.OTHER
+            else -> connectivityReason(causeChain) ?: when {
+                logtoType in NETWORK_LOGTO_TYPES -> SignInFailureReason.NETWORK
+                logtoType == LogtoException.Type.UNABLE_TO_LAUNCH_BROWSER.name -> SignInFailureReason.NO_BROWSER
+                logtoType in CONFIG_LOGTO_TYPES -> SignInFailureReason.CONFIG
+                else -> SignInFailureReason.OTHER
+            }
         }
         val props = buildMap<String, Any> {
             put("reason", reason.name.lowercase())
@@ -260,12 +257,10 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
             return
         }
         val causeChain = generateSequence(exception.cause) { it.cause }.toList()
+        // invalid_grant（HTTP 400 拒绝）与连接层归因在异常形态上互斥，先后无行为差异
         val reason = when {
-            isClockSkew(causeChain) -> "clock_skew"
             isSessionExpired(causeChain) -> "invalid_grant"
-            causeChain.any { it is SocketTimeoutException } -> "timeout"
-            causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> "network"
-            else -> "other"
+            else -> connectivityReason(causeChain)?.name?.lowercase() ?: "other"
         }
         trackEvent(
             "token_refresh_failed",
@@ -306,6 +301,19 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         clearLocalUserState()
         SignInFailureBus.emit(SignInFailureReason.SESSION_EXPIRED)
         if (BuildConfig.DEBUG) Log.w(TAG, "session expired: credentials cleared, sign-in hint emitted")
+    }
+
+    /**
+     * cause 链的连接层归因（时钟偏差/超时/网络），登录失败与静默刷新失败两条埋点链路共用——
+     * 口径必须一致，sign_in_error 与 token_refresh_failed 的 reason 分布才可横向对比。
+     * 时钟偏差必须先于网络类判定：重试永远失败，通用网络提示会把用户引进死循环
+     * （2026-07-22 模拟器慢 63s 实测的坑）。流程特有类型（取消/配置/invalid_grant 等）由调用方自判。
+     */
+    private fun connectivityReason(causeChain: List<Throwable>): SignInFailureReason? = when {
+        isClockSkew(causeChain) -> SignInFailureReason.CLOCK_SKEW
+        causeChain.any { it is SocketTimeoutException } -> SignInFailureReason.TIMEOUT
+        causeChain.any { it is UnknownHostException || it is ConnectException || it is IOException } -> SignInFailureReason.NETWORK
+        else -> null
     }
 
     /**
