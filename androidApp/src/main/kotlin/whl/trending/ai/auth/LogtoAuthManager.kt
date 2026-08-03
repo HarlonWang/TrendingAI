@@ -51,9 +51,6 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
 
     private val logtoClient = obtainClient(activity.application)
 
-    private val _authState = MutableStateFlow<AuthState>(
-        if (logtoClient.isAuthenticated) AuthState.LoggedIn else AuthState.LoggedOut
-    )
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
     override val isSupported: Boolean = true
 
@@ -415,8 +412,21 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
                         usingPersistStorage = true,
                     ),
                     application,
-                ).also { sharedClient = it }
+                ).also {
+                    sharedClient = it
+                    // 登录态初始化只在首个 client 诞生时做一次；后续 manager 重建不得重置——
+                    // 否则会踩掉在途的 LoggingIn / 回调刚写入的终态
+                    _authState.value = if (it.isAuthenticated) AuthState.LoggedIn else AuthState.LoggedOut
+                }
             }
+
+        /**
+         * 进程级登录态流：manager 随 Activity 重建，若 flow 留在实例上，落在旧实例的回调
+         * （登录成功写 LoggedIn / 会话失效写 LoggedOut）只会更新旧 flow，新实例与 UI 永远
+         * 看不到——SignInFailureBus 当年为失败事件专设进程级总线就是绕这个坑，状态流本身
+         * 提级后这一族「写错实例」问题整体消失。
+         */
+        private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedOut)
 
         /** token 获取互斥锁：进程级——跨 manager 实例的并发调用也串行化，见 [getAccessToken] */
         private val tokenMutex = Mutex()
