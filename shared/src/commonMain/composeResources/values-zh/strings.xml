@@ -11,7 +11,6 @@
     <string name="theme_dark">深色</string>
     <string name="theme_amoled">纯黑</string>
     <string name="appearance">外观</string>
-    <string name="app_settings">应用设置</string>
     <string name="subscription_reminders">订阅与提醒</string>
     <string name="language_settings">应用语言</string>
     <string name="app_language_desc">界面显示语言</string>
@@ -235,7 +234,7 @@
     <string name="account_github_entry">GitHub 主页</string>
     <string name="account_github_entry_desc">贡献与关注动态</string>
     <string name="settings_group_general">通用</string>
-    <string name="app_settings_entry_desc">语言、默认首页、打开方式</string>
+    <string name="settings_entry_desc">外观、语言、通知、反馈</string>
     <string name="contrib_total">最近一年 %1$s 次贡献</string>
     <string name="contrib_less">少</string>
     <string name="contrib_more">多</string>

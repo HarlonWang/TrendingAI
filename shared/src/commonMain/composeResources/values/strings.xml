@@ -11,7 +11,6 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_amoled">AMOLED</string>
     <string name="appearance">Appearance</string>
-    <string name="app_settings">App Settings</string>
     <string name="subscription_reminders">Subscription &amp; Reminders</string>
     <string name="language_settings">App Language</string>
     <string name="app_language_desc">Interface display language</string>
@@ -235,7 +234,7 @@
     <string name="account_github_entry">GitHub profile</string>
     <string name="account_github_entry_desc">Contributions &amp; network activity</string>
     <string name="settings_group_general">General</string>
-    <string name="app_settings_entry_desc">Language, default tab, link opening</string>
+    <string name="settings_entry_desc">Appearance, language, notifications, feedback</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>

@@ -4,15 +4,15 @@ import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
-import whl.trending.ai.ui.profile.AccountScreen
 import whl.trending.ai.ui.profile.GithubProfileScreen
 import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
+import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
-import whl.trending.ai.ui.settings.AppSettingsScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.settings.ColorLabScreen
+import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.digest.DigestScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
@@ -50,7 +50,7 @@ import whl.trending.ai.ui.common.WhatsNewHost
 data object Home
 data object Appearance
 data object ColorLab
-data object AppSettings
+data object Settings
 data object About
 data object Feedback
 data object Subscribe
@@ -228,21 +228,20 @@ fun App() {
                         }
 
                         is Profile -> NavEntry(key) {
-                            AccountScreen(
+                            ProfileScreen(
                                 onBack = { backStack.safePop() },
                                 onNavigateToGithubProfile = { backStack.add(GithubProfile) },
                                 onNavigateToFavorites = { backStack.add(Favorites) },
-                                onNavigateToFeedback = { backStack.add(Feedback) },
-                                onNavigateToSubscribe = { backStack.add(Subscribe) },
-                                onNavigateToAppearance = { backStack.add(Appearance) },
-                                onNavigateToAppSettings = { backStack.add(AppSettings) },
+                                onNavigateToSettings = { backStack.add(Settings) },
                                 onNavigateToAbout = { backStack.add(About) },
                             )
                         }
 
-                        is AppSettings -> NavEntry(key) {
-                            AppSettingsScreen(
+                        is Settings -> NavEntry(key) {
+                            SettingsScreen(
                                 onBack = { backStack.safePop() },
+                                onNavigateToAppearance = { backStack.add(Appearance) },
+                                onNavigateToSubscribe = { backStack.add(Subscribe) },
                                 onNavigateToFeedback = { backStack.add(Feedback) },
                             )
                         }
