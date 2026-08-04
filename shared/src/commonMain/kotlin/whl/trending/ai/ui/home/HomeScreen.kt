@@ -104,9 +104,9 @@ import whl.trending.ai.ui.trending.TrendingViewModel
 import kotlin.time.Clock
 
 /**
- * 首页骨架：底栏四项（Trending / Picks / AI 对话 / 我的）。
+ * 首页骨架：底栏四项（首页 / Picks / AI 对话 / 我的）。
  *
- * Trending 内含 GitHub / Hacker News / Product Hunt 三个子源，用 [SecondaryTabRow] 切换——
+ * 首页内含 GitHub / Hacker News / Product Hunt 三个子源，用 [SecondaryTabRow] 切换——
  * 只点击、不横滑：三个源各自有下拉刷新与横向可滚内容，再叠一层横向手势会互相抢。
  *
  * AI 对话是入口不是落点：点它直接推全屏聊天页，底栏选中态仍留在原 tab（见 [HomeTab.Chat]）。
@@ -158,11 +158,11 @@ fun HomeScreen(
     val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
 
     // HN / PH 同样按需创建；提升到这里是为了 bottomBar 双击刷新能拿到同一实例
-    val onTrendingTab = selectedTab == HomeTab.Trending
-    val hnViewModel: FeedViewModel? = if (onTrendingTab && selectedSource == TrendingSource.HackerNews) {
+    val onHomeTab = selectedTab == HomeTab.Home
+    val hnViewModel: FeedViewModel? = if (onHomeTab && selectedSource == TrendingSource.HackerNews) {
         viewModel(key = "hackernews") { FeedViewModel("hackernews") }
     } else null
-    val phViewModel: FeedViewModel? = if (onTrendingTab && selectedSource == TrendingSource.ProductHunt) {
+    val phViewModel: FeedViewModel? = if (onHomeTab && selectedSource == TrendingSource.ProductHunt) {
         viewModel(key = "producthunt") { FeedViewModel("producthunt") }
     } else null
 
@@ -180,7 +180,7 @@ fun HomeScreen(
     TrendingScaffold(
         topBar = {
             when (selectedTab) {
-                HomeTab.Trending -> when (selectedSource) {
+                HomeTab.Home -> when (selectedSource) {
                     TrendingSource.GitHub -> TrendingTopBar(
                         selectedPeriod = trendingUiState.selectedPeriod,
                         selectedLanguage = trendingUiState.selectedLanguage,
@@ -255,7 +255,7 @@ fun HomeScreen(
                 mapOf("tab" to selectedTab.name.lowercase()),
             )
             when (selectedTab) {
-                HomeTab.Trending -> when (selectedSource) {
+                HomeTab.Home -> when (selectedSource) {
                     TrendingSource.GitHub -> trendingViewModel.fetchData(isRefresh = true)
                     TrendingSource.HackerNews -> hnViewModel?.refresh()
                     TrendingSource.ProductHunt -> phViewModel?.refresh()
@@ -284,12 +284,12 @@ fun HomeScreen(
         val barItems = buildList {
             add(
                 HomeBarItem(
-                    key = HomeTab.Trending,
+                    key = HomeTab.Home,
                     iconSelected = Icons.Filled.Home,
                     iconUnselected = Icons.Outlined.Home,
                     label = stringResource(Res.string.home_title),
-                    selected = selectedTab == HomeTab.Trending,
-                    onClick = { switchTo(HomeTab.Trending) },
+                    selected = selectedTab == HomeTab.Home,
+                    onClick = { switchTo(HomeTab.Home) },
                 )
             )
             add(
@@ -356,7 +356,7 @@ fun HomeScreen(
                     // 而外面的实例是「当前选中才创建」，此刻已是 null，直接用会崩。
                     // viewModel() 取的是同一个 ViewModelStore 里的同一实例，不会多创建。
                     when (tab) {
-                        HomeTab.Trending -> Column(modifier = contentModifier) {
+                        HomeTab.Home -> Column(modifier = contentModifier) {
                             TrendingSourceTabs(
                                 selected = selectedSource,
                                 onSelect = { source ->

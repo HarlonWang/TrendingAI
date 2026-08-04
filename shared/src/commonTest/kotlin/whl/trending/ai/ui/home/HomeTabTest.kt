@@ -14,26 +14,27 @@ class HomeTabTest {
     }
 
     @Test
-    fun fromNameOrDefault_falls_back_to_trending_on_unknown_name() {
-        assertEquals(HomeTab.Trending, HomeTab.fromNameOrDefault("NoSuchTab"))
+    fun fromNameOrDefault_falls_back_to_home_on_unknown_name() {
+        assertEquals(HomeTab.Home, HomeTab.fromNameOrDefault("NoSuchTab"))
     }
 
     @Test
-    fun fromNameOrDefault_falls_back_to_trending_on_blank() {
-        assertEquals(HomeTab.Trending, HomeTab.fromNameOrDefault(""))
+    fun fromNameOrDefault_falls_back_to_home_on_blank() {
+        assertEquals(HomeTab.Home, HomeTab.fromNameOrDefault(""))
     }
 
     @Test
     fun fromNameOrDefault_is_case_sensitive_like_storage() {
-        // 存储值就是 HomeTab.name 原文，大小写不符视为非法、回落 Trending
-        assertEquals(HomeTab.Trending, HomeTab.fromNameOrDefault("picks"))
+        // 存储值就是 HomeTab.name 原文，大小写不符视为非法、回落 Home
+        assertEquals(HomeTab.Home, HomeTab.fromNameOrDefault("picks"))
     }
 
     @Test
-    fun legacy_source_tabs_resolve_to_trending() {
-        // 0.23 前底栏的三个源名：它们现在是 Trending 的子源，落到 Trending 才是同一个位置
-        listOf("GitHub", "HackerNews", "ProductHunt").forEach { legacy ->
-            assertEquals(HomeTab.Trending, HomeTab.fromNameOrDefault(legacy))
+    fun legacy_tab_names_resolve_to_home() {
+        // GitHub/HackerNews/ProductHunt 是 0.23 前的三个一级 tab（现为首页的子源），
+        // Trending 是首页 tab 改名前的旧名——存量值全靠回落收口，落点与改名前一致
+        listOf("GitHub", "HackerNews", "ProductHunt", "Trending").forEach { legacy ->
+            assertEquals(HomeTab.Home, HomeTab.fromNameOrDefault(legacy))
         }
     }
 
@@ -46,13 +47,13 @@ class HomeTabTest {
     @Test
     fun defaultCandidates_excludes_chat() {
         assertFalse(HomeTab.Chat in HomeTab.defaultCandidates)
-        assertEquals(listOf(HomeTab.Trending, HomeTab.Picks, HomeTab.Me), HomeTab.defaultCandidates)
+        assertEquals(listOf(HomeTab.Home, HomeTab.Picks, HomeTab.Me), HomeTab.defaultCandidates)
     }
 
     @Test
     fun defaultFromName_treats_chat_as_invalid() {
         // Chat 只是入口：即便被写进设置也不能当落点
-        assertEquals(HomeTab.Trending, HomeTab.defaultFromName(HomeTab.Chat.name))
+        assertEquals(HomeTab.Home, HomeTab.defaultFromName(HomeTab.Chat.name))
         assertEquals(HomeTab.Me, HomeTab.defaultFromName(HomeTab.Me.name))
     }
 }

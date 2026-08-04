@@ -44,9 +44,9 @@ const val DEFAULT_THEME_STYLE_STORAGE: String = "soft"
 const val DEFAULT_THEME_CONTRAST_STORAGE: String = "standard"
 
 /** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
-private const val DEFAULT_HOME_TAB_NAME = "Trending"
+private const val DEFAULT_HOME_TAB_NAME = "Home"
 
-/** Trending tab 上次停留的子源（TrendingSource.name），仅 SettingsManager 内部作缺省值使用 */
+/** 首页上次停留的子源（TrendingSource.name），仅 SettingsManager 内部作缺省值使用 */
 private const val DEFAULT_TRENDING_SOURCE_NAME = "GitHub"
 
 enum class AppLanguage(val isoCode: String?) {
@@ -589,9 +589,10 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 冷启动默认显示的首页 tab，存 ui 层 HomeTab 枚举的 name（如 "Trending"、"Picks"）。
+     * 冷启动默认显示的首页 tab，存 ui 层 HomeTab 枚举的 name（如 "Home"、"Picks"）。
      * data 层不依赖 ui 层枚举，只存取字符串；解析与回落由 HomeTab.defaultFromName 负责——
-     * 0.23 前存的是 "GitHub"/"HackerNews"/"ProductHunt"，解析时会落到 Trending。
+     * 历史上存过 "GitHub"/"HackerNews"/"ProductHunt"（0.23 前）与 "Trending"（本 tab 旧名），
+     * 都匹配不上，统一回落到 Home，落点与改名前一致。
      * 只决定初始值；会话内切 tab 不回写此设置。
      */
     val defaultHomeTab: Flow<String> = settings.getStringFlow(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
@@ -603,7 +604,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * Trending tab 上次停留的子源，存 ui 层 TrendingSource 枚举的 name。
+     * 首页上次停留的子源，存 ui 层 TrendingSource 枚举的 name。
      * 与「默认首页」不同，这个值每次切子源都回写——用户上次看的是哪个源，下次冷启动就回哪。
      */
     fun currentTrendingSource(): String = settings.getString(TRENDING_SOURCE_KEY, DEFAULT_TRENDING_SOURCE_NAME)

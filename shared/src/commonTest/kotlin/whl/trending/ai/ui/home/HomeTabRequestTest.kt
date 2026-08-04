@@ -25,7 +25,7 @@ class HomeTabRequestTest {
 
     @Test
     fun latestRequestWins() {
-        HomeTabRequest.request(HomeTab.Trending)
+        HomeTabRequest.request(HomeTab.Home)
         HomeTabRequest.request(HomeTab.Picks)
         assertEquals(HomeTab.Picks, HomeTabRequest.pending.value)
     }

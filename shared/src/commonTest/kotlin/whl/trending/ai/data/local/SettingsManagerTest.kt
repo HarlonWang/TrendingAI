@@ -131,10 +131,10 @@ class SettingsManagerTest {
     }
 
     @Test
-    fun defaultHomeTab_defaults_to_trending_and_persists() = runTest {
-        // 默认值：Trending
-        assertEquals("Trending", manager.currentDefaultHomeTab())
-        assertEquals("Trending", manager.defaultHomeTab.first())
+    fun defaultHomeTab_defaults_to_home_and_persists() = runTest {
+        // 默认值：Home
+        assertEquals("Home", manager.currentDefaultHomeTab())
+        assertEquals("Home", manager.defaultHomeTab.first())
 
         // 改为 Picks
         manager.setDefaultHomeTab("Picks")
