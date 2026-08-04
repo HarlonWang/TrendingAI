@@ -1,0 +1,3 @@
+• New AI digest page for Hacker News items
+• Product Hunt entries now show product images
+• Expired sign-ins now prompt you to sign in again instead of failing silently
