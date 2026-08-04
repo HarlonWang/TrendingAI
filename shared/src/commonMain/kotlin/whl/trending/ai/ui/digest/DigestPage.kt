@@ -56,15 +56,18 @@ fun PickItem.toDigestPage(): DigestPage = DigestPage(
 )
 
 /**
- * 存量收藏的 externalId 可能是空串或 `url:<url>` 合成键（见 [FavoriteItem.resolvedExternalId]）——
- * 此时解读接口查不到（进「暂无解读」态），讨论区链接回退到收藏时记录的打开地址。
+ * 存量收藏的 externalId 可能是空串或 `url:<url>` 合成键（见 [FavoriteItem.resolvedExternalId]），
+ * 且合成键会经云同步持久化——换设备拉取后本地 externalId 就是非空的合成值。
+ * 故讨论区链接只认**纯数字** id（HN story id 恒为数字），否则回退收藏时记录的打开地址；
+ * 解读接口查不到合成键会进「暂无解读」态，页面仍有可用出路。
  */
 fun FavoriteItem.toDigestPage(): DigestPage = DigestPage(
     source = source,
     externalId = resolvedExternalId,
     title = title,
     url = url,
-    hnUrl = externalId.takeIf { it.isNotBlank() }?.let { hnDiscussionUrl(it) } ?: targetUrl,
+    hnUrl = resolvedExternalId.takeIf { id -> id.isNotEmpty() && id.all(Char::isDigit) }
+        ?.let { hnDiscussionUrl(it) } ?: targetUrl,
     description = description,
     summary = summary,
 )

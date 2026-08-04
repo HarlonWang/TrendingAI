@@ -28,13 +28,17 @@ import androidx.compose.ui.unit.sp
  * chat 模块的 MarkdownText 基于 commonmark（Java 库），进不了 commonMain，不能复用。
  */
 
-private sealed interface Block {
+internal sealed interface Block {
     data class Heading(val text: String) : Block
     data class Paragraph(val text: String) : Block
     data class Bullets(val items: List<String>) : Block
 }
 
-private fun parseBlocks(markdown: String): List<Block> {
+// ATX 标题要求「井号 + 空格」：不带空格的 "#1 ranked"、"#ai" 是正文不是标题。
+// 级别刻意不限（模型偶发 ##/# 时按标题渲染，优于把井号字面量端给用户）
+private val HEADING_REGEX = Regex("""^#{1,6}\s+(.+)""")
+
+internal fun parseBlocks(markdown: String): List<Block> {
     val blocks = mutableListOf<Block>()
     val paragraph = StringBuilder()
     val bullets = mutableListOf<String>()
@@ -51,13 +55,14 @@ private fun parseBlocks(markdown: String): List<Block> {
 
     for (line in markdown.lines()) {
         val trimmed = line.trim()
+        val heading = HEADING_REGEX.matchEntire(trimmed)
         when {
             trimmed.isEmpty() -> {
                 flushParagraph(); flushBullets()
             }
-            trimmed.startsWith("#") -> {
+            heading != null -> {
                 flushParagraph(); flushBullets()
-                blocks.add(Block.Heading(trimmed.trimStart('#').trim()))
+                blocks.add(Block.Heading(heading.groupValues[1].trim()))
             }
             trimmed.startsWith("- ") || trimmed.startsWith("* ") -> {
                 flushParagraph()
