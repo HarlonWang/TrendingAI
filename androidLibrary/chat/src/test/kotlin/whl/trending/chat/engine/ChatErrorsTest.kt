@@ -1,5 +1,6 @@
 package whl.trending.chat.engine
 
+import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -42,6 +43,16 @@ class ChatErrorsTest {
     @Test
     fun status_500_is_server() {
         assertEquals(ChatErrorCategory.SERVER, ChatErrors.forStatus(500, null, null).category)
+    }
+
+    /** 地区拒绝是 502，分类上仍属 SERVER（可重试）；「重试无效」由 UI 按 code 单独裁决，
+     *  故这里锁定的契约是 code 必须原样透传上来 —— 丢了它 UI 就只能回落到「稍后再试」的误导文案。 */
+    @Test
+    fun region_blocked_stays_server_category_but_carries_code() {
+        val e = ChatErrors.forStatus(502, ChatError.CODE_REGION_BLOCKED, "Region not supported")
+        assertEquals(ChatErrorCategory.SERVER, e.category)
+        assertEquals(ChatError.CODE_REGION_BLOCKED, e.code)
+        assertTrue(e.category.retryable)
     }
 
     @Test

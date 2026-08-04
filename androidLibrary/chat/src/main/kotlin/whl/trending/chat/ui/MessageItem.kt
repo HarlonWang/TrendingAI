@@ -275,7 +275,9 @@ private fun AssistantMessage(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
-            if (error.category.retryable) {
+            // 地区拒绝虽是 5xx（category 可重试），但重试必然同样被拒——文案已说明「重试无效」，
+            // 按钮再留着就是把用户按在一个必失败的循环里
+            if (error.category.retryable && error.code != ChatError.CODE_REGION_BLOCKED) {
                 TextButton(onClick = onRetry) {
                     Text(stringResource(R.string.chat_retry))
                 }
@@ -293,6 +295,7 @@ private fun errorMessageRes(error: ChatError): Int = when (error.code) {
     "quota_global" -> R.string.chat_error_quota_global
     ChatError.CODE_QUOTA_DEVICE -> R.string.chat_quota_exceeded
     "upstream_timeout" -> R.string.chat_error_timeout
+    ChatError.CODE_REGION_BLOCKED -> R.string.chat_error_region_blocked
     "upstream_error" -> R.string.chat_error_server
     else -> when (error.category) {
         ChatErrorCategory.NETWORK -> R.string.chat_error_network

@@ -8,6 +8,7 @@
     <string name="chat_error_network">网络不可用，请检查连接后重试。</string>
     <string name="chat_error_timeout">响应超时，请重试。</string>
     <string name="chat_error_server">服务暂时不可用，请稍后再试。</string>
+    <string name="chat_error_region_blocked">当前网络所在地区暂不支持 AI 服务，重试无效。我们正在处理。</string>
     <string name="chat_error_bad_request">这条消息无法处理，可换个说法或开启新对话。</string>
     <string name="chat_error_content_too_long">消息内容过长，已超出长度上限。</string>
     <string name="chat_error_quota_global">服务今日繁忙，请明天再来。</string>
