@@ -110,7 +110,6 @@ import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.platform.trackItemClick
-import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
@@ -283,8 +282,7 @@ private fun RepoList(
             }
 
             else -> {
-                val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
-                val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                val favoriteUrls by globalFavoriteRepository.favoriteUrls.collectAsState()
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 items(
                     count = displayRepos.size,
@@ -298,21 +296,17 @@ private fun RepoList(
                         isFavorite = repo.url in favoriteUrls,
                         onStar = onStarRepo?.let { star -> { star(repo) } },
                         onToggleFavorite = {
-                            if (repo.url in favoriteUrls) {
-                                globalFavoriteRepository.remove(repo.url)
-                            } else {
-                                globalFavoriteRepository.add(
-                                    FavoriteItem(
-                                        url = repo.url,
-                                        title = "${repo.author}/${repo.repoName}",
-                                        source = "github",
-                                        description = repo.description.takeIf { it.isNotBlank() },
-                                        summary = repo.aiSummaries.firstOrNull()?.content,
-                                        savedAt = Clock.System.now().toEpochMilliseconds(),
-                                        externalId = "${repo.author}/${repo.repoName}"
-                                    )
+                            globalFavoriteRepository.toggle(
+                                FavoriteItem(
+                                    url = repo.url,
+                                    title = "${repo.author}/${repo.repoName}",
+                                    source = "github",
+                                    description = repo.description.takeIf { it.isNotBlank() },
+                                    summary = repo.aiSummaries.firstOrNull()?.content,
+                                    savedAt = Clock.System.now().toEpochMilliseconds(),
+                                    externalId = "${repo.author}/${repo.repoName}"
                                 )
-                            }
+                            )
                         },
                         onClick = {
                             trackItemClick(

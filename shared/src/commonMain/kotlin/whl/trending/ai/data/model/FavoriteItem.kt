@@ -17,35 +17,13 @@ data class FavoriteItem(
      */
     val openUrl: String? = null,
     /**
-     * 与后端 contents 表对齐的内容标识（github=owner/repo、hn=story id、ph=node id），
-     * 云同步以 (source, externalId) 为唯一键。存量本地收藏 / 无法解析时为空串，
-     * 首次同步由 [resolvedExternalId] best-effort 回填（github 从 url 反解，其余用 url 派生）。
+     * 与后端 contents 表对齐的内容标识（github=owner/repo、hn=story id、ph=node id）。
+     * 各页面收藏时都自带（来自 API），仅 0.22.0 之前的存量本地收藏为空串——
+     * 上云前由 `FavoriteRepository.withExternalId` 用 url 顶上，不做反解。
      */
     val externalId: String = ""
 ) {
     /** 打开收藏时应使用的地址 */
     val targetUrl: String get() = openUrl?.takeIf { it.isNotBlank() } ?: url
-
-    /**
-     * 云同步用的 external_id：优先用已有值；缺失时 best-effort 回填——
-     * github 从 url 反解 owner/repo，其余源用 url 派生合成键（`url:<url>`，仅保证用户内唯一，不与 contents join）。
-     */
-    val resolvedExternalId: String
-        get() = externalId.ifBlank {
-            if (source == "github") {
-                val path = url
-                    .removePrefix("https://github.com/")
-                    .removePrefix("http://github.com/")
-                    .trimEnd('/')
-                val parts = path.split("/")
-                if (parts.size >= 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
-                    "${parts[0]}/${parts[1]}"
-                } else {
-                    "url:$url"
-                }
-            } else {
-                "url:$url"
-            }
-        }
 }
 

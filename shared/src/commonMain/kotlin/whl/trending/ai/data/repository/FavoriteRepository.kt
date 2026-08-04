@@ -3,175 +3,183 @@ package whl.trending.ai.data.repository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import whl.trending.ai.auth.AuthManager
+import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
-import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.remote.TrendingApi
 
 /**
- * 收藏云同步引擎（设计稿 2026-07-24-favorites-cloud-sync，B 档：本地缓存 + 幂等 CRUD + 打开时全量拉取覆盖）。
+ * 收藏读写的唯一入口。一条数据永远只有一个真源，同步只有一个方向：
  *
- * - 本地缓存（[SettingsManager] 的 favorites）始终是 UI 即时真源，离线可用；网络在后台跑、失败不打断。
- * - 收藏/取消：先落本地即时生效，登录且已完成首次合并后入队一条 op 并后台 flush；失败留队列下次重试。
- * - [sync]（登录/启动触发）：首次登录把全部本地收藏 batch 上云合并，之后 flush 增量 op；随后全量 GET 覆盖本地。
- * - 删除跨设备传播靠「打开时全量 GET 覆盖」完成，无墓碑。
+ * - **未登录**：[SettingsManager.localFavorites] 是唯一真源，纯本地、离线可用（与云同步上线前一致）。
+ * - **登录那一刻**：把 local 那份一次性 batch 上云，成功后清空——这是全链路唯一一次「本地 → 云端」。
+ * - **已登录**：服务端是唯一真源，[SettingsManager.cachedFavorites] 只是它的只读镜像；
+ *   收藏/取消先乐观改镜像再打接口，失败原样回滚并发 [errors]（离线不支持收藏，是有意的功能裁剪）。
  *
- * UI 只需把原先直调 SettingsManager 的收藏读写改为调本类；收藏列表流仍读 SettingsManager.favorites 不变。
+ * 因此这里没有 pending 队列、没有 dirty/merged 状态位、没有双向合并与冲突判定：
+ * 「local 非空」本身就是「还欠一次导入」的信号，导入失败不清空、下次 [sync] 原样重来即可（batch 幂等）。
  */
 class FavoriteRepository(
     private val settings: SettingsManager,
     private val api: TrendingApi,
-    private val tokenProvider: suspend () -> String?,
+    /**
+     * 取当前 [AuthManager] 而非直接持有实例：配置变更会重建 Activity 并替换 [globalAuthManager]，
+     * 持有旧实例会让登录态判断永久停在注入前的 Noop（登录后仍走本地分支）。
+     */
+    private val authProvider: () -> AuthManager = { globalAuthManager },
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    /** 埋点注入点：host 单测里 Aptabase 未初始化，直调 trackEvent 会 NPE */
+    private val track: (String, Map<String, Any>) -> Unit = { name, props -> trackEvent(name, props) },
 ) {
-    // 序列化所有网络同步，避免 flush 与全量覆盖交错导致缓存被旧快照回冲
+    // 串行化所有收藏写入：连点两次、以及与 sync 的并发，都不允许交错读-改-写同一份存储
     private val mutex = Mutex()
 
-    /** 收藏：本地即时写入 + 埋点（沿用 SettingsManager 手势路径），随后后台推送。 */
-    fun add(item: FavoriteItem) {
-        val resolved = if (item.externalId.isBlank()) item.copy(externalId = item.resolvedExternalId) else item
-        settings.addFavorite(resolved)
-        if (canSyncOps()) {
-            scope.launch { pushOp(PendingFavoriteOp("add", resolved.url, resolved.source, resolved.externalId, resolved)) }
-        }
-    }
-
-    /** 取消收藏：按 url 本地删除 + 埋点，随后后台推送删除。 */
-    fun remove(url: String) {
-        val existing = settings.currentFavorites().firstOrNull { it.url == url }
-        settings.removeFavorite(url)
-        if (existing != null && canSyncOps()) {
-            scope.launch { pushOp(PendingFavoriteOp("delete", url, existing.source, existing.resolvedExternalId, null)) }
-        }
+    init {
+        settings.migrateFavoritesStorageIfNeeded()
     }
 
     /**
-     * 登录 / 启动时的同步。传入 access token（null=匿名，直接返回，纯本地）。
-     * 内部吞掉网络异常：失败保留本地态，下次再试。
+     * 当前应展示的收藏列表：登录态读云端镜像，否则读本地那份——**按登录态二选一，不做合并**。
+     *
+     * authState 用 cold flow 延迟到订阅时才读 [authProvider]，与 WhileSubscribed 配合，
+     * 天然跟上 Activity 重建后的实例替换。
      */
-    suspend fun sync(accessToken: String?) {
-        val token = accessToken ?: return
-        mutex.withLock {
-            runCatching {
-                if (!settings.favoritesMerged()) {
-                    // 首次登录合并：全部本地收藏（含匿名期 + 存量，externalId 回填）batch 上云
-                    val local = settings.currentFavorites().map { withResolvedId(it) }
-                    if (local.isNotEmpty() && !api.batchPutFavorites(token, local)) {
-                        return@runCatching // batch 失败：不置 merged、不覆盖本地，下次重试
-                    }
-                    settings.setPendingFavoriteOps(emptyList()) // batch 已全覆盖，清历史 op
-                    settings.setFavoritesMerged(true)
-                } else {
-                    flushPending(token)
-                }
-                // 全量拉取覆盖本地；叠加在途/未 flush 成功的 pending，避免刚发生的本地改动被旧快照冲掉
-                val server = api.fetchFavorites(token)
-                val merged = applyPending(server, settings.getPendingFavoriteOps())
-                settings.replaceFavorites(merged)
+    val favorites: StateFlow<List<FavoriteItem>> = combine(
+        flow { emitAll(authProvider().authState) },
+        settings.localFavorites,
+        settings.cachedFavorites,
+    ) { state, local, cached ->
+        if (state is AuthState.LoggedIn) cached else local
+    }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** 列表页判断「这条是否已收藏」用；由 [favorites] 派生，全 app 只解析一次存储。 */
+    val favoriteUrls: StateFlow<Set<String>> = favorites
+        .map { items -> items.mapTo(mutableSetOf()) { it.url } }
+        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    private val _errors = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** 收藏/取消失败（登录态下网络不可用等），由根部宿主统一提示。 */
+    val errors: SharedFlow<Unit> = _errors.asSharedFlow()
+
+    /** 收藏 / 取消收藏（按当前是否已收藏自动取反）。传入完整快照，取消时只用到 url。 */
+    fun toggle(item: FavoriteItem) {
+        scope.launch {
+            mutex.withLock {
+                if (currentFavorites().any { it.url == item.url }) removeLocked(item.url) else addLocked(item)
             }
         }
     }
 
     /**
-     * 触发一次同步，运行在仓库自有 [scope] 上（**不绑定任何 Compose composition**）。
-     * 必须用它、而非在 composable 的 LaunchedEffect 里直接 await [sync]——否则用户登录后
-     * 一旦离开当前屏（如登录发生在账户页、随即进"我的收藏"），composition 退出会取消协程
-     * （LeftCompositionCancellationException），[sync] 半途中断、[replaceFavorites] 不执行，
-     * 云端收藏拉不下来。token 由自身 [tokenProvider] 取，调用方无需持有。
+     * 登录后 / 启动时的同步：先把匿名期攒下的收藏一次性导入，再用服务端全量刷新镜像。
+     * 网络异常一律吞掉——本地态保持不变，下次进来重来。
      */
-    fun requestSync() {
-        scope.launch {
-            val token = tokenProvider() ?: return@launch
-            sync(token)
+    suspend fun sync() {
+        mutex.withLock {
+            val token = authProvider().getAccessToken() ?: return
+            runCatching {
+                val pending = settings.currentLocalFavorites()
+                if (pending.isNotEmpty()) {
+                    // 导入失败就此打住：此时不能刷新镜像，否则登录态读到的镜像里没有这批条目，
+                    // 用户会以为匿名期的收藏丢了（其实还在 local 键里等下次导入）
+                    if (!api.batchPutFavorites(token, pending.map { withExternalId(it) })) return@runCatching
+                    settings.setLocalFavorites(emptyList())
+                }
+                settings.setCachedFavorites(api.fetchFavorites(token))
+            }
         }
     }
 
     /**
-     * 登出清理：清空本地收藏 + 同步状态，避免账号间串味。由登出流程调用。
-     *
-     * 取舍：会一并清掉未 flush 成功的 pending op。极端场景「离线新增一条收藏（flush 失败留队列）
-     * → 立即登出」下，该条既未上云也被清除 → 丢失。不在此做 best-effort flush，因为：
-     * (1) 该场景前提是离线，flush 同样发不出去；(2) 登出流程开头已吊销凭证，此刻已无有效 token。
-     * 唯一能不丢的做法是「登出不清、留到下次登录再传」，但那会重开要防的账号串味。
-     * 详见设计稿 §6.2。
+     * 触发一次同步，跑在仓库自有 [scope] 上（**不绑定任何 Compose composition**）。
+     * 必须用它、而非在 composable 的 LaunchedEffect 里直接 await [sync]——否则用户登录后
+     * 一旦离开当前屏（如登录发生在账户页、随即进「我的收藏」），composition 退出会取消协程
+     * （LeftCompositionCancellationException），[sync] 半途中断，云端收藏拉不下来。
      */
+    fun requestSync() {
+        scope.launch { sync() }
+    }
+
+    /** 登出清理：只清云端镜像，匿名期那份不动（见 [SettingsManager.clearFavoritesOnSignOut]）。 */
     fun onSignOut() {
         settings.clearFavoritesOnSignOut()
     }
 
     // ---- 内部 ----
 
-    /**
-     * 仅在已完成首次合并后才入队增量 op；否则本地改动由首次 batch 合并整体覆盖。
-     * merged 只有在带真实 token 的 [sync] 成功后才置 true，故匿名 / iOS(Noop 无 token) 恒为 false，
-     * 天然不入队、队列不膨胀，无需再看平台是否支持登录。
-     */
-    private fun canSyncOps(): Boolean = settings.favoritesMerged()
+    private fun isLoggedIn(): Boolean = authProvider().authState.value is AuthState.LoggedIn
 
     /**
-     * 入队一条 op 并尝试 flush，全程持 [mutex]——与 [sync] 串行化。
-     * 关键：pending 键的读-改-写只允许在 mutex 内发生（enqueue/flush/sync 都在锁内），
-     * 否则主线程 enqueue 与后台 flush 并行 RMW 同一 prefs 键会 lost-update、静默丢一条收藏。
+     * 当前收藏的同步快照。[favorites] 是 StateFlow，首个值要等订阅后才到，
+     * 进屏即读（如收藏列表页的曝光埋点）会拿到初始空列表，故直接读存储。
      */
-    private suspend fun pushOp(op: PendingFavoriteOp) {
-        mutex.withLock {
-            enqueueLocked(op)
-            val token = tokenProvider() ?: return@withLock // 匿名/无 token：留队列，下次 sync 再推
-            runCatching { flushPending(token) }
+    fun currentFavorites(): List<FavoriteItem> =
+        if (isLoggedIn()) settings.currentCachedFavorites() else settings.currentLocalFavorites()
+
+    private suspend fun addLocked(item: FavoriteItem) {
+        val entry = withExternalId(item)
+        track("favorite_toggle", mapOf("on" to true, "source" to entry.source))
+        if (!isLoggedIn()) {
+            settings.setLocalFavorites(listOf(entry) + settings.currentLocalFavorites().filterNot { it.url == entry.url })
+            return
+        }
+        val before = settings.currentCachedFavorites()
+        settings.setCachedFavorites(listOf(entry) + before.filterNot { it.url == entry.url }) // 乐观
+        val token = authProvider().getAccessToken()
+        val ok = token != null && runCatching { api.putFavorite(token, entry) }.getOrDefault(false)
+        if (!ok) {
+            settings.setCachedFavorites(before)
+            _errors.tryEmit(Unit)
         }
     }
 
-    /** 必须在 [mutex] 内调用。同一 (op,url) 去重合并：保留最新一条，避免同键 op 堆积。 */
-    private fun enqueueLocked(op: PendingFavoriteOp) {
-        val kept = settings.getPendingFavoriteOps().filterNot { it.op == op.op && it.url == op.url }
-        settings.setPendingFavoriteOps(kept + op)
-    }
-
-    /** 逐条推送队列；成功的移出队列，遇失败保留剩余（含当前）待下次重试。必须在 [mutex] 内调用。 */
-    private suspend fun flushPending(token: String) {
-        val ops = settings.getPendingFavoriteOps()
-        if (ops.isEmpty()) return
-        val done = mutableListOf<PendingFavoriteOp>()
-        for (op in ops) {
-            val ok = when (op.op) {
-                "add" -> op.item?.let { api.putFavorite(token, withResolvedId(it)) } ?: true
-                "delete" -> api.deleteFavorite(token, op.source, op.externalId)
-                else -> true // 未知 op 直接丢弃
-            }
-            if (ok) done += op else break
+    private suspend fun removeLocked(url: String) {
+        track("favorite_toggle", mapOf("on" to false))
+        if (!isLoggedIn()) {
+            settings.setLocalFavorites(settings.currentLocalFavorites().filterNot { it.url == url })
+            return
         }
-        if (done.isNotEmpty()) {
-            settings.setPendingFavoriteOps(settings.getPendingFavoriteOps().filterNot { it in done })
+        val before = settings.currentCachedFavorites()
+        val target = before.firstOrNull { it.url == url } ?: return
+        settings.setCachedFavorites(before.filterNot { it.url == url }) // 乐观
+        val token = authProvider().getAccessToken()
+        val ok = token != null &&
+            runCatching { api.deleteFavorite(token, target.source, withExternalId(target).externalId) }.getOrDefault(false)
+        if (!ok) {
+            settings.setCachedFavorites(before)
+            _errors.tryEmit(Unit)
         }
     }
 
-    private fun withResolvedId(item: FavoriteItem): FavoriteItem =
-        if (item.externalId.isBlank()) item.copy(externalId = item.resolvedExternalId) else item
-
-    /** 服务端全量叠加本地 pending：add 覆盖入表、delete 移除，按 url 定位，收藏时刻倒序。 */
-    private fun applyPending(server: List<FavoriteItem>, pending: List<PendingFavoriteOp>): List<FavoriteItem> {
-        val map = LinkedHashMap<String, FavoriteItem>()
-        server.forEach { map[it.url] = it }
-        pending.forEach { op ->
-            when (op.op) {
-                "add" -> op.item?.let { map[it.url] = it }
-                "delete" -> map.remove(op.url)
-            }
-        }
-        return map.values.sortedByDescending { it.savedAt }
-    }
+    /**
+     * 服务端要求 external_id 非空。列表页 / 解读页给的条目都自带（来自 API），
+     * 缺失的只有 0.22.0 之前存下的存量收藏——一律用 url 顶上即可：
+     * 该字段在收藏这条链路上只做用户内唯一键，从不与 contents join，无需反解真实 id。
+     * 已登录时镜像来自服务端 GET，删除用的是服务端给的值，故存量行也一定删得掉。
+     */
+    private fun withExternalId(item: FavoriteItem): FavoriteItem =
+        if (item.externalId.isBlank()) item.copy(externalId = item.url) else item
 }
 
-/** 全局单例：注入全局 SettingsManager / TrendingApi / 登录态 token。 */
+/** 全局单例：注入全局 SettingsManager / TrendingApi，登录态每次现取。 */
 val globalFavoriteRepository by lazy {
-    FavoriteRepository(
-        settings = globalSettingsManager,
-        api = TrendingApi(),
-        tokenProvider = { globalAuthManager.getAccessToken() },
-    )
+    FavoriteRepository(settings = globalSettingsManager, api = TrendingApi())
 }

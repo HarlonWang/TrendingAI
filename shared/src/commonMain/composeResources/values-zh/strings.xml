@@ -130,6 +130,7 @@
     <string name="favorites_empty">暂无收藏</string>
     <string name="favorites_empty_hint">点击内容底部的菜单即可收藏</string>
     <string name="favorites_removed">已取消收藏</string>
+    <string name="favorites_action_failed">收藏同步失败，请检查网络后重试</string>
     <string name="action_favorite">收藏</string>
     <string name="action_unfavorite">取消收藏</string>
     <string name="action_star">Star</string>

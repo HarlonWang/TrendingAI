@@ -38,7 +38,6 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.platform.trackItemClick
-import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
@@ -131,8 +130,7 @@ fun FeedScreen(
             }
 
             else -> {
-                val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
-                val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                val favoriteUrls by globalFavoriteRepository.favoriteUrls.collectAsState()
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(
                         uiState.items,
@@ -144,22 +142,18 @@ fun FeedScreen(
                             isFavorite = item.url in favoriteUrls,
                             onOpenUrl = onOpenUrl,
                             onToggleFavorite = {
-                                if (item.url in favoriteUrls) {
-                                    globalFavoriteRepository.remove(item.url)
-                                } else {
-                                    globalFavoriteRepository.add(
-                                        FavoriteItem(
-                                            url = item.url,
-                                            title = item.title,
-                                            source = item.source,
-                                            description = item.description,
-                                            summary = item.summary,
-                                            savedAt = Clock.System.now().toEpochMilliseconds(),
-                                            openUrl = item.openUrl,
-                                            externalId = item.externalId
-                                        )
+                                globalFavoriteRepository.toggle(
+                                    FavoriteItem(
+                                        url = item.url,
+                                        title = item.title,
+                                        source = item.source,
+                                        description = item.description,
+                                        summary = item.summary,
+                                        savedAt = Clock.System.now().toEpochMilliseconds(),
+                                        openUrl = item.openUrl,
+                                        externalId = item.externalId
                                     )
-                                }
+                                )
                             }
                         )
                         if (index < uiState.items.lastIndex) {

@@ -1,6 +1,5 @@
 package whl.trending.ai.ui.favorites
 
-import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.ui.common.AiSummaryBox
@@ -9,7 +8,6 @@ import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.picks.SourceTag
 import whl.trending.ai.core.platform.trackEvent
 import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.flow.first
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,11 +66,10 @@ fun FavoriteListScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> },
     onOpenUrl: (url: String) -> Unit = {}
 ) {
-    val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
+    val favorites by globalFavoriteRepository.favorites.collectAsState()
 
     LaunchedEffect(Unit) {
-        val items = globalSettingsManager.favorites.first()
-        trackEvent("favorite_list_view", mapOf("count" to items.size))
+        trackEvent("favorite_list_view", mapOf("count" to globalFavoriteRepository.currentFavorites().size))
     }
 
     TrendingScaffold(
@@ -117,7 +114,7 @@ fun FavoriteListScreen(
                     FavoriteCard(
                         item = item,
                         onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl) },
-                        onRemove = { globalFavoriteRepository.remove(item.url) }
+                        onRemove = { globalFavoriteRepository.toggle(item) }
                     )
                     if (index < favorites.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

@@ -3,17 +3,23 @@ package whl.trending.ai.data.repository
 import com.russhwolf.settings.MapSettings
 import com.russhwolf.settings.ObservableSettings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import whl.trending.ai.auth.AuthManager
+import whl.trending.ai.auth.AuthState
+import whl.trending.ai.auth.SignInMethod
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.model.FavoriteItem
-import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.remote.TrendingApi
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** 内存版 TrendingApi：记录调用并维护一份「服务端」收藏，键为 source|externalId。 */
@@ -23,6 +29,7 @@ private class FakeApi : TrendingApi() {
     var batchCount = 0
     val puts = mutableListOf<FavoriteItem>()
     val deletes = mutableListOf<Pair<String, String>>()
+    var failWrites = false
     var failNextBatch = false
 
     private fun key(source: String, externalId: String) = "$source|$externalId"
@@ -37,12 +44,14 @@ private class FakeApi : TrendingApi() {
     }
 
     override suspend fun putFavorite(accessToken: String, item: FavoriteItem): Boolean {
+        if (failWrites) return false
         puts += item
         server[key(item.source, item.externalId)] = item
         return true
     }
 
     override suspend fun deleteFavorite(accessToken: String, source: String, externalId: String): Boolean {
+        if (failWrites) return false
         deletes += source to externalId
         server.remove(key(source, externalId))
         return true
@@ -56,12 +65,28 @@ private class FakeApi : TrendingApi() {
     }
 }
 
+/** 可切换登录态的 AuthManager；token 为 null 模拟已登录但取不到 token（离线）。 */
+private class FakeAuth(loggedIn: Boolean, private val token: String? = "tok") : AuthManager {
+    override val isSupported: Boolean = true
+    private val state = MutableStateFlow<AuthState>(if (loggedIn) AuthState.LoggedIn else AuthState.LoggedOut)
+    override val authState: StateFlow<AuthState> = state
+    override fun signIn(source: String) {}
+    override fun signIn(source: String, method: SignInMethod) {}
+    override fun signOut() {}
+    override suspend fun getAccessToken(): String? = token
+}
+
 class FavoriteRepositoryTest {
     private lateinit var settings: SettingsManager
     private lateinit var api: FakeApi
 
-    private fun repo(token: String? = "tok") =
-        FavoriteRepository(settings, api, tokenProvider = { token })
+    private fun TestScope.repo(auth: AuthManager) = FavoriteRepository(
+        settings = settings,
+        api = api,
+        authProvider = { auth },
+        scope = CoroutineScope(StandardTestDispatcher(testScheduler)),
+        track = { _, _ -> },
+    )
 
     private fun gh(name: String, ext: String = name) = FavoriteItem(
         url = "https://github.com/$name",
@@ -78,137 +103,140 @@ class FavoriteRepositoryTest {
     }
 
     @Test
-    fun 首次登录合并_本地全部batch上云并用服务端覆盖本地() = runTest {
-        settings.replaceFavorites(listOf(gh("a/b"), gh("c/d")))
+    fun 未登录_收藏与取消只落本地不打接口() = runTest {
+        val repo = repo(FakeAuth(loggedIn = false))
+
+        repo.toggle(gh("a/b"))
+        advanceUntilIdle()
+        assertEquals(listOf("a/b"), settings.currentLocalFavorites().map { it.externalId })
+        assertEquals(0, api.puts.size)
+
+        repo.toggle(gh("a/b")) // 再点一次 = 取消
+        advanceUntilIdle()
+        assertTrue(settings.currentLocalFavorites().isEmpty())
+        assertEquals(0, api.deletes.size)
+        assertTrue(settings.currentCachedFavorites().isEmpty()) // 未登录不碰镜像
+    }
+
+    @Test
+    fun 登录后sync_匿名收藏一次性导入并清空本地键() = runTest {
+        settings.setLocalFavorites(listOf(gh("a/b"), gh("c/d")))
         api.seedServer(gh("e/f")) // 云端已有的另一条
 
-        repo().sync("tok")
+        repo(FakeAuth(loggedIn = true)).sync()
 
         assertEquals(1, api.batchCount)
-        assertTrue(settings.favoritesMerged())
-        // 本地被服务端全量覆盖：合并后含云端已有 + 本地上推的三条
-        val local = settings.currentFavorites().map { it.externalId }.toSet()
-        assertEquals(setOf("a/b", "c/d", "e/f"), local)
+        assertTrue(settings.currentLocalFavorites().isEmpty()) // 导入成功即清空，不会二次导入
+        assertEquals(setOf("a/b", "c/d", "e/f"), settings.currentCachedFavorites().map { it.externalId }.toSet())
     }
 
     @Test
-    fun 首次合并_存量收藏无externalId时github从url回填() = runTest {
-        // 存量本地收藏：externalId 为空
-        settings.replaceFavorites(listOf(FavoriteItem(url = "https://github.com/foo/bar", title = "foo/bar", source = "github")))
-
-        repo().sync("tok")
-
-        // batch 上推的条目 externalId 已回填为 owner/repo
-        assertEquals("foo/bar", api.server.keys.first().removePrefix("github|"))
-    }
-
-    @Test
-    fun batch失败_不置merged也不覆盖本地() = runTest {
-        settings.replaceFavorites(listOf(gh("a/b")))
+    fun 导入失败_不清本地也不刷新镜像() = runTest {
+        settings.setLocalFavorites(listOf(gh("a/b")))
         api.failNextBatch = true
 
-        repo().sync("tok")
+        repo(FakeAuth(loggedIn = true)).sync()
 
-        assertFalse(settings.favoritesMerged())
-        assertEquals(0, api.getCount) // 未走到 GET
-        assertEquals(listOf("a/b"), settings.currentFavorites().map { it.externalId }) // 本地保留
+        assertEquals(listOf("a/b"), settings.currentLocalFavorites().map { it.externalId }) // 留着下次重来
+        assertEquals(0, api.getCount) // 未走到 GET，避免登录态读到不含这批条目的镜像
     }
 
     @Test
-    fun 已合并_删除跨设备传播_GET覆盖移除本地条目() = runTest {
-        // 已完成首次合并；本地有 X，云端已被别的设备删掉（服务端为空）
-        settings.setFavoritesMerged(true)
-        settings.replaceFavorites(listOf(gh("a/b")))
-        // api.server 为空
-
-        repo().sync("tok")
-
-        assertEquals(0, api.batchCount) // 已合并，不再 batch
-        assertTrue(settings.currentFavorites().isEmpty()) // X 被服务端全量覆盖移除
-    }
-
-    @Test
-    fun 已合并_在途pending的add在GET覆盖时被保留() = runTest {
-        settings.setFavoritesMerged(true)
-        // 服务端空，但本地有一条尚未 flush 成功的 add op
-        settings.setPendingFavoriteOps(
-            listOf(PendingFavoriteOp("add", "https://github.com/x/y", "github", "x/y", gh("x/y")))
+    fun 存量收藏无externalId_导入时用url顶上() = runTest {
+        settings.setLocalFavorites(
+            listOf(FavoriteItem(url = "https://news.ycombinator.com/item?id=1", title = "x", source = "hackernews"))
         )
 
-        repo().sync("tok")
+        repo(FakeAuth(loggedIn = true)).sync()
 
-        // GET 返回空，但 pending add 叠加回来，本地仍含 x/y
-        assertEquals(listOf("x/y"), settings.currentFavorites().map { it.externalId })
+        assertEquals("hackernews|https://news.ycombinator.com/item?id=1", api.server.keys.single())
     }
 
     @Test
-    fun 已合并_flush先推增量op再GET() = runTest {
-        settings.setFavoritesMerged(true)
-        settings.replaceFavorites(listOf(gh("a/b")))
-        settings.setPendingFavoriteOps(
-            listOf(PendingFavoriteOp("add", "https://github.com/a/b", "github", "a/b", gh("a/b")))
-        )
+    fun 已登录_删除跨设备传播_GET刷新镜像移除条目() = runTest {
+        settings.setCachedFavorites(listOf(gh("a/b"))) // 另一台设备已删，服务端为空
 
-        repo().sync("tok")
+        repo(FakeAuth(loggedIn = true)).sync()
 
-        assertEquals(1, api.puts.size) // pending add 被 flush
-        assertTrue(settings.getPendingFavoriteOps().isEmpty()) // flush 成功后出队
+        assertEquals(0, api.batchCount) // 本地键为空，无需导入
+        assertTrue(settings.currentCachedFavorites().isEmpty())
     }
 
     @Test
-    fun 匿名_token为null时sync直接返回不动本地() = runTest {
-        settings.replaceFavorites(listOf(gh("a/b")))
+    fun 已登录_收藏成功_镜像与服务端一致() = runTest {
+        val repo = repo(FakeAuth(loggedIn = true))
 
-        repo(token = null).sync(null)
+        repo.toggle(gh("a/b"))
+        advanceUntilIdle()
 
-        assertFalse(settings.favoritesMerged())
-        assertEquals(0, api.getCount)
-        assertEquals(0, api.batchCount)
-        assertEquals(listOf("a/b"), settings.currentFavorites().map { it.externalId })
+        assertEquals(listOf("a/b"), settings.currentCachedFavorites().map { it.externalId })
+        assertEquals(1, api.puts.size)
+        assertTrue(settings.currentLocalFavorites().isEmpty()) // 登录态绝不写本地键
     }
 
-    // 注：add()/remove() 的手势路径会触发 favorite_toggle 埋点（Aptabase），
-    // 在纯 JVM host-test 中未初始化会 NPE，故不在此单测；其本地写入 + 入队逻辑
-    // 由上面的「在途 pending 保留」「flush 增量」用例间接覆盖（构造同一 PendingFavoriteOp 形态）。
-
-    // 回归：requestSync 必须在仓库自有 scope 上把同步跑到底（拉取并覆盖本地），
-    // 而非绑定调用方（Compose composition）——否则登录后切屏会取消协程、拉取半途中断。
     @Test
-    fun requestSync_在独立scope上跑完整拉取覆盖() = runTest {
-        settings.setFavoritesMerged(true)
-        settings.replaceFavorites(emptyList())
+    fun 已登录_收藏失败_回滚镜像并发出错误() = runTest {
+        api.failWrites = true
+        val repo = repo(FakeAuth(loggedIn = true))
+        val errors = mutableListOf<Unit>()
+        val collector = CoroutineScope(StandardTestDispatcher(testScheduler))
+        collector.launchCollect(repo, errors)
+
+        repo.toggle(gh("a/b"))
+        advanceUntilIdle()
+
+        assertTrue(settings.currentCachedFavorites().isEmpty()) // 乐观写入已回滚
+        assertEquals(1, errors.size)
+        collector.cancel()
+    }
+
+    @Test
+    fun 已登录_取消失败_条目回到镜像() = runTest {
+        settings.setCachedFavorites(listOf(gh("a/b")))
+        api.failWrites = true
+        val repo = repo(FakeAuth(loggedIn = true))
+
+        repo.toggle(gh("a/b"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("a/b"), settings.currentCachedFavorites().map { it.externalId })
+    }
+
+    @Test
+    fun 已登录但取不到token_视为失败不静默丢弃() = runTest {
+        val repo = repo(FakeAuth(loggedIn = true, token = null))
+
+        repo.toggle(gh("a/b"))
+        advanceUntilIdle()
+
+        assertTrue(settings.currentCachedFavorites().isEmpty())
+        assertTrue(settings.currentLocalFavorites().isEmpty()) // 不能偷偷落到本地键：登录态读的是镜像，用户会看不见
+    }
+
+    @Test
+    fun requestSync_在独立scope上跑完拉取() = runTest {
         api.seedServer(gh("a/b"), gh("c/d"))
-        val repo = FavoriteRepository(settings, api, tokenProvider = { "tok" }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val repo = repo(FakeAuth(loggedIn = true))
 
         repo.requestSync()
         advanceUntilIdle()
 
-        assertEquals(setOf("a/b", "c/d"), settings.currentFavorites().map { it.externalId }.toSet())
+        assertEquals(setOf("a/b", "c/d"), settings.currentCachedFavorites().map { it.externalId }.toSet())
     }
 
     @Test
-    fun requestSync_token为null时不动本地() = runTest {
-        settings.setFavoritesMerged(true)
-        settings.replaceFavorites(listOf(gh("x/y")))
-        val repo = FavoriteRepository(settings, api, tokenProvider = { null }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+    fun onSignOut_只清镜像不动匿名那份() = runTest {
+        settings.setCachedFavorites(listOf(gh("a/b")))
+        settings.setLocalFavorites(listOf(gh("x/y"))) // 尚未导入成功的匿名收藏
 
-        repo.requestSync()
-        advanceUntilIdle()
+        repo(FakeAuth(loggedIn = true)).onSignOut()
 
-        assertEquals(0, api.getCount)
-        assertEquals(listOf("x/y"), settings.currentFavorites().map { it.externalId })
+        assertTrue(settings.currentCachedFavorites().isEmpty())
+        assertEquals(listOf("x/y"), settings.currentLocalFavorites().map { it.externalId })
     }
+}
 
-    @Test
-    fun onSignOut_清空收藏与同步状态() = runTest {
-        settings.setFavoritesMerged(true)
-        settings.replaceFavorites(listOf(gh("a/b")))
-        settings.setPendingFavoriteOps(listOf(PendingFavoriteOp("delete", "u", "github", "a/b", null)))
-
-        repo().onSignOut()
-
-        assertTrue(settings.currentFavorites().isEmpty())
-        assertTrue(settings.getPendingFavoriteOps().isEmpty())
-        assertFalse(settings.favoritesMerged())
-    }
+/** 收集 errors 的小工具：避免在测试体里写一堆 launch/collect 噪音。 */
+private fun CoroutineScope.launchCollect(repo: FavoriteRepository, sink: MutableList<Unit>) {
+    launch { repo.errors.collect { sink += it } }
 }

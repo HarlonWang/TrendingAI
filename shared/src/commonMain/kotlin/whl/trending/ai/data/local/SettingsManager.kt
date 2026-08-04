@@ -17,10 +17,8 @@ import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import whl.trending.ai.core.platform.getSystemLanguage
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.CHAT_MODEL_UNSET
 import whl.trending.ai.data.model.FavoriteItem
-import whl.trending.ai.data.model.PendingFavoriteOp
 
 /**
  * 持久化存的是 ordinal，新档位只能追加在末尾，否则老用户的选择会错位。
@@ -111,6 +109,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val LAST_SEEN_WHATSNEW_KEY = "prefs_last_seen_whatsnew_version"
     private val FAVORITES_KEY = "prefs_favorites"
+    private val FAVORITES_CACHE_KEY = "prefs_favorites_cache"
+    // 下面两个键已废弃（旧 op 队列 / 首次合并标记），仅由 migrateFavoritesStorageIfNeeded 读取后清除
     private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
     private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
@@ -350,69 +350,53 @@ class SettingsManager(private val settings: ObservableSettings) {
     fun setLastSeenWhatsNewVersion(version: String) =
         settings.putString(LAST_SEEN_WHATSNEW_KEY, version)
 
-    val favorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_KEY)
-        .map { json ->
-            if (json.isNullOrEmpty()) emptyList()
-            else runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }
-        }
+    // ---- 收藏：两份存储，各自只有一个写入者，永不互相合并 ----
+    // [localFavorites]（FAVORITES_KEY）= 未登录时的唯一真源，同时是「有条目待导入云端」的信号；
+    // [cachedFavorites]（FAVORITES_CACHE_KEY）= 已登录时服务端收藏的只读镜像。
+    // 登录态决定读哪一份（见 FavoriteRepository.favorites），两份从不 merge，故无需任何同步状态位。
 
-    fun addFavorite(item: FavoriteItem) {
-        val current = getCurrentFavorites()
-        if (current.any { it.url == item.url }) return
-        val updated = listOf(item) + current
-        settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
-        // 当前所有调用点均为用户手势，集中在此埋点即可覆盖各页面入口；
-        // 若未来引入同步/导入等非手势写入，需绕开本方法或拆分埋点
-        trackEvent("favorite_toggle", mapOf("on" to true, "source" to item.source))
-    }
+    val localFavorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_KEY)
+        .map { decodeFavorites(it) }
 
-    fun removeFavorite(url: String) {
-        val current = getCurrentFavorites()
-        val updated = current.filter { it.url != url }
-        settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
-        trackEvent("favorite_toggle", mapOf("on" to false))
-    }
+    fun currentLocalFavorites(): List<FavoriteItem> = decodeFavorites(settings.getStringOrNull(FAVORITES_KEY))
 
-    /** 当前收藏快照（同步引擎读本地态用）。 */
-    fun currentFavorites(): List<FavoriteItem> = getCurrentFavorites()
+    fun setLocalFavorites(items: List<FavoriteItem>) = writeFavorites(FAVORITES_KEY, items)
 
-    private fun getCurrentFavorites(): List<FavoriteItem> {
-        val json = settings.getStringOrNull(FAVORITES_KEY) ?: return emptyList()
+    val cachedFavorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_CACHE_KEY)
+        .map { decodeFavorites(it) }
+
+    fun currentCachedFavorites(): List<FavoriteItem> = decodeFavorites(settings.getStringOrNull(FAVORITES_CACHE_KEY))
+
+    fun setCachedFavorites(items: List<FavoriteItem>) = writeFavorites(FAVORITES_CACHE_KEY, items)
+
+    private fun decodeFavorites(json: String?): List<FavoriteItem> {
+        if (json.isNullOrEmpty()) return emptyList()
         return runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }
     }
 
-    /**
-     * 用服务端全量列表覆盖本地收藏缓存（云同步「打开时全量拉取」用）。
-     * 非用户手势，不埋点；与 [addFavorite]/[removeFavorite] 的手势写入区分。
-     */
-    fun replaceFavorites(items: List<FavoriteItem>) {
-        settings.putString(FAVORITES_KEY, Json.encodeToString(items))
-    }
-
-    // ---- 云同步状态：待同步 op 队列 + 首次登录合并标记 ----
-
-    fun getPendingFavoriteOps(): List<PendingFavoriteOp> {
-        val json = settings.getStringOrNull(FAVORITES_PENDING_KEY) ?: return emptyList()
-        return runCatching { Json.decodeFromString<List<PendingFavoriteOp>>(json) }.getOrElse { emptyList() }
-    }
-
-    fun setPendingFavoriteOps(ops: List<PendingFavoriteOp>) {
-        if (ops.isEmpty()) settings.remove(FAVORITES_PENDING_KEY)
-        else settings.putString(FAVORITES_PENDING_KEY, Json.encodeToString(ops))
-    }
-
-    /** 是否已完成本次登录的首次合并（true 后走增量 op flush，false 时走全量 batch 合并）。 */
-    fun favoritesMerged(): Boolean = settings.getBoolean(FAVORITES_MERGED_KEY, false)
-
-    fun setFavoritesMerged(value: Boolean) {
-        settings.putBoolean(FAVORITES_MERGED_KEY, value)
+    private fun writeFavorites(key: String, items: List<FavoriteItem>) {
+        if (items.isEmpty()) settings.remove(key) else settings.putString(key, Json.encodeToString(items))
     }
 
     /**
-     * 登出时清空账号收藏与同步状态：收藏已安全存于该账号云端，清本地避免账号间数据串味
-     * （下个账号登录时不会把上一个账号的收藏 batch 合并上去）。匿名重新收藏从空开始。
+     * 登出时只清云端镜像：那份数据属于刚登出的账号，留着会串到下个账号。
+     * 不清 [localFavorites]——它装的是匿名期收藏（登录后导入成功即被清空，非空说明尚未成功上云），
+     * 不属于任何账号，登出后应原样回到匿名态继续可见。
      */
     fun clearFavoritesOnSignOut() {
+        settings.remove(FAVORITES_CACHE_KEY)
+    }
+
+    /**
+     * 一次性存储迁移：0.22.0 的收藏同步把服务端全量写回 FAVORITES_KEY，并用 merged 标记记账。
+     * 新模型下 FAVORITES_KEY 专表「待导入」，若把老用户那份（已在云端）留在原处，
+     * 升级后会被当成待导入再 batch 上去一次——本身幂等无害，但会把用户在另一台设备已删、
+     * 本机尚未 GET 到的条目复活。故按老 merged 标记把它搬进镜像键，并清掉两个废弃键。
+     */
+    fun migrateFavoritesStorageIfNeeded() {
+        if (!settings.getBoolean(FAVORITES_MERGED_KEY, false)) return
+        val synced = decodeFavorites(settings.getStringOrNull(FAVORITES_KEY))
+        if (synced.isNotEmpty()) setCachedFavorites(synced)
         settings.remove(FAVORITES_KEY)
         settings.remove(FAVORITES_PENDING_KEY)
         settings.remove(FAVORITES_MERGED_KEY)

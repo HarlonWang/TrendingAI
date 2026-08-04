@@ -129,8 +129,7 @@ fun PicksScreen(
                         Text(text = stringResource(Res.string.picks_no_data))
                     }
                 } else {
-                    val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
-                    val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
+                    val favoriteUrls by globalFavoriteRepository.favoriteUrls.collectAsState()
                     // 初值同步读，避免已订阅/已关闭用户冷启动时横幅闪现一帧
                     val subscribedEmail by globalSettingsManager.subscribedEmail.collectAsState(
                         remember { globalSettingsManager.currentSubscribedEmail() }
@@ -208,7 +207,7 @@ private fun PicksList(
                 DebutCard(
                     item = item,
                     isFavorite = item.url in favoriteUrls,
-                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onToggleFavorite = { togglePickFavorite(item) },
                     onClick = { onItemClick(item, "debut") }
                 )
             }
@@ -224,7 +223,7 @@ private fun PicksList(
                 DeepDiveCard(
                     item = item,
                     isFavorite = item.url in favoriteUrls,
-                    onToggleFavorite = { togglePickFavorite(item, favoriteUrls) },
+                    onToggleFavorite = { togglePickFavorite(item) },
                     onClick = { onItemClick(item, "deep_dive") }
                 )
             }
@@ -489,23 +488,19 @@ private fun DebutCard(
     }
 }
 
-private fun togglePickFavorite(item: PickItem, favoriteUrls: Set<String>) {
-    if (item.url in favoriteUrls) {
-        globalFavoriteRepository.remove(item.url)
-    } else {
-        globalFavoriteRepository.add(
-            FavoriteItem(
-                url = item.url,
-                title = item.title,
-                source = item.source,
-                description = item.analysis?.core ?: item.description,
-                summary = item.analysis?.whyImportant ?: item.summary,
-                savedAt = Clock.System.now().toEpochMilliseconds(),
-                openUrl = item.openUrl,
-                externalId = item.externalId
-            )
+private fun togglePickFavorite(item: PickItem) {
+    globalFavoriteRepository.toggle(
+        FavoriteItem(
+            url = item.url,
+            title = item.title,
+            source = item.source,
+            description = item.analysis?.core ?: item.description,
+            summary = item.analysis?.whyImportant ?: item.summary,
+            savedAt = Clock.System.now().toEpochMilliseconds(),
+            openUrl = item.openUrl,
+            externalId = item.externalId
         )
-    }
+    )
 }
 
 

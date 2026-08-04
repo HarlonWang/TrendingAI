@@ -40,6 +40,7 @@ import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
+import whl.trending.ai.ui.common.FavoriteErrorHost
 import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.common.SignInMethodChooserHost
 import whl.trending.ai.ui.common.SponsorLinkHost
@@ -298,6 +299,8 @@ fun App() {
                         }
                     }
                 )
+                // 排在 NavDisplay 之后：Snackbar 不是独立窗口，先绘制会被页面内容盖住
+                FavoriteErrorHost()
             }
         }
     }
