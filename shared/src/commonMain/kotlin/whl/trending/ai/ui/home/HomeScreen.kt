@@ -7,17 +7,22 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -37,9 +42,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.RichTooltip
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -56,6 +62,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -101,7 +108,7 @@ import kotlin.time.Clock
 /**
  * 首页骨架：底栏四项（Trending / Picks / AI 对话 / 我的）。
  *
- * Trending 内含 GitHub / Hacker News / Product Hunt 三个子源，用 [PrimaryTabRow] 切换——
+ * Trending 内含 GitHub / Hacker News / Product Hunt 三个子源，用 [SecondaryTabRow] 切换——
  * 只点击、不横滑：三个源各自有下拉刷新与横向可滚内容，再叠一层横向手势会互相抢。
  *
  * AI 对话是入口不是落点：点它直接推全屏聊天页，底栏选中态仍留在原 tab（见 [HomeTab.Chat]）。
@@ -414,13 +421,39 @@ fun HomeScreen(
     }
 }
 
-/** Trending 的三源子 tab。文案用各源全称，图标交给顶栏——一行三项不必再塞图标。 */
+/**
+ * Trending 的三源子 tab。文案用各源全称，图标交给顶栏——一行三项不必再塞图标。
+ *
+ * 样式照搬 Echo 搜索页的内部 tab（`SearchScreen` 的 Explore / Echo Chart / Album）：
+ * [SecondaryTabRow] + 透明底，指示器不是整宽下划线，而是一条 32dp 宽、3dp 高、
+ * 上缘带圆角的短横条，居中在选中项下方。切内容同样是硬切，Echo 那边也没有转场。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TrendingSourceTabs(
     selected: TrendingSource,
     onSelect: (TrendingSource) -> Unit,
 ) {
-    PrimaryTabRow(selectedTabIndex = selected.ordinal) {
+    SecondaryTabRow(
+        selectedTabIndex = selected.ordinal,
+        containerColor = Color.Transparent,
+        indicator = {
+            Box(
+                modifier = Modifier
+                    .tabIndicatorOffset(selected.ordinal)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        },
+    ) {
         TrendingSource.entries.forEach { source ->
             val label = when (source) {
                 TrendingSource.GitHub -> "GitHub"
@@ -430,7 +463,9 @@ private fun TrendingSourceTabs(
             Tab(
                 selected = source == selected,
                 onClick = { onSelect(source) },
-                text = { Text(label, style = MaterialTheme.typography.titleSmall) },
+                selectedContentColor = MaterialTheme.colorScheme.primary,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = { Text(label) },
             )
         }
     }
