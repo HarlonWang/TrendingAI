@@ -85,7 +85,7 @@ import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.producthunt_title
 import trendingai.shared.generated.resources.me_title
-import trendingai.shared.generated.resources.trending_title
+import trendingai.shared.generated.resources.home_title
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
@@ -287,7 +287,7 @@ fun HomeScreen(
                     key = HomeTab.Trending,
                     iconSelected = Icons.Filled.Home,
                     iconUnselected = Icons.Outlined.Home,
-                    label = stringResource(Res.string.trending_title),
+                    label = stringResource(Res.string.home_title),
                     selected = selectedTab == HomeTab.Trending,
                     onClick = { switchTo(HomeTab.Trending) },
                 )

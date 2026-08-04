@@ -89,7 +89,7 @@ import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.summary_language_sponsor
-import trendingai.shared.generated.resources.trending_title
+import trendingai.shared.generated.resources.home_title
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProSponsor
@@ -452,7 +452,7 @@ private fun languageOptionText(language: SummaryLanguage): String {
 
 @Composable
 private fun homeTabOptionText(tab: HomeTab): String = when (tab) {
-    HomeTab.Trending -> stringResource(Res.string.trending_title)
+    HomeTab.Trending -> stringResource(Res.string.home_title)
     HomeTab.Picks -> stringResource(Res.string.picks_title)
     HomeTab.Me -> stringResource(Res.string.me_title)
     // Chat 不在 defaultCandidates 里，选项列表不会渲染它；穷尽 when 用

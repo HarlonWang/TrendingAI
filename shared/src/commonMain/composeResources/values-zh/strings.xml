@@ -115,7 +115,7 @@
     <string name="readme_no_content">该仓库暂无 README 文件。</string>
     <string name="privacy_policy">隐私政策</string>
     <string name="picks_title">Picks</string>
-    <string name="trending_title">热榜</string>
+    <string name="home_title">首页</string>
     <string name="chat_title">AI 对话</string>
     <string name="me_title">我的</string>
     <string name="hackernews_title">Hacker News</string>
