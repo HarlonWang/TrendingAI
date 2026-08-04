@@ -181,6 +181,10 @@ private fun DigestHeader(page: DigestPage, onOpenUrl: (url: String) -> Unit) {
                 if (isNotEmpty()) append(" · ")
                 append("💬 ${page.commentCount}")
             }
+            page.author?.takeIf { it.isNotBlank() }?.let {
+                if (isNotEmpty()) append(" · ")
+                append(it)
+            }
         }
         if (meta.isNotEmpty()) {
             Text(

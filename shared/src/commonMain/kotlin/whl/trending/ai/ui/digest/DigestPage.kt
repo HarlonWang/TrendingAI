@@ -21,6 +21,8 @@ data class DigestPage(
     val hnUrl: String,
     val score: Int = 0,
     val commentCount: Int = 0,
+    /** HN 提交者。仅 Feed 入口有值——Picks 接口与本地收藏结构都不带这个字段 */
+    val author: String? = null,
     val description: String? = null,
     val summary: String? = null,
 ) {
@@ -40,6 +42,7 @@ fun FeedItem.toDigestPage(): DigestPage = DigestPage(
     hnUrl = extra?.hnUrl?.takeIf { it.isNotBlank() } ?: hnDiscussionUrl(externalId),
     score = score,
     commentCount = commentCount,
+    author = author,
     description = description,
     summary = summary,
 )
