@@ -1,27 +1,32 @@
 package whl.trending.ai.ui.home
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -29,15 +34,14 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +50,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -59,11 +66,17 @@ import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.more_label
 import trendingai.shared.generated.resources.settings
 
-/** 悬浮底栏胶囊本体的高度，不含系统导航栏 inset 与外边距。 */
-val FloatingBarHeight: Dp = 64.dp
+/**
+ * 悬浮底栏胶囊本体的高度，不含系统导航栏 inset 与外边距。
+ * 对齐 Echo 的 `FloatingToolbarHeight`（constants/Dimensions.kt）。
+ */
+val FloatingBarHeight: Dp = 72.dp
 
-/** 胶囊与屏幕底边、与内容之间的呼吸位。 */
+/** 胶囊与屏幕底边、与内容之间的呼吸位。对齐 Echo 的 `FloatingToolbarBottomPadding`。 */
 val FloatingBarBottomMargin: Dp = 12.dp
+
+/** 胶囊最大宽度，平板/大屏上不至于拉成一整条。对齐 Echo。 */
+private val BarMaxWidth: Dp = 480.dp
 
 /** 底栏一项。[selected] 为 false 且点击后不改变选中态的项（AI 对话）也走这里，见 [HomeTab.Chat]。 */
 internal data class HomeBarItem(
@@ -77,9 +90,10 @@ internal data class HomeBarItem(
 /**
  * 首页悬浮底栏：M3 Expressive 的胶囊工具栏 + 右侧一颗独立的「⋯」FAB。
  *
- * 选中态不是给单项加底色，而是一块跟着选中项滑动的药丸——位置与宽度都用 spring 追过去，
- * 切 tab 时能看出「同一块高亮移过去了」，而不是这边灭那边亮。选中项额外展开文字标签，
- * 未选中只留图标，四项加一颗 FAB 才塞得进一行。
+ * 实现照搬 Echo Music 的 `FloatingNavigationToolbar`：外层 [BoxWithConstraints] 撑满并居中，
+ * 工具栏用 `widthIn(max)` 收住宽度，FAB 放在工具栏自带的槽位里。
+ * 选中态是一块跟着选中项滑动的药丸（见 [SlidingPillItems]）；只有图标、没有文字标签
+ * ——Echo 那边 `showSelectedLabels` 写死为 false。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -89,55 +103,69 @@ internal fun HomeFloatingBar(
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 不用工具栏自带的 FAB 槽位：那个槽位会把胶囊撑满整行、项挤在左边留一大片空白。
-    // 自己排成「胶囊（按内容宽度）+ 间隙 + 独立 FAB」，整体居中。
-    Row(
-        // 必须定高：不定的话 Row 会撑满父 Box，FAB 跟着拉成一根竖条、胶囊被垂直居中
-        modifier = modifier.height(FloatingBarHeight),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
     ) {
         HorizontalFloatingToolbar(
             expanded = true,
-            modifier = Modifier.fillMaxHeight(),
+            floatingActionButton = { OverflowFab(onOpenSettings = onOpenSettings, onOpenAbout = onOpenAbout) },
+            modifier = Modifier.widthIn(max = BarMaxWidth),
+            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(
+                toolbarContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            ),
+            animationSpec = FloatingToolbarDefaults.animationSpec(),
         ) {
             SlidingPillItems(items)
         }
-        OverflowFab(onOpenSettings = onOpenSettings, onOpenAbout = onOpenAbout)
     }
 }
 
-/** 图标行 + 底下那块滑动药丸。药丸画在 Row 之下同一个 Box 里，靠测量到的位置/宽度定位。 */
+/**
+ * 图标行 + 底下那块滑动药丸。药丸单独占一层 [Modifier.matchParentSize]，不参与
+ * [IntrinsicSize] 测量；位置与宽度取自各项 [onGloballyPositioned] 报回来的实测值。
+ */
 @Composable
 private fun SlidingPillItems(items: List<HomeBarItem>) {
     val density = LocalDensity.current
-    val widths = remember { mutableStateMapOf<HomeTab, Dp>() }
-    val positions = remember { mutableStateMapOf<HomeTab, Dp>() }
+    val itemWidths = remember { mutableStateMapOf<HomeTab, Dp>() }
+    val itemPositions = remember { mutableStateMapOf<HomeTab, Dp>() }
 
     val active = items.firstOrNull { it.selected }
-    val targetWidth = active?.let { widths[it.key] } ?: 0.dp
-    val targetOffset = active?.let { positions[it.key] } ?: 0.dp
+    val targetWidth = active?.let { itemWidths[it.key] } ?: 0.dp
+    val targetPosition = active?.let { itemPositions[it.key] } ?: 0.dp
 
-    val pillSpring = spring<Dp>(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMediumLow,
+    val slidingPillWidth by animateDpAsState(
+        targetValue = targetWidth,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "pillWidth",
     )
-    val pillWidth by animateDpAsState(targetWidth, pillSpring, label = "pillWidth")
-    val pillOffset by animateDpAsState(targetOffset, pillSpring, label = "pillOffset")
+    val slidingPillOffset by animateDpAsState(
+        targetValue = targetPosition,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "pillOffset",
+    )
 
     Box(modifier = Modifier.height(IntrinsicSize.Min)) {
-        if (targetWidth > 0.dp) {
-            Box(
-                modifier = Modifier
-                    .offset(x = pillOffset)
-                    .width(pillWidth)
-                    .fillMaxHeight()
-                    .padding(vertical = 6.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = CircleShape,
-                    )
-            )
+        Box(modifier = Modifier.matchParentSize()) {
+            if (targetWidth > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .offset(x = slidingPillOffset)
+                        .width(slidingPillWidth)
+                        .fillMaxHeight()
+                        .background(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(24.dp),
+                        )
+                )
+            }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -146,8 +174,8 @@ private fun SlidingPillItems(items: List<HomeBarItem>) {
                     item = item,
                     modifier = Modifier.onGloballyPositioned { coordinates ->
                         with(density) {
-                            widths[item.key] = coordinates.size.width.toDp()
-                            positions[item.key] = coordinates.positionInParent().x.toDp()
+                            itemWidths[item.key] = coordinates.size.width.toDp()
+                            itemPositions[item.key] = coordinates.positionInParent().x.toDp()
                         }
                     },
                 )
@@ -156,43 +184,66 @@ private fun SlidingPillItems(items: List<HomeBarItem>) {
     }
 }
 
+/**
+ * 单项：只有图标。宽度由内容撑开（下限 48dp），选中时图标放大、颜色渐变，按下时整体缩一下。
+ * 各段动画参数与 Echo 的 `FloatingNavigationToolbarItem` 相同。
+ */
 @Composable
 private fun BarItem(item: HomeBarItem, modifier: Modifier = Modifier) {
-    val contentColor = if (item.selected) {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = RoundedCornerShape(24.dp)
+    val transition = updateTransition(targetState = item.selected, label = "navItem_${item.key.name}")
+
+    val contentColor by transition.animateColor(
+        transitionSpec = { spring(stiffness = Spring.StiffnessMedium) },
+        label = "contentColor",
+    ) { isSelected ->
+        if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant
     }
+
+    val iconScale by transition.animateFloat(
+        transitionSpec = {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            )
+        },
+        label = "iconScale",
+    ) { isSelected -> if (isSelected) 1.12f else 1.0f }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.91f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "pressScale",
+    )
+
     Row(
         modifier = modifier
-            .height(FloatingBarHeight)
-            .selectable(
-                selected = item.selected,
+            .scale(pressScale)
+            .clip(shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
                 role = Role.Tab,
-                // 药丸自己就是选中反馈，再叠一圈 ripple 会糊成一团
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
                 onClick = item.onClick,
             )
-            .padding(horizontal = 16.dp),
+            .widthIn(min = 48.dp)
+            // Echo 在展示文字标签时把水平 padding 撑到 16dp；标签关掉后它取的就是这个 12dp
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        CompositionLocalProvider(LocalContentColor provides contentColor) {
-            Icon(item.icon, contentDescription = item.label)
-            // 只有选中项展开文字：四项都带标签会撑爆一行，全不带又认不出来
-            AnimatedVisibility(
-                visible = item.selected,
-                enter = fadeIn() + expandHorizontally(),
-                exit = fadeOut() + shrinkHorizontally(),
-            ) {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = contentColor,
-                )
-            }
-        }
+        Icon(
+            imageVector = item.icon,
+            contentDescription = item.label,
+            tint = contentColor,
+            modifier = Modifier.scale(iconScale),
+        )
     }
 }
 
@@ -203,11 +254,13 @@ private fun OverflowFab(onOpenSettings: () -> Unit, onOpenAbout: () -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box {
-        androidx.compose.material3.FloatingToolbarDefaults.VibrantFloatingActionButton(
+        FloatingToolbarDefaults.VibrantFloatingActionButton(
             onClick = { expanded = !expanded },
-            // 默认是圆角方形；这里要的是一颗独立的圆，和胶囊区分开
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            // Echo 用的是默认形状——androidx 版默认就是圆；CMP 这版默认是圆角方形，
+            // 显式传 CircleShape 才能得到与 Echo 相同的外观。
             shape = CircleShape,
-            modifier = Modifier.size(FloatingBarHeight),
         ) {
             Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(Res.string.more_label))
         }
@@ -215,7 +268,9 @@ private fun OverflowFab(onOpenSettings: () -> Unit, onOpenAbout: () -> Unit) {
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            shape = MaterialTheme.shapes.large,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+            tonalElevation = 8.dp,
         ) {
             OverflowMenuItem(
                 text = stringResource(Res.string.settings),
@@ -254,6 +309,9 @@ private fun OverflowMenuItem(text: String, icon: ImageVector, onClick: () -> Uni
                 }
             }
         },
-        colors = MenuDefaults.itemColors(),
+        colors = MenuDefaults.itemColors(
+            textColor = MaterialTheme.colorScheme.onSurface,
+            leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
     )
 }
