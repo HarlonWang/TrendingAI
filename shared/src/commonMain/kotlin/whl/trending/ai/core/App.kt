@@ -7,7 +7,6 @@ import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.profile.GithubProfileScreen
 import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
-import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
@@ -57,7 +56,6 @@ data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
-data object Profile
 data object GithubProfile
 data object ProfileFollowers
 data object ProfileFollowing
@@ -137,9 +135,6 @@ fun App() {
                         when (key) {
                         is Home -> NavEntry(key) {
                             HomeScreen(
-                                onNavigateToAccount = {
-                                    backStack.add(Profile)
-                                },
                                 onNavigateToDetail = { owner, repo ->
                                     backStack.add(RepoDetail(owner, repo))
                                 },
@@ -155,6 +150,10 @@ fun App() {
                                 onOpenDigest = { page ->
                                     backStack.add(page)
                                 },
+                                onNavigateToGithubProfile = { backStack.add(GithubProfile) },
+                                onNavigateToFavorites = { backStack.add(Favorites) },
+                                onNavigateToSettings = { backStack.add(Settings) },
+                                onNavigateToAbout = { backStack.add(About) },
                             )
                         }
 
@@ -224,16 +223,6 @@ fun App() {
                                 onOpenDigest = { page ->
                                     backStack.add(page)
                                 }
-                            )
-                        }
-
-                        is Profile -> NavEntry(key) {
-                            ProfileScreen(
-                                onBack = { backStack.safePop() },
-                                onNavigateToGithubProfile = { backStack.add(GithubProfile) },
-                                onNavigateToFavorites = { backStack.add(Favorites) },
-                                onNavigateToSettings = { backStack.add(Settings) },
-                                onNavigateToAbout = { backStack.add(About) },
                             )
                         }
 

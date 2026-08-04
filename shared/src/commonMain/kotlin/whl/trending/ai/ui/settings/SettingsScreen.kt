@@ -56,6 +56,7 @@ import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.close
+import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.default_home_tab
 import trendingai.shared.generated.resources.default_home_tab_desc
@@ -64,7 +65,6 @@ import trendingai.shared.generated.resources.feedback_email_invalid
 import trendingai.shared.generated.resources.feedback_email_placeholder
 import trendingai.shared.generated.resources.feedback_error
 import trendingai.shared.generated.resources.feedback_rate_limit
-import trendingai.shared.generated.resources.hackernews_title
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
@@ -75,7 +75,7 @@ import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.settings
 import trendingai.shared.generated.resources.settings_group_general
 import trendingai.shared.generated.resources.subscribe_title
@@ -89,6 +89,7 @@ import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.summary_language_sponsor
+import trendingai.shared.generated.resources.trending_title
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProSponsor
@@ -306,7 +307,7 @@ fun SettingsScreen(
                     trailingContent = {
                         Box {
                             Text(
-                                text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
+                                text = homeTabOptionText(HomeTab.defaultFromName(defaultHomeTab)),
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.clickable { expanded = true }
                             )
@@ -314,7 +315,7 @@ fun SettingsScreen(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                HomeTab.entries.forEach { tab ->
+                                HomeTab.defaultCandidates.forEach { tab ->
                                     DropdownMenuItem(
                                         text = { Text(homeTabOptionText(tab)) },
                                         onClick = {
@@ -451,10 +452,11 @@ private fun languageOptionText(language: SummaryLanguage): String {
 
 @Composable
 private fun homeTabOptionText(tab: HomeTab): String = when (tab) {
-    HomeTab.GitHub -> "GitHub"
-    HomeTab.HackerNews -> stringResource(Res.string.hackernews_title)
-    HomeTab.ProductHunt -> stringResource(Res.string.producthunt_title)
+    HomeTab.Trending -> stringResource(Res.string.trending_title)
     HomeTab.Picks -> stringResource(Res.string.picks_title)
+    HomeTab.Me -> stringResource(Res.string.me_title)
+    // Chat 不在 defaultCandidates 里，选项列表不会渲染它；穷尽 when 用
+    HomeTab.Chat -> stringResource(Res.string.chat_title)
 }
 
 /**

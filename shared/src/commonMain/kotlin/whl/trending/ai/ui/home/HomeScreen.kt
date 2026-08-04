@@ -2,37 +2,37 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RichTooltip
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,74 +42,80 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.hackernews_title
-import trendingai.shared.generated.resources.producthunt_title
 import trendingai.shared.generated.resources.app_name
-import trendingai.shared.generated.resources.filter_new_only
-import trendingai.shared.generated.resources.new_only_hint
-import trendingai.shared.generated.resources.icon_producthunt_dark
-import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
+import trendingai.shared.generated.resources.chat_title
+import trendingai.shared.generated.resources.filter_new_only
+import trendingai.shared.generated.resources.hackernews_title
 import trendingai.shared.generated.resources.history_trending
+import trendingai.shared.generated.resources.icon_producthunt_dark
+import trendingai.shared.generated.resources.icon_producthunt_light
+import trendingai.shared.generated.resources.new_only_hint
 import trendingai.shared.generated.resources.period_daily
 import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
-import trendingai.shared.generated.resources.account_title
-import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.globalAuthManager
+import trendingai.shared.generated.resources.picks_title
+import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.me_title
+import trendingai.shared.generated.resources.trending_title
 import whl.trending.ai.chat.globalChatScreen
+import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
 import whl.trending.ai.ui.picks.PicksViewModel
-import whl.trending.ai.ui.digest.DigestPage
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
 import kotlin.time.Clock
 
-enum class HomeTab {
-    GitHub, HackerNews, ProductHunt, Picks;
-
-    companion object {
-        /** 解析持久化的 tab name；非法值（枚举改名、脏数据）回落 GitHub */
-        fun fromNameOrDefault(name: String): HomeTab =
-            entries.firstOrNull { it.name == name } ?: GitHub
-    }
-}
-
+/**
+ * 首页骨架：底栏四项（Trending / Picks / AI 对话 / 我的）。
+ *
+ * Trending 内含 GitHub / Hacker News / Product Hunt 三个子源，用 [PrimaryTabRow] 切换——
+ * 只点击、不横滑：三个源各自有下拉刷新与横向可滚内容，再叠一层横向手势会互相抢。
+ *
+ * AI 对话是入口不是落点：点它直接推全屏聊天页，底栏选中态仍留在原 tab（见 [HomeTab.Chat]）。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToAccount: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onNavigateToChat: () -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {},
-    onOpenDigest: (DigestPage) -> Unit = {}
+    onOpenDigest: (DigestPage) -> Unit = {},
+    onNavigateToGithubProfile: () -> Unit = {},
+    onNavigateToFavorites: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
 ) {
     // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
     var selectedTabName by rememberSaveable {
-        mutableStateOf(HomeTab.fromNameOrDefault(globalSettingsManager.currentDefaultHomeTab()).name)
+        mutableStateOf(HomeTab.defaultFromName(globalSettingsManager.currentDefaultHomeTab()).name)
     }
     val selectedTab = HomeTab.fromNameOrDefault(selectedTabName)
+
+    // 子源与 tab 不同：每次切换都回写，冷启动回到上次看的那个源
+    var selectedSourceName by rememberSaveable {
+        mutableStateOf(TrendingSource.fromNameOrDefault(globalSettingsManager.currentTrendingSource()).name)
+    }
+    val selectedSource = TrendingSource.fromNameOrDefault(selectedSourceName)
 
     // 组合树外的切 tab 请求（通知点击深链等）：置位状态可跨冷启动等到这里再消费
     LaunchedEffect(Unit) {
@@ -133,20 +139,17 @@ fun HomeScreen(
     val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
 
     // HN / PH 同样按需创建；提升到这里是为了 bottomBar 双击刷新能拿到同一实例
-    val hnViewModel: FeedViewModel? = if (selectedTab == HomeTab.HackerNews) {
+    val onTrendingTab = selectedTab == HomeTab.Trending
+    val hnViewModel: FeedViewModel? = if (onTrendingTab && selectedSource == TrendingSource.HackerNews) {
         viewModel(key = "hackernews") { FeedViewModel("hackernews") }
     } else null
-    val phViewModel: FeedViewModel? = if (selectedTab == HomeTab.ProductHunt) {
+    val phViewModel: FeedViewModel? = if (onTrendingTab && selectedSource == TrendingSource.ProductHunt) {
         viewModel(key = "producthunt") { FeedViewModel("producthunt") }
     } else null
 
-    val authManager = globalAuthManager
-    val authState by authManager.authState.collectAsState()
-    val userAvatarUrl by globalSettingsManager.userAvatarUrl.collectAsState(null)
-
     // syncMe（建档 + 头像/GitHub 身份/isPro 缓存）不在此触发——已随收藏同步一起挂在 App 根部
-    // （见 App.kt）：登录常发生在账户页，Home 的 LaunchedEffect 彼时已随 NavEntry 销毁，
-    // 挂这里会漏掉「账户页登录」主路径（isPro 不回写，Pro 用户被当免费档，2026-08-03 必现修复）。
+    // （见 App.kt）：登录常发生在「我的」tab，Home 的 LaunchedEffect 彼时仍在，但登录也可能
+    // 发生在被推到栈顶的子页，挂这里会漏掉那条路径（isPro 不回写，Pro 用户被当免费档）。
 
     // 预热聊天模型目录：让选择器 chip 在用户首次进入 chat 前就绪，避免冷首拉导致 chip 迟迟不出现。
     LaunchedEffect(Unit) {
@@ -158,72 +161,60 @@ fun HomeScreen(
     TrendingScaffold(
         topBar = {
             when (selectedTab) {
-                HomeTab.GitHub -> TrendingTopBar(
-                    selectedPeriod = trendingUiState.selectedPeriod,
-                    selectedLanguage = trendingUiState.selectedLanguage,
-                    selectedDate = trendingUiState.selectedDate,
-                    selectedBatch = trendingUiState.selectedBatch,
-                    newOnly = trendingUiState.newOnly,
-                    onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
-                                onTitleClick = { showFilterSheet = true },
-                    onHistoryClick = { showHistorySheet = true },
-                    authState = authState,
-                    userAvatarUrl = userAvatarUrl,
-                    onNavigateToAccount = onNavigateToAccount,
+                HomeTab.Trending -> when (selectedSource) {
+                    TrendingSource.GitHub -> TrendingTopBar(
+                        selectedPeriod = trendingUiState.selectedPeriod,
+                        selectedLanguage = trendingUiState.selectedLanguage,
+                        selectedDate = trendingUiState.selectedDate,
+                        selectedBatch = trendingUiState.selectedBatch,
+                        newOnly = trendingUiState.newOnly,
+                        onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
+                        onTitleClick = { showFilterSheet = true },
+                        onHistoryClick = { showHistorySheet = true },
+                    )
+                    TrendingSource.HackerNews -> {
+                        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                        FeedTopBar(
+                            title = stringResource(Res.string.hackernews_title),
+                            navigationIcon = {
+                                Icon(
+                                    imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
+                                    contentDescription = "Hacker News",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified
+                                )
+                            },
+                        )
+                    }
+                    TrendingSource.ProductHunt -> {
+                        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                        FeedTopBar(
+                            title = stringResource(Res.string.producthunt_title),
+                            navigationIcon = {
+                                Icon(
+                                    painter = painterResource(
+                                        if (isDark) Res.drawable.icon_producthunt_dark
+                                        else Res.drawable.icon_producthunt_light
+                                    ),
+                                    contentDescription = "Product Hunt",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified
+                                )
+                            },
+                        )
+                    }
+                }
+                HomeTab.Picks -> PicksTopBar(date = picksUiState?.picks?.metadata?.date)
+                HomeTab.Me -> TrendingTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(Res.string.me_title),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    },
                 )
-                HomeTab.Picks -> PicksTopBar(
-                    date = picksUiState?.picks?.metadata?.date,
-                                authState = authState,
-                    userAvatarUrl = userAvatarUrl,
-                    onNavigateToAccount = onNavigateToAccount,
-                )
-                HomeTab.HackerNews -> {
-                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                    FeedTopBar(
-                        title = stringResource(Res.string.hackernews_title),
-                        navigationIcon = {
-                            Icon(
-                                imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
-                                contentDescription = "Hacker News",
-                                modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified
-                            )
-                        },
-                                        authState = authState,
-                        userAvatarUrl = userAvatarUrl,
-                        onNavigateToAccount = onNavigateToAccount,
-                    )
-                }
-                HomeTab.ProductHunt -> {
-                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                    FeedTopBar(
-                        title = stringResource(Res.string.producthunt_title),
-                        navigationIcon = {
-                            Icon(
-                                painter = painterResource(
-                                    if (isDark) Res.drawable.icon_producthunt_dark
-                                    else Res.drawable.icon_producthunt_light
-                                ),
-                                contentDescription = "Product Hunt",
-                                modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified
-                            )
-                        },
-                                        authState = authState,
-                        userAvatarUrl = userAvatarUrl,
-                        onNavigateToAccount = onNavigateToAccount,
-                    )
-                }
-            }
-        },
-        floatingActionButton = {
-            if (globalChatScreen != null) {
-                FloatingActionButton(onClick = onNavigateToChat) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "AI Assistant"
-                    )
-                }
+                // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
+                HomeTab.Chat -> Unit
             }
         },
         bottomBar = {
@@ -232,12 +223,19 @@ fun HomeScreen(
             val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
             var lastTapTime by remember { mutableStateOf(0L) }
             val refreshCurrentTab = {
-                trackEvent("tab_double_tap_refresh", mapOf("tab" to selectedTab.name.lowercase()))
+                trackEvent(
+                    "tab_double_tap_refresh",
+                    mapOf("tab" to selectedTab.name.lowercase()),
+                )
                 when (selectedTab) {
-                    HomeTab.GitHub -> trendingViewModel.fetchData(isRefresh = true)
-                    HomeTab.HackerNews -> hnViewModel?.refresh()
-                    HomeTab.ProductHunt -> phViewModel?.refresh()
+                    HomeTab.Trending -> when (selectedSource) {
+                        TrendingSource.GitHub -> trendingViewModel.fetchData(isRefresh = true)
+                        TrendingSource.HackerNews -> hnViewModel?.refresh()
+                        TrendingSource.ProductHunt -> phViewModel?.refresh()
+                    }
                     HomeTab.Picks -> picksViewModel?.refresh()
+                    // 「我的」自带下拉刷新，Chat 不是落点：都不参与双击刷新
+                    HomeTab.Me, HomeTab.Chat -> Unit
                 }
             }
             val switchTo = { tab: HomeTab ->
@@ -257,53 +255,74 @@ fun HomeScreen(
             }
             NavigationBar {
                 NavigationBarItem(
-                    selected = selectedTab == HomeTab.GitHub,
-                    onClick = { switchTo(HomeTab.GitHub) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "GitHub") },
-                    label = { Text("GitHub") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == HomeTab.HackerNews,
-                    onClick = { switchTo(HomeTab.HackerNews) },
-                    icon = { Icon(HackerNewsYIcon, contentDescription = stringResource(Res.string.hackernews_title)) },
-                    label = { Text("HN") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == HomeTab.ProductHunt,
-                    onClick = { switchTo(HomeTab.ProductHunt) },
-                    icon = { Icon(ProductHuntPIcon, contentDescription = stringResource(Res.string.producthunt_title)) },
-                    label = { Text("PH") }
+                    selected = selectedTab == HomeTab.Trending,
+                    onClick = { switchTo(HomeTab.Trending) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.trending_title)) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.Picks,
                     onClick = { switchTo(HomeTab.Picks) },
-                    icon = { Icon(Icons.Default.Star, contentDescription = stringResource(Res.string.picks_title)) },
+                    icon = { Icon(Icons.Default.Star, contentDescription = null) },
                     label = { Text(stringResource(Res.string.picks_title)) }
+                )
+                // 聊天未接入的平台（iOS）隐藏该项，底栏退化成三项
+                if (globalChatScreen != null) {
+                    NavigationBarItem(
+                        // 选中态不给它：点击只是推一页，回来后仍在原 tab
+                        selected = false,
+                        onClick = {
+                            trackEvent("tab_switch", mapOf("tab" to HomeTab.Chat.name.lowercase()))
+                            onNavigateToChat()
+                        },
+                        icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                        label = { Text(stringResource(Res.string.chat_title)) }
+                    )
+                }
+                NavigationBarItem(
+                    selected = selectedTab == HomeTab.Me,
+                    onClick = { switchTo(HomeTab.Me) },
+                    icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.me_title)) }
                 )
             }
         }
     ) { innerPadding ->
         when (selectedTab) {
-            HomeTab.GitHub -> TrendingScreen(
-                onNavigateToDetail = onNavigateToDetail,
-                showFilterSheet = showFilterSheet,
-                onDismissFilterSheet = { showFilterSheet = false },
-                showHistorySheet = showHistorySheet,
-                onDismissHistorySheet = { showHistorySheet = false },
-                modifier = Modifier.padding(innerPadding),
-                viewModel = trendingViewModel
-            )
-            HomeTab.HackerNews -> FeedScreen(
-                modifier = Modifier.padding(innerPadding),
-                viewModel = hnViewModel!!,
-                onOpenUrl = onOpenUrl,
-                onOpenDigest = onOpenDigest
-            )
-            HomeTab.ProductHunt -> FeedScreen(
-                modifier = Modifier.padding(innerPadding),
-                viewModel = phViewModel!!,
-                onOpenUrl = onOpenUrl
-            )
+            HomeTab.Trending -> Column(modifier = Modifier.padding(innerPadding)) {
+                TrendingSourceTabs(
+                    selected = selectedSource,
+                    onSelect = { source ->
+                        if (source != selectedSource) {
+                            trackEvent(
+                                "trending_source_switch",
+                                mapOf("source" to source.name.lowercase()),
+                            )
+                            selectedSourceName = source.name
+                            globalSettingsManager.setTrendingSource(source.name)
+                        }
+                    },
+                )
+                when (selectedSource) {
+                    TrendingSource.GitHub -> TrendingScreen(
+                        onNavigateToDetail = onNavigateToDetail,
+                        showFilterSheet = showFilterSheet,
+                        onDismissFilterSheet = { showFilterSheet = false },
+                        showHistorySheet = showHistorySheet,
+                        onDismissHistorySheet = { showHistorySheet = false },
+                        viewModel = trendingViewModel
+                    )
+                    TrendingSource.HackerNews -> FeedScreen(
+                        viewModel = hnViewModel!!,
+                        onOpenUrl = onOpenUrl,
+                        onOpenDigest = onOpenDigest
+                    )
+                    TrendingSource.ProductHunt -> FeedScreen(
+                        viewModel = phViewModel!!,
+                        onOpenUrl = onOpenUrl
+                    )
+                }
+            }
             HomeTab.Picks -> PicksScreen(
                 onNavigateToDetail = onNavigateToDetail,
                 onOpenUrl = onOpenUrl,
@@ -312,9 +331,38 @@ fun HomeScreen(
                 viewModel = picksViewModel!!,
                 onOpenDigest = onOpenDigest
             )
+            HomeTab.Me -> ProfileScreen(
+                modifier = Modifier.padding(innerPadding),
+                onNavigateToGithubProfile = onNavigateToGithubProfile,
+                onNavigateToFavorites = onNavigateToFavorites,
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToAbout = onNavigateToAbout,
+            )
+            HomeTab.Chat -> Unit
         }
     }
+}
 
+/** Trending 的三源子 tab。文案用各源全称，图标交给顶栏——一行三项不必再塞图标。 */
+@Composable
+private fun TrendingSourceTabs(
+    selected: TrendingSource,
+    onSelect: (TrendingSource) -> Unit,
+) {
+    PrimaryTabRow(selectedTabIndex = selected.ordinal) {
+        TrendingSource.entries.forEach { source ->
+            val label = when (source) {
+                TrendingSource.GitHub -> "GitHub"
+                TrendingSource.HackerNews -> stringResource(Res.string.hackernews_title)
+                TrendingSource.ProductHunt -> stringResource(Res.string.producthunt_title)
+            }
+            Tab(
+                selected = source == selected,
+                onClick = { onSelect(source) },
+                text = { Text(label, style = MaterialTheme.typography.titleSmall) },
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -328,9 +376,6 @@ private fun TrendingTopBar(
     onToggleNewOnly: () -> Unit,
     onTitleClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    authState: AuthState,
-    userAvatarUrl: String?,
-    onNavigateToAccount: () -> Unit,
 ) {
     val periodLabel = when (selectedPeriod) {
         "daily" -> stringResource(Res.string.period_daily)
@@ -420,44 +465,13 @@ private fun TrendingTopBar(
             IconButton(onClick = onHistoryClick) {
                 Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
             }
-            AccountAction(authState, userAvatarUrl, onNavigateToAccount)
         }
     )
 }
 
-/**
- * 顶栏账户入口：统一账户中心（Hub）的唯一入口，各 tab 顶栏共用。已登录且有头像显示头像，
- * 登录中显示加载态，其余（含未登录 / iOS 未接入）显示账户图标——点击一律进 Hub（内含设置与登录引导）。
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun AccountAction(authState: AuthState, userAvatarUrl: String?, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = authState !is AuthState.LoggingIn) {
-        when {
-            authState is AuthState.LoggedIn && userAvatarUrl != null -> AsyncImage(
-                model = userAvatarUrl,
-                contentDescription = stringResource(Res.string.account_title),
-                modifier = Modifier.size(28.dp).clip(CircleShape)
-            )
-            authState is AuthState.LoggingIn -> LoadingIndicator(
-                modifier = Modifier.size(24.dp)
-            )
-            else -> Icon(
-                Icons.Default.AccountCircle,
-                contentDescription = stringResource(Res.string.account_title)
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PicksTopBar(
-    date: String?,
-    authState: AuthState,
-    userAvatarUrl: String?,
-    onNavigateToAccount: () -> Unit,
-) {
+private fun PicksTopBar(date: String?) {
     TrendingTopAppBar(
         title = {
             Column {
@@ -475,9 +489,6 @@ private fun PicksTopBar(
                 )
             }
         },
-        actions = {
-            AccountAction(authState, userAvatarUrl, onNavigateToAccount)
-        }
     )
 }
 
@@ -486,9 +497,6 @@ private fun PicksTopBar(
 private fun FeedTopBar(
     title: String,
     navigationIcon: @Composable () -> Unit,
-    authState: AuthState,
-    userAvatarUrl: String?,
-    onNavigateToAccount: () -> Unit,
 ) {
     TrendingTopAppBar(
         title = {
@@ -502,8 +510,5 @@ private fun FeedTopBar(
                 navigationIcon()
             }
         },
-        actions = {
-            AccountAction(authState, userAvatarUrl, onNavigateToAccount)
-        }
     )
 }

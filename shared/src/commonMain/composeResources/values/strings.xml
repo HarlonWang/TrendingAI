@@ -115,6 +115,9 @@
     <string name="readme_no_content">No README found for this repository.</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="picks_title">Picks</string>
+    <string name="trending_title">Trending</string>
+    <string name="chat_title">AI Chat</string>
+    <string name="me_title">Me</string>
     <string name="hackernews_title">Hacker News</string>
     <string name="producthunt_title">Product Hunt</string>
     <string name="hackernews_placeholder">Hacker News content coming soon</string>
