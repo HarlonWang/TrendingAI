@@ -1,5 +1,12 @@
 package whl.trending.ai.ui.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -321,55 +328,76 @@ fun HomeScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             CompositionLocalProvider(LocalContentBottomPadding provides contentBottomPadding) {
-                when (selectedTab) {
-                    HomeTab.Trending -> Column(modifier = contentModifier) {
-                        TrendingSourceTabs(
-                            selected = selectedSource,
-                            onSelect = { source ->
-                                if (source != selectedSource) {
-                                    trackEvent(
-                                        "trending_source_switch",
-                                        mapOf("source" to source.name.lowercase()),
-                                    )
-                                    selectedSourceName = source.name
-                                    globalSettingsManager.setTrendingSource(source.name)
-                                }
-                            },
-                        )
-                        when (selectedSource) {
-                            TrendingSource.GitHub -> TrendingScreen(
-                                onNavigateToDetail = onNavigateToDetail,
-                                showFilterSheet = showFilterSheet,
-                                onDismissFilterSheet = { showFilterSheet = false },
-                                showHistorySheet = showHistorySheet,
-                                onDismissHistorySheet = { showHistorySheet = false },
-                                viewModel = trendingViewModel
-                            )
-                            TrendingSource.HackerNews -> FeedScreen(
-                                viewModel = hnViewModel!!,
-                                onOpenUrl = onOpenUrl,
-                                onOpenDigest = onOpenDigest
-                            )
-                            TrendingSource.ProductHunt -> FeedScreen(
-                                viewModel = phViewModel!!,
-                                onOpenUrl = onOpenUrl
-                            )
+                // 切 tab 的方向性转场：新页从前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms
+                // 淡入淡出。位移量、时长与方向判定照搬 Echo 的 NavHost enter/exitTransition；
+                // 差别只在承载方式——它的 tab 是 NavHost 目的地，我们的 tab 是状态，等价物是
+                // AnimatedContent。
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = {
+                        if (targetState.ordinal > initialState.ordinal) {
+                            slideInHorizontally { it / 8 } + fadeIn(tween(200)) togetherWith
+                                slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                        } else {
+                            slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
+                                slideOutHorizontally { it / 8 } + fadeOut(tween(200))
                         }
+                    },
+                    label = "homeTabContent",
+                ) { tab ->
+                    // 各页在这里自取 ViewModel，不用外面那几个可空的：转场期间旧页仍在组合树里，
+                    // 而外面的实例是「当前选中才创建」，此刻已是 null，直接用会崩。
+                    // viewModel() 取的是同一个 ViewModelStore 里的同一实例，不会多创建。
+                    when (tab) {
+                        HomeTab.Trending -> Column(modifier = contentModifier) {
+                            TrendingSourceTabs(
+                                selected = selectedSource,
+                                onSelect = { source ->
+                                    if (source != selectedSource) {
+                                        trackEvent(
+                                            "trending_source_switch",
+                                            mapOf("source" to source.name.lowercase()),
+                                        )
+                                        selectedSourceName = source.name
+                                        globalSettingsManager.setTrendingSource(source.name)
+                                    }
+                                },
+                            )
+                            when (selectedSource) {
+                                TrendingSource.GitHub -> TrendingScreen(
+                                    onNavigateToDetail = onNavigateToDetail,
+                                    showFilterSheet = showFilterSheet,
+                                    onDismissFilterSheet = { showFilterSheet = false },
+                                    showHistorySheet = showHistorySheet,
+                                    onDismissHistorySheet = { showHistorySheet = false },
+                                    viewModel = trendingViewModel
+                                )
+                                TrendingSource.HackerNews -> FeedScreen(
+                                    viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
+                                    onOpenUrl = onOpenUrl,
+                                    onOpenDigest = onOpenDigest
+                                )
+                                TrendingSource.ProductHunt -> FeedScreen(
+                                    viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
+                                    onOpenUrl = onOpenUrl
+                                )
+                            }
+                        }
+                        HomeTab.Picks -> PicksScreen(
+                            onNavigateToDetail = onNavigateToDetail,
+                            onOpenUrl = onOpenUrl,
+                            onNavigateToSubscribe = onNavigateToSubscribe,
+                            modifier = contentModifier,
+                            viewModel = viewModel { PicksViewModel() },
+                            onOpenDigest = onOpenDigest
+                        )
+                        HomeTab.Me -> ProfileScreen(
+                            modifier = contentModifier,
+                            onNavigateToGithubProfile = onNavigateToGithubProfile,
+                            onNavigateToFavorites = onNavigateToFavorites,
+                        )
+                        HomeTab.Chat -> Unit
                     }
-                    HomeTab.Picks -> PicksScreen(
-                        onNavigateToDetail = onNavigateToDetail,
-                        onOpenUrl = onOpenUrl,
-                        onNavigateToSubscribe = onNavigateToSubscribe,
-                        modifier = contentModifier,
-                        viewModel = picksViewModel!!,
-                        onOpenDigest = onOpenDigest
-                    )
-                    HomeTab.Me -> ProfileScreen(
-                        modifier = contentModifier,
-                        onNavigateToGithubProfile = onNavigateToGithubProfile,
-                        onNavigateToFavorites = onNavigateToFavorites,
-                    )
-                    HomeTab.Chat -> Unit
                 }
             }
 
