@@ -19,8 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,18 +47,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
 import trendingai.shared.generated.resources.account_link_github
@@ -87,8 +86,6 @@ import trendingai.shared.generated.resources.profile_quota_reset_soon
 import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_repos
 import trendingai.shared.generated.resources.profile_retry
-import trendingai.shared.generated.resources.settings
-import trendingai.shared.generated.resources.settings_entry_desc
 import trendingai.shared.generated.resources.sign_in
 import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
@@ -106,10 +103,9 @@ import whl.trending.ai.data.model.QuotaResponse
  * 个人中心：只讲「你是谁、你还剩多少额度、你收藏了什么」。
  *
  * 从上到下：身份区（含未登录引导）→ 套餐 & 用量（含升级 CTA）→ GitHub 主页入口卡
- * （仅 GitHub 用户）→ 收藏 / 设置 / 关于我们 三个入口 → 退出登录。
+ * （仅 GitHub 用户）→ 收藏 → 退出登录。
  *
- * 应用偏好已全部迁到 [SettingsScreen]，这里只留一个入口——本页与设置页各自单一职责，
- * 后续设置与关于挪进底栏扩展菜单时，本页只需摘掉这两行。
+ * 应用偏好全部在 [SettingsScreen]，入口挂在底栏的「⋯」扩展菜单上，本页不再重复。
  *
  * 本页是「我的」tab 的内容，不自带脚手架与顶栏：顶栏由 [HomeScreen] 统一提供，
  * 底栏要一直在，页面内套 Scaffold 会出现两层顶栏。
@@ -124,8 +120,6 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     onNavigateToGithubProfile: () -> Unit,
     onNavigateToFavorites: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {},
 ) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
@@ -206,7 +200,10 @@ fun ProfileScreen(
         },
         modifier = modifier.fillMaxSize(),
     ) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
+        ) {
             if (authSupported) {
                 // ① 身份区
                 item(key = "account_header") {
@@ -253,7 +250,8 @@ fun ProfileScreen(
                 item(key = "divider_top") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
             }
 
-            // ④ 入口区：收藏 / 设置 / 关于我们
+            // ④ 收藏入口。设置与关于我们不在这里——它们挂在底栏的「⋯」扩展菜单上，
+                // 两处都放会变成同一个入口的两个按钮。
             item(key = "favorites") {
                 ListItem(
                     headlineContent = { Text(stringResource(Res.string.favorites)) },
@@ -261,30 +259,6 @@ fun ProfileScreen(
                     modifier = Modifier.clickable {
                         trackEvent("settings_favorites")
                         onNavigateToFavorites()
-                    }
-                )
-            }
-            item(key = "settings_entry") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.settings)) },
-                    supportingContent = { Text(stringResource(Res.string.settings_entry_desc)) },
-                    leadingContent = { Icon(Icons.Default.Settings, null) },
-                    trailingContent = {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                    },
-                    modifier = Modifier.clickable {
-                        trackEvent("profile_open_settings")
-                        onNavigateToSettings()
-                    }
-                )
-            }
-            item(key = "about_us") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.about_us)) },
-                    leadingContent = { Icon(Icons.Default.Info, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_about")
-                        onNavigateToAbout()
                     }
                 )
             }

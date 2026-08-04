@@ -237,7 +237,7 @@
     <string name="account_github_entry">GitHub 主页</string>
     <string name="account_github_entry_desc">贡献与关注动态</string>
     <string name="settings_group_general">通用</string>
-    <string name="settings_entry_desc">外观、语言、通知、反馈</string>
+    <string name="more_label">更多</string>
     <string name="contrib_total">最近一年 %1$s 次贡献</string>
     <string name="contrib_less">少</string>
     <string name="contrib_more">多</string>

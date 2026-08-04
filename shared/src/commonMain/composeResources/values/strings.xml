@@ -237,7 +237,7 @@
     <string name="account_github_entry">GitHub profile</string>
     <string name="account_github_entry_desc">Contributions &amp; network activity</string>
     <string name="settings_group_general">General</string>
-    <string name="settings_entry_desc">Appearance, language, notifications, feedback</string>
+    <string name="more_label">More</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>

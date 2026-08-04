@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -23,8 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RichTooltip
 import androidx.compose.material3.Tab
@@ -34,6 +35,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,6 +74,7 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
+import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.digest.DigestPage
@@ -217,128 +220,160 @@ fun HomeScreen(
                 HomeTab.Chat -> Unit
             }
         },
-        bottomBar = {
-            // 双击当前 tab 触发下拉刷新（#38）：仅当两次点击都落在已选中的 tab 上才算，
-            // 双击未选中的 tab 只切换不刷新（切换会重置计时）
-            val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
-            var lastTapTime by remember { mutableStateOf(0L) }
-            val refreshCurrentTab = {
-                trackEvent(
-                    "tab_double_tap_refresh",
-                    mapOf("tab" to selectedTab.name.lowercase()),
-                )
-                when (selectedTab) {
-                    HomeTab.Trending -> when (selectedSource) {
-                        TrendingSource.GitHub -> trendingViewModel.fetchData(isRefresh = true)
-                        TrendingSource.HackerNews -> hnViewModel?.refresh()
-                        TrendingSource.ProductHunt -> phViewModel?.refresh()
-                    }
-                    HomeTab.Picks -> picksViewModel?.refresh()
-                    // 「我的」自带下拉刷新，Chat 不是落点：都不参与双击刷新
-                    HomeTab.Me, HomeTab.Chat -> Unit
+        // 底栏是浮在内容之上的胶囊，不占 Scaffold 的 bottomBar 槽位——占了内容就被顶上去，
+        // 拿不到「内容从底栏下面穿过去」的观感。
+    ) { innerPadding ->
+        // 只取顶部：底部留给悬浮底栏自己算（见 LocalContentBottomPadding），
+        // 内容层不做底部 padding，列表才能滚到底栏之下。
+        val contentModifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+        val barBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val contentBottomPadding = barBottomInset + FloatingBarHeight + FloatingBarBottomMargin * 2
+
+        val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
+        var lastTapTime by remember { mutableStateOf(0L) }
+        // 双击当前 tab 触发下拉刷新（#38）：仅当两次点击都落在已选中的 tab 上才算，
+        // 双击未选中的 tab 只切换不刷新（切换会重置计时）
+        val refreshCurrentTab = {
+            trackEvent(
+                "tab_double_tap_refresh",
+                mapOf("tab" to selectedTab.name.lowercase()),
+            )
+            when (selectedTab) {
+                HomeTab.Trending -> when (selectedSource) {
+                    TrendingSource.GitHub -> trendingViewModel.fetchData(isRefresh = true)
+                    TrendingSource.HackerNews -> hnViewModel?.refresh()
+                    TrendingSource.ProductHunt -> phViewModel?.refresh()
                 }
+                HomeTab.Picks -> picksViewModel?.refresh()
+                // 「我的」自带下拉刷新，Chat 不是落点：都不参与双击刷新
+                HomeTab.Me, HomeTab.Chat -> Unit
             }
-            val switchTo = { tab: HomeTab ->
-                if (selectedTab != tab) {
-                    trackEvent("tab_switch", mapOf("tab" to tab.name.lowercase()))
-                    selectedTabName = tab.name
-                    lastTapTime = 0L
+        }
+        val switchTo = { tab: HomeTab ->
+            if (selectedTab != tab) {
+                trackEvent("tab_switch", mapOf("tab" to tab.name.lowercase()))
+                selectedTabName = tab.name
+                lastTapTime = 0L
+            } else {
+                val now = Clock.System.now().toEpochMilliseconds()
+                if (now - lastTapTime <= doubleTapMillis) {
+                    refreshCurrentTab()
+                    lastTapTime = 0L // 已触发一次，三连击不重复刷新
                 } else {
-                    val now = Clock.System.now().toEpochMilliseconds()
-                    if (now - lastTapTime <= doubleTapMillis) {
-                        refreshCurrentTab()
-                        lastTapTime = 0L // 已触发一次，三连击不重复刷新
-                    } else {
-                        lastTapTime = now
-                    }
+                    lastTapTime = now
                 }
             }
-            NavigationBar {
-                NavigationBarItem(
+        }
+
+        val barItems = buildList {
+            add(
+                HomeBarItem(
+                    key = HomeTab.Trending,
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    label = stringResource(Res.string.trending_title),
                     selected = selectedTab == HomeTab.Trending,
                     onClick = { switchTo(HomeTab.Trending) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
-                    label = { Text(stringResource(Res.string.trending_title)) }
                 )
-                NavigationBarItem(
+            )
+            add(
+                HomeBarItem(
+                    key = HomeTab.Picks,
+                    icon = Icons.Default.Star,
+                    label = stringResource(Res.string.picks_title),
                     selected = selectedTab == HomeTab.Picks,
                     onClick = { switchTo(HomeTab.Picks) },
-                    icon = { Icon(Icons.Default.Star, contentDescription = null) },
-                    label = { Text(stringResource(Res.string.picks_title)) }
                 )
-                // 聊天未接入的平台（iOS）隐藏该项，底栏退化成三项
-                if (globalChatScreen != null) {
-                    NavigationBarItem(
+            )
+            // 聊天未接入的平台（iOS）隐藏该项，底栏退化成三项
+            if (globalChatScreen != null) {
+                add(
+                    HomeBarItem(
+                        key = HomeTab.Chat,
+                        icon = Icons.Default.AutoAwesome,
+                        label = stringResource(Res.string.chat_title),
                         // 选中态不给它：点击只是推一页，回来后仍在原 tab
                         selected = false,
                         onClick = {
                             trackEvent("tab_switch", mapOf("tab" to HomeTab.Chat.name.lowercase()))
                             onNavigateToChat()
                         },
-                        icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                        label = { Text(stringResource(Res.string.chat_title)) }
                     )
-                }
-                NavigationBarItem(
+                )
+            }
+            add(
+                HomeBarItem(
+                    key = HomeTab.Me,
+                    icon = Icons.Default.AccountCircle,
+                    label = stringResource(Res.string.me_title),
                     selected = selectedTab == HomeTab.Me,
                     onClick = { switchTo(HomeTab.Me) },
-                    icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
-                    label = { Text(stringResource(Res.string.me_title)) }
                 )
-            }
+            )
         }
-    ) { innerPadding ->
-        when (selectedTab) {
-            HomeTab.Trending -> Column(modifier = Modifier.padding(innerPadding)) {
-                TrendingSourceTabs(
-                    selected = selectedSource,
-                    onSelect = { source ->
-                        if (source != selectedSource) {
-                            trackEvent(
-                                "trending_source_switch",
-                                mapOf("source" to source.name.lowercase()),
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalContentBottomPadding provides contentBottomPadding) {
+                when (selectedTab) {
+                    HomeTab.Trending -> Column(modifier = contentModifier) {
+                        TrendingSourceTabs(
+                            selected = selectedSource,
+                            onSelect = { source ->
+                                if (source != selectedSource) {
+                                    trackEvent(
+                                        "trending_source_switch",
+                                        mapOf("source" to source.name.lowercase()),
+                                    )
+                                    selectedSourceName = source.name
+                                    globalSettingsManager.setTrendingSource(source.name)
+                                }
+                            },
+                        )
+                        when (selectedSource) {
+                            TrendingSource.GitHub -> TrendingScreen(
+                                onNavigateToDetail = onNavigateToDetail,
+                                showFilterSheet = showFilterSheet,
+                                onDismissFilterSheet = { showFilterSheet = false },
+                                showHistorySheet = showHistorySheet,
+                                onDismissHistorySheet = { showHistorySheet = false },
+                                viewModel = trendingViewModel
                             )
-                            selectedSourceName = source.name
-                            globalSettingsManager.setTrendingSource(source.name)
+                            TrendingSource.HackerNews -> FeedScreen(
+                                viewModel = hnViewModel!!,
+                                onOpenUrl = onOpenUrl,
+                                onOpenDigest = onOpenDigest
+                            )
+                            TrendingSource.ProductHunt -> FeedScreen(
+                                viewModel = phViewModel!!,
+                                onOpenUrl = onOpenUrl
+                            )
                         }
-                    },
-                )
-                when (selectedSource) {
-                    TrendingSource.GitHub -> TrendingScreen(
+                    }
+                    HomeTab.Picks -> PicksScreen(
                         onNavigateToDetail = onNavigateToDetail,
-                        showFilterSheet = showFilterSheet,
-                        onDismissFilterSheet = { showFilterSheet = false },
-                        showHistorySheet = showHistorySheet,
-                        onDismissHistorySheet = { showHistorySheet = false },
-                        viewModel = trendingViewModel
-                    )
-                    TrendingSource.HackerNews -> FeedScreen(
-                        viewModel = hnViewModel!!,
                         onOpenUrl = onOpenUrl,
+                        onNavigateToSubscribe = onNavigateToSubscribe,
+                        modifier = contentModifier,
+                        viewModel = picksViewModel!!,
                         onOpenDigest = onOpenDigest
                     )
-                    TrendingSource.ProductHunt -> FeedScreen(
-                        viewModel = phViewModel!!,
-                        onOpenUrl = onOpenUrl
+                    HomeTab.Me -> ProfileScreen(
+                        modifier = contentModifier,
+                        onNavigateToGithubProfile = onNavigateToGithubProfile,
+                        onNavigateToFavorites = onNavigateToFavorites,
                     )
+                    HomeTab.Chat -> Unit
                 }
             }
-            HomeTab.Picks -> PicksScreen(
-                onNavigateToDetail = onNavigateToDetail,
-                onOpenUrl = onOpenUrl,
-                onNavigateToSubscribe = onNavigateToSubscribe,
-                modifier = Modifier.padding(innerPadding),
-                viewModel = picksViewModel!!,
-                onOpenDigest = onOpenDigest
+
+            HomeFloatingBar(
+                items = barItems,
+                onOpenSettings = onNavigateToSettings,
+                onOpenAbout = onNavigateToAbout,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = barBottomInset + FloatingBarBottomMargin),
             )
-            HomeTab.Me -> ProfileScreen(
-                modifier = Modifier.padding(innerPadding),
-                onNavigateToGithubProfile = onNavigateToGithubProfile,
-                onNavigateToFavorites = onNavigateToFavorites,
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToAbout = onNavigateToAbout,
-            )
-            HomeTab.Chat -> Unit
         }
     }
 }

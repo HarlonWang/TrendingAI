@@ -59,12 +59,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -167,7 +169,10 @@ fun TrendingScreen(
         )
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            // 抬到悬浮底栏之上，否则 star 结果提示会被胶囊压住
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = LocalContentBottomPadding.current),
         )
     }
 
@@ -285,7 +290,12 @@ private fun RepoList(
             else -> {
                 val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
                 val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
-                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    // 末条要能从悬浮底栏下面滚出来
+                    contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
+                ) {
                 items(
                     count = displayRepos.size,
                     key = { index -> displayRepos[index].url }
