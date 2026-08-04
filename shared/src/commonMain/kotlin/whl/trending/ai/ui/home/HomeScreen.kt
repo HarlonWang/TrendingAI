@@ -24,17 +24,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Whatshot
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material.icons.outlined.Whatshot
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconToggleButton
@@ -287,8 +285,8 @@ fun HomeScreen(
             add(
                 HomeBarItem(
                     key = HomeTab.Trending,
-                    iconSelected = Icons.Filled.Whatshot,
-                    iconUnselected = Icons.Outlined.Whatshot,
+                    iconSelected = Icons.Filled.Home,
+                    iconUnselected = Icons.Outlined.Home,
                     label = stringResource(Res.string.trending_title),
                     selected = selectedTab == HomeTab.Trending,
                     onClick = { switchTo(HomeTab.Trending) },
@@ -297,8 +295,8 @@ fun HomeScreen(
             add(
                 HomeBarItem(
                     key = HomeTab.Picks,
-                    iconSelected = Icons.Filled.Star,
-                    iconUnselected = Icons.Outlined.StarOutline,
+                    iconSelected = KidStarFilled,
+                    iconUnselected = KidStarOutlined,
                     label = stringResource(Res.string.picks_title),
                     selected = selectedTab == HomeTab.Picks,
                     onClick = { switchTo(HomeTab.Picks) },
@@ -309,8 +307,10 @@ fun HomeScreen(
                 add(
                     HomeBarItem(
                         key = HomeTab.Chat,
-                        iconSelected = Icons.Filled.AutoAwesome,
-                        iconUnselected = Icons.Outlined.AutoAwesome,
+                        iconSelected = Icons.Filled.ChatBubble,
+                        // Outlined.ChatBubble 仍是实心气泡，空心的那个叫 ChatBubbleOutline；
+                        // Chat 永远不进选中态，露出的就是这一个
+                        iconUnselected = Icons.Outlined.ChatBubbleOutline,
                         label = stringResource(Res.string.chat_title),
                         // 选中态不给它：点击只是推一页，回来后仍在原 tab
                         selected = false,
@@ -324,8 +324,8 @@ fun HomeScreen(
             add(
                 HomeBarItem(
                     key = HomeTab.Me,
-                    iconSelected = Icons.Filled.AccountCircle,
-                    iconUnselected = Icons.Outlined.AccountCircle,
+                    iconSelected = Icons.Filled.Person,
+                    iconUnselected = Icons.Outlined.Person,
                     label = stringResource(Res.string.me_title),
                     selected = selectedTab == HomeTab.Me,
                     onClick = { switchTo(HomeTab.Me) },
