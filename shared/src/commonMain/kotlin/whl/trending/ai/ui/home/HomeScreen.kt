@@ -412,10 +412,13 @@ fun HomeScreen(
                 items = barItems,
                 onOpenSettings = onNavigateToSettings,
                 onOpenAbout = onNavigateToAbout,
+                // 定高与内容底部留白同源（contentBottomPadding 也按它算），两者不能各算各的。
+                // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 16.dp)
-                    .padding(bottom = barBottomInset + FloatingBarBottomMargin),
+                    .padding(bottom = barBottomInset + FloatingBarBottomMargin)
+                    .height(FloatingBarHeight),
             )
         }
     }
