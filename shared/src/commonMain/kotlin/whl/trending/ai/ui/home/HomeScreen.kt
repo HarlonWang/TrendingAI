@@ -12,13 +12,17 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconToggleButton
@@ -269,7 +273,8 @@ fun HomeScreen(
             add(
                 HomeBarItem(
                     key = HomeTab.Trending,
-                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    iconSelected = Icons.Filled.Whatshot,
+                    iconUnselected = Icons.Outlined.Whatshot,
                     label = stringResource(Res.string.trending_title),
                     selected = selectedTab == HomeTab.Trending,
                     onClick = { switchTo(HomeTab.Trending) },
@@ -278,7 +283,8 @@ fun HomeScreen(
             add(
                 HomeBarItem(
                     key = HomeTab.Picks,
-                    icon = Icons.Default.Star,
+                    iconSelected = Icons.Filled.Star,
+                    iconUnselected = Icons.Outlined.StarOutline,
                     label = stringResource(Res.string.picks_title),
                     selected = selectedTab == HomeTab.Picks,
                     onClick = { switchTo(HomeTab.Picks) },
@@ -289,7 +295,8 @@ fun HomeScreen(
                 add(
                     HomeBarItem(
                         key = HomeTab.Chat,
-                        icon = Icons.Default.AutoAwesome,
+                        iconSelected = Icons.Filled.AutoAwesome,
+                        iconUnselected = Icons.Outlined.AutoAwesome,
                         label = stringResource(Res.string.chat_title),
                         // 选中态不给它：点击只是推一页，回来后仍在原 tab
                         selected = false,
@@ -303,7 +310,8 @@ fun HomeScreen(
             add(
                 HomeBarItem(
                     key = HomeTab.Me,
-                    icon = Icons.Default.AccountCircle,
+                    iconSelected = Icons.Filled.AccountCircle,
+                    iconUnselected = Icons.Outlined.AccountCircle,
                     label = stringResource(Res.string.me_title),
                     selected = selectedTab == HomeTab.Me,
                     onClick = { switchTo(HomeTab.Me) },

@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.home
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -78,10 +79,14 @@ val FloatingBarBottomMargin: Dp = 12.dp
 /** 胶囊最大宽度，平板/大屏上不至于拉成一整条。对齐 Echo。 */
 private val BarMaxWidth: Dp = 480.dp
 
-/** 底栏一项。[selected] 为 false 且点击后不改变选中态的项（AI 对话）也走这里，见 [HomeTab.Chat]。 */
+/**
+ * 底栏一项。图标备实心/描边两态，选中切实心——与 Echo 的 `Screens.iconIdActive/Inactive` 同构。
+ * [selected] 为 false 且点击后不改变选中态的项（AI 对话）也走这里，见 [HomeTab.Chat]。
+ */
 internal data class HomeBarItem(
     val key: HomeTab,
-    val icon: ImageVector,
+    val iconSelected: ImageVector,
+    val iconUnselected: ImageVector,
     val label: String,
     val selected: Boolean,
     val onClick: () -> Unit,
@@ -185,8 +190,8 @@ private fun SlidingPillItems(items: List<HomeBarItem>) {
 }
 
 /**
- * 单项：只有图标。宽度由内容撑开（下限 48dp），选中时图标放大、颜色渐变，按下时整体缩一下。
- * 各段动画参数与 Echo 的 `FloatingNavigationToolbarItem` 相同。
+ * 单项：只有图标。宽度由内容撑开（下限 48dp），选中时图标 Crossfade 到实心态并放大、
+ * 颜色渐变，按下时整体缩一下。各段动画参数与 Echo 的 `FloatingNavigationToolbarItem` 相同。
  */
 @Composable
 private fun BarItem(item: HomeBarItem, modifier: Modifier = Modifier) {
@@ -238,12 +243,21 @@ private fun BarItem(item: HomeBarItem, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = item.label,
-            tint = contentColor,
+        Crossfade(
+            targetState = item.selected,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+            label = "iconCrossfade",
             modifier = Modifier.scale(iconScale),
-        )
+        ) { isSelected ->
+            Icon(
+                imageVector = if (isSelected) item.iconSelected else item.iconUnselected,
+                contentDescription = item.label,
+                tint = contentColor,
+            )
+        }
     }
 }
 
