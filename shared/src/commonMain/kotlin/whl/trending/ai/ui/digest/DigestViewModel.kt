@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.SettingsManager
@@ -32,6 +33,17 @@ class DigestViewModel(
 
     init {
         load()
+
+        // 摘要语言切换后重载（对齐 FeedViewModel 的既有模式）。
+        // 必须有这层监听：viewModel(key) 的实例生命周期长于页面（返回不销毁），
+        // init 里的语言只是创建时刻的快照——没有它，切语言后重进「访问过的条目」
+        // 会端出旧语言的缓存内容。drop(1) 丢弃初始值，只响应真正的修改。
+        viewModelScope.launch {
+            settingsManager.summaryLanguage.drop(1).collect {
+                _uiState.value = DigestUiState.Loading
+                load()
+            }
+        }
     }
 
     fun retry() {
