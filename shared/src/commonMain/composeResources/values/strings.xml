@@ -282,4 +282,10 @@
     <string name="feed_rules_vs_official_title">vs. GitHub feed</string>
     <string name="feed_rules_vs_official_desc">GitHub has no official feed API; this page is aggregated from its public received_events endpoint.</string>
     <string name="feed_rules_limits">Last 30 days, up to 300 events, with a 30s–6h delay (GitHub API limits).</string>
+    <string name="digest_read_original">Read original</string>
+    <string name="digest_hn_discussion">HN discussion</string>
+    <string name="digest_unavailable_title">No AI digest for this item yet</string>
+    <string name="digest_unavailable_desc">Public information wasn\'t enough to generate a reliable digest. Use the buttons above to read the original or browse the HN discussion.</string>
+    <string name="digest_generated_at">AI-generated on %1$s · may lag behind the latest discussion</string>
+    <string name="digest_load_failed">Failed to load, please retry</string>
 </resources>

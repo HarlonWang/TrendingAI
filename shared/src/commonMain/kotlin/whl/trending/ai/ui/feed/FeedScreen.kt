@@ -47,6 +47,8 @@ import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.common.ItemActionMenu
 import whl.trending.ai.ui.common.aiShareText
+import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.digest.toDigestPage
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -80,7 +82,8 @@ private const val HERO_MAX_RATIO = 3f
 fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel,
-    onOpenUrl: (url: String) -> Unit
+    onOpenUrl: (url: String) -> Unit,
+    onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -143,6 +146,7 @@ fun FeedScreen(
                             item = item,
                             isFavorite = item.url in favoriteUrls,
                             onOpenUrl = onOpenUrl,
+                            onOpenDigest = onOpenDigest,
                             onToggleFavorite = {
                                 if (item.url in favoriteUrls) {
                                     globalFavoriteRepository.remove(item.url)
@@ -178,6 +182,7 @@ private fun FeedItemCard(
     item: FeedItem,
     isFavorite: Boolean,
     onOpenUrl: (url: String) -> Unit,
+    onOpenDigest: (DigestPage) -> Unit,
     onToggleFavorite: () -> Unit
 ) {
     val heroImage = item.heroImageUrl(HERO_REQUEST_PX)
@@ -187,7 +192,12 @@ private fun FeedItemCard(
             rank = index + 1,
             title = item.title
         )
-        onOpenUrl(item.openUrl)
+        // HN 条目整卡点击进解读页（预生成、零等待），外链降级为解读页首屏出路按钮
+        if (item.source == "hackernews") {
+            onOpenDigest(item.toDigestPage())
+        } else {
+            onOpenUrl(item.openUrl)
+        }
     }
 
     Row(

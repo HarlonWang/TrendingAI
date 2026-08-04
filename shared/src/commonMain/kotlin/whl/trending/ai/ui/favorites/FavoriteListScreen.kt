@@ -7,6 +7,8 @@ import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.picks.SourceTag
+import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.digest.toDigestPage
 import whl.trending.ai.core.platform.trackEvent
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.flow.first
@@ -66,7 +68,8 @@ import trendingai.shared.generated.resources.favorites_removed
 fun FavoriteListScreen(
     onBack: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> },
-    onOpenUrl: (url: String) -> Unit = {}
+    onOpenUrl: (url: String) -> Unit = {},
+    onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
 
@@ -116,7 +119,7 @@ fun FavoriteListScreen(
                 ) { index, item ->
                     FavoriteCard(
                         item = item,
-                        onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl) },
+                        onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl, onOpenDigest) },
                         onRemove = { globalFavoriteRepository.remove(item.url) }
                     )
                     if (index < favorites.lastIndex) {
@@ -131,7 +134,8 @@ fun FavoriteListScreen(
 private fun handleFavoriteClick(
     item: FavoriteItem,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
-    onOpenUrl: (url: String) -> Unit
+    onOpenUrl: (url: String) -> Unit,
+    onOpenDigest: (DigestPage) -> Unit
 ) {
     if (item.source == "github") {
         val parts = item.url.removePrefix("https://github.com/").split("/")
@@ -139,6 +143,11 @@ private fun handleFavoriteClick(
             onNavigateToDetail(parts[0], parts[1])
             return
         }
+    }
+    // HN 条目进解读页（与列表同一落点）；存量收藏无 externalId 时解读页会展示「暂无解读」+ 原文入口
+    if (item.source == "hackernews") {
+        onOpenDigest(item.toDigestPage())
+        return
     }
     onOpenUrl(item.targetUrl)
 }

@@ -13,6 +13,8 @@ import whl.trending.ai.ui.settings.AboutScreen
 import whl.trending.ai.ui.settings.AppSettingsScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.settings.ColorLabScreen
+import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.digest.DigestScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
@@ -150,6 +152,9 @@ fun App() {
                                 onNavigateToSubscribe = {
                                     backStack.add(Subscribe)
                                 },
+                                onOpenDigest = { page ->
+                                    backStack.add(page)
+                                },
                             )
                         }
 
@@ -215,6 +220,9 @@ fun App() {
                                 },
                                 onOpenUrl = { url ->
                                     openExternalUrl(url, "")
+                                },
+                                onOpenDigest = { page ->
+                                    backStack.add(page)
                                 }
                             )
                         }
@@ -278,6 +286,16 @@ fun App() {
                                 onBack = { backStack.safePop() },
                                 onNavigateToChat = { context ->
                                     backStack.add(Chat(context))
+                                }
+                            )
+                        }
+
+                        is DigestPage -> NavEntry(key) {
+                            DigestScreen(
+                                page = key,
+                                onBack = { backStack.safePop() },
+                                onOpenUrl = { url ->
+                                    openExternalUrl(url, "")
                                 }
                             )
                         }
