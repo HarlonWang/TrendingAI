@@ -42,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -52,6 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -88,9 +91,16 @@ fun ChatInputBar(
     onAddImage: (String) -> Unit,
     onRemoveImage: (String) -> Unit,
     modifier: Modifier = Modifier,
+    autoFocus: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // 进入页面自动聚焦输入框，键盘随焦点自动弹出（官方做法：focusRequester + 在组合外 requestFocus）
+    val inputFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) inputFocusRequester.requestFocus()
+    }
     val authState by globalAuthManager.authState.collectAsState()
 
     var menuExpanded by remember { mutableStateOf(false) }
@@ -260,7 +270,8 @@ fun ChatInputBar(
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
-                    modifier = Modifier.weight(1f),
+                    // focusRequester 必须声明在可聚焦项之前才会关联（官方文档「焦点修饰符的优先级」）
+                    modifier = Modifier.focusRequester(inputFocusRequester).weight(1f),
                     placeholder = { Text(stringResource(R.string.chat_input_hint)) },
                     maxLines = 5,
                 )

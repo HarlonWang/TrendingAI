@@ -124,6 +124,11 @@ fun ChatScreen(
         if (state.isSending) focusManager.clearFocus()
     }
 
+    // 进页面自动聚焦输入框唤起键盘（焦点请求在 ChatInputBar 内部）：主路径是「进来就想打字」。
+    // 「一键解读」入口例外：它进来就自动发送，上面的 isSending 分支会立刻 clearFocus，
+    // 两者叠加就是键盘弹起又秒收的闪烁，索性不弹。
+    val autoFocusInput = initialContext?.autoDetailSummary != true
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     fun closeDrawer() = scope.launch { drawerState.close() }
@@ -264,6 +269,7 @@ fun ChatScreen(
                         onSend = viewModel::send,
                         onAddImage = viewModel::addPendingImage,
                         onRemoveImage = viewModel::removePendingImage,
+                        autoFocus = autoFocusInput,
                     )
                 }
             },
