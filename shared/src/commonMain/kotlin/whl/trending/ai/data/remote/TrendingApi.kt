@@ -6,6 +6,7 @@ import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.ChatModelsResponse
+import whl.trending.ai.data.model.DigestResponse
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.PicksResponse
@@ -91,6 +92,19 @@ open class TrendingApi {
             parameter("summary_lang", summaryLang)
         }
         return response.body<PicksResponse>()
+    }
+
+    /**
+     * 预生成解读（本期仅 hackernews）。未命中返回 404，但响应体仍是合法 JSON
+     * （success=false, code=digest_unavailable）——client 未开 expectSuccess，直接解析 body。
+     */
+    open suspend fun fetchDigest(source: String, externalId: String, lang: String): DigestResponse {
+        val response = client.get("$baseHost/api/digest") {
+            parameter("source", source)
+            parameter("external_id", externalId)
+            parameter("lang", lang)
+        }
+        return response.body<DigestResponse>()
     }
 
     open suspend fun fetchReadme(owner: String, repo: String): ReadmeResponse {

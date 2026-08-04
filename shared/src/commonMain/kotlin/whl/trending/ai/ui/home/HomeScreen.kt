@@ -79,6 +79,7 @@ import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen
 import whl.trending.ai.ui.picks.PicksViewModel
+import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
@@ -101,7 +102,8 @@ fun HomeScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onNavigateToChat: () -> Unit = {},
     onOpenUrl: (url: String) -> Unit = {},
-    onNavigateToSubscribe: () -> Unit = {}
+    onNavigateToSubscribe: () -> Unit = {},
+    onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
     var selectedTabName by rememberSaveable {
@@ -294,7 +296,8 @@ fun HomeScreen(
             HomeTab.HackerNews -> FeedScreen(
                 modifier = Modifier.padding(innerPadding),
                 viewModel = hnViewModel!!,
-                onOpenUrl = onOpenUrl
+                onOpenUrl = onOpenUrl,
+                onOpenDigest = onOpenDigest
             )
             HomeTab.ProductHunt -> FeedScreen(
                 modifier = Modifier.padding(innerPadding),
@@ -306,7 +309,8 @@ fun HomeScreen(
                 onOpenUrl = onOpenUrl,
                 onNavigateToSubscribe = onNavigateToSubscribe,
                 modifier = Modifier.padding(innerPadding),
-                viewModel = picksViewModel!!
+                viewModel = picksViewModel!!,
+                onOpenDigest = onOpenDigest
             )
         }
     }

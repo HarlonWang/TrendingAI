@@ -67,6 +67,8 @@ import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.PickItem
 import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.digest.toDigestPage
 import whl.trending.ai.ui.common.aiShareText
 import androidx.compose.runtime.remember
 import kotlin.time.Clock
@@ -78,7 +80,8 @@ fun PicksScreen(
     onOpenUrl: (url: String) -> Unit,
     onNavigateToSubscribe: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: PicksViewModel
+    viewModel: PicksViewModel,
+    onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -151,7 +154,7 @@ fun PicksScreen(
                             trackEvent("picks_newsletter_banner_dismiss")
                             globalSettingsManager.setPicksNewsletterBannerDismissed(true)
                         },
-                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl) },
+                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl, onOpenDigest) },
                     )
                 }
             }
@@ -163,7 +166,8 @@ private fun handleItemClick(
     item: PickItem,
     section: String,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
-    onOpenUrl: (url: String) -> Unit
+    onOpenUrl: (url: String) -> Unit,
+    onOpenDigest: (DigestPage) -> Unit
 ) {
     trackItemClick(
         source = item.source,
@@ -177,6 +181,11 @@ private fun handleItemClick(
             onNavigateToDetail(parts[0], parts[1])
             return
         }
+    }
+    // HN 条目进解读页（与 Feed/收藏同一落点），外链从解读页首屏按钮出去
+    if (item.source == "hackernews" && item.externalId.isNotBlank()) {
+        onOpenDigest(item.toDigestPage())
+        return
     }
     onOpenUrl(item.openUrl)
 }

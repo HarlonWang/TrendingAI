@@ -282,4 +282,10 @@
     <string name="feed_rules_vs_official_title">与 GitHub 官方动态的区别</string>
     <string name="feed_rules_vs_official_desc">GitHub 无官方动态接口，本页基于其公开 received_events 接口聚合。</string>
     <string name="feed_rules_limits">最近 30 天、最多 300 条，有 30 秒~6 小时延迟（GitHub 接口限制）。</string>
+    <string name="digest_read_original">阅读原文</string>
+    <string name="digest_hn_discussion">HN 讨论区</string>
+    <string name="digest_unavailable_title">该条目暂无 AI 解读</string>
+    <string name="digest_unavailable_desc">这条内容的公开信息还不足以生成可靠的解读。你可以通过上方按钮阅读原文或查看 HN 讨论。</string>
+    <string name="digest_generated_at">AI 生成于 %1$s · 内容可能滞后于最新讨论</string>
+    <string name="digest_load_failed">加载失败，请重试</string>
 </resources>
