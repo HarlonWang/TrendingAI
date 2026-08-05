@@ -107,6 +107,7 @@ import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.ui.common.SettingsGroup
+import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
@@ -242,7 +243,7 @@ fun SettingsScreen(
                                         text = languageOptionText(appLanguage),
                                         color = MaterialTheme.colorScheme.primary,
                                     )
-                                    DropdownMenu(
+                                    TrendingDropdownMenu(
                                         expanded = appLanguageMenuExpanded,
                                         onDismissRequest = { appLanguageMenuExpanded = false },
                                     ) {
@@ -277,7 +278,7 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.clickable { summaryLanguageMenuExpanded = true },
                                 )
-                                DropdownMenu(
+                                TrendingDropdownMenu(
                                     expanded = summaryLanguageMenuExpanded,
                                     onDismissRequest = { summaryLanguageMenuExpanded = false },
                                 ) {
@@ -310,7 +311,7 @@ fun SettingsScreen(
                                     text = homeTabOptionText(HomeTab.defaultFromName(defaultHomeTab)),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
-                                DropdownMenu(
+                                TrendingDropdownMenu(
                                     expanded = homeTabMenuExpanded,
                                     onDismissRequest = { homeTabMenuExpanded = false },
                                 ) {
