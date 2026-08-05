@@ -21,11 +21,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
@@ -34,7 +32,6 @@ import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -61,9 +58,7 @@ import trendingai.shared.generated.resources.changelog
 import trendingai.shared.generated.resources.check_update_failed
 import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.confirm
-import trendingai.shared.generated.resources.contact_author
 import trendingai.shared.generated.resources.donate
-import trendingai.shared.generated.resources.donate_alipay
 import trendingai.shared.generated.resources.account_link_sponsor_note
 import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
@@ -172,16 +167,6 @@ fun AboutScreen(
                     title = { Text(stringResource(Res.string.official_website)) },
                     onClick = { uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL) },
                 )
-                // 邮箱可长按选中复制，因此这一项整行不可点
-                settingsItem(
-                    icon = Icons.Default.AlternateEmail,
-                    title = { Text(stringResource(Res.string.contact_author)) },
-                    trailing = {
-                        SelectionContainer {
-                            Text(Constants.AUTHOR_EMAIL, color = MaterialTheme.colorScheme.outline)
-                        }
-                    },
-                )
                 settingsItem(
                     icon = Icons.Default.VolunteerActivism,
                     title = { Text(stringResource(Res.string.donate)) },
@@ -240,26 +225,6 @@ private fun DonateDialog(onDismiss: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                }
-                HorizontalDivider()
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.VolunteerActivism,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    SelectionContainer(modifier = Modifier.padding(start = 16.dp)) {
-                        Text(
-                            text = stringResource(Res.string.donate_alipay, Constants.ALIPAY_ACCOUNT),
-                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
                 }

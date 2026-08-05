@@ -7,8 +7,6 @@ object Constants {
     const val CHANGELOG_URL = "https://github.com/HarlonWang/TrendingAI/releases"
     const val PRIVACY_POLICY_URL = "https://trendingai.cn/privacy/"
     const val GITHUB_SPONSORS_URL = "https://github.com/sponsors/HarlonWang"
-    const val ALIPAY_ACCOUNT = "15865268560@163.com"
-    const val AUTHOR_EMAIL = "81813780@qq.com"
 
     /**
      * Logto 账户中心的 GitHub 连接器 ID（后台「连接器 → GitHub」页的 ID，随租户固定）。

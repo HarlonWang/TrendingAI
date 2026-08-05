@@ -38,10 +38,8 @@
     <string name="version_up_to_date">Up to date</string>
     <string name="check_update_failed">Check failed, try again later</string>
     <string name="official_website">Official Website</string>
-    <string name="contact_author">Contact Author</string>
     <string name="donate">Donate</string>
     <string name="donate_message">We build Trending AI in our limited spare time, hoping to help you discover global tech trends more efficiently.\nIf you find it helpful, a donation would mean a lot to us.\n\nAll donations go toward improving our servers and operations to keep the product moving forward.</string>
-    <string name="donate_alipay">Alipay: %1$s</string>
     <string name="donate_github_desc">Sponsor Pro on GitHub · unlock a more generous daily chat quota and stronger, newer models</string>
     <string name="last_updated">Last updated at: %1$s</string>
     <string name="stars_total">Stars %1$s</string>
