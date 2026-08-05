@@ -332,6 +332,10 @@ fun HomeScreen(
                         selected = false,
                         onClick = {
                             trackEvent("tab_switch", mapOf("tab" to HomeTab.Chat.name.lowercase()))
+                            // 与 README 页的入口共用 chat_entry_click，把分散在两处的进入
+                            // 路径收进同一事件的 from 维度（tab_switch 保留，口径不同：
+                            // 那个是底栏行为，这个是 chat 入口漏斗）
+                            trackEvent("chat_entry_click", mapOf("from" to "home_tab"))
                             onNavigateToChat()
                         },
                     )

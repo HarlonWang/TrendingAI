@@ -132,4 +132,29 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 - **「进入设置页」的量自 0.23.0 起统计不到**，只能靠设置页内的子事件（`settings_appearance` / `settings_language_change` 等）间接推断，会低估只进去看一眼就退出的用户；
 - `settings_about` 仍然只在设置页那个入口上报（`SettingsScreen.kt:427`），从底栏「⋯」直接进关于页的路径不计入——所以它现在**只覆盖部分进入**，跨 0.23.0 的下跌可能纯粹是入口分流，不是兴趣下降。
 
-补两行 `trackEvent` 即可消除（底栏菜单的 settings / about 各一条），尚未做。
+补两行 `trackEvent` 即可消除（底栏菜单的 settings / about 各一条）——已于 2026-08-04（commit `e08fc26`）补上 `home_open_settings` / `home_open_about`，盲区自那之后消失，但 0.23.0 期间的空档仍在。
+
+## chat 入口漏斗：补齐分母（2026-08-05，尚未发版）
+
+**补齐前**：chat 只有「用了多少」（`chat_send` / `detail_summary_generate` / `research_start`），**没有任何入口曝光或点击事件**——README 页浏览量、AI FAB 菜单展开全是盲的。后果是一个入口冷下来，无法区分「需求不成立」和「路径太深没人看见」，容易把曝光问题误读成需求问题而砍掉功能。
+
+新增三个事件：
+
+| 事件 | 触发点 | 属性 |
+|---|---|---|
+| `readme_view` | README 详情页每次进入（记在 `ReadmeViewModel.init`，VM 随页面实例创建、旋转复用，天然不重复） | `source`：目前恒为 `github` |
+| `readme_ai_menu_open` | README 页 AI FAB 菜单展开（`ReadmeScreen`） | `detail_summary_available`：README 是否 ≥1500 字，即菜单里有没有「一键解读」项 |
+| `chat_entry_click` | 所有进入 chat 的点击 | `from`：`home_tab` / `readme_chat` / `readme_detail_summary` / `readme_deep_research` |
+
+可算的转化率：
+
+- **条目入口发现率** = `readme_ai_menu_open` / `readme_view`——三个 chat 入口都藏在 FAB 菜单里，不展开就看不见，这一步是「路径深不深」的直接度量；
+- **条目入口转化率** = `chat_entry_click`(from=readme_*) / `readme_ai_menu_open`。
+
+口径注意：
+
+- `chat_entry_click`(from=home_tab) 与既有的 `tab_switch`(tab=chat) **同一次点击报两条**，刻意保留：前者是 chat 入口漏斗，后者是底栏行为分析，分开看板各取所需，**不要相加**。
+- `readme_ai_menu_open` 每次展开都算（类广告 impression），同一次浏览里反复开合会多计。要按人看时用独立 `install_id` 计数。
+- **仍缺的一个分母**：chat 页内「一键详细解读」chip 的曝光没有埋点（评估后决定暂不加），所以 `detail_summary_generate` 只有分子，**解读的点击转化率算不出**。能算的只是「从 README 菜单直接点进解读入口」那条路径（`chat_entry_click`(from=readme_detail_summary)），不含进了 chat 之后才点 chip 的那部分。
+
+> 背景：2026-08-05 评估「条目入口是否鸡肋」时发现，全时段条目会话 318 条消息 / 153 人（其中 96 人只用条目入口、从没用过通用入口），而一键解读只有 23 个 repo、深度调研 3 次。绝对量小但分母未知，无法判断是需求问题还是曝光问题——这批埋点就是为回答该问题补的，建议积累 4 周后再做取舍决策。同期还发现 `usage_events` 里 detail_summary 自 7-30 起零成功（`upstream_region_blocked`），排查前不要把 8 月的低使用量当需求信号。

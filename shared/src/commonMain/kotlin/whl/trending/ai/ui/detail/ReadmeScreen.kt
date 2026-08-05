@@ -223,7 +223,17 @@ fun ReadmeScreen(
                     button = {
                         ToggleFloatingActionButton(
                             checked = menuExpanded,
-                            onCheckedChange = { menuExpanded = it },
+                            // 三个 chat 入口都藏在这个菜单里，不展开就看不见——展开量是
+                            // 「用户是否发现了入口」的直接代理，比页面浏览量更贴近转化率分母
+                            onCheckedChange = {
+                                if (it) {
+                                    trackEvent(
+                                        "readme_ai_menu_open",
+                                        mapOf("detail_summary_available" to detailSummaryAvailable),
+                                    )
+                                }
+                                menuExpanded = it
+                            },
                             // 显式配对容器色，避免依赖默认值，保证与下面图标 tint 的对比度
                             containerColor = ToggleFloatingActionButtonDefaults.containerColor(
                                 MaterialTheme.colorScheme.primaryContainer,
@@ -251,6 +261,7 @@ fun ReadmeScreen(
                     FloatingActionButtonMenuItem(
                         onClick = {
                             menuExpanded = false
+                            trackEvent("chat_entry_click", mapOf("from" to "readme_chat"))
                             onNavigateToChat(buildChatContext())
                         },
                         icon = {
@@ -263,6 +274,7 @@ fun ReadmeScreen(
                         FloatingActionButtonMenuItem(
                             onClick = {
                                 menuExpanded = false
+                                trackEvent("chat_entry_click", mapOf("from" to "readme_detail_summary"))
                                 onNavigateToChat(buildChatContext(autoDetailSummary = true))
                             },
                             icon = {
@@ -275,6 +287,7 @@ fun ReadmeScreen(
                     FloatingActionButtonMenuItem(
                         onClick = {
                             menuExpanded = false
+                            trackEvent("chat_entry_click", mapOf("from" to "readme_deep_research"))
                             onNavigateToChat(buildChatContext(autoDeepResearch = true))
                         },
                         icon = {
