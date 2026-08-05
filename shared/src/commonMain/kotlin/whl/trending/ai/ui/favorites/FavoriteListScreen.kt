@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -162,10 +163,16 @@ private fun FavoriteCard(item: FavoriteItem, onClick: () -> Unit, onRemove: () -
             title = { Text(stringResource(Res.string.favorites_removed)) },
             text = { Text(stringResource(Res.string.favorites_delete_confirm)) },
             confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onRemove()
-                }) {
+                // 破坏性动作用 error 色与「取消」拉开权重（见 docs/interaction-consistency-audit.md 决策表）
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onRemove()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
                     Text(stringResource(Res.string.confirm))
                 }
             },
