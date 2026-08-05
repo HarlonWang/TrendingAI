@@ -61,7 +61,7 @@
    两个低值都不构成问题：**药丸**的选中态是三重信号叠加（药丸底色 + 图标从描边变实心 + 图标提亮到 196 vs 未选中 174），不靠色差单打独斗；**胶囊**靠形状与阴影立起来，且 Echo 在 pureBlack 档更极端——它把胶囊直接压成 `Color.Black`（`FloatingNavigationToolbar.kt:512`），与纯黑页面零色差，我们交给主题层的 AMOLED 反而留了 1.20:1。截图放大核对过，两档下胶囊边界、药丸、实心/描边差异都清晰。
 
    同日修掉的深色专有 bug：一级页转场整屏白闪——根部缺兜底底色，fade 那 200ms 透出了 window 背景，而 window 主题是 `AppCompat.DayNight`、跟系统深浅走，app 内深色/AMOLED 传不过去。修法照抄 Echo `MainActivity.kt:559` 的 `BoxWithConstraints(.background(...))`，见 `App.kt` 的 `Box(Modifier.fillMaxSize().background(colorScheme.background))`。
-2. **登录态下的「我的」页** — 身份区、额度条、GitHub 入口卡在登录后长什么样，一次都没看过。需真登一次 GitHub。
+2. ~~**登录态下的「我的」页**~~ — **2026-08-05 已验**（模拟器为 Pro + 已关联 GitHub 的登录态）：身份区的头像 / 名称 / PRO 徽章 / 邮箱、额度条的「0% used + 重置倒计时 + Pro 文案」、GitHub 入口卡的头像与 followers/repos 摘要，渲染均正常。同一轮把「我的」页的三个列表项（GitHub 入口 / 收藏 / 退出登录）一并卡片化了。
 
 （iOS 端不作验证要求，见下方「其他产品决策」。）
 

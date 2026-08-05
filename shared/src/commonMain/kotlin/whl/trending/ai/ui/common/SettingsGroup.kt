@@ -81,10 +81,12 @@ class SettingsGroupScope internal constructor() {
 
     /**
      * 一个设置项。[trailing] 放开关、当前值、下拉菜单锚点等；整行点击走 [onClick]。
-     * 图标会被放进 40dp 的圆形容器里（与首页底栏选中药丸同一对 token）。
+     * [icon] 会被放进 40dp 的圆形容器里（与首页底栏选中药丸同一对 token）；
+     * 需要头像这类自带形状的前导元素时改用 [leading]，它优先于 [icon]，尺寸自理。
      */
     fun settingsItem(
         icon: ImageVector? = null,
+        leading: (@Composable () -> Unit)? = null,
         title: @Composable () -> Unit,
         description: (@Composable () -> Unit)? = null,
         enabled: Boolean = true,
@@ -95,6 +97,7 @@ class SettingsGroupScope internal constructor() {
             SettingsItemRow(
                 shape = shape,
                 icon = icon,
+                leading = leading,
                 title = title,
                 description = description,
                 enabled = enabled,
@@ -109,6 +112,7 @@ class SettingsGroupScope internal constructor() {
 private fun SettingsItemRow(
     shape: Shape,
     icon: ImageVector?,
+    leading: (@Composable () -> Unit)?,
     title: @Composable () -> Unit,
     description: (@Composable () -> Unit)?,
     enabled: Boolean,
@@ -134,7 +138,10 @@ private fun SettingsItemRow(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            icon?.let {
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(16.dp))
+            } else icon?.let {
                 Surface(
                     modifier = Modifier.size(IconContainerSize),
                     shape = CircleShape,
