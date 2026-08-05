@@ -24,6 +24,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +39,7 @@ import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.repository.UserRepository
 import whl.trending.ai.data.repository.globalFavoriteRepository
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.tooling.preview.Preview
@@ -111,206 +116,213 @@ fun App() {
     }
 
     TrendingTheme {
-        CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
-            ForceUpdateGate {
-                WhatsNewHost()
-                SignInHintHost()
-                SignInMethodChooserHost()
-                SponsorLinkHost()
-                NavDisplay(
-                    backStack = backStack,
-                    onBack = { backStack.safePop() },
-                    // 页面转场：新页沿前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms 淡入淡出；
-                    // 返回及预测式返回手势反向。位移量与时长取自 Echo 的 NavHost
-                    // enter/exit/popEnter/popExitTransition——位移走默认 spring，只有淡化是 tween(200)。
-                    // 首页切 tab 的 AnimatedContent 用的是同一组参数，全 app 一套转场语言。
-                    transitionSpec = {
-                        slideInHorizontally { it / 8 } + fadeIn(tween(200)) togetherWith
-                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                    },
-                    popTransitionSpec = {
-                        slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
-                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
-                    },
-                    // Nav3 特有：预测式返回手势。Echo 的 NavHost 没有对应物，与 pop 同参。
-                    predictivePopTransitionSpec = {
-                        slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
-                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
-                    },
-                    entryProvider = { key ->
-                        when (key) {
-                        is Home -> NavEntry(key) {
-                            HomeScreen(
-                                onNavigateToDetail = { owner, repo ->
-                                    backStack.add(RepoDetail(owner, repo))
-                                },
-                                onNavigateToChat = {
-                                    backStack.add(Chat(null))
-                                },
-                                onOpenUrl = { url ->
-                                    openExternalUrl(url, "")
-                                },
-                                onNavigateToSubscribe = {
-                                    backStack.add(Subscribe)
-                                },
-                                onOpenDigest = { page ->
-                                    backStack.add(page)
-                                },
-                                onNavigateToGithubProfile = { backStack.add(GithubProfile) },
-                                onNavigateToFavorites = { backStack.add(Favorites) },
-                                onNavigateToSettings = { backStack.add(Settings) },
-                                onNavigateToAbout = { backStack.add(About) },
-                            )
-                        }
+        // 转场兜底底色：NavDisplay 的 enter/exit 都带 fadeIn/fadeOut，那 200ms 内新旧页 alpha 都 <1，
+        // 没有这层就会透出 Android window 背景。window 主题是 AppCompat.DayNight，跟的是系统深浅，
+        // 而深色/AMOLED 是应用内 ThemeMode——系统浅色 + app 内深色时露出的是 #fafafa，整屏白闪。
+        // 取 background 与各页 TrendingScaffold 的 containerColor 对齐；纯黑档不特判
+        //（主题层的 isAmoled 已把 background 压到全黑）。
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
+                ForceUpdateGate {
+                    WhatsNewHost()
+                    SignInHintHost()
+                    SignInMethodChooserHost()
+                    SponsorLinkHost()
+                    NavDisplay(
+                        backStack = backStack,
+                        onBack = { backStack.safePop() },
+                        // 页面转场：新页沿前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms 淡入淡出；
+                        // 返回及预测式返回手势反向。位移量与时长取自 Echo 的 NavHost
+                        // enter/exit/popEnter/popExitTransition——位移走默认 spring，只有淡化是 tween(200)。
+                        // 首页切 tab 的 AnimatedContent 用的是同一组参数，全 app 一套转场语言。
+                        transitionSpec = {
+                            slideInHorizontally { it / 8 } + fadeIn(tween(200)) togetherWith
+                                slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                        },
+                        popTransitionSpec = {
+                            slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
+                                slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                        },
+                        // Nav3 特有：预测式返回手势。Echo 的 NavHost 没有对应物，与 pop 同参。
+                        predictivePopTransitionSpec = {
+                            slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
+                                slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                        },
+                        entryProvider = { key ->
+                            when (key) {
+                            is Home -> NavEntry(key) {
+                                HomeScreen(
+                                    onNavigateToDetail = { owner, repo ->
+                                        backStack.add(RepoDetail(owner, repo))
+                                    },
+                                    onNavigateToChat = {
+                                        backStack.add(Chat(null))
+                                    },
+                                    onOpenUrl = { url ->
+                                        openExternalUrl(url, "")
+                                    },
+                                    onNavigateToSubscribe = {
+                                        backStack.add(Subscribe)
+                                    },
+                                    onOpenDigest = { page ->
+                                        backStack.add(page)
+                                    },
+                                    onNavigateToGithubProfile = { backStack.add(GithubProfile) },
+                                    onNavigateToFavorites = { backStack.add(Favorites) },
+                                    onNavigateToSettings = { backStack.add(Settings) },
+                                    onNavigateToAbout = { backStack.add(About) },
+                                )
+                            }
 
-                        is Appearance -> NavEntry(key) {
-                            AppearanceScreen(
-                                onBack = {
-                                    backStack.safePop()
-                                },
-                                onNavigateToColorLab = {
-                                    backStack.add(ColorLab)
+                            is Appearance -> NavEntry(key) {
+                                AppearanceScreen(
+                                    onBack = {
+                                        backStack.safePop()
+                                    },
+                                    onNavigateToColorLab = {
+                                        backStack.add(ColorLab)
+                                    }
+                                )
+                            }
+
+                            is ColorLab -> NavEntry(key) {
+                                ColorLabScreen(
+                                    onBack = {
+                                        backStack.safePop()
+                                    }
+                                )
+                            }
+
+                            is About -> NavEntry(key) {
+                                AboutScreen(
+                                    onBack = {
+                                        backStack.safePop()
+                                    },
+                                    onNavigateToWebPage = { url, title ->
+                                        openExternalUrl(url, title)
+                                    }
+                                )
+                            }
+
+                            is Feedback -> NavEntry(key) {
+                                FeedbackScreen(
+                                    onBack = {
+                                        backStack.safePop()
+                                    }
+                                )
+                            }
+
+                            is Subscribe -> NavEntry(key) {
+                                SubscribeScreen(
+                                    onBack = {
+                                        backStack.safePop()
+                                    }
+                                )
+                            }
+
+                            is WebPage -> NavEntry(key) {
+                                WebViewScreen(
+                                    url = key.url,
+                                    title = key.title,
+                                    onBack = { backStack.safePop() }
+                                )
+                            }
+
+                            is Favorites -> NavEntry(key) {
+                                FavoriteListScreen(
+                                    onBack = { backStack.safePop() },
+                                    onNavigateToDetail = { owner, repo ->
+                                        backStack.add(RepoDetail(owner, repo))
+                                    },
+                                    onOpenUrl = { url ->
+                                        openExternalUrl(url, "")
+                                    },
+                                    onOpenDigest = { page ->
+                                        backStack.add(page)
+                                    }
+                                )
+                            }
+
+                            is Settings -> NavEntry(key) {
+                                SettingsScreen(
+                                    onBack = { backStack.safePop() },
+                                    onNavigateToAppearance = { backStack.add(Appearance) },
+                                    onNavigateToSubscribe = { backStack.add(Subscribe) },
+                                    onNavigateToFeedback = { backStack.add(Feedback) },
+                                    onNavigateToAbout = { backStack.add(About) },
+                                )
+                            }
+
+                            is GithubProfile -> NavEntry(key) {
+                                GithubProfileScreen(
+                                    onBack = { backStack.safePop() },
+                                    onOpenFollowers = { backStack.add(ProfileFollowers) },
+                                    onOpenFollowing = { backStack.add(ProfileFollowing) },
+                                    onOpenRepos = { backStack.add(ProfileRepos) },
+                                )
+                            }
+
+                            is ProfileFollowers -> NavEntry(key) {
+                                GithubUserListScreen(
+                                    mode = GithubUserListMode.FOLLOWERS,
+                                    onBack = { backStack.safePop() },
+                                )
+                            }
+
+                            is ProfileFollowing -> NavEntry(key) {
+                                GithubUserListScreen(
+                                    mode = GithubUserListMode.FOLLOWING,
+                                    onBack = { backStack.safePop() },
+                                )
+                            }
+
+                            is ProfileRepos -> NavEntry(key) {
+                                RepoListScreen(
+                                    onBack = { backStack.safePop() },
+                                    onOpenRepo = { owner, repo ->
+                                        backStack.add(RepoDetail(owner, repo))
+                                    },
+                                )
+                            }
+
+                            is RepoDetail -> NavEntry(key) {
+                                ReadmeScreen(
+                                    owner = key.owner,
+                                    repo = key.repo,
+                                    onBack = { backStack.safePop() },
+                                    onNavigateToChat = { context ->
+                                        backStack.add(Chat(context))
+                                    }
+                                )
+                            }
+
+                            is DigestPage -> NavEntry(key) {
+                                DigestScreen(
+                                    page = key,
+                                    onBack = { backStack.safePop() },
+                                    onOpenUrl = { url ->
+                                        openExternalUrl(url, "")
+                                    }
+                                )
+                            }
+
+                            is Chat -> NavEntry(key) {
+                                val screen = globalChatScreen
+                                if (screen != null) {
+                                    screen(key.context) { backStack.safePop() }
+                                } else {
+                                    // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
+                                    LaunchedEffect(Unit) { backStack.safePop() }
                                 }
-                            )
-                        }
+                            }
 
-                        is ColorLab -> NavEntry(key) {
-                            ColorLabScreen(
-                                onBack = {
-                                    backStack.safePop()
-                                }
-                            )
-                        }
-
-                        is About -> NavEntry(key) {
-                            AboutScreen(
-                                onBack = {
-                                    backStack.safePop()
-                                },
-                                onNavigateToWebPage = { url, title ->
-                                    openExternalUrl(url, title)
-                                }
-                            )
-                        }
-
-                        is Feedback -> NavEntry(key) {
-                            FeedbackScreen(
-                                onBack = {
-                                    backStack.safePop()
-                                }
-                            )
-                        }
-
-                        is Subscribe -> NavEntry(key) {
-                            SubscribeScreen(
-                                onBack = {
-                                    backStack.safePop()
-                                }
-                            )
-                        }
-
-                        is WebPage -> NavEntry(key) {
-                            WebViewScreen(
-                                url = key.url,
-                                title = key.title,
-                                onBack = { backStack.safePop() }
-                            )
-                        }
-
-                        is Favorites -> NavEntry(key) {
-                            FavoriteListScreen(
-                                onBack = { backStack.safePop() },
-                                onNavigateToDetail = { owner, repo ->
-                                    backStack.add(RepoDetail(owner, repo))
-                                },
-                                onOpenUrl = { url ->
-                                    openExternalUrl(url, "")
-                                },
-                                onOpenDigest = { page ->
-                                    backStack.add(page)
-                                }
-                            )
-                        }
-
-                        is Settings -> NavEntry(key) {
-                            SettingsScreen(
-                                onBack = { backStack.safePop() },
-                                onNavigateToAppearance = { backStack.add(Appearance) },
-                                onNavigateToSubscribe = { backStack.add(Subscribe) },
-                                onNavigateToFeedback = { backStack.add(Feedback) },
-                                onNavigateToAbout = { backStack.add(About) },
-                            )
-                        }
-
-                        is GithubProfile -> NavEntry(key) {
-                            GithubProfileScreen(
-                                onBack = { backStack.safePop() },
-                                onOpenFollowers = { backStack.add(ProfileFollowers) },
-                                onOpenFollowing = { backStack.add(ProfileFollowing) },
-                                onOpenRepos = { backStack.add(ProfileRepos) },
-                            )
-                        }
-
-                        is ProfileFollowers -> NavEntry(key) {
-                            GithubUserListScreen(
-                                mode = GithubUserListMode.FOLLOWERS,
-                                onBack = { backStack.safePop() },
-                            )
-                        }
-
-                        is ProfileFollowing -> NavEntry(key) {
-                            GithubUserListScreen(
-                                mode = GithubUserListMode.FOLLOWING,
-                                onBack = { backStack.safePop() },
-                            )
-                        }
-
-                        is ProfileRepos -> NavEntry(key) {
-                            RepoListScreen(
-                                onBack = { backStack.safePop() },
-                                onOpenRepo = { owner, repo ->
-                                    backStack.add(RepoDetail(owner, repo))
-                                },
-                            )
-                        }
-
-                        is RepoDetail -> NavEntry(key) {
-                            ReadmeScreen(
-                                owner = key.owner,
-                                repo = key.repo,
-                                onBack = { backStack.safePop() },
-                                onNavigateToChat = { context ->
-                                    backStack.add(Chat(context))
-                                }
-                            )
-                        }
-
-                        is DigestPage -> NavEntry(key) {
-                            DigestScreen(
-                                page = key,
-                                onBack = { backStack.safePop() },
-                                onOpenUrl = { url ->
-                                    openExternalUrl(url, "")
-                                }
-                            )
-                        }
-
-                        is Chat -> NavEntry(key) {
-                            val screen = globalChatScreen
-                            if (screen != null) {
-                                screen(key.context) { backStack.safePop() }
-                            } else {
-                                // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
-                                LaunchedEffect(Unit) { backStack.safePop() }
+                            else -> {
+                                error("Unknown route: $key")
+                            }
                             }
                         }
-
-                        else -> {
-                            error("Unknown route: $key")
-                        }
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
     }

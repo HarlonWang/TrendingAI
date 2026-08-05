@@ -49,6 +49,7 @@
 ### B. 两项从未验证
 
 1. **深色 / AMOLED 观感** — 全程只看过浅色。悬浮胶囊、药丸、双态图标的对比度都没验。
+   （2026-08-05 已修一个深色专有 bug：一级页转场整屏白闪——根部缺兜底底色，fade 那 200ms 透出了 window 背景，而 window 主题是 `AppCompat.DayNight`、跟系统深浅走，app 内深色/AMOLED 传不过去。修法照抄 Echo `MainActivity.kt:559` 的 `BoxWithConstraints(.background(...))`，见 `App.kt` 的 `Box(Modifier.fillMaxSize().background(colorScheme.background))`。对比度那几项仍未验。）
 2. **登录态下的「我的」页** — 身份区、额度条、GitHub 入口卡在登录后长什么样，一次都没看过。需真登一次 GitHub。
 
 （iOS 端不作验证要求，见下方「其他产品决策」。）
