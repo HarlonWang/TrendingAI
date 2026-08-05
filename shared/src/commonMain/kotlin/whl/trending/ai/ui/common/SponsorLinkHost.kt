@@ -49,20 +49,10 @@ fun SponsorLinkHost() {
 
     if (!show) return
 
-    AlertDialog(
+    LinkGithubDialog(
+        title = stringResource(Res.string.sponsor_link_needed_title),
+        message = stringResource(Res.string.sponsor_link_needed_message),
         onDismissRequest = { show = false },
-        title = { Text(stringResource(Res.string.sponsor_link_needed_title)) },
-        text = { Text(stringResource(Res.string.sponsor_link_needed_message)) },
-        confirmButton = {
-            TextButton(onClick = {
-                show = false
-                // 关联成功后，MainActivity 的 AccountLink 分支会自动补一次 pro/refresh，
-                // 用户不需要再回赞助页，也不需要重启 app。
-                AccountLink.openLinkGithubPage(AccountLink.SOURCE_UPGRADE_DIALOG)
-            }) {
-                Text(stringResource(Res.string.account_link_github))
-            }
-        },
         dismissButton = {
             TextButton(onClick = { show = false }) {
                 Text(stringResource(Res.string.sponsor_link_needed_later))

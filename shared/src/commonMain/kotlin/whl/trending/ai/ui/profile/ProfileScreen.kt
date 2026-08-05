@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.LinkGithubDialog
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.SettingsGroup
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -170,18 +171,10 @@ fun ProfileScreen(
     // 邮箱用户点「升级 Pro」时的拦截：Pro 权益以 GitHub 账户为发放主体，不先关联就会
     // 「钱付了但权益对不上」。次按钮保留直接前往赞助页——有人只是想单纯支持，不图权益。
     if (showLinkGithubDialog) {
-        AlertDialog(
+        LinkGithubDialog(
+            title = stringResource(Res.string.account_link_required_title),
+            message = stringResource(Res.string.account_link_required_message),
             onDismissRequest = { showLinkGithubDialog = false },
-            title = { Text(stringResource(Res.string.account_link_required_title)) },
-            text = { Text(stringResource(Res.string.account_link_required_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLinkGithubDialog = false
-                    AccountLink.openLinkGithubPage(AccountLink.SOURCE_UPGRADE_DIALOG)
-                }) {
-                    Text(stringResource(Res.string.account_link_github))
-                }
-            },
             dismissButton = {
                 TextButton(onClick = {
                     showLinkGithubDialog = false

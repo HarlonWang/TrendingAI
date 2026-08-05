@@ -66,6 +66,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.InfoDialog
 import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.compose.ui.unit.sp
@@ -802,24 +803,6 @@ private fun HistoryBottomSheet(
                 }
             }
     }
-}
-
-@Composable
-private fun InfoDialog(
-    title: String,
-    content: String,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(content) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.confirm))
-            }
-        }
-    )
 }
 
 private fun String.toColorOrNull(): Color? {
