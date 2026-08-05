@@ -167,13 +167,19 @@ fun SettingsGroup(title: String? = null, items: List<SettingsItem>)
 
 ---
 
-## 七、需要拍板的三件事
+## 七、已定的决策（2026-08-05，迁移已完成）
 
-1. **图标容器形状** — 圆角方 12dp（Echo）／圆形（Rhythm）／多边形 Cookie4Sided（EchoFlow）。倾向圆形：与首页底栏的圆形药丸、头像同语言，最省心；多边形最"Expressive"但要引入 `MaterialShapes` 依赖，且和我们现有的圆角语言差异大。
-2. **按压缩放反馈** — 是否抄 Rhythm 的 0.97 缩放（代价是要关掉 ripple 自己接 `interactionSource`）。
-3. **改造边界** — 只改 `SettingsScreen`，还是连 `AboutScreen`、「我的」页一起统一。
+迁移在 `feat/settings-card-style` 分支落地，覆盖设置页、关于页、「我的」页三处。当时留白的选项都已拍板：
 
----
+| 项 | 决定 | 说明 |
+|---|---|---|
+| 图标容器形状 | **圆形** | 与首页底栏的圆形药丸、头像同语言 |
+| 卡片底色 | `surfaceContainer` | 与统一后的顶栏一致 |
+| 组件 API | **slot API**，不用数据类 | 见 6.1；后续只加了一个 `leading` slot（给「我的」页 GitHub 入口的 40dp 头像用） |
+| 按压缩放反馈 | **不做** | 只有 Rhythm 有。它是全局手感决策——全 app 其余部分都是 ripple，只在设置页换成缩放会更不自洽。要做得整体换，另开一轮 |
+| 长描述行高不均 | **不调** | 「应用语言」「默认首页 tab」「外链打开方式」的描述会换行，卡片高度参差；维持规格值不动 |
+| 退出登录的图标色 | **不特化** | 文字保持 `error` 色，图标沿用默认容器色，不为此给 `settingsItem` 加颜色参数 |
+| 改造边界 | 设置页 + 关于页 + 「我的」页 | `AppearanceScreen` 主体是主题选择卡，不动；`PlanUsageCard` / `AccountHeader` 是特化组件，不动 |
 
 ## 附：本文引用的源码位置
 
