@@ -147,7 +147,14 @@ private fun SettingsItemRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leading != null) {
-                leading()
+                // 统一占满图标容器的宽度并居中：leading 的内容尺寸不一（40dp 头像、24dp 品牌 logo），
+                // 不框住的话同一组里各行的文字起点会参差
+                Box(
+                    modifier = Modifier.size(IconContainerSize),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    leading()
+                }
                 Spacer(Modifier.width(16.dp))
             } else icon?.let {
                 Surface(
