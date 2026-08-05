@@ -1,13 +1,13 @@
 {
-  "version": "0.23.0",
+  "version": "1.0.0-beta.1",
   "zh": [
-    "新增 HN 条目的 AI 解读页",
-    "Product Hunt 列表新增产品配图",
-    "登录过期时会明确提示重新登录，不再静默失效"
+    "首页焕新：底部导航改为悬浮胶囊，标签顺序重排，切换更顺手",
+    "界面整体风格升级，观感与交互更统一",
+    "AI 对话重开 App 后默认开启新对话，历史对话可在抽屉里切回"
   ],
   "en": [
-    "New AI digest page for Hacker News items",
-    "Product Hunt entries now show product images",
-    "Expired sign-ins now prompt you to sign in again instead of failing silently"
+    "Refreshed home screen: floating pill navigation bar with reordered tabs",
+    "Refreshed visual style across the app for a more consistent look and feel",
+    "AI chat starts a new conversation after you reopen the app; earlier chats remain in the drawer"
   ]
 }
