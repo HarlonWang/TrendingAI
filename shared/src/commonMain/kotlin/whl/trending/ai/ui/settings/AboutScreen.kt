@@ -5,6 +5,7 @@ import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.ui.common.SettingsGroup
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.githubLogoPainter
@@ -36,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -125,76 +125,78 @@ fun AboutScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            // 检查更新：apk 渠道点按自建检查，iOS 跳官网；play/fdroid 渠道由商店接管，不显示
-            if (globalUpdateChecker.isEnabled || isIos) {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.check_updates)) },
-                    leadingContent = { Icon(Icons.Default.Refresh, null) },
-                    trailingContent = {
-                        when {
-                            !isIos && isChecking -> LoadingIndicator(
-                                modifier = Modifier.size(24.dp)
-                            )
-                            !isIos && isUpToDate -> Text(
-                                stringResource(Res.string.version_up_to_date),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            !isIos && isCheckFailed -> Text(
-                                stringResource(Res.string.check_update_failed),
-                                color = MaterialTheme.colorScheme.error
-                            )
+            // 隐私政策标题要传给 WebView，须在 composable 作用域取；SettingsGroup 的 content 不是 @Composable
+            val privacyTitle = stringResource(Res.string.privacy_policy)
+            SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
+                // 检查更新：apk 渠道点按自建检查，iOS 跳官网；play/fdroid 渠道由商店接管，不显示
+                if (globalUpdateChecker.isEnabled || isIos) {
+                    settingsItem(
+                        icon = Icons.Default.Refresh,
+                        title = { Text(stringResource(Res.string.check_updates)) },
+                        enabled = !isChecking,
+                        trailing = {
+                            when {
+                                !isIos && isChecking -> LoadingIndicator(
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                !isIos && isUpToDate -> Text(
+                                    stringResource(Res.string.version_up_to_date),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                !isIos && isCheckFailed -> Text(
+                                    stringResource(Res.string.check_update_failed),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        },
+                        onClick = {
+                            trackEvent("settings_check_update")
+                            if (isIos) {
+                                uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
+                            } else {
+                                globalUpdateChecker.manualCheck()
+                            }
+                        },
+                    )
+                }
+                settingsItem(
+                    icon = Icons.Default.History,
+                    title = { Text(stringResource(Res.string.changelog)) },
+                    onClick = {
+                        trackEvent("settings_changelog")
+                        uriHandler.openUri(Constants.CHANGELOG_URL)
+                    },
+                )
+                settingsItem(
+                    icon = Icons.Default.Public,
+                    title = { Text(stringResource(Res.string.official_website)) },
+                    onClick = { uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL) },
+                )
+                // 邮箱可长按选中复制，因此这一项整行不可点
+                settingsItem(
+                    icon = Icons.Default.AlternateEmail,
+                    title = { Text(stringResource(Res.string.contact_author)) },
+                    trailing = {
+                        SelectionContainer {
+                            Text(Constants.AUTHOR_EMAIL, color = MaterialTheme.colorScheme.outline)
                         }
                     },
-                    modifier = Modifier.clickable(enabled = !isChecking) {
-                        trackEvent("settings_check_update")
-                        if (isIos) {
-                            uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
-                        } else {
-                            globalUpdateChecker.manualCheck()
-                        }
-                    }
+                )
+                settingsItem(
+                    icon = Icons.Default.VolunteerActivism,
+                    title = { Text(stringResource(Res.string.donate)) },
+                    onClick = {
+                        trackEvent("settings_donate")
+                        showDonateDialog = true
+                    },
+                )
+                settingsItem(
+                    icon = Icons.Default.PrivacyTip,
+                    title = { Text(privacyTitle) },
+                    onClick = { onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle) },
                 )
             }
-            ListItem(
-                headlineContent = { Text(stringResource(Res.string.changelog)) },
-                leadingContent = { Icon(Icons.Default.History, null) },
-                modifier = Modifier.clickable {
-                    trackEvent("settings_changelog")
-                    uriHandler.openUri(Constants.CHANGELOG_URL)
-                }
-            )
-            ListItem(
-                headlineContent = { Text(stringResource(Res.string.official_website)) },
-                leadingContent = { Icon(Icons.Default.Public, null) },
-                modifier = Modifier.clickable {
-                    uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
-                }
-            )
-            ListItem(
-                headlineContent = { Text(stringResource(Res.string.contact_author)) },
-                trailingContent = {
-                    SelectionContainer {
-                        Text(Constants.AUTHOR_EMAIL, color = MaterialTheme.colorScheme.outline)
-                    }
-                },
-                leadingContent = { Icon(Icons.Default.AlternateEmail, null) }
-            )
-            ListItem(
-                headlineContent = { Text(stringResource(Res.string.donate)) },
-                leadingContent = { Icon(Icons.Default.VolunteerActivism, null) },
-                modifier = Modifier.clickable {
-                    trackEvent("settings_donate")
-                    showDonateDialog = true
-                }
-            )
-            val privacyTitle = stringResource(Res.string.privacy_policy)
-            ListItem(
-                headlineContent = { Text(privacyTitle) },
-                leadingContent = { Icon(Icons.Default.PrivacyTip, null) },
-                modifier = Modifier.clickable {
-                    onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle)
-                }
-            )
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
