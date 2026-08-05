@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 /**
@@ -42,7 +43,7 @@ import androidx.compose.ui.unit.dp
  *
  * ```
  * SettingsGroup(title = "个性化", modifier = Modifier.padding(horizontal = 16.dp)) {
- *     item(
+ *     settingsItem(
  *         icon = Icons.Default.Palette,
  *         title = { Text("外观") },
  *         trailing = { Text(themeModeText(themeMode)) },
@@ -132,8 +133,15 @@ private fun SettingsItemRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // 只在有 onClick 时才挂 clickable：没有点击行为的行（「联系作者」、纯开关行）
+                // 不该带任何按钮语义。有 onClick 但 enabled=false 时仍挂着、由 clickable 自己
+                // 表达「暂不可用」（如正在检查更新），这样 TalkBack 才播报得出禁用态。
                 .then(
-                    if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier
+                    if (onClick != null) {
+                        Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                    } else {
+                        Modifier
+                    }
                 )
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
