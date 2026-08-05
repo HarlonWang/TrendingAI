@@ -100,3 +100,36 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 ### 收藏云同步无埋点
 
 0.22.0 的收藏云同步只有老的 `favorite_toggle` / `favorite_list_view`，同步/合并本身（`prefs_favorites_merged` 等）没有任何事件，功能成效在埋点侧看不到。
+
+## 0.23.0 埋点断点：一级 tab 重排（首页改版，尚未发版）
+
+首页改版把底栏改成 首页 / Picks / AI 对话 / 我的，三源收进首页用子 tab 切换，账户中心升为一级 tab。埋点随之有三处变化，跨 0.23.0 看首页相关曲线时必须切段。
+
+### `tab_switch` / `tab_double_tap_refresh` 的 `tab` 取值换了两代
+
+`tab` 取的是 `HomeTab.name.lowercase()`（`HomeScreen.kt:270`），改版后是 `home` / `picks` / `chat` / `me`：
+
+| 版本 | `tab` 取值 |
+|---|---|
+| 0.23.0 起 | `home` / `picks` / `chat` / `me` |
+| 0.22.0～0.23 之前 | `trending` / `picks` |
+| 更早 | `github` / `hackernews` / `producthunt` |
+
+**同一个事件名跨越三代词汇**。按 `tab` 分组的看板跨版本聚合会得到割裂的曲线，且 `home` 与旧的 `github`/`trending` 虽然落点相近，含义已从「某一源」变成「三源合一的首页」，不能直接接续。
+
+`chat` 是个特例：AI 对话是入口不是落点（点击直接推全屏聊天页，底栏选中态留在原 tab），所以 `tab=chat` 只会出现在 `tab_switch`，永远不会出现在 `tab_double_tap_refresh`。
+
+### 新增 `trending_source_switch`
+
+记录首页内三源子 tab 的切换（`HomeScreen.kt:365`），属性 `source` 取 `github` / `hackernews` / `producthunt`。0.23.0 之前这个动作是一级 `tab_switch`，之后降级成二级——**三源的相对热度要从这个新事件看，不能再看 `tab_switch`**。
+
+### ⚠️ 进入设置页 / 关于页出现埋点盲区
+
+0.22.0 的 `settings_app_settings`（账户中心 →「应用设置」）随该子页删除而作废，**没有替代事件**。改版后设置页与关于页挂在底栏「⋯」菜单上，而这两个入口是纯回调透传（`HomeScreen.kt:413-414` → `HomeFloatingBar.kt:295/303`），**没有任何 `trackEvent`**。
+
+后果：
+
+- **「进入设置页」的量自 0.23.0 起统计不到**，只能靠设置页内的子事件（`settings_appearance` / `settings_language_change` 等）间接推断，会低估只进去看一眼就退出的用户；
+- `settings_about` 仍然只在设置页那个入口上报（`SettingsScreen.kt:427`），从底栏「⋯」直接进关于页的路径不计入——所以它现在**只覆盖部分进入**，跨 0.23.0 的下跌可能纯粹是入口分流，不是兴趣下降。
+
+补两行 `trackEvent` 即可消除（底栏菜单的 settings / about 各一条），尚未做。

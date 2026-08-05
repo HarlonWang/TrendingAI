@@ -41,10 +41,21 @@
 
 ## 三、剩余待办
 
-### A. 阶段 4 未做的两项（用户说「先不做」，随时可捡起）
+### A. 阶段 4 未做的两项 —— 均已了结
 
-1. **设置项卡片化** — 对齐 Echo 的 `Material3SettingsGroup` / `Material3SettingsItem`：每行独立圆角卡片（`surfaceContainer` 底）+ 圆角方形 tonal 图标容器 + 小号 primary 色分组标题。当前是裸 `ListItem` + `SettingsHeader`。参照 `app/src/main/kotlin/com/music/echo/ui/component/Material3SettingsGroup.kt`。
-2. **页面主标题字号层级** — Echo 用 `displaySmall` / `titleLarge` + Bold，我们还是 `titleMedium`。
+1. ~~**设置项卡片化**~~ — **2026-08-05 已完成**（`f18a4cf` / PR #82）。设置页、关于页、「我的」页三处列表行改用 `ui/common/SettingsGroup.kt`（连体卡片 + 40dp 圆形图标容器 + slot API）。规格与取舍见 `docs/settings-style-comparison.md`。
+2. ~~**页面主标题字号层级**~~ — **2026-08-05 评估后决定不做**。原以为是"我们 `titleMedium`、Echo `displaySmall`"的简单差距，核完结构发现现状是有理由的分层：
+
+   | 首页 tab | 顶栏结构 | 字号 |
+   |---|---|---|
+   | GitHub | 双行：`Trending AI ⌄` + 筛选态副标题 | `titleMedium` + `bodySmall` |
+   | Picks | 双行：`Picks` + 三源与日期副标题 | `titleMedium` + `bodySmall` |
+   | HN / PH、我的 | 单行 | `titleMedium` |
+   | 二级页（设置/关于/收藏/反馈/…） | 单行 + 返回键 | `titleLarge`（M3 默认） |
+
+   四个一级 tab 里**有两个是双行**，M3 的 two-line top app bar 本就该用较小主标题给副标题让位；其余两个跟着用同一档，是为了**切 tab 时标题不跳档**（我们还有 1/8 屏位移转场，跳档会很显眼）。二级页用 M3 默认的 `titleLarge`，语境不同（页面身份 + 返回键），不必与一级页同号。
+
+   要往 Echo 的大标题走**不是改字号，而是改顶栏结构**——Echo 能用 `displaySmall` 是因为它顶栏单行无副标题；我们得先把筛选态、三源日期从顶栏挪到内容区才腾得出空间，代价是这些实时信息的可见性下降。结论：不值得，别再捡起。
 
 ### B. 验证情况
 
@@ -65,18 +76,16 @@
 
 （iOS 端不作验证要求，见下方「其他产品决策」。）
 
-### C. 文档
+### C. 文档 —— 已完成
 
-**`docs/analytics-notes.md` 补这轮的埋点断点**（目前只写在 commit message 里）：
+**2026-08-05 已补进 `docs/analytics-notes.md`**（「0.23.0 埋点断点」一节）：`tab_switch` / `tab_double_tap_refresh` 的 `tab` 取值三代变迁、新增的 `trending_source_switch`、以及下面这个补记时才发现的盲区。
 
-| 事件 | 变化 |
-|---|---|
-| `tab_switch` / `tab_double_tap_refresh` | `tab` 取值改为 `home` / `picks` / `chat` / `me`；0.23 是 `trending`/`picks`，更早是 `github`/`hackernews`/`producthunt` |
-| `trending_source_switch` | 新增，记录三源子 tab 切换 |
-| `profile_open_settings` | 新增，替代 `settings_app_settings`（后者作废，原指向已删除的「应用设置」子页） |
-| `settings_about` | 语义不变，但现在有两个触发点（设置页 + 底栏「⋯」菜单） |
+⚠️ 补文档时核对代码，发现本节初版列的两条与实现不符，已按实际情况更正：
 
-拉首页相关漏斗/留存时需按版本切段。
+- **`profile_open_settings` 并不存在**——初版写它「新增、替代 `settings_app_settings`」，代码里查无此事件；
+- **`settings_about` 仍只有一个触发点**（`SettingsScreen.kt:427`），初版说的「设置页 + 底栏「⋯」菜单两个触发点」不成立——底栏菜单那条路径是纯回调透传（`HomeScreen.kt:413-414`），没有埋点。
+
+由此暴露一个真实盲区：**改版后「进入设置页」完全统计不到**（`settings_app_settings` 作废且无替代），关于页也只统计得到一半入口。补两行 `trackEvent` 即可，尚未做。
 
 ### D. 发版
 
