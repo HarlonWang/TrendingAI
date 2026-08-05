@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.SettingsGroup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -246,43 +247,38 @@ fun ProfileScreen(
                         })
                     }
                 }
-
-                item(key = "divider_top") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
             }
 
             // ④ 收藏入口。设置与关于我们不在这里——它们挂在底栏的「⋯」扩展菜单上，
                 // 两处都放会变成同一个入口的两个按钮。
             item(key = "favorites") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.favorites)) },
-                    leadingContent = { Icon(Icons.Default.Favorite, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_favorites")
-                        onNavigateToFavorites()
-                    }
-                )
+                SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    settingsItem(
+                        icon = Icons.Default.Favorite,
+                        title = { Text(stringResource(Res.string.favorites)) },
+                        onClick = {
+                            trackEvent("settings_favorites")
+                            onNavigateToFavorites()
+                        },
+                    )
+                }
             }
 
             // ⑤ 退出登录（仅登录用户）
             if (uiState.loggedIn) {
                 item(key = "sign_out") {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(Res.string.sign_out),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        leadingContent = {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        modifier = Modifier.clickable { showSignOutDialog = true }
-                    )
+                    SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        settingsItem(
+                            icon = Icons.AutoMirrored.Filled.Logout,
+                            title = {
+                                Text(
+                                    stringResource(Res.string.sign_out),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = { showSignOutDialog = true },
+                        )
+                    }
                 }
             }
             item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
@@ -563,24 +559,25 @@ private fun TierPillFree() {
  */
 @Composable
 private fun LinkGithubCard(onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(stringResource(Res.string.account_link_github)) },
-        supportingContent = {
-            Text(
-                stringResource(Res.string.account_link_github_desc),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        leadingContent = {
-            Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
-        },
-        trailingContent = {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-        },
-        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        modifier = Modifier.clickable(onClick = onClick),
-    )
+    SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        settingsItem(
+            leading = {
+                Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
+            },
+            title = { Text(stringResource(Res.string.account_link_github)) },
+            description = {
+                Text(
+                    stringResource(Res.string.account_link_github_desc),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            trailing = {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+            },
+            onClick = onClick,
+        )
+    }
 }
 
 /** GitHub 主页入口卡：头像 + 名称 + 计数摘要，点击进 [GithubProfileScreen]。 */
@@ -603,24 +600,25 @@ private fun GithubEntryCard(uiState: ProfileUiState, onClick: () -> Unit) {
     } else {
         stringResource(Res.string.account_github_entry_desc)
     }
-    ListItem(
-        headlineContent = { Text(stringResource(Res.string.account_github_entry)) },
-        supportingContent = { Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        leadingContent = {
-            if (user.avatarUrl != null) {
-                AsyncImage(
-                    model = user.avatarUrl,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp).clip(CircleShape),
-                )
-            } else {
-                Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
-            }
-        },
-        trailingContent = {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-        },
-        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        modifier = Modifier.clickable { onClick() },
-    )
+    SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        settingsItem(
+            leading = {
+                if (user.avatarUrl != null) {
+                    AsyncImage(
+                        model = user.avatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp).clip(CircleShape),
+                    )
+                } else {
+                    Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
+                }
+            },
+            title = { Text(stringResource(Res.string.account_github_entry)) },
+            description = { Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            trailing = {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+            },
+            onClick = onClick,
+        )
+    }
 }

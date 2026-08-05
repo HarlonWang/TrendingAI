@@ -27,10 +27,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -108,6 +106,7 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.notification.globalDailyPicksNotifier
+import whl.trending.ai.ui.common.SettingsGroup
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
@@ -147,6 +146,11 @@ fun SettingsScreen(
 
     var showSummaryLanguageDialog by remember { mutableStateOf(false) }
     var showLangCaptureDialog by remember { mutableStateOf(false) }
+    // 三个下拉菜单的展开态提到页面作用域：SettingsGroup 的 content 是收集用的普通 lambda，
+    // 不是 @Composable，里面调不了 remember
+    var appLanguageMenuExpanded by remember { mutableStateOf(false) }
+    var summaryLanguageMenuExpanded by remember { mutableStateOf(false) }
+    var homeTabMenuExpanded by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val settingsScope = rememberCoroutineScope()
@@ -202,231 +206,228 @@ fun SettingsScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             // ① 个性化
-            item(key = "group_personalization") { SettingsHeader(stringResource(Res.string.personalization)) }
-            item(key = "appearance") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.appearance)) },
-                    leadingContent = { Icon(Icons.Default.Palette, null) },
-                    trailingContent = {
-                        Text(
-                            text = themeModeText(themeMode),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_appearance")
-                        onNavigateToAppearance()
-                    }
-                )
-            }
-            // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
-            item(key = "app_language") {
-                var expanded by remember { mutableStateOf(false) }
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.language_settings)) },
-                    supportingContent = { Text(stringResource(Res.string.app_language_desc)) },
-                    leadingContent = { Icon(Icons.Default.Language, null) },
-                    trailingContent = {
-                        if (isIos) {
+            item(key = "group_personalization") {
+                SettingsGroup(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    title = stringResource(Res.string.personalization),
+                ) {
+                    settingsItem(
+                        icon = Icons.Default.Palette,
+                        title = { Text(stringResource(Res.string.appearance)) },
+                        trailing = {
                             Text(
-                                text = stringResource(Res.string.open_system_settings),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable { openAppSettings() }
+                                text = themeModeText(themeMode),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                        } else {
+                        },
+                        onClick = {
+                            trackEvent("settings_appearance")
+                            onNavigateToAppearance()
+                        },
+                    )
+                    // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
+                    settingsItem(
+                        icon = Icons.Default.Language,
+                        title = { Text(stringResource(Res.string.language_settings)) },
+                        description = { Text(stringResource(Res.string.app_language_desc)) },
+                        trailing = {
+                            if (isIos) {
+                                Text(
+                                    text = stringResource(Res.string.open_system_settings),
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            } else {
+                                Box {
+                                    Text(
+                                        text = languageOptionText(appLanguage),
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    DropdownMenu(
+                                        expanded = appLanguageMenuExpanded,
+                                        onDismissRequest = { appLanguageMenuExpanded = false },
+                                    ) {
+                                        AppLanguage.entries.forEach { language ->
+                                            DropdownMenuItem(
+                                                text = { Text(languageOptionText(language)) },
+                                                onClick = {
+                                                    appLanguageMenuExpanded = false
+                                                    trackEvent("settings_language_change", mapOf("language" to language.name.lowercase()))
+                                                    globalSettingsManager.setLanguage(language)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        onClick = {
+                            if (isIos) openAppSettings() else appLanguageMenuExpanded = true
+                        },
+                    )
+                    // 摘要语言：独立决定 AI 摘要/解读的请求语言；行点击弹说明（含「更多语言」引导采集 + 赞助），
+                    // 点右侧当前值才是直接换语言——两个动作分开，别合并
+                    settingsItem(
+                        icon = Icons.Default.Translate,
+                        title = { Text(stringResource(Res.string.summary_language)) },
+                        description = { Text(stringResource(Res.string.summary_language_desc)) },
+                        trailing = {
                             Box {
                                 Text(
-                                    text = languageOptionText(appLanguage),
+                                    text = languageOptionText(summaryLanguage),
                                     color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clickable { expanded = true }
+                                    modifier = Modifier.clickable { summaryLanguageMenuExpanded = true },
                                 )
                                 DropdownMenu(
-                                    expanded = expanded,
-                                    onDismissRequest = { expanded = false }
+                                    expanded = summaryLanguageMenuExpanded,
+                                    onDismissRequest = { summaryLanguageMenuExpanded = false },
                                 ) {
-                                    AppLanguage.entries.forEach { language ->
+                                    SummaryLanguage.entries.forEach { language ->
                                         DropdownMenuItem(
                                             text = { Text(languageOptionText(language)) },
                                             onClick = {
-                                                expanded = false
-                                                trackEvent("settings_language_change", mapOf("language" to language.name.lowercase()))
-                                                globalSettingsManager.setLanguage(language)
+                                                summaryLanguageMenuExpanded = false
+                                                trackEvent("settings_summary_language_change", mapOf("language" to language.name.lowercase()))
+                                                globalSettingsManager.setSummaryLanguage(language)
                                             }
                                         )
                                     }
                                 }
                             }
-                        }
-                    },
-                    modifier = Modifier.clickable {
-                        if (isIos) openAppSettings() else expanded = true
-                    }
-                )
-            }
-            // 摘要语言：独立决定 AI 摘要/解读的请求语言；行点击弹说明（含「更多语言」引导采集 + 赞助）
-            item(key = "summary_language") {
-                var expanded by remember { mutableStateOf(false) }
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.summary_language)) },
-                    supportingContent = { Text(stringResource(Res.string.summary_language_desc)) },
-                    leadingContent = { Icon(Icons.Default.Translate, null) },
-                    trailingContent = {
-                        Box {
-                            Text(
-                                text = languageOptionText(summaryLanguage),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable { expanded = true }
-                            )
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                SummaryLanguage.entries.forEach { language ->
-                                    DropdownMenuItem(
-                                        text = { Text(languageOptionText(language)) },
-                                        onClick = {
-                                            expanded = false
-                                            trackEvent("settings_summary_language_change", mapOf("language" to language.name.lowercase()))
-                                            globalSettingsManager.setSummaryLanguage(language)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_summary_language", mapOf("summary_language" to summaryLanguage.name.lowercase()))
-                        showSummaryLanguageDialog = true
-                    }
-                )
-            }
-            // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
-            item(key = "default_home_tab") {
-                var expanded by remember { mutableStateOf(false) }
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.default_home_tab)) },
-                    supportingContent = { Text(stringResource(Res.string.default_home_tab_desc)) },
-                    leadingContent = { Icon(Icons.Default.Home, null) },
-                    trailingContent = {
-                        Box {
-                            Text(
-                                text = homeTabOptionText(HomeTab.defaultFromName(defaultHomeTab)),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable { expanded = true }
-                            )
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                HomeTab.defaultCandidates.forEach { tab ->
-                                    DropdownMenuItem(
-                                        text = { Text(homeTabOptionText(tab)) },
-                                        onClick = {
-                                            expanded = false
-                                            trackEvent("settings_default_home_tab_change", mapOf("tab" to tab.name.lowercase()))
-                                            globalSettingsManager.setDefaultHomeTab(tab.name)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
-            }
-            item(key = "divider_1") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            // ② 订阅与提醒
-            item(key = "group_subscription") { SettingsHeader(stringResource(Res.string.subscription_reminders)) }
-            item(key = "subscribe") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.subscribe_title)) },
-                    leadingContent = { Icon(Icons.Default.Email, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_subscribe")
-                        onNavigateToSubscribe()
-                    }
-                )
-            }
-            if (globalDailyPicksNotifier.isSupported) {
-                item(key = "daily_picks_notification") {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
-                        leadingContent = { Icon(Icons.Default.Notifications, null) },
-                        trailingContent = {
-                            Switch(
-                                checked = dailyPicksNotificationEnabled,
-                                onCheckedChange = { enabled ->
-                                    trackEvent(
-                                        "settings_daily_picks_notification",
-                                        mapOf("enabled" to enabled.toString())
-                                    )
-                                    if (enabled) {
-                                        settingsScope.launch {
-                                            val granted = globalDailyPicksNotifier.enable()
-                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
-                                            if (!granted) {
-                                                val result = snackbarHostState.showSnackbar(
-                                                    message = permissionDeniedMsg,
-                                                    actionLabel = openSystemSettingsLabel,
-                                                )
-                                                if (result == SnackbarResult.ActionPerformed) {
-                                                    openAppSettings()
-                                                }
+                        },
+                        onClick = {
+                            trackEvent("settings_summary_language", mapOf("summary_language" to summaryLanguage.name.lowercase()))
+                            showSummaryLanguageDialog = true
+                        },
+                    )
+                    // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
+                    settingsItem(
+                        icon = Icons.Default.Home,
+                        title = { Text(stringResource(Res.string.default_home_tab)) },
+                        description = { Text(stringResource(Res.string.default_home_tab_desc)) },
+                        trailing = {
+                            Box {
+                                Text(
+                                    text = homeTabOptionText(HomeTab.defaultFromName(defaultHomeTab)),
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                DropdownMenu(
+                                    expanded = homeTabMenuExpanded,
+                                    onDismissRequest = { homeTabMenuExpanded = false },
+                                ) {
+                                    HomeTab.defaultCandidates.forEach { tab ->
+                                        DropdownMenuItem(
+                                            text = { Text(homeTabOptionText(tab)) },
+                                            onClick = {
+                                                homeTabMenuExpanded = false
+                                                trackEvent("settings_default_home_tab_change", mapOf("tab" to tab.name.lowercase()))
+                                                globalSettingsManager.setDefaultHomeTab(tab.name)
                                             }
-                                        }
-                                    } else {
-                                        globalDailyPicksNotifier.disable()
-                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                        )
                                     }
                                 }
-                            )
-                        }
+                            }
+                        },
+                        onClick = { homeTabMenuExpanded = true },
                     )
                 }
             }
-            item(key = "divider_2") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
+            // ② 订阅与提醒
+            item(key = "group_subscription") {
+                SettingsGroup(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    title = stringResource(Res.string.subscription_reminders),
+                ) {
+                    settingsItem(
+                        icon = Icons.Default.Email,
+                        title = { Text(stringResource(Res.string.subscribe_title)) },
+                        onClick = {
+                            trackEvent("settings_subscribe")
+                            onNavigateToSubscribe()
+                        },
+                    )
+                    if (globalDailyPicksNotifier.isSupported) {
+                        settingsItem(
+                            icon = Icons.Default.Notifications,
+                            title = { Text(stringResource(Res.string.daily_picks_notification)) },
+                            trailing = {
+                                Switch(
+                                    checked = dailyPicksNotificationEnabled,
+                                    onCheckedChange = { enabled ->
+                                        trackEvent(
+                                            "settings_daily_picks_notification",
+                                            mapOf("enabled" to enabled.toString())
+                                        )
+                                        if (enabled) {
+                                            settingsScope.launch {
+                                                val granted = globalDailyPicksNotifier.enable()
+                                                globalSettingsManager.setDailyPicksNotificationEnabled(granted)
+                                                if (!granted) {
+                                                    val result = snackbarHostState.showSnackbar(
+                                                        message = permissionDeniedMsg,
+                                                        actionLabel = openSystemSettingsLabel,
+                                                    )
+                                                    if (result == SnackbarResult.ActionPerformed) {
+                                                        openAppSettings()
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            globalDailyPicksNotifier.disable()
+                                            globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                        }
+                                    }
+                                )
+                            },
+                        )
+                    }
+                }
+            }
 
             // ③ 通用
-            item(key = "group_general") { SettingsHeader(stringResource(Res.string.settings_group_general)) }
-            // 外链打开方式：行点击与开关同为切换
-            item(key = "open_links") {
-                val toggleOpenLinks = { enabled: Boolean ->
-                    trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
-                    globalSettingsManager.setOpenLinksInCustomTab(enabled)
+            item(key = "group_general") {
+                SettingsGroup(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    title = stringResource(Res.string.settings_group_general),
+                ) {
+                    // 外链打开方式：行点击与开关同为切换
+                    settingsItem(
+                        icon = Icons.Default.OpenInBrowser,
+                        title = { Text(stringResource(Res.string.open_links_in_browser)) },
+                        description = { Text(stringResource(Res.string.open_links_in_browser_desc)) },
+                        trailing = {
+                            Switch(
+                                checked = openLinksInCustomTab,
+                                onCheckedChange = { enabled ->
+                                    trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
+                                    globalSettingsManager.setOpenLinksInCustomTab(enabled)
+                                }
+                            )
+                        },
+                        onClick = {
+                            val enabled = !openLinksInCustomTab
+                            trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
+                            globalSettingsManager.setOpenLinksInCustomTab(enabled)
+                        },
+                    )
+                    settingsItem(
+                        icon = Icons.Default.Feedback,
+                        title = { Text(stringResource(Res.string.feedback)) },
+                        onClick = {
+                            trackEvent("settings_feedback")
+                            onNavigateToFeedback()
+                        },
+                    )
+                    // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
+                    settingsItem(
+                        icon = Icons.Default.Info,
+                        title = { Text(stringResource(Res.string.about)) },
+                        onClick = {
+                            trackEvent("settings_about")
+                            onNavigateToAbout()
+                        },
+                    )
                 }
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.open_links_in_browser)) },
-                    supportingContent = { Text(stringResource(Res.string.open_links_in_browser_desc)) },
-                    leadingContent = { Icon(Icons.Default.OpenInBrowser, null) },
-                    trailingContent = {
-                        Switch(
-                            checked = openLinksInCustomTab,
-                            onCheckedChange = toggleOpenLinks
-                        )
-                    },
-                    modifier = Modifier.clickable { toggleOpenLinks(!openLinksInCustomTab) }
-                )
-            }
-            item(key = "feedback") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.feedback)) },
-                    leadingContent = { Icon(Icons.Default.Feedback, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_feedback")
-                        onNavigateToFeedback()
-                    }
-                )
-            }
-            // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
-            item(key = "about") {
-                ListItem(
-                    headlineContent = { Text(stringResource(Res.string.about)) },
-                    leadingContent = { Icon(Icons.Default.Info, null) },
-                    modifier = Modifier.clickable {
-                        trackEvent("settings_about")
-                        onNavigateToAbout()
-                    }
-                )
             }
             item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
         }
@@ -434,16 +435,6 @@ fun SettingsScreen(
 }
 
 /** 设置分组标题，账户页与设置页共用。 */
-@Composable
-fun SettingsHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
-}
-
 @Composable
 private fun languageOptionText(language: AppLanguage): String {
     val labelRes = when (language) {
