@@ -145,9 +145,15 @@ class ChatViewModel(
     fun enterEntry(context: ChatContext?) {
         viewModelScope.launch {
             val isGeneralEntry = ChatStore.entryKeyOf(context) == ChatStore.ENTRY_GENERAL
-            // 进程内续接。判断必须在 activeContext 被覆盖之前——它此刻的值代表「上次停在哪」，
-            // null 才说明停在通用会话上（停在 repo 会话时走通用入口，应当开新会话而非续那条）
-            if (isGeneralEntry && activeContext == null && _currentThreadId.value != null) return@launch
+            // 进程内续接。两点讲究：
+            // 1. 判断必须在 activeContext 被覆盖之前——它此刻的值代表「上次停在哪」；
+            //    停在 repo 会话时走通用入口，应当开新会话而非把那条续过来。
+            // 2. 「上次是不是通用会话」与 isGeneralEntry 走同一个 entryKeyOf，避免两处口径不一：
+            //    entryKeyOf 把「有 title 但无 externalId」的 context（HN/PH 场景）也算 general，
+            //    裸写 activeContext == null 会把它判成非通用，将来给 HN/PH 加入口就会分歧。
+            val wasOnGeneralThread = ChatStore.entryKeyOf(activeContext) == ChatStore.ENTRY_GENERAL &&
+                _currentThreadId.value != null
+            if (isGeneralEntry && wasOnGeneralThread) return@launch
             activeContext = context
             val s = store ?: return@launch
             val id = if (isGeneralEntry) null else s.resolveLatestThread(context)
