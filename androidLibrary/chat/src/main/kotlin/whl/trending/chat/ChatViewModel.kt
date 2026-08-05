@@ -126,22 +126,30 @@ class ChatViewModel(
     /**
      * 入口进入（Screen 每个新入口调用一次）。
      *
-     * **通用入口一律新会话**（对齐 ChatGPT / Gemini / Grok）：对话是一次性任务单元，
+     * **通用入口默认新会话**（对齐 ChatGPT / Gemini / Grok）：对话是一次性任务单元，
      * 历史进抽屉、不进现场。此前「永远续同一条 general 会话」的代价是——不相关的话题
      * 堆进同一上下文窗口（最近 12 条 / 16k 字符会被上一话题连同 4000 字解读占满，答非
      * 所问），抽屉里长期只有一条会话（多会话功能形同虚设），欢迎区与快捷问因 messages
      * 非空而永久消失。线上 95% 的对话都走通用入口，这条路径的收益最大。
      *
+     * 「新会话」的边界是**进程**，不是页面：本 VM 挂在 Activity 作用域（`viewModel(key="chat")`
+     * 的 owner 是 Activity，退出 chat 页不销毁），所以返回首页查个东西再进来，[_currentThreadId]
+     * 还指着刚才那条会话——此时保持现状即可，不必重新开一条。进程被杀后 VM 随之消失，
+     * 下次进来自然是新会话，无需任何额外标记或时间窗口。
+     *
      * **条目入口（`repo:*`）仍恢复**：回到同一个项目继续追问是真实需求，且会话里已有的
      * 解读全文可以复用，不必重新生成。
      *
-     * 纯内存模式只切 context，不动 initialMessages。
+     * 纯内存模式只切 context，不动 initialMessages（该模式下不建线，续接分支恒不触发）。
      */
     fun enterEntry(context: ChatContext?) {
         viewModelScope.launch {
+            val isGeneralEntry = ChatStore.entryKeyOf(context) == ChatStore.ENTRY_GENERAL
+            // 进程内续接。判断必须在 activeContext 被覆盖之前——它此刻的值代表「上次停在哪」，
+            // null 才说明停在通用会话上（停在 repo 会话时走通用入口，应当开新会话而非续那条）
+            if (isGeneralEntry && activeContext == null && _currentThreadId.value != null) return@launch
             activeContext = context
             val s = store ?: return@launch
-            val isGeneralEntry = ChatStore.entryKeyOf(context) == ChatStore.ENTRY_GENERAL
             val id = if (isGeneralEntry) null else s.resolveLatestThread(context)
             if (id != null) {
                 openThread(id, fallbackContext = context)

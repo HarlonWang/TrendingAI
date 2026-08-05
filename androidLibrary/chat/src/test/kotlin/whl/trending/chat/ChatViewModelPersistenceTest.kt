@@ -401,6 +401,41 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
+    fun `进程内再次进入通用入口：续接当前会话，不重置`() = runTest(dispatcher) {
+        val v = vm(GatedEngine(reply = "答"))
+        advanceUntilIdle()
+        v.updateInput("问")
+        v.send()
+        advanceUntilIdle()
+        val threadId = v.currentThreadId.value
+        assertNotNull(threadId)
+
+        // 模拟「返回首页再进 chat」：VM 挂在 Activity 作用域仍存活，而 Screen 侧 enteredKey
+        // 随新 NavEntry 重置 → enterEntry 会再被调一次。此时应保持现状，不另开会话
+        v.enterEntry(null)
+        advanceUntilIdle()
+
+        assertEquals(threadId, v.currentThreadId.value)
+        assertEquals(listOf("问", "答"), v.uiState.value.messages.map { it.content })
+        assertEquals(1, store.threads().first().size)
+    }
+
+    @Test
+    fun `停在条目会话时走通用入口：开新会话，不把 repo 会话当通用会话续上`() = runTest(dispatcher) {
+        val v = vm(GatedEngine(reply = "答"), repoContext)
+        advanceUntilIdle()
+        v.updateInput("问")
+        v.send()
+        advanceUntilIdle()
+
+        v.enterEntry(null)
+        advanceUntilIdle()
+
+        assertNull(v.currentThreadId.value)
+        assertTrue(v.uiState.value.messages.isEmpty())
+    }
+
+    @Test
     fun `通用入口进入即新会话，不续上次；历史仍在抽屉可切回`() = runTest(dispatcher) {
         val first = vm(GatedEngine(reply = "答一"))
         advanceUntilIdle()
