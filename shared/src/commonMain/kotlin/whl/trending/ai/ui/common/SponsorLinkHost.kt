@@ -1,6 +1,5 @@
 package whl.trending.ai.ui.common
 
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -15,7 +14,6 @@ import trendingai.shared.generated.resources.account_link_github
 import trendingai.shared.generated.resources.sponsor_link_needed_later
 import trendingai.shared.generated.resources.sponsor_link_needed_message
 import trendingai.shared.generated.resources.sponsor_link_needed_title
-import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.ProSponsor
 
 /**
