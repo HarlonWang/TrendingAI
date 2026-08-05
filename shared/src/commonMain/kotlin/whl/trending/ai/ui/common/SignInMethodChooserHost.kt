@@ -1,19 +1,11 @@
 package whl.trending.ai.ui.common
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,22 +51,18 @@ fun SignInMethodChooserHost() {
         SignInChooserBus.clear()
         globalAuthManager.signIn(pendingSource, method)
     }
-    ModalBottomSheet(
+    TrendingBottomSheet(
         onDismissRequest = {
             trackEvent("sign_in_method_dismiss", mapOf("source" to pendingSource))
             SignInChooserBus.clear()
         },
+        title = stringResource(Res.string.sign_in_method_title),
     ) {
-        Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
-            Text(
-                text = stringResource(Res.string.sign_in_method_title),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            )
-            ListItem(
-                headlineContent = { Text(stringResource(Res.string.sign_in_method_github)) },
-                supportingContent = { Text(stringResource(Res.string.sign_in_method_github_desc)) },
-                leadingContent = {
+        // 两个选项都带一句说明，下拉塞不下——按决策表这类选择就该走浮层；
+        // 选项行复用全 app 的卡片语言（SettingsGroup），不再是裸 ListItem
+        SettingsGroup {
+            settingsItem(
+                leading = {
                     Icon(
                         painter = githubLogoPainter(),
                         contentDescription = null,
@@ -82,22 +70,15 @@ fun SignInMethodChooserHost() {
                         modifier = Modifier.size(24.dp),
                     )
                 },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.fillMaxWidth().clickable { choose(SignInMethod.GITHUB) },
+                title = { Text(stringResource(Res.string.sign_in_method_github)) },
+                description = { Text(stringResource(Res.string.sign_in_method_github_desc)) },
+                onClick = { choose(SignInMethod.GITHUB) },
             )
-            ListItem(
-                headlineContent = { Text(stringResource(Res.string.sign_in_method_email)) },
-                supportingContent = { Text(stringResource(Res.string.sign_in_method_email_desc)) },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Outlined.Email,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp),
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.fillMaxWidth().clickable { choose(SignInMethod.EMAIL) },
+            settingsItem(
+                icon = Icons.Outlined.Email,
+                title = { Text(stringResource(Res.string.sign_in_method_email)) },
+                description = { Text(stringResource(Res.string.sign_in_method_email_desc)) },
+                onClick = { choose(SignInMethod.EMAIL) },
             )
         }
     }

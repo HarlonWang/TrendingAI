@@ -66,6 +66,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -573,22 +574,19 @@ private fun FilterBottomSheet(
         )
     }
 
-    ModalBottomSheet(
+    TrendingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        title = stringResource(Res.string.filter_options),
+        titleAction = {
+            IconButton(onClick = { showHelpDialog = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = stringResource(Res.string.action_help),
+                )
+            }
+        },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            BottomSheetHeader(
-                title = stringResource(Res.string.filter_options),
-                onHelpClick = { showHelpDialog = true }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(Res.string.filter_period),
@@ -658,7 +656,6 @@ private fun FilterBottomSheet(
                     Text(stringResource(Res.string.filter_done))
                 }
             }
-        }
     }
 }
 
@@ -706,22 +703,19 @@ private fun HistoryBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    TrendingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        title = stringResource(Res.string.history_trending),
+        titleAction = {
+            IconButton(onClick = { showHelpDialog = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = stringResource(Res.string.action_help),
+                )
+            }
+        },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            BottomSheetHeader(
-                title = stringResource(Res.string.history_trending),
-                onHelpClick = { showHelpDialog = true }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(Res.string.history_date),
@@ -807,7 +801,6 @@ private fun HistoryBottomSheet(
                     Text(stringResource(Res.string.filter_done))
                 }
             }
-        }
     }
 }
 
@@ -827,30 +820,6 @@ private fun InfoDialog(
             }
         }
     )
-}
-
-@Composable
-private fun BottomSheetHeader(
-    title: String,
-    onHelpClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge
-        )
-        IconButton(onClick = onHelpClick) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = stringResource(Res.string.action_help),
-            )
-        }
-    }
 }
 
 private fun String.toColorOrNull(): Color? {
