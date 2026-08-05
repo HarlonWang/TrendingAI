@@ -128,6 +128,10 @@ class ChatStore(
     /** research 失败：删占位行（服务端已退款；留着会让重启误续轮询死任务） */
     suspend fun deleteMessage(messageId: Long) = db.messageDao().deleteById(messageId)
 
+    /** 仍挂着未完成 research 的会话 id（跨进程恢复轮询用，与「当前打开哪个会话」无关） */
+    suspend fun threadsWithPendingResearch(): List<Long> =
+        db.messageDao().threadsWithPendingResearch(MessageKind.DEEP_RESEARCH.name)
+
     suspend fun renameThread(threadId: Long, title: String) =
         db.threadDao().rename(threadId, title.trim().take(MAX_TITLE_LENGTH))
 

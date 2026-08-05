@@ -120,18 +120,43 @@ class ChatViewModel(
         viewModelScope.launch {
             _catalog.value = runCatching { loadModels() }.getOrDefault(ChatModelsResponse())
         }
+        viewModelScope.launch { resumeAllPendingResearch() }
     }
 
     /**
-     * 入口进入（Screen 每个新入口调用一次）：恢复该入口最近会话（跨进程延续原
-     * sessionKey 的「再次进入恢复」体验）；无历史则以该 context 呈现空会话态。
-     * 纯内存模式只切 context，不动 initialMessages。
+     * 入口进入（Screen 每个新入口调用一次）。
+     *
+     * **通用入口默认新会话**（对齐 ChatGPT / Gemini / Grok）：对话是一次性任务单元，
+     * 历史进抽屉、不进现场。此前「永远续同一条 general 会话」的代价是——不相关的话题
+     * 堆进同一上下文窗口（最近 12 条 / 16k 字符会被上一话题连同 4000 字解读占满，答非
+     * 所问），抽屉里长期只有一条会话（多会话功能形同虚设），欢迎区与快捷问因 messages
+     * 非空而永久消失。线上 95% 的对话都走通用入口，这条路径的收益最大。
+     *
+     * 「新会话」的边界是**进程**，不是页面：本 VM 挂在 Activity 作用域（`viewModel(key="chat")`
+     * 的 owner 是 Activity，退出 chat 页不销毁），所以返回首页查个东西再进来，[_currentThreadId]
+     * 还指着刚才那条会话——此时保持现状即可，不必重新开一条。进程被杀后 VM 随之消失，
+     * 下次进来自然是新会话，无需任何额外标记或时间窗口。
+     *
+     * **条目入口（`repo:*`）仍恢复**：回到同一个项目继续追问是真实需求，且会话里已有的
+     * 解读全文可以复用，不必重新生成。
+     *
+     * 纯内存模式只切 context，不动 initialMessages（该模式下不建线，续接分支恒不触发）。
      */
     fun enterEntry(context: ChatContext?) {
         viewModelScope.launch {
+            val isGeneralEntry = ChatStore.entryKeyOf(context) == ChatStore.ENTRY_GENERAL
+            // 进程内续接。两点讲究：
+            // 1. 判断必须在 activeContext 被覆盖之前——它此刻的值代表「上次停在哪」；
+            //    停在 repo 会话时走通用入口，应当开新会话而非把那条续过来。
+            // 2. 「上次是不是通用会话」与 isGeneralEntry 走同一个 entryKeyOf，避免两处口径不一：
+            //    entryKeyOf 把「有 title 但无 externalId」的 context（HN/PH 场景）也算 general，
+            //    裸写 activeContext == null 会把它判成非通用，将来给 HN/PH 加入口就会分歧。
+            val wasOnGeneralThread = ChatStore.entryKeyOf(activeContext) == ChatStore.ENTRY_GENERAL &&
+                _currentThreadId.value != null
+            if (isGeneralEntry && wasOnGeneralThread) return@launch
             activeContext = context
             val s = store ?: return@launch
-            val id = s.resolveLatestThread(context)
+            val id = if (isGeneralEntry) null else s.resolveLatestThread(context)
             if (id != null) {
                 openThread(id, fallbackContext = context)
             } else {
@@ -141,6 +166,27 @@ class ChatViewModel(
                     it.copy(messages = emptyList(), isSending = false, pendingImages = emptyList())
                 }
             }
+        }
+    }
+
+    /**
+     * 跨进程恢复**所有**未完成的 research 轮询，不依赖「进入时恢复了哪个会话」。
+     *
+     * 通用入口不再恢复会话之后，那条挂着任务的会话不会被打开——恢复若仍挂在
+     * [openThread] 上，后台被杀再回来就没人接这 10 credits 的任务了（服务端跑完也没人
+     * 写回）。轮询照常落库，用户从抽屉切过去就能看到完整报告。
+     *
+     * 落在 init 而非 [enterEntry]：Activity 被系统重建时 Screen 侧的 `enteredKey`
+     * （rememberSaveable）已恢复、`enterEntry` 不会再调，而那恰恰是最需要恢复的场景。
+     * 此刻尚无当前线，所以不区分——随后 [openThread] 对当前线补 searching 转圈标记，
+     * 它重复发起的轮询由 [researchJobs] 的在途判定拦下。
+     */
+    private suspend fun resumeAllPendingResearch() {
+        val s = store ?: return
+        s.threadsWithPendingResearch().forEach { threadId ->
+            val messages = messagesByThread[threadId]
+                ?: s.loadMessages(threadId).also { messagesByThread[threadId] = it }
+            resumeResearchIfAny(threadId, messages)
         }
     }
 
