@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -52,6 +53,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.app_language_desc
+import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
@@ -114,11 +116,11 @@ import whl.trending.ai.ui.home.HomeTab
  * 设置页：应用偏好的唯一落点，从账户页（后续版本为「我的」tab 的扩展菜单）进入。
  *
  * 分三组：个性化（外观 / 界面语言 / 摘要语言 / 默认首页）、订阅与提醒（邮件订阅 / 每日推送）、
- * 通用（外链打开方式 / 反馈）。
+ * 通用（外链打开方式 / 反馈 / 关于）。
  *
  * 这一页同时收掉了原来的「应用设置」子页——账户中心拆分后设置不再与身份、额度混排，
- * 四个低频偏好可以直接平铺，不必再折叠一层。「关于我们」不在这里：它与「设置」并列，
- * 同为账户页的独立入口。
+ * 四个低频偏好可以直接平铺，不必再折叠一层。「关于」在通用组末尾，与底栏「⋯」菜单里的那一项指向同一页——
+ * 菜单是快捷入口，这里是完整清单。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,6 +129,7 @@ fun SettingsScreen(
     onNavigateToAppearance: () -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
 ) {
     val isIos = isIosPlatform()
     val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
@@ -411,6 +414,17 @@ fun SettingsScreen(
                     modifier = Modifier.clickable {
                         trackEvent("settings_feedback")
                         onNavigateToFeedback()
+                    }
+                )
+            }
+            // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
+            item(key = "about") {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.about)) },
+                    leadingContent = { Icon(Icons.Default.Info, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_about")
+                        onNavigateToAbout()
                     }
                 )
             }

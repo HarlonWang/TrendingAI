@@ -37,8 +37,6 @@
     <string name="changelog">更新日志</string>
     <string name="version_up_to_date">已是最新</string>
     <string name="check_update_failed">检查失败，请稍后重试</string>
-    <string name="about_us">关于我们</string>
-    <string name="about_us_desc">了解更多关于 Trending AI 的信息</string>
     <string name="official_website">官网</string>
     <string name="contact_author">联系作者</string>
     <string name="donate">捐助我们</string>

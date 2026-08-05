@@ -238,6 +238,7 @@ fun App() {
                                 onNavigateToAppearance = { backStack.add(Appearance) },
                                 onNavigateToSubscribe = { backStack.add(Subscribe) },
                                 onNavigateToFeedback = { backStack.add(Feedback) },
+                                onNavigateToAbout = { backStack.add(About) },
                             )
                         }
 

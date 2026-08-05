@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about_us
+import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.more_label
 import trendingai.shared.generated.resources.settings
 
@@ -261,7 +261,7 @@ private fun BarItem(item: HomeBarItem, modifier: Modifier = Modifier) {
     }
 }
 
-/** 「⋯」扩展菜单：设置 / 关于我们。图标各自套一层圆形 tonal 底，与 M3 菜单的分量匹配。 */
+/** 「⋯」扩展菜单：设置 / 关于。图标各自套一层圆形 tonal 底，与 M3 菜单的分量匹配。 */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun OverflowFab(onOpenSettings: () -> Unit, onOpenAbout: () -> Unit) {
@@ -295,7 +295,7 @@ private fun OverflowFab(onOpenSettings: () -> Unit, onOpenAbout: () -> Unit) {
                 },
             )
             OverflowMenuItem(
-                text = stringResource(Res.string.about_us),
+                text = stringResource(Res.string.about),
                 icon = Icons.Default.Info,
                 onClick = {
                     expanded = false

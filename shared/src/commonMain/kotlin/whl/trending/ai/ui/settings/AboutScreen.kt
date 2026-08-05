@@ -54,7 +54,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about_us
+import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.changelog
@@ -92,7 +92,7 @@ fun AboutScreen(
     TrendingScaffold(
         topBar = {
             TrendingTopAppBar(
-                title = { Text(stringResource(Res.string.about_us)) },
+                title = { Text(stringResource(Res.string.about)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
