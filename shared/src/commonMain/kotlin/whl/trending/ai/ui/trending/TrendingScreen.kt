@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -34,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -66,6 +64,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.InfoDialog
+import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -573,22 +573,19 @@ private fun FilterBottomSheet(
         )
     }
 
-    ModalBottomSheet(
+    TrendingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        title = stringResource(Res.string.filter_options),
+        titleAction = {
+            IconButton(onClick = { showHelpDialog = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = stringResource(Res.string.action_help),
+                )
+            }
+        },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            BottomSheetHeader(
-                title = stringResource(Res.string.filter_options),
-                onHelpClick = { showHelpDialog = true }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(Res.string.filter_period),
@@ -658,7 +655,6 @@ private fun FilterBottomSheet(
                     Text(stringResource(Res.string.filter_done))
                 }
             }
-        }
     }
 }
 
@@ -706,22 +702,19 @@ private fun HistoryBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    TrendingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        title = stringResource(Res.string.history_trending),
+        titleAction = {
+            IconButton(onClick = { showHelpDialog = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = stringResource(Res.string.action_help),
+                )
+            }
+        },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            BottomSheetHeader(
-                title = stringResource(Res.string.history_trending),
-                onHelpClick = { showHelpDialog = true }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(Res.string.history_date),
@@ -807,49 +800,6 @@ private fun HistoryBottomSheet(
                     Text(stringResource(Res.string.filter_done))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun InfoDialog(
-    title: String,
-    content: String,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(content) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.confirm))
-            }
-        }
-    )
-}
-
-@Composable
-private fun BottomSheetHeader(
-    title: String,
-    onHelpClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge
-        )
-        IconButton(onClick = onHelpClick) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = stringResource(Res.string.action_help),
-            )
-        }
     }
 }
 

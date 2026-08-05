@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.LinkGithubDialog
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.SettingsGroup
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -144,11 +146,17 @@ fun ProfileScreen(
             title = { Text(stringResource(Res.string.sign_out)) },
             text = { Text(stringResource(Res.string.sign_out_confirm)) },
             confirmButton = {
-                TextButton(onClick = {
-                    showSignOutDialog = false
-                    // 停留在 Hub：登出后 VM 监听 authState 落回匿名态（身份区显示登录引导）
-                    viewModel.signOut()
-                }) {
+                // 破坏性动作用 error 色与「取消」拉开权重（见 docs/interaction-consistency-audit.md 决策表）
+                TextButton(
+                    onClick = {
+                        showSignOutDialog = false
+                        // 停留在 Hub：登出后 VM 监听 authState 落回匿名态（身份区显示登录引导）
+                        viewModel.signOut()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
                     Text(stringResource(Res.string.sign_out))
                 }
             },
@@ -163,18 +171,10 @@ fun ProfileScreen(
     // 邮箱用户点「升级 Pro」时的拦截：Pro 权益以 GitHub 账户为发放主体，不先关联就会
     // 「钱付了但权益对不上」。次按钮保留直接前往赞助页——有人只是想单纯支持，不图权益。
     if (showLinkGithubDialog) {
-        AlertDialog(
+        LinkGithubDialog(
+            title = stringResource(Res.string.account_link_required_title),
+            message = stringResource(Res.string.account_link_required_message),
             onDismissRequest = { showLinkGithubDialog = false },
-            title = { Text(stringResource(Res.string.account_link_required_title)) },
-            text = { Text(stringResource(Res.string.account_link_required_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLinkGithubDialog = false
-                    AccountLink.openLinkGithubPage(AccountLink.SOURCE_UPGRADE_DIALOG)
-                }) {
-                    Text(stringResource(Res.string.account_link_github))
-                }
-            },
             dismissButton = {
                 TextButton(onClick = {
                     showLinkGithubDialog = false

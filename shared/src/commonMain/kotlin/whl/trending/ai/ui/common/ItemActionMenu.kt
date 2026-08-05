@@ -67,7 +67,7 @@ fun ItemActionMenu(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            DropdownMenu(
+            TrendingDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {

@@ -66,6 +66,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.more_label
 import trendingai.shared.generated.resources.settings
+import whl.trending.ai.ui.common.TrendingDropdownMenu
 
 /**
  * 悬浮底栏胶囊本体的高度，不含系统导航栏 inset 与外边距。
@@ -279,10 +280,10 @@ private fun OverflowFab(onOpenSettings: () -> Unit, onOpenAbout: () -> Unit) {
             Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(Res.string.more_label))
         }
 
-        DropdownMenu(
+        // 容器色与 elevation 是底栏特有的「浮在胶囊之上」的观感，圆角走统一组件
+        TrendingDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            shape = RoundedCornerShape(24.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
             tonalElevation = 8.dp,
         ) {

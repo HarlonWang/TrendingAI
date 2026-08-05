@@ -95,6 +95,7 @@ import trendingai.shared.generated.resources.time_hours_ago
 import trendingai.shared.generated.resources.time_just_now
 import trendingai.shared.generated.resources.time_minutes_ago
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 
@@ -231,7 +232,10 @@ fun GithubProfileScreen(
     }
 
     if (showRulesSheet) {
-        ModalBottomSheet(onDismissRequest = { showRulesSheet = false }) {
+        TrendingBottomSheet(
+            onDismissRequest = { showRulesSheet = false },
+            title = stringResource(Res.string.feed_rules_title),
+        ) {
             FeedRulesSheet()
         }
     }
@@ -304,15 +308,9 @@ private fun FeedRulesSheet() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 32.dp),
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            stringResource(Res.string.feed_rules_title),
-            style = MaterialTheme.typography.titleLarge,
-        )
         FeedRulesSection(
             title = stringResource(Res.string.feed_rules_highlights_title),
             body = stringResource(Res.string.feed_rules_highlights_desc),
