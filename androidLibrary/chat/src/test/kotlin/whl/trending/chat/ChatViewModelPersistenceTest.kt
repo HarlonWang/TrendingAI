@@ -28,6 +28,7 @@ import whl.trending.chat.store.ChatStore
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -384,14 +385,40 @@ class ChatViewModelPersistenceTest {
         // 只让创建完成、不推进轮询到终局：先切走再回来模拟重开
         advanceUntilIdle()
 
-        // 新 VM（模拟进程重启）：占位行在库里 → enterEntry 恢复轮询
+        val threadId = store.threads().first()[0].id
+
+        // 新 VM（模拟进程重启）：通用入口进来是**新会话**，那条挂着任务的会话并不会被打开——
+        // 恢复轮询因此不能挂在会话恢复上，否则这 10 credits 的任务永远没人接。
+        // 任务照常跑完落库，用户从抽屉切过去就能看到完整报告。
         val engine2 = ResearchEngine(mutableListOf(
             whl.trending.chat.model.ResearchRun("run-77", "completed", "迟到的报告", null),
         ))
         val v2 = vm(engine2)
         advanceUntilIdle()
 
-        assertEquals("迟到的报告", v2.uiState.value.messages.last().content)
+        assertTrue(v2.uiState.value.messages.isEmpty())
+        assertEquals("迟到的报告", db.messageDao().messagesFor(threadId).last().content)
+    }
+
+    @Test
+    fun `通用入口进入即新会话，不续上次；历史仍在抽屉可切回`() = runTest(dispatcher) {
+        val first = vm(GatedEngine(reply = "答一"))
+        advanceUntilIdle()
+        first.updateInput("问一")
+        first.send()
+        advanceUntilIdle()
+        val threadId = store.threads().first()[0].id
+
+        val second = vm(GatedEngine())
+        advanceUntilIdle()
+        assertTrue(second.uiState.value.messages.isEmpty())
+        assertNull(second.currentThreadId.value)
+
+        // 历史没丢：抽屉里还在，切回去内容完整
+        assertEquals(1, second.threads.value.size)
+        second.switchThread(threadId)
+        advanceUntilIdle()
+        assertEquals(listOf("问一", "答一"), second.uiState.value.messages.map { it.content })
     }
 
     @Test

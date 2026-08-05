@@ -109,6 +109,16 @@ interface MessageDao {
 
     @Query("DELETE FROM chat_messages WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    /**
+     * 仍有未完成 research 占位（空内容）的会话 id。
+     *
+     * 恢复轮询不能只覆盖「当前打开的会话」：通用入口进入即新会话，之前那条挂着任务的
+     * 会话不会被打开，任务就没人接了。runId 存在 segmentsJson 里，SQL 侧只筛到「空内容
+     * 的 research 行」，由 [whl.trending.chat.ChatViewModel] 再按 runId 过滤。
+     */
+    @Query("SELECT DISTINCT threadId FROM chat_messages WHERE kind = :kind AND content = ''")
+    suspend fun threadsWithPendingResearch(kind: String): List<Long>
 }
 
 @Database(entities = [ThreadEntity::class, MessageEntity::class], version = 1, exportSchema = true)
