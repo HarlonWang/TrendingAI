@@ -46,11 +46,12 @@
 1. **设置项卡片化** — 对齐 Echo 的 `Material3SettingsGroup` / `Material3SettingsItem`：每行独立圆角卡片（`surfaceContainer` 底）+ 圆角方形 tonal 图标容器 + 小号 primary 色分组标题。当前是裸 `ListItem` + `SettingsHeader`。参照 `app/src/main/kotlin/com/music/echo/ui/component/Material3SettingsGroup.kt`。
 2. **页面主标题字号层级** — Echo 用 `displaySmall` / `titleLarge` + Bold，我们还是 `titleMedium`。
 
-### B. 三项从未验证
+### B. 两项从未验证
 
-1. **iOS 端** — `shared` 改动很大，全程只编过 Android。跑 `./gradlew :shared:compileKotlinIosSimulatorArm64`。iOS 上 `globalChatScreen` 为 null，底栏应退化成三项，形态也要看。
-2. **深色 / AMOLED 观感** — 全程只看过浅色。悬浮胶囊、药丸、双态图标的对比度都没验。
-3. **登录态下的「我的」页** — 身份区、额度条、GitHub 入口卡在登录后长什么样，一次都没看过。需真登一次 GitHub。
+1. **深色 / AMOLED 观感** — 全程只看过浅色。悬浮胶囊、药丸、双态图标的对比度都没验。
+2. **登录态下的「我的」页** — 身份区、额度条、GitHub 入口卡在登录后长什么样，一次都没看过。需真登一次 GitHub。
+
+（iOS 端不作验证要求，见下方「其他产品决策」。）
 
 ### C. 文档
 
@@ -99,6 +100,7 @@
 - **子源切换不加转场**：Echo 的搜索页内部 tab 是 `when (selectedTabIndex)` 硬切，我们照抄。一级 tab 有转场、二级瞬切是对齐后的结果。
 - **「关于」有两个入口**（底栏「⋯」菜单 + 设置页通用组末尾），有意为之：菜单是快捷入口，设置是完整清单。别当重复入口删掉。
 - **AI 对话是入口不是落点**：点击直接推全屏聊天页，底栏选中态留在原 tab，`HomeTab.Chat` 永远不会成为 `selectedTab` 的取值，也不出现在「默认首页」可选项里。
+- **iOS 端不作验证要求**（用户 2026-08-05 决定）：这轮改动只验 Android，不跑 iOS 编译，也不看 iOS 上的三 tab 退化形态。别把它重新加回待办。
 
 ---
 
