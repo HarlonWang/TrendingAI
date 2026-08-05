@@ -131,10 +131,10 @@ class SettingsManagerTest {
     }
 
     @Test
-    fun defaultHomeTab_defaults_to_github_and_persists() = runTest {
-        // 默认值：GitHub
-        assertEquals("GitHub", manager.currentDefaultHomeTab())
-        assertEquals("GitHub", manager.defaultHomeTab.first())
+    fun defaultHomeTab_defaults_to_home_and_persists() = runTest {
+        // 默认值：Home
+        assertEquals("Home", manager.currentDefaultHomeTab())
+        assertEquals("Home", manager.defaultHomeTab.first())
 
         // 改为 Picks
         manager.setDefaultHomeTab("Picks")
@@ -144,5 +144,19 @@ class SettingsManagerTest {
         // 模拟应用重启：同一份底层存储，新建 manager
         val rebuilt = SettingsManager(settings)
         assertEquals("Picks", rebuilt.currentDefaultHomeTab())
+    }
+
+    @Test
+    fun trendingSource_defaults_to_github_and_persists() = runTest {
+        // 默认值：GitHub
+        assertEquals("GitHub", manager.currentTrendingSource())
+
+        // 切到 HN
+        manager.setTrendingSource("HackerNews")
+        assertEquals("HackerNews", manager.currentTrendingSource())
+
+        // 模拟应用重启：上次看的源要能带回来
+        val rebuilt = SettingsManager(settings)
+        assertEquals("HackerNews", rebuilt.currentTrendingSource())
     }
 }

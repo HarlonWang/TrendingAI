@@ -29,9 +29,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -136,7 +138,11 @@ fun FeedScreen(
             else -> {
                 val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
                 val favoriteUrls = remember(favorites) { favorites.map { it.url }.toSet() }
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    // 末条要能从悬浮底栏下面滚出来
+                    contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
+                ) {
                     itemsIndexed(
                         uiState.items,
                         key = { _, item -> "${item.source}_${item.externalId}" }

@@ -13,21 +13,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,26 +53,35 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.app_language_desc
-import trendingai.shared.generated.resources.app_settings
+import trendingai.shared.generated.resources.about
+import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.close
+import trendingai.shared.generated.resources.chat_title
+import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.default_home_tab
 import trendingai.shared.generated.resources.default_home_tab_desc
+import trendingai.shared.generated.resources.feedback
 import trendingai.shared.generated.resources.feedback_email_invalid
 import trendingai.shared.generated.resources.feedback_email_placeholder
 import trendingai.shared.generated.resources.feedback_error
 import trendingai.shared.generated.resources.feedback_rate_limit
-import trendingai.shared.generated.resources.hackernews_title
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
 import trendingai.shared.generated.resources.language_settings
+import trendingai.shared.generated.resources.notification_permission_denied
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
+import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.me_title
+import trendingai.shared.generated.resources.settings
+import trendingai.shared.generated.resources.settings_group_general
+import trendingai.shared.generated.resources.subscribe_title
+import trendingai.shared.generated.resources.subscription_reminders
 import trendingai.shared.generated.resources.summary_lang_capture_identity_note
 import trendingai.shared.generated.resources.summary_lang_capture_label
 import trendingai.shared.generated.resources.summary_lang_capture_message
@@ -73,6 +91,7 @@ import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.summary_language_sponsor
+import trendingai.shared.generated.resources.home_title
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProSponsor
@@ -84,35 +103,55 @@ import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SummaryLanguage
+import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
+import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
 
 /**
- * 应用设置子页：从账户 Hub 的「应用设置」入口进入。承接原设置页「应用设置」组——
- * 界面语言 / 摘要语言 / 默认首页 / 外链打开方式，都是低频、工具性偏好，从 Hub 折叠到此处
- * 以缩短 Hub 主列表。摘要语言的意图采集 + 赞助流程一并随「摘要语言」项收在这里。
+ * 设置页：应用偏好的唯一落点，从账户页（后续版本为「我的」tab 的扩展菜单）进入。
+ *
+ * 分三组：个性化（外观 / 界面语言 / 摘要语言 / 默认首页）、订阅与提醒（邮件订阅 / 每日推送）、
+ * 通用（外链打开方式 / 反馈 / 关于）。
+ *
+ * 这一页同时收掉了原来的「应用设置」子页——账户中心拆分后设置不再与身份、额度混排，
+ * 四个低频偏好可以直接平铺，不必再折叠一层。「关于」在通用组末尾，与底栏「⋯」菜单里的那一项指向同一页——
+ * 菜单是快捷入口，这里是完整清单。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppSettingsScreen(
+fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToAppearance: () -> Unit = {},
+    onNavigateToSubscribe: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
 ) {
     val isIos = isIosPlatform()
+    val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(SummaryLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
     )
+    val dailyPicksNotificationEnabled by globalSettingsManager.dailyPicksNotificationEnabled.collectAsState(
+        remember { globalSettingsManager.currentDailyPicksNotificationEnabled() }
+    )
     val authState by globalAuthManager.authState.collectAsState()
     val isLoggedIn = authState is AuthState.LoggedIn
+
     var showSummaryLanguageDialog by remember { mutableStateOf(false) }
     var showLangCaptureDialog by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val settingsScope = rememberCoroutineScope()
+    val permissionDeniedMsg = stringResource(Res.string.notification_permission_denied)
+    val openSystemSettingsLabel = stringResource(Res.string.open_system_settings)
 
     if (showSummaryLanguageDialog) {
         AlertDialog(
@@ -151,7 +190,7 @@ fun AppSettingsScreen(
     TrendingScaffold(
         topBar = {
             TrendingTopAppBar(
-                title = { Text(stringResource(Res.string.app_settings)) },
+                title = { Text(stringResource(Res.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
@@ -159,8 +198,27 @@ fun AppSettingsScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // ① 个性化
+            item(key = "group_personalization") { SettingsHeader(stringResource(Res.string.personalization)) }
+            item(key = "appearance") {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.appearance)) },
+                    leadingContent = { Icon(Icons.Default.Palette, null) },
+                    trailingContent = {
+                        Text(
+                            text = themeModeText(themeMode),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_appearance")
+                        onNavigateToAppearance()
+                    }
+                )
+            }
             // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
             item(key = "app_language") {
                 var expanded by remember { mutableStateOf(false) }
@@ -252,7 +310,7 @@ fun AppSettingsScreen(
                     trailingContent = {
                         Box {
                             Text(
-                                text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
+                                text = homeTabOptionText(HomeTab.defaultFromName(defaultHomeTab)),
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.clickable { expanded = true }
                             )
@@ -260,7 +318,7 @@ fun AppSettingsScreen(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                HomeTab.entries.forEach { tab ->
+                                HomeTab.defaultCandidates.forEach { tab ->
                                     DropdownMenuItem(
                                         text = { Text(homeTabOptionText(tab)) },
                                         onClick = {
@@ -275,6 +333,61 @@ fun AppSettingsScreen(
                     }
                 )
             }
+            item(key = "divider_1") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
+            // ② 订阅与提醒
+            item(key = "group_subscription") { SettingsHeader(stringResource(Res.string.subscription_reminders)) }
+            item(key = "subscribe") {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.subscribe_title)) },
+                    leadingContent = { Icon(Icons.Default.Email, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_subscribe")
+                        onNavigateToSubscribe()
+                    }
+                )
+            }
+            if (globalDailyPicksNotifier.isSupported) {
+                item(key = "daily_picks_notification") {
+                    ListItem(
+                        headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
+                        leadingContent = { Icon(Icons.Default.Notifications, null) },
+                        trailingContent = {
+                            Switch(
+                                checked = dailyPicksNotificationEnabled,
+                                onCheckedChange = { enabled ->
+                                    trackEvent(
+                                        "settings_daily_picks_notification",
+                                        mapOf("enabled" to enabled.toString())
+                                    )
+                                    if (enabled) {
+                                        settingsScope.launch {
+                                            val granted = globalDailyPicksNotifier.enable()
+                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
+                                            if (!granted) {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    message = permissionDeniedMsg,
+                                                    actionLabel = openSystemSettingsLabel,
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    openAppSettings()
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        globalDailyPicksNotifier.disable()
+                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                    }
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+            item(key = "divider_2") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
+            // ③ 通用
+            item(key = "group_general") { SettingsHeader(stringResource(Res.string.settings_group_general)) }
             // 外链打开方式：行点击与开关同为切换
             item(key = "open_links") {
                 val toggleOpenLinks = { enabled: Boolean ->
@@ -294,8 +407,41 @@ fun AppSettingsScreen(
                     modifier = Modifier.clickable { toggleOpenLinks(!openLinksInCustomTab) }
                 )
             }
+            item(key = "feedback") {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.feedback)) },
+                    leadingContent = { Icon(Icons.Default.Feedback, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_feedback")
+                        onNavigateToFeedback()
+                    }
+                )
+            }
+            // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
+            item(key = "about") {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.about)) },
+                    leadingContent = { Icon(Icons.Default.Info, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_about")
+                        onNavigateToAbout()
+                    }
+                )
+            }
+            item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
         }
     }
+}
+
+/** 设置分组标题，账户页与设置页共用。 */
+@Composable
+fun SettingsHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }
 
 @Composable
@@ -320,10 +466,11 @@ private fun languageOptionText(language: SummaryLanguage): String {
 
 @Composable
 private fun homeTabOptionText(tab: HomeTab): String = when (tab) {
-    HomeTab.GitHub -> "GitHub"
-    HomeTab.HackerNews -> stringResource(Res.string.hackernews_title)
-    HomeTab.ProductHunt -> stringResource(Res.string.producthunt_title)
+    HomeTab.Home -> stringResource(Res.string.home_title)
     HomeTab.Picks -> stringResource(Res.string.picks_title)
+    HomeTab.Me -> stringResource(Res.string.me_title)
+    // Chat 不在 defaultCandidates 里，选项列表不会渲染它；穷尽 when 用
+    HomeTab.Chat -> stringResource(Res.string.chat_title)
 }
 
 /**

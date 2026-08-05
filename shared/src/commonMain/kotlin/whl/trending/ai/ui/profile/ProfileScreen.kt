@@ -15,17 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Feedback
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,17 +26,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -56,23 +44,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.LocalContentBottomPadding
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about_us
 import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
 import trendingai.shared.generated.resources.account_link_github
@@ -86,20 +73,10 @@ import trendingai.shared.generated.resources.account_signed_out_prompt
 import trendingai.shared.generated.resources.account_signed_out_title
 import trendingai.shared.generated.resources.account_signin_for_more
 import trendingai.shared.generated.resources.account_tier_free
-import trendingai.shared.generated.resources.account_title
 import trendingai.shared.generated.resources.account_upgrade_cta
 import trendingai.shared.generated.resources.account_upgrade_hint
-import trendingai.shared.generated.resources.app_settings
-import trendingai.shared.generated.resources.app_settings_entry_desc
-import trendingai.shared.generated.resources.appearance
-import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
-import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.favorites
-import trendingai.shared.generated.resources.feedback
-import trendingai.shared.generated.resources.notification_permission_denied
-import trendingai.shared.generated.resources.open_system_settings
-import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.profile_load_failed
 import trendingai.shared.generated.resources.profile_quota_error
 import trendingai.shared.generated.resources.profile_quota_exhausted
@@ -109,74 +86,55 @@ import trendingai.shared.generated.resources.profile_quota_reset_soon
 import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_repos
 import trendingai.shared.generated.resources.profile_retry
-import trendingai.shared.generated.resources.settings
-import trendingai.shared.generated.resources.settings_group_general
 import trendingai.shared.generated.resources.sign_in
 import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
-import trendingai.shared.generated.resources.subscribe_title
-import trendingai.shared.generated.resources.subscription_reminders
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.minutes
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.ProSponsor
-import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.QuotaResponse
-import whl.trending.ai.notification.globalDailyPicksNotifier
-import whl.trending.ai.ui.settings.themeModeText
-import whl.trending.ai.ui.common.TrendingScaffold
-import whl.trending.ai.ui.common.TrendingTopAppBar
 
 /**
- * 账户中心（统一 Hub）：应用「关于我」的唯一入口，替代原独立的个人主页 + 设置页。
+ * 个人中心：只讲「你是谁、你还剩多少额度、你收藏了什么」。
  *
  * 从上到下：身份区（含未登录引导）→ 套餐 & 用量（含升级 CTA）→ GitHub 主页入口卡
- * （仅 GitHub 用户）→ 设置分组（个性化 / 订阅提醒 / 通用）→ 退出登录。
- * 低频应用偏好（语言/默认首页/打开方式）折叠进「应用设置」子页 [AppSettingsScreen]。
+ * （仅 GitHub 用户）→ 收藏 → 退出登录。
  *
- * 未登录用户同样可达：身份区显示登录引导、用量区显示匿名额度、设置分组照常可用——
- * 不再像旧个人主页那样对邮箱/匿名用户只剩空壳。GitHub 开发者档案（贡献图 + 动态流）
- * 降为 [GithubProfileScreen] 子页，动态数据由共享的 [ProfileViewModel] 承载。
+ * 应用偏好全部在 [SettingsScreen]，入口挂在底栏的「⋯」扩展菜单上，本页不再重复。
+ *
+ * 本页是「我的」tab 的内容，不自带脚手架与顶栏：顶栏由 [HomeScreen] 统一提供，
+ * 底栏要一直在，页面内套 Scaffold 会出现两层顶栏。
+ *
+ * 未登录用户同样可达：身份区显示登录引导、用量区显示匿名额度——不像旧个人主页那样
+ * 对邮箱/匿名用户只剩空壳。GitHub 开发者档案（贡献图 + 动态流）降为
+ * [GithubProfileScreen] 子页，动态数据由共享的 [ProfileViewModel] 承载。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun AccountScreen(
-    onBack: () -> Unit,
+fun ProfileScreen(
+    modifier: Modifier = Modifier,
     onNavigateToGithubProfile: () -> Unit,
     onNavigateToFavorites: () -> Unit = {},
-    onNavigateToFeedback: () -> Unit = {},
-    onNavigateToSubscribe: () -> Unit = {},
-    onNavigateToAppearance: () -> Unit = {},
-    onNavigateToAppSettings: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {},
 ) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
-    // 未接入登录的平台（iOS NoopAuthManager）：Hub 退化为纯设置页——身份/额度/GitHub/登录
-    // 都无意义，隐藏这些动态区块，只留设置分组（等同旧的独立设置页）。
+    // 未接入登录的平台（iOS NoopAuthManager）：身份/额度/GitHub/登录都无意义，
+    // 隐藏这些动态区块，本页退化成「收藏 + 设置 + 关于」三个入口。
     val authSupported = globalAuthManager.isSupported
     LaunchedEffect(Unit) { if (authSupported) viewModel.load() }
 
     val isPro by globalSettingsManager.isPro.collectAsState(
         initial = globalSettingsManager.currentIsPro()
     )
-    val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
-    val dailyPicksNotificationEnabled by globalSettingsManager.dailyPicksNotificationEnabled.collectAsState(
-        remember { globalSettingsManager.currentDailyPicksNotificationEnabled() }
-    )
 
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showLinkGithubDialog by remember { mutableStateOf(false) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val settingsScope = rememberCoroutineScope()
-    val permissionDeniedMsg = stringResource(Res.string.notification_permission_denied)
-    val openSystemSettingsLabel = stringResource(Res.string.open_system_settings)
     val pullToRefreshState = rememberPullToRefreshState()
 
     if (showSignOutDialog) {
@@ -227,225 +185,107 @@ fun AccountScreen(
         )
     }
 
-    TrendingScaffold(
-        topBar = {
-            TrendingTopAppBar(
-                title = {
-                    Text(stringResource(if (authSupported) Res.string.account_title else Res.string.settings))
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
-                    }
-                },
+    PullToRefreshBox(
+        // 未接入登录的平台（iOS）：身份/额度区块都已隐藏，下拉刷新会拉
+        // profile/quota 却无任何可见变化——短路成 no-op，避免无谓网络开销。
+        isRefreshing = authSupported && uiState.isRefreshing,
+        state = pullToRefreshState,
+        onRefresh = { if (authSupported) viewModel.refresh() },
+        indicator = {
+            PullToRefreshDefaults.LoadingIndicator(
+                state = pullToRefreshState,
+                isRefreshing = uiState.isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter),
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        PullToRefreshBox(
-            // 未接入登录的平台（iOS）：Hub 是纯设置页，身份/额度区块都已隐藏，下拉刷新会拉
-            // profile/quota 却无任何可见变化——短路成 no-op，避免无谓网络开销。
-            isRefreshing = authSupported && uiState.isRefreshing,
-            state = pullToRefreshState,
-            onRefresh = { if (authSupported) viewModel.refresh() },
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = uiState.isRefreshing,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
-            modifier = Modifier.fillMaxSize().padding(padding),
+        modifier = modifier.fillMaxSize(),
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
         ) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (authSupported) {
-                    // ① 身份区
-                    item(key = "account_header") {
-                        AccountHeader(
-                            uiState = uiState,
-                            isPro = isPro,
-                            onSignIn = { globalAuthManager.signIn("account_hub") },
-                            onRetry = { viewModel.load() },
-                        )
-                    }
-
-                    // ② 套餐 & 用量
-                    item(key = "plan_card") {
-                        PlanUsageCard(
-                            quota = uiState.quota,
-                            quotaError = uiState.quotaError,
-                            loggedIn = uiState.loggedIn,
-                            isPro = isPro,
-                            onUpgrade = {
-                                // 没有 GitHub 身份就直奔赞助页 = 让用户白花钱，先引导关联
-                                if (uiState.user?.githubUserId == null) showLinkGithubDialog = true
-                                else ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
-                            },
-                            onSignIn = { globalAuthManager.signIn("account_hub") },
-                        )
-                    }
-
-                    // ③ GitHub 区：已关联给主页入口，未关联给关联入口。
-                    // 两处条件刻意不对称——githubUserId 是「是否已关联」的权威（Pro 判定同源），
-                    // githubLogin 才是能展示的名字。中间态（有 id 无 login，资料未同步）两块都不显示，
-                    // 好过让已关联的用户看到「关联 GitHub」或让主页卡显示 @null。
-                    if (uiState.user?.githubLogin != null) {
-                        item(key = "github_entry") {
-                            GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
-                        }
-                    } else if (uiState.loggedIn && uiState.user?.githubUserId == null) {
-                        item(key = "link_github") {
-                            LinkGithubCard(onClick = {
-                                AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)
-                            })
-                        }
-                    }
-
-                    item(key = "divider_top") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+            if (authSupported) {
+                // ① 身份区
+                item(key = "account_header") {
+                    AccountHeader(
+                        uiState = uiState,
+                        isPro = isPro,
+                        onSignIn = { globalAuthManager.signIn("account_hub") },
+                        onRetry = { viewModel.load() },
+                    )
                 }
 
-                // ④ 设置分组：个性化
-                item(key = "group_personalization") { SettingsHeader(stringResource(Res.string.personalization)) }
-                item(key = "appearance") {
+                // ② 套餐 & 用量
+                item(key = "plan_card") {
+                    PlanUsageCard(
+                        quota = uiState.quota,
+                        quotaError = uiState.quotaError,
+                        loggedIn = uiState.loggedIn,
+                        isPro = isPro,
+                        onUpgrade = {
+                            // 没有 GitHub 身份就直奔赞助页 = 让用户白花钱，先引导关联
+                            if (uiState.user?.githubUserId == null) showLinkGithubDialog = true
+                            else ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
+                        },
+                        onSignIn = { globalAuthManager.signIn("account_hub") },
+                    )
+                }
+
+                // ③ GitHub 区：已关联给主页入口，未关联给关联入口。
+                // 两处条件刻意不对称——githubUserId 是「是否已关联」的权威（Pro 判定同源），
+                // githubLogin 才是能展示的名字。中间态（有 id 无 login，资料未同步）两块都不显示，
+                // 好过让已关联的用户看到「关联 GitHub」或让主页卡显示 @null。
+                if (uiState.user?.githubLogin != null) {
+                    item(key = "github_entry") {
+                        GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
+                    }
+                } else if (uiState.loggedIn && uiState.user?.githubUserId == null) {
+                    item(key = "link_github") {
+                        LinkGithubCard(onClick = {
+                            AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)
+                        })
+                    }
+                }
+
+                item(key = "divider_top") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+            }
+
+            // ④ 收藏入口。设置与关于我们不在这里——它们挂在底栏的「⋯」扩展菜单上，
+                // 两处都放会变成同一个入口的两个按钮。
+            item(key = "favorites") {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.favorites)) },
+                    leadingContent = { Icon(Icons.Default.Favorite, null) },
+                    modifier = Modifier.clickable {
+                        trackEvent("settings_favorites")
+                        onNavigateToFavorites()
+                    }
+                )
+            }
+
+            // ⑤ 退出登录（仅登录用户）
+            if (uiState.loggedIn) {
+                item(key = "sign_out") {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ListItem(
-                        headlineContent = { Text(stringResource(Res.string.appearance)) },
-                        leadingContent = { Icon(Icons.Default.Palette, null) },
-                        trailingContent = {
+                        headlineContent = {
                             Text(
-                                text = themeModeText(themeMode),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                stringResource(Res.string.sign_out),
+                                color = MaterialTheme.colorScheme.error,
                             )
                         },
-                        modifier = Modifier.clickable {
-                            trackEvent("settings_appearance")
-                            onNavigateToAppearance()
-                        }
-                    )
-                }
-                item(key = "favorites") {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.favorites)) },
-                        leadingContent = { Icon(Icons.Default.Favorite, null) },
-                        modifier = Modifier.clickable {
-                            trackEvent("settings_favorites")
-                            onNavigateToFavorites()
-                        }
-                    )
-                }
-                item(key = "divider_1") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-                // 订阅提醒
-                item(key = "group_subscription") { SettingsHeader(stringResource(Res.string.subscription_reminders)) }
-                item(key = "subscribe") {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.subscribe_title)) },
-                        leadingContent = { Icon(Icons.Default.Email, null) },
-                        modifier = Modifier.clickable {
-                            trackEvent("settings_subscribe")
-                            onNavigateToSubscribe()
-                        }
-                    )
-                }
-                if (globalDailyPicksNotifier.isSupported) {
-                    item(key = "daily_picks_notification") {
-                        ListItem(
-                            headlineContent = { Text(stringResource(Res.string.daily_picks_notification)) },
-                            leadingContent = { Icon(Icons.Default.Notifications, null) },
-                            trailingContent = {
-                                Switch(
-                                    checked = dailyPicksNotificationEnabled,
-                                    onCheckedChange = { enabled ->
-                                        trackEvent(
-                                            "settings_daily_picks_notification",
-                                            mapOf("enabled" to enabled.toString())
-                                        )
-                                        if (enabled) {
-                                            settingsScope.launch {
-                                                val granted = globalDailyPicksNotifier.enable()
-                                                globalSettingsManager.setDailyPicksNotificationEnabled(granted)
-                                                if (!granted) {
-                                                    val result = snackbarHostState.showSnackbar(
-                                                        message = permissionDeniedMsg,
-                                                        actionLabel = openSystemSettingsLabel,
-                                                    )
-                                                    if (result == SnackbarResult.ActionPerformed) {
-                                                        openAppSettings()
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            globalDailyPicksNotifier.disable()
-                                            globalSettingsManager.setDailyPicksNotificationEnabled(false)
-                                        }
-                                    }
-                                )
-                            }
-                        )
-                    }
-                }
-                item(key = "divider_2") { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-                // 通用：应用设置（低频偏好折叠进子页）+ 反馈 + 关于
-                item(key = "group_general") { SettingsHeader(stringResource(Res.string.settings_group_general)) }
-                item(key = "app_settings_entry") {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.app_settings)) },
-                        supportingContent = { Text(stringResource(Res.string.app_settings_entry_desc)) },
-                        leadingContent = { Icon(Icons.Default.Tune, null) },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                        leadingContent = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
                         },
-                        modifier = Modifier.clickable {
-                            trackEvent("settings_app_settings")
-                            onNavigateToAppSettings()
-                        }
+                        modifier = Modifier.clickable { showSignOutDialog = true }
                     )
                 }
-                item(key = "feedback") {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.feedback)) },
-                        leadingContent = { Icon(Icons.Default.Feedback, null) },
-                        modifier = Modifier.clickable {
-                            trackEvent("settings_feedback")
-                            onNavigateToFeedback()
-                        }
-                    )
-                }
-                item(key = "about_us") {
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.about_us)) },
-                        leadingContent = { Icon(Icons.Default.Info, null) },
-                        modifier = Modifier.clickable {
-                            trackEvent("settings_about")
-                            onNavigateToAbout()
-                        }
-                    )
-                }
-
-                // ⑤ 退出登录（仅登录用户）
-                if (uiState.loggedIn) {
-                    item(key = "sign_out") {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    stringResource(Res.string.sign_out),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            leadingContent = {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Logout,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            modifier = Modifier.clickable { showSignOutDialog = true }
-                        )
-                    }
-                }
-                item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
             }
+            item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
         }
     }
 }
@@ -782,15 +622,5 @@ private fun GithubEntryCard(uiState: ProfileUiState, onClick: () -> Unit) {
         },
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         modifier = Modifier.clickable { onClick() },
-    )
-}
-
-@Composable
-fun SettingsHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }

@@ -11,7 +11,6 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_amoled">AMOLED</string>
     <string name="appearance">Appearance</string>
-    <string name="app_settings">App Settings</string>
     <string name="subscription_reminders">Subscription &amp; Reminders</string>
     <string name="language_settings">App Language</string>
     <string name="app_language_desc">Interface display language</string>
@@ -38,8 +37,6 @@
     <string name="changelog">Changelog</string>
     <string name="version_up_to_date">Up to date</string>
     <string name="check_update_failed">Check failed, try again later</string>
-    <string name="about_us">About Us</string>
-    <string name="about_us_desc">Learn more about Trending AI</string>
     <string name="official_website">Official Website</string>
     <string name="contact_author">Contact Author</string>
     <string name="donate">Donate</string>
@@ -116,6 +113,9 @@
     <string name="readme_no_content">No README found for this repository.</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="picks_title">Picks</string>
+    <string name="home_title">Home</string>
+    <string name="chat_title">AI Chat</string>
+    <string name="me_title">Me</string>
     <string name="hackernews_title">Hacker News</string>
     <string name="producthunt_title">Product Hunt</string>
     <string name="hackernews_placeholder">Hacker News content coming soon</string>
@@ -235,7 +235,7 @@
     <string name="account_github_entry">GitHub profile</string>
     <string name="account_github_entry_desc">Contributions &amp; network activity</string>
     <string name="settings_group_general">General</string>
-    <string name="app_settings_entry_desc">Language, default tab, link opening</string>
+    <string name="more_label">More</string>
     <string name="contrib_total">%1$s contributions in the last year</string>
     <string name="contrib_less">Less</string>
     <string name="contrib_more">More</string>

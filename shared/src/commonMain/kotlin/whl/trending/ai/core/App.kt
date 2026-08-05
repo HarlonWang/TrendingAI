@@ -4,21 +4,23 @@ import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
 import whl.trending.ai.ui.home.HomeScreen
-import whl.trending.ai.ui.profile.AccountScreen
 import whl.trending.ai.ui.profile.GithubProfileScreen
 import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
 import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
-import whl.trending.ai.ui.settings.AppSettingsScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.settings.ColorLabScreen
+import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.digest.DigestScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
 import whl.trending.ai.ui.webview.WebViewScreen
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -50,14 +52,13 @@ import whl.trending.ai.ui.common.WhatsNewHost
 data object Home
 data object Appearance
 data object ColorLab
-data object AppSettings
+data object Settings
 data object About
 data object Feedback
 data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
-data object Profile
 data object GithubProfile
 data object ProfileFollowers
 data object ProfileFollowing
@@ -119,27 +120,27 @@ fun App() {
                 NavDisplay(
                     backStack = backStack,
                     onBack = { backStack.safePop() },
-                    // Material 水平共享轴转场（Nav3 官方推荐写法，全局统一）：
-                    // 前进——新页从右滑入、旧页向左滑出；返回及预测式返回手势——反向。
+                    // 页面转场：新页沿前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms 淡入淡出；
+                    // 返回及预测式返回手势反向。位移量与时长取自 Echo 的 NavHost
+                    // enter/exit/popEnter/popExitTransition——位移走默认 spring，只有淡化是 tween(200)。
+                    // 首页切 tab 的 AnimatedContent 用的是同一组参数，全 app 一套转场语言。
                     transitionSpec = {
-                        slideInHorizontally(initialOffsetX = { it }) togetherWith
-                            slideOutHorizontally(targetOffsetX = { -it })
+                        slideInHorizontally { it / 8 } + fadeIn(tween(200)) togetherWith
+                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
                     },
                     popTransitionSpec = {
-                        slideInHorizontally(initialOffsetX = { -it }) togetherWith
-                            slideOutHorizontally(targetOffsetX = { it })
+                        slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
+                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
                     },
+                    // Nav3 特有：预测式返回手势。Echo 的 NavHost 没有对应物，与 pop 同参。
                     predictivePopTransitionSpec = {
-                        slideInHorizontally(initialOffsetX = { -it }) togetherWith
-                            slideOutHorizontally(targetOffsetX = { it })
+                        slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
+                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
                     },
                     entryProvider = { key ->
                         when (key) {
                         is Home -> NavEntry(key) {
                             HomeScreen(
-                                onNavigateToAccount = {
-                                    backStack.add(Profile)
-                                },
                                 onNavigateToDetail = { owner, repo ->
                                     backStack.add(RepoDetail(owner, repo))
                                 },
@@ -155,6 +156,10 @@ fun App() {
                                 onOpenDigest = { page ->
                                     backStack.add(page)
                                 },
+                                onNavigateToGithubProfile = { backStack.add(GithubProfile) },
+                                onNavigateToFavorites = { backStack.add(Favorites) },
+                                onNavigateToSettings = { backStack.add(Settings) },
+                                onNavigateToAbout = { backStack.add(About) },
                             )
                         }
 
@@ -227,23 +232,13 @@ fun App() {
                             )
                         }
 
-                        is Profile -> NavEntry(key) {
-                            AccountScreen(
+                        is Settings -> NavEntry(key) {
+                            SettingsScreen(
                                 onBack = { backStack.safePop() },
-                                onNavigateToGithubProfile = { backStack.add(GithubProfile) },
-                                onNavigateToFavorites = { backStack.add(Favorites) },
-                                onNavigateToFeedback = { backStack.add(Feedback) },
-                                onNavigateToSubscribe = { backStack.add(Subscribe) },
                                 onNavigateToAppearance = { backStack.add(Appearance) },
-                                onNavigateToAppSettings = { backStack.add(AppSettings) },
-                                onNavigateToAbout = { backStack.add(About) },
-                            )
-                        }
-
-                        is AppSettings -> NavEntry(key) {
-                            AppSettingsScreen(
-                                onBack = { backStack.safePop() },
+                                onNavigateToSubscribe = { backStack.add(Subscribe) },
                                 onNavigateToFeedback = { backStack.add(Feedback) },
+                                onNavigateToAbout = { backStack.add(About) },
                             )
                         }
 
