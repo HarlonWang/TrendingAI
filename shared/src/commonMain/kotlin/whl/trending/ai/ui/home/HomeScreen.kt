@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -84,6 +85,7 @@ import trendingai.shared.generated.resources.period_monthly
 import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.producthunt_title
+import trendingai.shared.generated.resources.settings
 import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.home_title
 import whl.trending.ai.chat.globalChatScreen
@@ -177,6 +179,13 @@ fun HomeScreen(
         }
     }
 
+    // 进设置页有两条路径，统一在这里记一条事件、用 entry 区分来源：
+    // topbar = 顶栏常驻齿轮（0.24.0 新增），more = 底栏「⋯」里的那项。
+    val openSettings = { entry: String ->
+        trackEvent("home_open_settings", mapOf("entry" to entry))
+        onNavigateToSettings()
+    }
+
     TrendingScaffold(
         topBar = {
             when (selectedTab) {
@@ -190,6 +199,7 @@ fun HomeScreen(
                         onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
                         onTitleClick = { showFilterSheet = true },
                         onHistoryClick = { showHistorySheet = true },
+                        onSettingsClick = { openSettings("topbar") },
                     )
                     TrendingSource.HackerNews -> {
                         val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -203,6 +213,7 @@ fun HomeScreen(
                                     tint = Color.Unspecified
                                 )
                             },
+                            onSettingsClick = { openSettings("topbar") },
                         )
                     }
                     TrendingSource.ProductHunt -> {
@@ -220,10 +231,14 @@ fun HomeScreen(
                                     tint = Color.Unspecified
                                 )
                             },
+                            onSettingsClick = { openSettings("topbar") },
                         )
                     }
                 }
-                HomeTab.Picks -> PicksTopBar(date = picksUiState?.picks?.metadata?.date)
+                HomeTab.Picks -> PicksTopBar(
+                    date = picksUiState?.picks?.metadata?.date,
+                    onSettingsClick = { openSettings("topbar") },
+                )
                 HomeTab.Me -> TrendingTopAppBar(
                     title = {
                         Text(
@@ -231,6 +246,7 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleMedium,
                         )
                     },
+                    actions = { SettingsAction(onClick = { openSettings("topbar") }) },
                 )
                 // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
                 HomeTab.Chat -> Unit
@@ -410,14 +426,11 @@ fun HomeScreen(
 
             HomeFloatingBar(
                 items = barItems,
-                // 底栏「⋯」是设置页与关于页在改版后的唯一入口，各记一条：
+                // 底栏「⋯」是关于页的唯一入口、设置页的次要入口（主入口是顶栏齿轮），各记一条：
                 // 0.22.0 的 settings_app_settings 随「应用设置」子页删除而作废，此前这两条路径
                 // 完全无埋点，「进入设置页」的量统计不到（见 docs/analytics-notes.md）。
-                // 事件名用 home_ 前缀与设置页内部的 settings_* 区分，一眼看出是从底栏进的。
-                onOpenSettings = {
-                    trackEvent("home_open_settings")
-                    onNavigateToSettings()
-                },
+                // 事件名用 home_ 前缀与设置页内部的 settings_* 区分，一眼看出是从首页进的。
+                onOpenSettings = { openSettings("more") },
                 onOpenAbout = {
                     trackEvent("home_open_about")
                     onNavigateToAbout()
@@ -495,6 +508,7 @@ private fun TrendingTopBar(
     onToggleNewOnly: () -> Unit,
     onTitleClick: () -> Unit,
     onHistoryClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     val periodLabel = when (selectedPeriod) {
         "daily" -> stringResource(Res.string.period_daily)
@@ -584,13 +598,27 @@ private fun TrendingTopBar(
             IconButton(onClick = onHistoryClick) {
                 Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
             }
+            SettingsAction(onClick = onSettingsClick)
         }
     )
 }
 
+/**
+ * 首页各 tab 顶栏右上角统一的设置入口。
+ *
+ * 底栏「⋯」里那项藏在浮层里，用户不点开就看不见；顶栏给一个常驻齿轮当主入口，
+ * 「⋯」保留作为次要路径（关于页仍只在那里）。位置与 Echo 一致：actions 的最末一个。
+ */
+@Composable
+private fun SettingsAction(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PicksTopBar(date: String?) {
+private fun PicksTopBar(date: String?, onSettingsClick: () -> Unit) {
     TrendingTopAppBar(
         title = {
             Column {
@@ -608,6 +636,7 @@ private fun PicksTopBar(date: String?) {
                 )
             }
         },
+        actions = { SettingsAction(onClick = onSettingsClick) },
     )
 }
 
@@ -616,6 +645,7 @@ private fun PicksTopBar(date: String?) {
 private fun FeedTopBar(
     title: String,
     navigationIcon: @Composable () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     TrendingTopAppBar(
         title = {
@@ -629,5 +659,6 @@ private fun FeedTopBar(
                 navigationIcon()
             }
         },
+        actions = { SettingsAction(onClick = onSettingsClick) },
     )
 }
