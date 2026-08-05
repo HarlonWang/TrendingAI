@@ -108,25 +108,31 @@
 
 ### 复现 Echo 环境
 
-Echo 仓库在会话 scratchpad 里，会话结束即消失。重新拉：
+Echo 仓库已常驻本机：`TrendingProjects/.refs/Echo-Music` （blobless clone，含完整历史）。**直接读，不要重新 clone，更不要 clone 到会话 scratchpad**——早期版本的本文档写的就是往 scratchpad clone，结果每换一个会话都要重拉一次。详见父目录 `CLAUDE.md` 的「参照仓库」一节。
+
+万一目录不在（换机器等），才重建：
 
 ```bash
-git clone --depth 50 https://github.com/EchoMusicApp/Echo-Music.git
+git clone --filter=blob:none https://github.com/EchoMusicApp/Echo-Music.git \
+  /Users/wanghl/TrendingProjects/.refs/Echo-Music
 ```
 
-编译要点：
+跟进 upstream：`git -C /Users/wanghl/TrendingProjects/.refs/Echo-Music pull --ff-only` 。注意 `.refs/` 被父仓库 gitignore，Grep 要显式指定路径才搜得到。
+
+编译要点（只在确实要跑 Echo 时才需要，读源码不需要）：
 
 - **不要用 `gradle.properties.template` 覆盖 `gradle.properties`** —— 后者是入库文件，里面的 `android.newDsl=false` 是必须的；覆盖掉会让 protobuf 插件 0.9.6 在 AGP 9 上炸（`Cannot cast ApplicationExtensionImpl to BaseExtension`）
 - 需要 **JDK 21**，本机只有 17；用 Android Studio 自带的：`export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`
 - 构建 `:app:assembleArm64FossDebug`（universal 包 107MB，arm64 也有 77MB）
 - **模拟器装不下**：Pixel_9_2 的 /data 只剩 400MB 左右，低于系统预留阈值，`INSTALL_FAILED_INSUFFICIENT_STORAGE`。当时是直接看用户已装的 Echo Music 5.2.82 正式版
 
-关键源码位置：
+关键源码位置（相对 `.refs/Echo-Music/`，行号为 2026-08-05 的 HEAD，会随 upstream 漂移，**以符号名为准**）：
 
 - `app/src/main/kotlin/com/music/echo/ui/component/FloatingNavigationToolbar.kt` — 悬浮底栏（默认档）
 - `app/src/main/kotlin/com/music/echo/ui/component/floatingtabbar/FloatingTabBar.kt` — iOS26 档（vendored）
-- `app/src/main/kotlin/com/music/echo/ui/screens/search/SearchScreen.kt:371` — 内部 tab（我们三源子 tab 的参照）
-- `app/src/main/kotlin/com/music/echo/MainActivity.kt:657` — 底栏显隐白名单；`:1248` — NavHost 转场；`:1066` — 底栏位移换算
+- `app/src/main/kotlin/com/music/echo/ui/component/Material3SettingsGroup.kt` — 设置项卡片化的参照（见「剩余待办 A1」）
+- `app/src/main/kotlin/com/music/echo/ui/screens/search/SearchScreen.kt:371` — 内部 tab `SecondaryTabRow`（我们三源子 tab 的参照）
+- `app/src/main/kotlin/com/music/echo/MainActivity.kt` — `shouldShowNavigationBar`（底栏显隐白名单，:658）、`NavHost(`（转场，:1241）、`navPadding` / `collapsedBound`（底栏位移换算，:672–693）、`FloatingNavigationToolbar(` 调用点（:1120）
 - `app/src/main/kotlin/com/music/echo/constants/Dimensions.kt` — 尺寸常量
 
 ### 本机环境
