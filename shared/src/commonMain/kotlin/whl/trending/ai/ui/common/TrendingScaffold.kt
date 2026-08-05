@@ -24,7 +24,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
  * 当前页面的顶栏滚动行为，由 [TrendingScaffold] 提供、[TrendingTopAppBar] 自动消费。
  *
  * 走 CompositionLocal 而不是逐层传参，是因为顶栏常被拆成独立的私有 composable（首页四个 tab 各一个），
- * 手工传参时只要有一处忘了写，那一页就静默失去滚动变色——正是这次要统一掉的问题。
+ * 手工传参时只要有一处忘了写，那一页就静默漏接——顶栏底色现已恒定（见 [TrendingTopAppBar]），
+ * 这套接线只剩「让顶栏正常参与 nestedScroll」这一层作用，保留是为了将来要折叠时不用重接。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 val LocalTopAppBarScrollBehavior = compositionLocalOf<TopAppBarScrollBehavior?> { null }
@@ -32,11 +33,11 @@ val LocalTopAppBarScrollBehavior = compositionLocalOf<TopAppBarScrollBehavior?> 
 /**
  * 全 app 统一的页面骨架：在 [Scaffold] 基础上把顶栏的滚动联动接好。
  *
- * 内容滚动时，顶栏底色会从 `surface` 过渡到 `surfaceContainer`（M3 的 scrolledContainerColor），
- * 用一层底色把顶栏和滚上来的内容区分开。行为固定为 [TopAppBarDefaults.pinnedScrollBehavior]：
- * 顶栏只变色、不折叠隐藏。
+ * 顶栏底色恒定为 `surfaceContainer`，比内容区（`background`）深一档，靠这层固定的层次差
+ * 把顶栏和内容分开——不随滚动变色。行为固定为 [TopAppBarDefaults.pinnedScrollBehavior]：
+ * 顶栏不折叠隐藏。
  *
- * 页面不要直接用 [Scaffold] + [TopAppBar]，否则拿不到这套联动。
+ * 页面不要直接用 [Scaffold] + [TopAppBar]，否则拿不到统一的顶栏配色。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +73,12 @@ fun TrendingScaffold(
 /**
  * 全 app 统一的顶栏：默认取用 [TrendingScaffold] 提供的滚动行为，调用方无需接线。
  *
+ * 底色恒定为 `surfaceContainer`（`containerColor` 与 `scrolledContainerColor` 同值），不随滚动变化。
+ * 不用 M3 默认的「滚起来才从 surface 变成 surfaceContainer」，是因为那套变色在顶栏下面挂了子 tab 的
+ * 页面会把头部劈成两截：首页的三源 `SecondaryTabRow` 是内容区的第一项、底色跟着 `background`，
+ * 顶栏一变色就出现一条突兀的横向断层，而 tab 行本身的 divider 已经承担了分隔职责。
+ * 恒定底色同时消掉了 pinned 行为下那个 0→1 的阶跃跳变。参照 Echo 的 MainActivity 顶栏配色。
+ *
  * 不在 [TrendingScaffold] 里时（LocalTopAppBarScrollBehavior 为 null）退化成普通 [TopAppBar]。
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +88,10 @@ fun TrendingTopAppBar(
     modifier: Modifier = Modifier,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
-    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
+    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ),
     scrollBehavior: TopAppBarScrollBehavior? = LocalTopAppBarScrollBehavior.current,
 ) {
     TopAppBar(

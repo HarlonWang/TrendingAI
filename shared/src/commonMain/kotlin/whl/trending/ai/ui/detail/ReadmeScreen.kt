@@ -32,15 +32,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -77,6 +74,8 @@ import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.unstar_success
 import trendingai.shared.generated.resources.view_on_github
 import whl.trending.ai.auth.RepoStarService
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.common.aiShareText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -151,10 +150,10 @@ fun ReadmeScreen(
         }
     }
 
-    Scaffold(
+    TrendingScaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
+            TrendingTopAppBar(
                 title = {
                     Text(
                         text = "$owner/$repo",
@@ -213,12 +212,6 @@ fun ReadmeScreen(
                         )
                     }
                 },
-                // 全 app 唯一不走 TrendingScaffold + TrendingTopAppBar 的页面：正文是 WebView，
-                // 它的滚动不经过 Compose 的 nestedScroll，滚动驱动的顶栏变色在这里根本收不到事件。
-                // 故直接固定成滚动后的色值，视觉上与其他页滚起来之后保持一致。别按统一规范改回去。
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
             )
         },
         floatingActionButton = {
