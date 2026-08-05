@@ -410,8 +410,18 @@ fun HomeScreen(
 
             HomeFloatingBar(
                 items = barItems,
-                onOpenSettings = onNavigateToSettings,
-                onOpenAbout = onNavigateToAbout,
+                // 底栏「⋯」是设置页与关于页在改版后的唯一入口，各记一条：
+                // 0.22.0 的 settings_app_settings 随「应用设置」子页删除而作废，此前这两条路径
+                // 完全无埋点，「进入设置页」的量统计不到（见 docs/analytics-notes.md）。
+                // 事件名用 home_ 前缀与设置页内部的 settings_* 区分，一眼看出是从底栏进的。
+                onOpenSettings = {
+                    trackEvent("home_open_settings")
+                    onNavigateToSettings()
+                },
+                onOpenAbout = {
+                    trackEvent("home_open_about")
+                    onNavigateToAbout()
+                },
                 // 定高与内容底部留白同源（contentBottomPadding 也按它算），两者不能各算各的。
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier

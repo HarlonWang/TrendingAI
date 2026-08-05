@@ -85,7 +85,7 @@
 - **`profile_open_settings` 并不存在**——初版写它「新增、替代 `settings_app_settings`」，代码里查无此事件；
 - **`settings_about` 仍只有一个触发点**（`SettingsScreen.kt:427`），初版说的「设置页 + 底栏「⋯」菜单两个触发点」不成立——底栏菜单那条路径是纯回调透传（`HomeScreen.kt:413-414`），没有埋点。
 
-由此暴露一个真实盲区：**改版后「进入设置页」完全统计不到**（`settings_app_settings` 作废且无替代），关于页也只统计得到一半入口。补两行 `trackEvent` 即可，尚未做。
+由此暴露的盲区——**改版后「进入设置页」完全统计不到**（`settings_app_settings` 作废且无替代）、关于页只统计得到一半入口——已于同日补上 `home_open_settings` / `home_open_about` 两个事件，口径写在 `docs/analytics-notes.md`。
 
 ### D. 发版
 
