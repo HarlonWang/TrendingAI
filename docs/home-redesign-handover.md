@@ -46,10 +46,21 @@
 1. **设置项卡片化** — 对齐 Echo 的 `Material3SettingsGroup` / `Material3SettingsItem`：每行独立圆角卡片（`surfaceContainer` 底）+ 圆角方形 tonal 图标容器 + 小号 primary 色分组标题。当前是裸 `ListItem` + `SettingsHeader`。参照 `app/src/main/kotlin/com/music/echo/ui/component/Material3SettingsGroup.kt`。
 2. **页面主标题字号层级** — Echo 用 `displaySmall` / `titleLarge` + Bold，我们还是 `titleMedium`。
 
-### B. 两项从未验证
+### B. 验证情况
 
-1. **深色 / AMOLED 观感** — 全程只看过浅色。悬浮胶囊、药丸、双态图标的对比度都没验。
-   （2026-08-05 已修一个深色专有 bug：一级页转场整屏白闪——根部缺兜底底色，fade 那 200ms 透出了 window 背景，而 window 主题是 `AppCompat.DayNight`、跟系统深浅走，app 内深色/AMOLED 传不过去。修法照抄 Echo `MainActivity.kt:559` 的 `BoxWithConstraints(.background(...))`，见 `App.kt` 的 `Box(Modifier.fillMaxSize().background(colorScheme.background))`。对比度那几项仍未验。）
+1. ~~**深色 / AMOLED 观感**~~ — **2026-08-05 已验，无需改动**。Pixel_9_2 上逐像素量了底栏各元素的 WCAG 对比度：
+
+   | 项 | 深色 | AMOLED | 判定 |
+   |---|---|---|---|
+   | 选中图标 / 药丸 | 6.08:1 | 6.08:1 | ✅ 远超 3:1 |
+   | 未选中图标 / 胶囊 | 7.63:1 | 7.63:1 | ✅ |
+   | FAB 图标 / FAB 底 | 6.04:1 | 6.04:1 | ✅ |
+   | 药丸 / 胶囊底 | 1.57:1 | 1.57:1 | 可接受（见下） |
+   | 胶囊 / 页面底 | 1.10:1 | 1.20:1 | 可接受（见下） |
+
+   两个低值都不构成问题：**药丸**的选中态是三重信号叠加（药丸底色 + 图标从描边变实心 + 图标提亮到 196 vs 未选中 174），不靠色差单打独斗；**胶囊**靠形状与阴影立起来，且 Echo 在 pureBlack 档更极端——它把胶囊直接压成 `Color.Black`（`FloatingNavigationToolbar.kt:512`），与纯黑页面零色差，我们交给主题层的 AMOLED 反而留了 1.20:1。截图放大核对过，两档下胶囊边界、药丸、实心/描边差异都清晰。
+
+   同日修掉的深色专有 bug：一级页转场整屏白闪——根部缺兜底底色，fade 那 200ms 透出了 window 背景，而 window 主题是 `AppCompat.DayNight`、跟系统深浅走，app 内深色/AMOLED 传不过去。修法照抄 Echo `MainActivity.kt:559` 的 `BoxWithConstraints(.background(...))`，见 `App.kt` 的 `Box(Modifier.fillMaxSize().background(colorScheme.background))`。
 2. **登录态下的「我的」页** — 身份区、额度条、GitHub 入口卡在登录后长什么样，一次都没看过。需真登一次 GitHub。
 
 （iOS 端不作验证要求，见下方「其他产品决策」。）
@@ -88,6 +99,9 @@
 | 3 | 底栏内单独判 `pureBlack` | 交给主题层 AMOLED | 已声明 |
 | 4 | 有 liquidGlass 档、iOS26 `FloatingTabBar` 档、横屏 `NavigationRail` | 都不做 | 已声明 |
 | 5 | FAB 不传 `shape`（androidx 默认即圆） | 显式 `CircleShape` | CMP 版 material3 默认是圆角方形，不传拿不到同款外观 |
+| 6 | 胶囊底色 pureBlack 档写死 `Color.Black` | 交给主题层（AMOLED 下仍是 `surfaceContainer`） | 同差异 #3；实测反而比 Echo 多留 1.20:1 的边界可见度 |
+
+顶栏配色后来也对齐了 Echo：**顶栏底色恒定 `surfaceContainer`，不随滚动变色**（`fc1579e`）。改版当时用的是 M3 默认的滚动变色，代价是首页那种"顶栏下面挂子 tab"的页面头部会被劈成两截。详见 `CLAUDE.md` 的 UI 规范。
 
 ### 代码不同但行为相同
 
