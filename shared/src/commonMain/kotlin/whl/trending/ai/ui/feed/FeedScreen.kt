@@ -309,7 +309,9 @@ private fun FeedItemBody(
  */
 @Composable
 private fun HeroGallery(urls: List<String>, modifier: Modifier = Modifier) {
-    val firstPainter = rememberAsyncImagePainter(urls.first())
+    // 调用点已按 isNotEmpty 把关，这里再兜一次：空列表就什么都不画，而不是抛异常
+    val first = urls.firstOrNull() ?: return
+    val firstPainter = rememberAsyncImagePainter(first)
     val firstState by firstPainter.state.collectAsState()
     val ratio = (firstState as? AsyncImagePainter.State.Success)
         ?.painter
