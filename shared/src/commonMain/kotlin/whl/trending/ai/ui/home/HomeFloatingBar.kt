@@ -100,6 +100,9 @@ internal data class HomeBarItem(
  * 工具栏用 `widthIn(max)` 收住宽度，FAB 放在工具栏自带的槽位里。
  * 选中态是一块跟着选中项滑动的药丸（见 [SlidingPillItems]）；只有图标、没有文字标签
  * ——Echo 那边 `showSelectedLabels` 写死为 false。
+ *
+ * 组件本身不接 `scrollBehavior`：滚动隐藏由调用方（`HomeScreen`）自己算隐藏距离并施加
+ * `translationY`，原因见那边的注释——M3 内建那套只按胶囊自身高度位移，藏不干净。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

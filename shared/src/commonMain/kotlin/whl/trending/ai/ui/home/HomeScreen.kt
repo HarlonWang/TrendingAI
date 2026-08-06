@@ -1,6 +1,9 @@
 package whl.trending.ai.ui.home
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,6 +40,8 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.FloatingToolbarExitDirection
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -49,10 +54,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberFloatingToolbarState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,7 +70,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -113,7 +123,7 @@ import kotlin.time.Clock
  *
  * AI 对话是入口不是落点：点它直接推全屏聊天页，底栏选中态仍留在原 tab（见 [HomeTab.Chat]）。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
@@ -259,7 +269,41 @@ fun HomeScreen(
         // 内容层不做底部 padding，列表才能滚到底栏之下。
         val contentModifier = Modifier.padding(top = innerPadding.calculateTopPadding())
         val barBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        // 内容底部留白按「底栏常驻」算，不跟着底栏藏起来一起缩——否则每次隐藏都要重排一次列表，
+        // 滚动中途的重排比露出的那点空间刺眼得多。
         val contentBottomPadding = barBottomInset + FloatingBarHeight + FloatingBarBottomMargin * 2
+
+        // 底栏跟手隐藏：内容往上滚（看后面的）胶囊顺着滑出屏幕，往下滚立刻跟回来，位移与手指 1:1；
+        // 松手时按剩余速度做衰减、再吸附到全显示/全隐藏，不会停在半截。
+        //
+        // 复用 M3 的 exitAlways 行为拿这套跟手 + 抛掷 + 吸附的曲线，但**不把它交给**
+        // [HorizontalFloatingToolbar]：组件内部那套位移只按胶囊自身高度算，胶囊底下的外边距和系统
+        // 导航栏 inset 不在里面，藏到底仍会露出一截。这里自己定隐藏距离（胶囊高 + 外边距 + inset），
+        // 位移用 graphicsLayer 施加——读 offset 落在 draw 阶段，滚动全程不触发重组。
+        val barState = rememberFloatingToolbarState()
+        val barScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(
+            exitDirection = FloatingToolbarExitDirection.Bottom,
+            state = barState,
+        )
+        val barHiddenDistancePx = with(LocalDensity.current) {
+            (FloatingBarHeight + FloatingBarBottomMargin + barBottomInset).toPx()
+        }
+        SideEffect { barState.offsetLimit = -barHiddenDistancePx }
+
+        // 换 tab / 换子源等于换了一屏内容，底栏收回显示态：不把上一屏滑到一半的隐藏量带过去，
+        // 也免得新一屏内容不足一屏时底栏没机会自己回来。
+        LaunchedEffect(selectedTab, selectedSource) {
+            if (barState.offset != 0f) {
+                animate(
+                    initialValue = barState.offset,
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ) { value, _ -> barState.offset = value }
+            }
+        }
 
         val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
         var lastTapTime by remember { mutableStateOf(0L) }
@@ -353,7 +397,8 @@ fun HomeScreen(
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        // nestedScroll 挂在这一层：四个 tab 的列表都在它下面，滚动事件冒上来才能驱动底栏位移
+        Box(modifier = Modifier.fillMaxSize().nestedScroll(barScrollBehavior)) {
             CompositionLocalProvider(LocalContentBottomPadding provides contentBottomPadding) {
                 // 切 tab 的方向性转场：新页从前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms
                 // 淡入淡出。位移量、时长与方向判定照搬 Echo 的 NavHost enter/exitTransition；
@@ -443,6 +488,8 @@ fun HomeScreen(
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    // 滚动隐藏的位移。offset 为负（见 exitAlways 的约定），往下推屏幕外要取反
+                    .graphicsLayer { translationY = -barState.offset }
                     .padding(horizontal = 16.dp)
                     .padding(bottom = barBottomInset + FloatingBarBottomMargin)
                     .height(FloatingBarHeight),
