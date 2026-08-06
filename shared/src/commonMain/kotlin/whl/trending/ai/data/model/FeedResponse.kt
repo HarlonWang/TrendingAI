@@ -51,17 +51,31 @@ data class FeedItem(
     }
 
     /**
-     * Product Hunt 产品主视觉，取图库首图。
+     * Product Hunt 产品图库，整组按显示宽度请求，顺序与接口一致（首张即主视觉）。
      * fit=max 只按宽度约束、不裁剪，原始比例交给调用方按图片实际尺寸排布。
      * 原图大到 4MB，必须带尺寸参数；这里显式要 webp 而不是 auto=format——
      * 图库多为界面截图，auto 会选无损 png，同尺寸下比 webp 大好几倍。
-     * 2026-07-30 之前入库的条目没有 gallery，返回 null 由调用方降级。
+     * 2026-07-30 之前入库的条目没有 gallery，返回空列表由调用方降级。
+     *
+     * [limit] 兜住接口万一放开条数：列表里一条目前最多 5 张，超出的不值得占轮播位。
+     * 注意返回的每一张都只是 URL，实际下载由调用方按需触发（轮播只加载当前页）。
      */
-    fun heroImageUrl(widthPx: Int): String? {
-        if (source != "producthunt") return null
-        val raw = extra?.gallery?.firstOrNull()?.takeIf { it.isNotBlank() } ?: return null
-        val separator = if ('?' in raw) "&" else "?"
-        return "$raw${separator}fm=webp&q=70&w=$widthPx&fit=max"
+    fun galleryImageUrls(widthPx: Int, limit: Int = GALLERY_MAX): List<String> {
+        if (source != "producthunt") return emptyList()
+        val raws = extra?.gallery ?: return emptyList()
+        return raws.asSequence()
+            .filter { it.isNotBlank() }
+            .take(limit)
+            .map { raw ->
+                val separator = if ('?' in raw) "&" else "?"
+                "$raw${separator}fm=webp&q=70&w=$widthPx&fit=max"
+            }
+            .toList()
+    }
+
+    companion object {
+        /** 单条最多展示的图库张数。 */
+        const val GALLERY_MAX = 5
     }
 }
 
