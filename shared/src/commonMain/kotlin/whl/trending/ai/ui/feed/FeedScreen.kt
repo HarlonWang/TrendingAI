@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +60,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
@@ -78,6 +81,9 @@ private const val HERO_REQUEST_PX = 720
 private const val HERO_PLACEHOLDER_RATIO = 16f / 9f
 private const val HERO_MIN_RATIO = 0.75f
 private const val HERO_MAX_RATIO = 3f
+
+/** 图库轮播的圆点指示器尺寸。 */
+private val INDICATOR_DOT_SIZE = 6.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -191,7 +197,7 @@ private fun FeedItemCard(
     onOpenDigest: (DigestPage) -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    val heroImage = item.heroImageUrl(HERO_REQUEST_PX)
+    val gallery = item.galleryImageUrls(HERO_REQUEST_PX)
     val clickModifier = Modifier.clickable {
         trackItemClick(
             source = item.source,
@@ -224,7 +230,7 @@ private fun FeedItemCard(
                 item = item,
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
-                heroImage = heroImage
+                gallery = gallery
             )
         }
     }
@@ -233,7 +239,7 @@ private fun FeedItemCard(
 /**
  * 标题以下的公共部分：描述、AI 摘要、元信息 + 操作菜单。
  *
- * [heroImage] 是 Product Hunt 的产品主视觉：有摘要时收进摘要块内部，
+ * [gallery] 是 Product Hunt 的产品图库：有摘要时收进摘要块内部，
  * 没摘要时单独成块——总之跟在描述之后，不再单独占卡片顶部。
  */
 @Composable
@@ -241,7 +247,7 @@ private fun FeedItemBody(
     item: FeedItem,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
-    heroImage: String? = null
+    gallery: List<String> = emptyList()
 ) {
     if (!item.description.isNullOrBlank()) {
         Text(
@@ -256,11 +262,11 @@ private fun FeedItemBody(
     if (!item.summary.isNullOrBlank()) {
         AiSummaryBox(
             summary = item.summary,
-            media = heroImage?.let { url -> { HeroImage(url = url) } }
+            media = gallery.takeIf { it.isNotEmpty() }?.let { urls -> { HeroGallery(urls = urls) } }
         )
-    } else if (heroImage != null) {
-        HeroImage(
-            url = heroImage,
+    } else if (gallery.isNotEmpty()) {
+        HeroGallery(
+            urls = gallery,
             modifier = Modifier.clip(RoundedCornerShape(12.dp))
         )
     }
@@ -291,30 +297,97 @@ private fun FeedItemBody(
 }
 
 /**
- * 产品主视觉。按图片实际比例排布，不裁成固定画幅——图库里既有 16:9 的演示图
- * 也有接近方形的宣传图，统一裁会切掉半张。加载完成前用 16:9 占位，避免高度从
- * 0 弹开；比例只在极端长图时才夹住，正常横图不受影响。
+ * 产品图库。一屏一图、左右滑动切换，多图时底部叠圆点指示器。
+ *
+ * 画幅按首图的实际比例排布，不裁成固定值——图库里既有 16:9 的演示图也有接近方形的
+ * 宣传图，统一裁会切掉半张。加载完成前用 16:9 占位，避免高度从 0 弹开；比例只在极端
+ * 长图时才夹住，正常横图不受影响。整组共用首图的比例：同一条内各图尺寸实测基本一致，
+ * 而逐页改高度会让列表在滑动中上下跳。
+ *
+ * 后几张只在翻到时才由 [HorizontalPager] 组合、进而触发下载，
+ * 静止在首图的用户不会为多图多付流量。
  */
 @Composable
-private fun HeroImage(url: String, modifier: Modifier = Modifier) {
-    val painter = rememberAsyncImagePainter(url)
-    val state by painter.state.collectAsState()
-    val ratio = (state as? AsyncImagePainter.State.Success)
+private fun HeroGallery(urls: List<String>, modifier: Modifier = Modifier) {
+    val firstPainter = rememberAsyncImagePainter(urls.first())
+    val firstState by firstPainter.state.collectAsState()
+    val ratio = (firstState as? AsyncImagePainter.State.Success)
         ?.painter
         ?.intrinsicSize
         ?.takeIf { it.width > 0f && it.height > 0f }
         ?.let { (it.width / it.height).coerceIn(HERO_MIN_RATIO, HERO_MAX_RATIO) }
         ?: HERO_PLACEHOLDER_RATIO
 
-    Image(
-        painter = painter,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
+    if (urls.size == 1) {
+        Image(
+            painter = firstPainter,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .fillMaxWidth()
+                .aspectRatio(ratio)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        )
+        return
+    }
+
+    val pagerState = rememberPagerState(pageCount = { urls.size })
+    Box(modifier = modifier) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(ratio)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) { page ->
+            // 首页复用外层那个 painter：比例已经从它身上读过，再建一个只是重复请求
+            if (page == 0) {
+                Image(
+                    painter = firstPainter,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                AsyncImage(
+                    model = urls[page],
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+        GalleryIndicator(
+            pageCount = urls.size,
+            currentPage = pagerState.currentPage,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+        )
+    }
+}
+
+/**
+ * 图库页码指示器。截图底色深浅不定，圆点垫一层半透明黑底才在两种图上都看得清，
+ * 因此这里用固定的黑/白而不是主题色。
+ */
+@Composable
+private fun GalleryIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modifier) {
+    Row(
         modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(ratio)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    )
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.35f))
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(pageCount) { page ->
+            Box(
+                modifier = Modifier
+                    .size(INDICATOR_DOT_SIZE)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = if (page == currentPage) 1f else 0.45f))
+            )
+        }
+    }
 }
 
 /**
