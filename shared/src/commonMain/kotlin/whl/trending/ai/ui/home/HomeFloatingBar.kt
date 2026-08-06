@@ -101,8 +101,9 @@ internal data class HomeBarItem(
  * 选中态是一块跟着选中项滑动的药丸（见 [SlidingPillItems]）；只有图标、没有文字标签
  * ——Echo 那边 `showSelectedLabels` 写死为 false。
  *
- * 组件本身不接 `scrollBehavior`：滚动隐藏由调用方（`HomeScreen`）自己算隐藏距离并施加
- * `translationY`，原因见那边的注释——M3 内建那套只按胶囊自身高度位移，藏不干净。
+ * 组件本身不接 `scrollBehavior`：可选的「跟随滚动隐藏」（设置项开关，默认关）由调用方施加
+ * `translationY`，理由见 [HomeFloatingBarHideState]——M3 内建那套的位移量按胶囊到**父布局**
+ * 底边算，够不到这层 [BoxWithConstraints] 之外的外边距与导航栏 inset，藏不干净。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

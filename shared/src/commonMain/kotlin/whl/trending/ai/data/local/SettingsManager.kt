@@ -134,6 +134,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
     private val TRENDING_SOURCE_KEY = "prefs_trending_source"
+    private val HIDE_BOTTOM_BAR_ON_SCROLL_KEY = "prefs_hide_bottom_bar_on_scroll"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -548,6 +549,19 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setOpenLinksInCustomTab(value: Boolean) {
         settings.putBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, value)
+    }
+
+    /**
+     * 首页悬浮底栏是否跟随滚动隐藏。默认 false——底栏常驻是四个 tab 的稳定锚点，
+     * 藏起来换到的那点屏幕空间不值得让所有人默认承担「想切 tab 得先往回滑」的代价，
+     * 留给需要的人自己打开。关闭时首页不会接入任何滚动监听（见 HomeFloatingBarScrollHide）。
+     */
+    val hideBottomBarOnScroll: Flow<Boolean> = settings.getBooleanFlow(HIDE_BOTTOM_BAR_ON_SCROLL_KEY, false)
+
+    fun currentHideBottomBarOnScroll(): Boolean = settings.getBoolean(HIDE_BOTTOM_BAR_ON_SCROLL_KEY, false)
+
+    fun setHideBottomBarOnScroll(value: Boolean) {
+        settings.putBoolean(HIDE_BOTTOM_BAR_ON_SCROLL_KEY, value)
     }
 
     /**
