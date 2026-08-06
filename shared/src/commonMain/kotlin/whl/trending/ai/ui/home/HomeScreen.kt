@@ -288,7 +288,12 @@ fun HomeScreen(
         val barHiddenDistancePx = with(LocalDensity.current) {
             (FloatingBarHeight + FloatingBarBottomMargin + barBottomInset).toPx()
         }
-        SideEffect { barState.offsetLimit = -barHiddenDistancePx }
+        SideEffect {
+            barState.offsetLimit = -barHiddenDistancePx
+            // offset 只在写入时 coerce：隐藏距离变了（转屏、手势导航切三键导航改的是 inset）
+            // 得把已有位移夹回新区间，否则会一直停在按旧区间算出来的那个值上
+            barState.offset = barState.offset.coerceAtLeast(-barHiddenDistancePx)
+        }
 
         // 换 tab / 换子源等于换了一屏内容，底栏收回显示态：不把上一屏滑到一半的隐藏量带过去，
         // 也免得新一屏内容不足一屏时底栏没机会自己回来。
