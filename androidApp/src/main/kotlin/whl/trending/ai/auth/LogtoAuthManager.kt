@@ -188,7 +188,7 @@ class LogtoAuthManager(activity: Activity) : AuthManager {
         globalSettingsManager.setGithubIdentity(null, null)
         globalSettingsManager.setUserEmail(null)
         globalSettingsManager.setIsPro(false)
-        globalSettingsManager.clearSelectedChatModel()
+        globalSettingsManager.followServerDefault()
         globalFavoriteRepository.onSignOut()
         GithubTokenProvider.shared.clear()
         FollowingProvider.shared.clear()

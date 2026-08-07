@@ -3,14 +3,18 @@ package whl.trending.ai.data.model
 import kotlinx.serialization.Serializable
 
 /**
- * 「未手选模型」的哨兵值：请求不带 model 字段，由服务端按 tier 决定默认。
+ * 「跟随服务端默认」的哨兵值：请求不带 model 字段，由服务端按 tier 决定用哪个模型。
+ *
+ * 空串只是存储层的表示，语义是**用户意图**而不是「没设置过」——用户主动点中下拉里的默认项，
+ * 存的同样是它（见 ModelPicker 的 onClick）。两种来路刻意不做区分：都表示「默认是谁由服务端
+ * 说了算」，于是后端换默认模型时它们一起跟着走。
  *
  * 客户端刻意不再硬编码默认模型 id。后端 `resolveModel(tier, undefined)` 两档都回落
  * `DEFAULT_MODEL`，所以「不传」就是「跟随后端默认」——后端换默认模型不必跟着发版。
  * 曾经硬编码是有代价的：免费档被后端白名单拍平看不出问题，Pro 档 `isOfferedModel` 放行，
  * 于是未手选的 Pro 用户实际被钉在客户端常量上，后端调档对存量版本无效（0aac277）。
  */
-const val CHAT_MODEL_UNSET = ""
+const val FOLLOW_SERVER_DEFAULT = ""
 
 /**
  * 一个可选聊天模型（来自 `GET /api/chat/models`，后端从 OpenAI 动态取）。
@@ -52,13 +56,13 @@ data class ChatModelsResponse(
 /**
  * 计算请求该带的模型 id，`null` = 不带 model 字段、由服务端决定默认。
  *
- * 返回 null 的三种情形：未手选（[CHAT_MODEL_UNSET]）、选择已不在目录中、选择是 Pro 专属但当前非 Pro。
+ * 返回 null 的三种情形：跟随服务端默认（[FOLLOW_SERVER_DEFAULT]）、选择已不在目录中、选择是 Pro 专属但当前非 Pro。
  * 目录为空（尚未拉到）时手选值原样透传，交服务端按 tier 强制。
  *
  * 选择器的自愈与 ChatApi 的发送共用本函数——「界面显示的」与「请求发出的」始终同一套判定。
  */
 fun resolveEffectiveChatModel(models: List<ChatModelOption>, selectedId: String, isPro: Boolean): String? {
-    if (selectedId == CHAT_MODEL_UNSET) return null
+    if (selectedId == FOLLOW_SERVER_DEFAULT) return null
     if (models.isEmpty()) return selectedId
     val sel = models.firstOrNull { it.id == selectedId }
     return if (sel == null || (sel.proOnly && !isPro)) null else selectedId

@@ -42,9 +42,9 @@ class ChatModelOptionTest {
     /** 核心解耦断言：没手选就不带 model，默认是谁由服务端定，客户端不复述模型 id。 */
     @Test
     fun unset_selection_sends_no_model() {
-        assertNull(resolveEffectiveChatModel(catalog.models, CHAT_MODEL_UNSET, isPro = false))
-        assertNull(resolveEffectiveChatModel(catalog.models, CHAT_MODEL_UNSET, isPro = true))
-        assertNull(resolveEffectiveChatModel(emptyList(), CHAT_MODEL_UNSET, isPro = true))
+        assertNull(resolveEffectiveChatModel(catalog.models, FOLLOW_SERVER_DEFAULT, isPro = false))
+        assertNull(resolveEffectiveChatModel(catalog.models, FOLLOW_SERVER_DEFAULT, isPro = true))
+        assertNull(resolveEffectiveChatModel(emptyList(), FOLLOW_SERVER_DEFAULT, isPro = true))
     }
 
     @Test
@@ -64,8 +64,8 @@ class ChatModelOptionTest {
 
     @Test
     fun displayed_model_is_declared_default_when_unset() {
-        assertEquals(free, resolveDisplayedChatModel(catalog, CHAT_MODEL_UNSET, isPro = false))
-        assertEquals(free, resolveDisplayedChatModel(catalog, CHAT_MODEL_UNSET, isPro = true))
+        assertEquals(free, resolveDisplayedChatModel(catalog, FOLLOW_SERVER_DEFAULT, isPro = false))
+        assertEquals(free, resolveDisplayedChatModel(catalog, FOLLOW_SERVER_DEFAULT, isPro = true))
     }
 
     /** 默认项由 default 字段声明，不靠排序猜：指向的项即使不排最前、目录里另有免费项也照选 */
@@ -73,7 +73,7 @@ class ChatModelOptionTest {
     fun displayed_model_follows_declared_default_not_ordering() {
         val otherFree = ChatModelOption(id = "gpt-5.6-terra", name = "GPT-5.6 Terra", minTier = ChatModelOption.TIER_USER)
         val declared = ChatModelsResponse(models = listOf(otherFree, free, pro), default = free.id)
-        assertEquals(free, resolveDisplayedChatModel(declared, CHAT_MODEL_UNSET, isPro = false))
+        assertEquals(free, resolveDisplayedChatModel(declared, FOLLOW_SERVER_DEFAULT, isPro = false))
     }
 
     @Test
@@ -84,7 +84,7 @@ class ChatModelOptionTest {
 
     @Test
     fun displayed_model_is_null_before_catalog_arrives() {
-        assertNull(resolveDisplayedChatModel(ChatModelsResponse(), CHAT_MODEL_UNSET, isPro = false))
+        assertNull(resolveDisplayedChatModel(ChatModelsResponse(), FOLLOW_SERVER_DEFAULT, isPro = false))
         assertNull(catalogDefaultChatModel(ChatModelsResponse()))
     }
 
@@ -93,7 +93,7 @@ class ChatModelOptionTest {
     fun dangling_default_yields_no_default() {
         val broken = ChatModelsResponse(models = listOf(free, pro), default = "ghost-model")
         assertNull(catalogDefaultChatModel(broken))
-        assertNull(resolveDisplayedChatModel(broken, CHAT_MODEL_UNSET, isPro = false))
+        assertNull(resolveDisplayedChatModel(broken, FOLLOW_SERVER_DEFAULT, isPro = false))
         // 有效的手选不受契约破损影响，照常显示
         assertEquals(pro, resolveDisplayedChatModel(broken, "gpt-6", isPro = true))
     }

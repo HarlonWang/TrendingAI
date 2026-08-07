@@ -59,7 +59,7 @@ class ChatViewModel(
         runCatching {
             resolveDisplayedChatModel(
                 ChatModelsProvider.cachedOrEmpty(),
-                globalSettingsManager.currentSelectedChatModel(),
+                globalSettingsManager.currentChatModelChoice(),
                 globalSettingsManager.currentIsPro(),
             )?.id
         }.getOrNull()

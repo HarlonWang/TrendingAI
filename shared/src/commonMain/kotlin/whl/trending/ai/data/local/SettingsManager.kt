@@ -18,7 +18,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.model.CHAT_MODEL_UNSET
+import whl.trending.ai.data.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 
@@ -126,7 +126,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
     private val ACCOUNT_LINK_OPENED_AT_KEY = "prefs_account_link_opened_at"
-    private val SELECTED_CHAT_MODEL_KEY = "prefs_selected_chat_model"
+    // 存储 key 的字面量不随常量名改动——改了等于丢掉存量用户已选的模型
+    private val CHAT_MODEL_CHOICE_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
     private val MIN_VERSION_KEY = "prefs_min_version"
@@ -500,21 +501,26 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 用户手选的聊天模型 id；[CHAT_MODEL_UNSET]（默认）= 未手选，请求不带 model、跟随服务端默认。
+     * 用户的聊天模型意向：钉住的模型 id，或 [FOLLOW_SERVER_DEFAULT]（默认）＝跟随服务端默认、
+     * 请求不带 model 字段。两种取值对应下面的 [pinChatModel] / [followServerDefault]。
      *
-     * 发请求时透传手选值：免费档服务端按白名单强制，Pro 档服务端尊重此选择。
+     * 发请求时透传钉住的值：免费档服务端按白名单强制，Pro 档服务端尊重此选择。
      */
-    val selectedChatModel: Flow<String> = settings.getStringFlow(SELECTED_CHAT_MODEL_KEY, CHAT_MODEL_UNSET)
+    val chatModelChoice: Flow<String> = settings.getStringFlow(CHAT_MODEL_CHOICE_KEY, FOLLOW_SERVER_DEFAULT)
 
-    fun currentSelectedChatModel(): String = settings.getString(SELECTED_CHAT_MODEL_KEY, CHAT_MODEL_UNSET)
+    fun currentChatModelChoice(): String = settings.getString(CHAT_MODEL_CHOICE_KEY, FOLLOW_SERVER_DEFAULT)
 
-    fun setSelectedChatModel(id: String) {
-        settings.putString(SELECTED_CHAT_MODEL_KEY, id)
+    /** 钉住某个具体模型：此后不再跟随服务端默认的变化，直到它下架或被 [followServerDefault] 解除。 */
+    fun pinChatModel(id: String) {
+        settings.putString(CHAT_MODEL_CHOICE_KEY, id)
     }
 
-    /** 登出时调用：清掉可能残留的 Pro 模型选择，避免下个用户继承（回到未手选、跟随服务端默认）。 */
-    fun clearSelectedChatModel() {
-        settings.remove(SELECTED_CHAT_MODEL_KEY)
+    /**
+     * 回到「跟随服务端默认」。三处调用语义一致：用户点中下拉里的默认项、选择已下架/越权时自愈、
+     * 登出时清掉可能残留的 Pro 模型选择（避免下个用户继承）。
+     */
+    fun followServerDefault() {
+        settings.remove(CHAT_MODEL_CHOICE_KEY)
     }
 
     val subscribedEmail: Flow<String?> = settings.getStringOrNullFlow(SUBSCRIBED_EMAIL_KEY)

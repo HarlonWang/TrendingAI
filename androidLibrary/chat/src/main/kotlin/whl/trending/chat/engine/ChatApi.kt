@@ -174,7 +174,7 @@ class ChatApi(
                     // encodeDefaults=false 省略，默认模型由服务端定（客户端不复述模型 id）
                     model = resolveEffectiveChatModel(
                         ChatModelsProvider.cachedOrEmpty().models,
-                        globalSettingsManager.currentSelectedChatModel(),
+                        globalSettingsManager.currentChatModelChoice(),
                         globalSettingsManager.currentIsPro(),
                     ),
                     stream = true,
