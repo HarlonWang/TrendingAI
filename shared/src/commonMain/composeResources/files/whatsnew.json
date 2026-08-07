@@ -1,13 +1,15 @@
 {
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "zh": [
     "首页焕新：底部导航改为悬浮胶囊，标签顺序重排，切换更顺手",
     "界面整体风格升级，观感与交互更统一",
-    "AI 对话重开 App 后默认开启新对话，历史对话可在抽屉里切回"
+    "AI 对话重开 App 后默认开启新对话，历史对话可在抽屉里切回",
+    "Product Hunt 产品支持多图，图片可左右滑动浏览"
   ],
   "en": [
     "Refreshed home screen: floating pill navigation bar with reordered tabs",
     "Refreshed visual style across the app for a more consistent look and feel",
-    "AI chat starts a new conversation after you reopen the app; earlier chats remain in the drawer"
+    "AI chat starts a new conversation after you reopen the app; earlier chats remain in the drawer",
+    "Product Hunt items now show multiple images you can swipe through"
   ]
 }
