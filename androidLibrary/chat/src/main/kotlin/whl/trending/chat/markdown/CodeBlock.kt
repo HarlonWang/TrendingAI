@@ -12,20 +12,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,13 +28,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.ClipData
 import dev.snipme.highlights.Highlights
 import dev.snipme.highlights.model.BoldHighlight
 import dev.snipme.highlights.model.ColorHighlight
 import dev.snipme.highlights.model.SyntaxLanguage
 import dev.snipme.highlights.model.SyntaxTheme
-import kotlinx.coroutines.launch
+import whl.trending.chat.ui.CopyIconButton
 
 /**
  * 代码块：等宽字体 + 横向滚动 + 语言标签 + 复制按钮 + 语法高亮。
@@ -50,8 +44,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun CodeBlock(code: String, language: String) {
     val colors = MaterialTheme.colorScheme
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
     val theme = m3SyntaxTheme(colors)
     val highlighted = remember(code, language, theme) {
         highlightCode(code = code, language = language, theme = theme)
@@ -73,17 +65,11 @@ fun CodeBlock(code: String, language: String) {
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.onSurfaceVariant,
             )
-            IconButton(onClick = {
-                scope.launch {
-                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("code", code)))
-                }
-            }) {
-                Icon(
-                    imageVector = Icons.Filled.ContentCopy,
-                    contentDescription = "Copy code",
-                    tint = colors.onSurfaceVariant,
-                )
-            }
+            CopyIconButton(
+                text = code,
+                icon = Icons.Filled.ContentCopy,
+                iconSize = 24.dp,
+            )
         }
         Text(
             text = highlighted,
