@@ -1,16 +1,19 @@
 package whl.trending.chat.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.data.local.globalSettingsManager
@@ -30,7 +34,18 @@ import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.catalogDefaultChatModel
 import whl.trending.ai.data.model.resolveDisplayedChatModel
 import whl.trending.ai.data.model.resolveEffectiveChatModel
+import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.chat.R
+
+/**
+ * [ModelPicker] 是否有东西可渲染。
+ *
+ * 抽出来是给 [ChatContextRow] 用的：那一行要在「模型和能力 chip 都没有」时整行缺席，
+ * 而选择器是否出现只有这里知道——组件内部 return 掉的话，外面看到的是一个高度为 0 却
+ * 仍占着 Arrangement 间距的成员。
+ */
+internal fun chatModelPickerVisible(catalog: ChatModelsResponse): Boolean =
+    catalog.models.size > 1 && catalogDefaultChatModel(catalog) != null
 
 /**
  * 常驻模型选择器（对所有用户透出）。未手选时显示目录里的免费默认项；Pro 专属项对免费用户锁定，
@@ -41,6 +56,7 @@ import whl.trending.chat.R
  *
  * 只有一个可选模型时不渲染（无从选择，锁定项也无从触达）。
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ModelPicker(
     catalog: ChatModelsResponse,
@@ -86,14 +102,50 @@ internal fun ModelPicker(
     val current = resolveDisplayedChatModel(catalog, selectedId, isPro) ?: catalogDefault
 
     Box(modifier) {
-        AssistChip(
-            onClick = { expanded = true },
-            label = { Text(current.name) },
-            trailingIcon = {
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+        // M3 Expressive 的 SplitButton 而不是 chip：模型名与下拉箭头分成两块，「这是个选择器」
+        // 由形态本身讲清楚，不用靠「能不能点掉」去猜（chip 的老问题）。它天生 40dp 高 + 全圆，
+        // 与下面的输入胶囊同一套圆角语言。
+        //
+        // 配色刻意选中性的 surfaceContainerHigh，而不是 tonal 默认的 secondaryContainer：
+        // 模型是常驻的纯信息，带色相就会跟旁边「已开启的能力」抢注意力。也不能用再深一档的
+        // surfaceContainerHighest——那正是禁用态发送键的容器色（实测浅色下同为 #E7E0EC），
+        // 空输入时同屏会出现两块一样的颜色，一块可点一块禁用。选 High 后浅色梯度是
+        // 背景 #FDF7FE → 胶囊 #F3EDF4（High + 3dp tonal 提亮）→ 模型 #ECE6F0 → 禁用发送键 #E7E0EC。
+        val modelColors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        )
+        SplitButtonLayout(
+            leadingButton = {
+                SplitButtonDefaults.LeadingButton(
+                    onClick = { expanded = true },
+                    colors = modelColors,
+                ) {
+                    Text(current.name)
+                }
+            },
+            trailingButton = {
+                SplitButtonDefaults.TrailingButton(
+                    checked = expanded,
+                    onCheckedChange = { expanded = it },
+                    colors = modelColors,
+                ) {
+                    // 展开时箭头转 180°：M3 官方 SplitButton 示例的做法，组件本身不管这个
+                    val rotation by animateFloatAsState(
+                        targetValue = if (expanded) 180f else 0f,
+                        label = "model-picker-arrow",
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(SplitButtonDefaults.TrailingIconSize)
+                            .graphicsLayer { rotationZ = rotation },
+                    )
+                }
             },
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        TrendingDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             models.forEach { model ->
                 val locked = model.proOnly && !isPro
                 DropdownMenuItem(
