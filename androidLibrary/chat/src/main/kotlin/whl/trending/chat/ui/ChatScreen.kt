@@ -1,6 +1,8 @@
 package whl.trending.chat.ui
 
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,16 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -190,22 +192,21 @@ fun ChatScreen(
                 )
             },
             bottomBar = {
+                val mode by viewModel.chatMode.collectAsState()
+                val catalog by viewModel.catalog.collectAsState()
                 Column {
-                    // 「一键详细解读」chip：GitHub 条目 + README 达标 + 尚无成功解读 → 常驻显示
+                    // ① 建议动作行：点一下立刻发出一条消息，一次性、发完即走。全部用描边样式，
+                    //    与下面填充的「当前配置」行分层——描边 = 建议，填充 = 已生效的状态。
+                    //    两个按钮可能同时出现（GitHub 条目 + 尚无对话），排一行而不是各占一行。
+                    //    用 OutlinedButton 而不是 AssistChip：Expressive 的按钮默认 40dp 高 + 全圆，
+                    //    与输入胶囊同一套圆角语言；chip 的 8dp 小圆角搁在 36dp 的胶囊上方不搭。
+                    //
+                    // 「一键详细解读」：GitHub 条目 + README 达标 + 尚无成功解读 → 常驻显示
                     // （不同于介绍 chip 的「messages 为空才显示」）；生成中置灰，成功一次后隐藏。
-                    if (DetailSummaryPolicy.chipVisible(initialContext, state.messages)) {
-                        val detailPrompt = stringResource(R.string.chat_action_detail_summary)
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-                            AssistChip(
-                                onClick = { viewModel.sendDetailSummary(detailPrompt) },
-                                enabled = !state.isSending,
-                                label = { Text(detailPrompt) },
-                            )
-                        }
-                    }
-                    // 尚无对话时在输入框上方显示入口对应的快捷问（label 资源 to prompt 资源）：
-                    // 通用助手入口问能力，README 入口问项目介绍。messages 非空即隐藏，
-                    // 天然覆盖"发送后隐藏"与"恢复历史会话不再显示"。
+                    val detailVisible = DetailSummaryPolicy.chipVisible(initialContext, state.messages)
+                    // 尚无对话时显示入口对应的快捷问（label 资源 to prompt 资源）：通用助手入口问能力，
+                    // README 入口问项目介绍。messages 非空即隐藏，天然覆盖「发送后隐藏」与
+                    // 「恢复历史会话不再显示」。
                     val quickAction = when {
                         initialContext == null ->
                             R.string.chat_action_what_can_you_do to R.string.chat_action_what_can_you_do_prompt
@@ -213,48 +214,43 @@ fun ChatScreen(
                             R.string.chat_action_what_is_this to R.string.chat_action_what_is_this_prompt
                         else -> null
                     }
-                    if (quickAction != null && state.messages.isEmpty()) {
-                        val prompt = stringResource(quickAction.second)
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-                            AssistChip(
-                                onClick = { viewModel.sendText(prompt) },
-                                enabled = !state.isSending,
-                                label = { Text(stringResource(quickAction.first)) },
-                            )
+                    val quickVisible = quickAction != null && state.messages.isEmpty()
+                    if (detailVisible || quickVisible) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                // 下方留 8dp：与「当前配置」行拉开一档，两组 chip 才读得出是两类东西
+                                .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (detailVisible) {
+                                val detailPrompt = stringResource(R.string.chat_action_detail_summary)
+                                OutlinedButton(
+                                    onClick = { viewModel.sendDetailSummary(detailPrompt) },
+                                    enabled = !state.isSending,
+                                ) {
+                                    Text(detailPrompt)
+                                }
+                            }
+                            if (quickAction != null && quickVisible) {
+                                val prompt = stringResource(quickAction.second)
+                                OutlinedButton(
+                                    onClick = { viewModel.sendText(prompt) },
+                                    enabled = !state.isSending,
+                                ) {
+                                    Text(stringResource(quickAction.first))
+                                }
+                            }
                         }
                     }
-                    // 能力 chip 回显区：开启的模式可见可撤（EchoFlow「菜单开启 + chip 回显」范式）
-                    val mode by viewModel.chatMode.collectAsState()
-                    if (mode != whl.trending.chat.model.ChatMode.Normal) {
-                        val isResearch = mode == whl.trending.chat.model.ChatMode.DeepResearch
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
-                            androidx.compose.material3.InputChip(
-                                selected = true,
-                                onClick = {
-                                    if (isResearch) viewModel.toggleDeepResearch() else viewModel.toggleWebSearch()
-                                },
-                                label = {
-                                    Text(stringResource(if (isResearch) R.string.chat_deep_research else R.string.chat_web_search))
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        Icons.Filled.Close,
-                                        contentDescription = stringResource(R.string.chat_dialog_cancel),
-                                        modifier = Modifier.padding(0.dp),
-                                    )
-                                },
-                            )
-                        }
-                    }
-                    // 常驻模型选择器（≤1 个模型时自动隐藏）。research 模式下整个隐藏：
-                    // 模型由服务端钉死，选择器留着会误导用户以为选的模型生效
-                    if (mode != whl.trending.chat.model.ChatMode.DeepResearch) {
-                        val catalog by viewModel.catalog.collectAsState()
-                        ModelPicker(
-                            catalog = catalog,
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                        )
-                    }
+                    // ② 当前配置行：模型 + 已开启的能力，回答「下一条消息以什么配置发出去」
+                    ChatContextRow(
+                        catalog = catalog,
+                        mode = mode,
+                        onToggleSearch = viewModel::toggleWebSearch,
+                        onToggleResearch = viewModel::toggleDeepResearch,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
                     ChatInputBar(
                         input = state.input,
                         // research 仅支持文本：只有图片没文字时发送会被 VM 忽略，按钮同步禁用（不静默）
