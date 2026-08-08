@@ -1,0 +1,3 @@
+• Refreshed home screen: floating pill navigation bar with reordered tabs
+• Refreshed visual style across the app — dialogs, sheets and card lists now feel consistent
+• Product Hunt items now show multiple images you can swipe through
