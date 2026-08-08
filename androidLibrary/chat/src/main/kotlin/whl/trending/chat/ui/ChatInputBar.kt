@@ -30,17 +30,19 @@ import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -66,12 +69,22 @@ import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.R
 import whl.trending.chat.attach.ChatImages
 
 /**
  * 底部输入区：图片入口（拍照/相册）+ 待发缩略图条 + 输入框 + 发送按钮。
+ *
+ * 样式参照 EchoFlow 的 composer（`ChatComposer.kt` 的 `InputToolbar`）：输入区是一枚**悬浮胶囊**
+ * 而非贴底通栏——大圆角 + `surfaceContainerHigh` + 投影，里面的 TextField 去掉容器和指示线，
+ * 边框感由胶囊本身承担。
+ *
+ * 两端按钮没照抄 EchoFlow：它给「+」和发送都配了
+ * [androidx.compose.material3.MaterialShapes] 异形填充容器（Cookie/Sunny + 按下形变）。我们的取舍是
+ * **整条只留一个彩色重心**，放在右侧的发送键上——「+」退成无容器裸图标，与 ChatGPT / Gemini 的
+ * composer 一致；发送键用圆形 primary 实心，不用异形，与 app 其余部分的全圆形语言一致。
  *
  * 图片理解仅对登录用户开放：未登录点「+」弹登录引导（服务端另有 403 真闸）。
  * 选图走系统契约（Photo Picker / TakePicture），Android 13+ 全程零运行时权限。
@@ -169,26 +182,41 @@ fun ChatInputBar(
         )
     }
 
-    Surface(tonalElevation = 3.dp, modifier = modifier.fillMaxWidth()) {
-        Column(
-            // 避让手势导航条与键盘（union 取两者较大值，避免双重叠加）；
-            // Surface 背景仍铺到屏幕底边，仅内容上移
-            modifier = Modifier.fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+    Column(
+        // 避让手势导航条与键盘（union 取两者较大值，避免双重叠加）。
+        // 胶囊化后底部不再有铺到屏幕边的背景板，插入的这段留白就是胶囊与屏幕底边的距离
+        modifier = modifier.fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        if (pendingImages.isNotEmpty() || processingCount > 0) {
+            PendingImageStrip(
+                pendingImages = pendingImages,
+                processingCount = processingCount,
+                onRemoveImage = onRemoveImage,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+        Surface(
+            // 固定 36dp 而不是 EchoFlow 的 CircleShape：单行时胶囊高 72dp（TextField 最小高 56 + 上下
+            // 各 8 的内边距），36dp 恰好等于半高，与全圆一模一样；但 CircleShape 的半径跟着高度走，
+            // 文字换到第 3、4 行后两端会撑成夸张的椭圆，把两侧按钮挤向中间
+            shape = RoundedCornerShape(36.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            if (pendingImages.isNotEmpty() || processingCount > 0) {
-                PendingImageStrip(
-                    pendingImages = pendingImages,
-                    processingCount = processingCount,
-                    onRemoveImage = onRemoveImage,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 // + 菜单常开：搜索 toggle 对匿名可用；图片两项在点击时才做登录闸
                 run {
                     Box {
+                        // 无容器裸图标：附件/能力开关是次要入口，给它填充容器就等于在输入区里
+                        // 造出第二个彩色重心，视线一进来先被拉到左下角。ChatGPT 与 Gemini 的
+                        // composer 都是这么处理的——左侧零视觉重量，色彩预算全留给右侧那一个主操作
                         IconButton(
                             onClick = { menuExpanded = true },
                         ) {
@@ -202,7 +230,7 @@ fun ChatInputBar(
                                 },
                             )
                         }
-                        DropdownMenu(
+                        TrendingDropdownMenu(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
                         ) {
@@ -267,23 +295,40 @@ fun ChatInputBar(
                         }
                     }
                 }
-                OutlinedTextField(
+                TextField(
                     value = input,
                     onValueChange = onInputChange,
                     // focusRequester 必须声明在可聚焦项之前才会关联（官方文档「焦点修饰符的优先级」）
                     modifier = Modifier.focusRequester(inputFocusRequester).weight(1f),
                     placeholder = { Text(stringResource(R.string.chat_input_hint)) },
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    // 容器与指示线全部透明：外层胶囊已经是这块区域的视觉容器，
+                    // 再叠一层 TextField 自己的底色/下划线就成了「框中框」
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
                     maxLines = 5,
                 )
-                IconButton(
+                FilledIconButton(
                     onClick = onSend,
                     enabled = canSend,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.size(48.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = stringResource(R.string.chat_send),
-                        tint = if (canSend) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
