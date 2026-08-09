@@ -78,6 +78,29 @@ enum class SummaryLanguage(val isoCode: String?) {
 }
 
 /**
+ * 动态 App 图标档位（仅 Android 生效，iOS 隐藏入口）。
+ *
+ * 同一箭头 glyph 换底色出变体；[backgroundArgb] 是外观页预览用的底色，
+ * **必须与 androidApp `res/values/ic_launcher_variants.xml` 里同名色值一致**（两处手动同步）。
+ * 持久化存 [id] 字符串而非 ordinal，便于后续插档；图标真实状态由系统组件开关记住，
+ * 本地存储只用于设置页回显选中态。
+ */
+enum class AppIconPreset(val id: String, val backgroundArgb: Long, val darkGlyph: Boolean = false) {
+    DEFAULT("default", 0xFF6750A4),
+    GRAPHITE("graphite", 0xFF46464A),
+    STEEL("steel", 0xFF4A5C92),
+    PINE("pine", 0xFF206A5D),
+    BERRY("berry", 0xFFA03B49),
+    // 浅底上白箭头不可见，预览与真实图标都换深色 glyph
+    CREAM("cream", 0xFFF1E7D8, darkGlyph = true);
+
+    companion object {
+        fun fromStorage(value: String?): AppIconPreset =
+            entries.firstOrNull { it.id == value } ?: DEFAULT
+    }
+}
+
+/**
  * 一条自定义主题记录。风格/对比度存字符串（`ThemeStyleOption.storageValue` 等），
  * 不引用 ui 层的枚举，避免 data 层反向依赖。
  */
@@ -109,6 +132,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val THEME_CUSTOM_HISTORY_KEY = "prefs_theme_custom_history"
     private val THEME_STYLE_KEY = "prefs_theme_style"
     private val THEME_CONTRAST_KEY = "prefs_theme_contrast"
+    private val APP_ICON_KEY = "prefs_app_icon"
     private val LANGUAGE_KEY = "prefs_language"
     private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
@@ -168,6 +192,16 @@ class SettingsManager(private val settings: ObservableSettings) {
     val seedColor: Flow<Long> = settings.getLongFlow(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
 
     fun currentSeedColor(): Long = settings.getLong(SEED_COLOR_KEY, DEFAULT_SEED_ARGB)
+
+    val appIcon: Flow<AppIconPreset> = settings.getStringFlow(APP_ICON_KEY, AppIconPreset.DEFAULT.id)
+        .map { AppIconPreset.fromStorage(it) }
+
+    fun currentAppIcon(): AppIconPreset =
+        AppIconPreset.fromStorage(settings.getString(APP_ICON_KEY, AppIconPreset.DEFAULT.id))
+
+    fun setAppIcon(preset: AppIconPreset) {
+        settings.putString(APP_ICON_KEY, preset.id)
+    }
 
     /**
      * 是否处于「自定义主题」状态。

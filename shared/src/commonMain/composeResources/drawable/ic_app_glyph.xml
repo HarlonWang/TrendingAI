@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App 图标的箭头 glyph（与 androidApp ic_launcher_foreground 同一路径），外观页动态图标预览用，白色底稿、用 tint 变色 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:pathData="M83,734q-20,-20 -20.5,-48T82,638l203,-203q40,-40 96,-40t96,40l66,65 151,-152h-18q-29,0 -48.5,-20T608,280q0,-28 19.5,-48t48.5,-20h182q29,0 48.5,20t19.5,48v183q0,28 -19.5,48t-48,20q-28.5,0 -48.5,-20t-20,-48v-20L639,595q-40,40 -96,40t-96,-40l-66,-64 -203,203q-20,20 -48,20t-47,-20Z"
+        android:fillColor="#FFFFFF"/>
+</vector>

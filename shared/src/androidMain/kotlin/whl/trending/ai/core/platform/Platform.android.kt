@@ -1,8 +1,11 @@
 package whl.trending.ai.core.platform
 
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import whl.trending.ai.data.local.AppIconPreset
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -25,6 +28,46 @@ class AndroidPlatform : Platform {
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform()
+
+actual fun supportsAlternateAppIcons(): Boolean = true
+
+/**
+ * alias 类名固定用 namespace 全限定，不能拿 `context.packageName` 拼：
+ * debug 构建有 applicationIdSuffix ".debug"，而 alias 的类名始终按 namespace（whl.trending.ai）解析，
+ * 拼 packageName 会得到 whl.trending.ai.debug.MainActivityXxx 这种不存在的组件。
+ */
+private fun AppIconPreset.aliasClassName(): String = "whl.trending.ai.MainActivity" + when (this) {
+    AppIconPreset.DEFAULT -> "Default"
+    AppIconPreset.GRAPHITE -> "Graphite"
+    AppIconPreset.STEEL -> "Steel"
+    AppIconPreset.PINE -> "Pine"
+    AppIconPreset.BERRY -> "Berry"
+    AppIconPreset.CREAM -> "Cream"
+}
+
+// 参照 SmokingYou（GPL-3.0，仅参照思路重写）的 AppIconManager：
+// 遍历全部 launcher alias，启用目标、禁用其余，任何时刻恰好一个桌面入口
+actual fun applyAppIcon(preset: AppIconPreset) {
+    val context = AndroidContextHolder.get() ?: return
+    val pm = context.packageManager
+    AppIconPreset.entries.forEach { candidate ->
+        val state = if (candidate == preset) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } else {
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        }
+        try {
+            pm.setComponentEnabledSetting(
+                ComponentName(context.packageName, candidate.aliasClassName()),
+                state,
+                PackageManager.DONT_KILL_APP,
+            )
+        } catch (e: Exception) {
+            // 单个 alias 失败不阻断其余：宁可先把目标启用，也别让桌面同时挂两个图标
+            Log.w("Platform", "applyAppIcon failed for ${candidate.id}", e)
+        }
+    }
+}
 
 actual fun openAppSettings() {
     val context = AndroidContextHolder.get() ?: return

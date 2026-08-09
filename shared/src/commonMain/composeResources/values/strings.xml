@@ -138,6 +138,8 @@
     <string name="star_need_login">Sign in to star this repository</string>
     <string name="favorites_delete_confirm">Remove this item from favorites?</string>
     <string name="theme_color">Accent Color</string>
+    <string name="app_icon">App icon</string>
+    <string name="app_icon_cream">Cream</string>
     <string name="theme_color_default">Default</string>
     <string name="theme_color_plum">Plum</string>
     <string name="theme_color_berry">Berry</string>

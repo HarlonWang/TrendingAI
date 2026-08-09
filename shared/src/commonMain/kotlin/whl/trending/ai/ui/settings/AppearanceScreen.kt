@@ -1,8 +1,11 @@
 package whl.trending.ai.ui.settings
 
+import whl.trending.ai.data.local.AppIconPreset
 import whl.trending.ai.data.local.DEFAULT_SEED_ARGB
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.core.platform.applyAppIcon
+import whl.trending.ai.core.platform.supportsAlternateAppIcons
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.theme.Hsv
 import whl.trending.ai.ui.theme.MorphPolygonShape
@@ -32,11 +35,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Contrast
@@ -69,10 +76,20 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.ColorFilter
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.app_icon
+import trendingai.shared.generated.resources.app_icon_cream
 import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.ic_app_glyph
+import trendingai.shared.generated.resources.theme_color_berry
+import trendingai.shared.generated.resources.theme_color_default
+import trendingai.shared.generated.resources.theme_color_graphite
+import trendingai.shared.generated.resources.theme_color_pine
+import trendingai.shared.generated.resources.theme_color_steel
 import trendingai.shared.generated.resources.dark_mode
 import trendingai.shared.generated.resources.theme_color
 import trendingai.shared.generated.resources.theme_amoled
@@ -178,7 +195,147 @@ fun AppearanceScreen(
                     },
                 )
             }
+
+            if (supportsAlternateAppIcons()) {
+                val appIcon by globalSettingsManager.appIcon.collectAsState(
+                    remember { globalSettingsManager.currentAppIcon() }
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Apps,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(Res.string.app_icon),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    AppIconGrid(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+                        selected = appIcon,
+                        onSelect = { preset ->
+                            trackEvent("settings_app_icon", mapOf("icon" to preset.id))
+                            globalSettingsManager.setAppIcon(preset)
+                            applyAppIcon(preset)
+                        },
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun appIconName(preset: AppIconPreset): String {
+    val res = when (preset) {
+        AppIconPreset.DEFAULT -> Res.string.theme_color_default
+        AppIconPreset.GRAPHITE -> Res.string.theme_color_graphite
+        AppIconPreset.STEEL -> Res.string.theme_color_steel
+        AppIconPreset.PINE -> Res.string.theme_color_pine
+        AppIconPreset.BERRY -> Res.string.theme_color_berry
+        AppIconPreset.CREAM -> Res.string.app_icon_cream
+    }
+    return stringResource(res)
+}
+
+/** 动态图标选择：3×2 网格，每格用「底色圆 + 箭头 glyph」实时合成，与真实图标同构、零位图资源 */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AppIconGrid(
+    modifier: Modifier = Modifier,
+    selected: AppIconPreset,
+    onSelect: (AppIconPreset) -> Unit,
+) {
+    FlowRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        maxItemsInEachRow = 3,
+    ) {
+        AppIconPreset.entries.forEach { preset ->
+            AppIconSwatch(
+                modifier = Modifier.weight(1f),
+                preset = preset,
+                selected = preset == selected,
+                onClick = { onSelect(preset) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppIconSwatch(
+    modifier: Modifier = Modifier,
+    preset: AppIconPreset,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val name = appIconName(preset)
+    val swatchScale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+    )
+    val ringColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+
+    Column(
+        // selectable 放在整列上，图标 + 标签构成一个完整触摸目标（标签也可点）
+        modifier = modifier
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = name },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .scale(swatchScale)
+                .border(3.dp, ringColor, CircleShape)
+                .padding(6.dp)
+                .clip(CircleShape)
+                .background(Color(preset.backgroundArgb)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(Res.drawable.ic_app_glyph),
+                contentDescription = null,
+                // glyph 底稿是白色，浅底档 tint 成深色，与真实图标的深色 foreground 一致
+                colorFilter = ColorFilter.tint(
+                    if (preset.darkGlyph) Color(0xFF4C4234) else Color.White
+                ),
+                modifier = Modifier.fillMaxSize(0.55f),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
     }
 }
 
