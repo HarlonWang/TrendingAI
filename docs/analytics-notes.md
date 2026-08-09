@@ -205,6 +205,23 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 - 用 shown 评估通知功能的触达/准点前，需先在 worker 上报后强制 flush（或改可靠上报通道），否则数据不可用于精细分析。
 - `open`/`shown` 比值不能当点击率用（分母残缺 + 分子少量重放）。
 
+## 通知迁移 AlarmManager 后的新埋点口径（2026-08-09 实现，尚未发版）
+
+上两节的问题在闹钟迁移（feat/daily-picks-alarm 分支）里一并修掉。发版后按新口径解读：
+
+| 事件 | 变化 |
+|---|---|
+| `daily_picks_notification_shown` | 新增属性：`trigger`（exact=精确闹钟 / inexact=降级档）、`attempt`（0~4，第几次尝试）、`delay_min`（实际弹出距计划 9:30 的分钟数，客户端自算）。**准点率从此直接看 `delay_min ≤ 10` 占比，不再需要按 country_code 猜时区**；迁移前基线约 12% |
+| `daily_picks_notification_skipped` | 新增，终局未弹时上报。`reason=permission_revoked`（开关开着但系统通知权限被收回，此前静默）/ `gave_up`（5 次重试烧完，服务端当天没出新内容） |
+| `daily_picks_notification_open` | 修掉重放：通知 intent 携带当天 date，按日去重。**跨版本对比 open 量时注意新版会低于旧版**，降幅即旧口径的重放污染 |
+
+配套机制与对账等式：
+
+- 终局事件上报后 receiver 留 2 秒上传窗口再收尾（Aptabase 0.0.8 无本地队列、每条即发 HTTP），后台丢失应大幅收敛；
+- 按天对账：`shown + skipped ≈ 开着开关且当日闹钟响过的设备数`，残差即上报丢失率，可当埋点健康度指标；
+- `open ≤ 当日 shown` 恒成立，破了说明又有重放；
+- 按 `trigger` 分组可回答「不精确档实际差多少」，为是否更积极引导精确闹钟权限提供数据。
+
 ## 留存与新老用户基线（2026-08-09，5~8 月导出数据实算）
 
 口径前提：`install_id` **2026-06-04 才上线**，此前（含 5 月整月）只有按天轮换的 `user_id`，设备级留存从 06-04 起算；「活跃」= 当天有任意埋点上报。5 月仅能看 DAU：日均 37 → 月末 19（F-Droid 06-22 上架前的小基数期）。

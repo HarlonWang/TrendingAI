@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Home
@@ -39,6 +40,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.app_language_desc
@@ -58,6 +61,8 @@ import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.daily_picks_notification
+import trendingai.shared.generated.resources.exact_alarm_desc
+import trendingai.shared.generated.resources.exact_alarm_title
 import trendingai.shared.generated.resources.default_home_tab
 import trendingai.shared.generated.resources.default_home_tab_desc
 import trendingai.shared.generated.resources.feedback
@@ -142,6 +147,15 @@ fun SettingsScreen(
     val dailyPicksNotificationEnabled by globalSettingsManager.dailyPicksNotificationEnabled.collectAsState(
         remember { globalSettingsManager.currentDailyPicksNotificationEnabled() }
     )
+    // 精确闹钟授权在系统设置页完成，返回本页只有 ON_RESUME，没有任何数据流可收集，
+    // 须在恢复时主动重查，「准点提醒」入口才能在授权后立即消失
+    var needsExactAlarm by remember {
+        mutableStateOf(globalDailyPicksNotifier.needsExactAlarmPermission)
+    }
+    LifecycleResumeEffect(Unit) {
+        needsExactAlarm = globalDailyPicksNotifier.needsExactAlarmPermission
+        onPauseOrDispose {}
+    }
     val authState by globalAuthManager.authState.collectAsState()
     val isLoggedIn = authState is AuthState.LoggedIn
 
@@ -381,6 +395,16 @@ fun SettingsScreen(
                                 )
                             },
                         )
+                        // Android 14+ 新装默认没有精确闹钟权限，提醒会晚几分钟；
+                        // 想准点的用户从这里去系统页开，授权后入口消失（ON_RESUME 重查）
+                        if (dailyPicksNotificationEnabled && needsExactAlarm) {
+                            settingsItem(
+                                icon = Icons.Default.Alarm,
+                                title = { Text(stringResource(Res.string.exact_alarm_title)) },
+                                description = { Text(stringResource(Res.string.exact_alarm_desc)) },
+                                onClick = { globalDailyPicksNotifier.openExactAlarmSettings() },
+                            )
+                        }
                     }
                 }
             }

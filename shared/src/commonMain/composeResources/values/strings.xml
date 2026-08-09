@@ -53,6 +53,8 @@
     <string name="daily_picks_notification">Daily Picks reminder</string>
     <string name="daily_picks_notification_desc">A local notification when the day&#8217;s AI picks are ready — no push service required</string>
     <string name="notification_permission_denied">Notification permission is off. Allow it in system settings to get reminders.</string>
+    <string name="exact_alarm_title">On-time delivery</string>
+    <string name="exact_alarm_desc">Reminders may arrive a few minutes late. Allow &#8220;Alarms &amp; reminders&#8221; in system settings for exact timing.</string>
     <string name="picks_newsletter_title">Get Picks by email</string>
     <string name="picks_newsletter_desc">One email a day, unsubscribe anytime</string>
     <string name="retry">Retry</string>

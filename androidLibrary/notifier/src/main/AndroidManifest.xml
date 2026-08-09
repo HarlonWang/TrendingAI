@@ -3,5 +3,26 @@
 
     <!-- Android 13+ 发通知需运行时权限；此处声明，运行时在设置开关打开时申请 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 精确闹钟（Android 12+ 特殊权限）：12/13 安装即授予，14+ 新装默认拒绝、
+         由设置页「准点提醒」入口引导去系统页开启；未授予时降级不精确闹钟，功能不受阻 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- 闹钟不随重启持久化，开机后由 receiver 重排（此前经 WorkManager 的库清单合并
+         获得，闹钟方案须自行声明） -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application>
+        <!-- exported=false 不影响接收：闹钟 PendingIntent 是显式投递，
+             四个系统广播的发送方是 system，均可送达未导出组件 -->
+        <receiver
+            android:name="whl.trending.notifier.DailyPicksAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
 
 </manifest>
