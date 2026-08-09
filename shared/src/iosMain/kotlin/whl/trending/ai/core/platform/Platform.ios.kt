@@ -18,6 +18,11 @@ class IOSPlatform: Platform {
 
 actual fun getPlatform(): Platform = IOSPlatform()
 
+// iOS 暂不做动态图标（setAlternateIconName 是另一套机制），外观页隐藏整块入口
+actual fun supportsAlternateAppIcons(): Boolean = false
+
+actual fun applyAppIcon(preset: whl.trending.ai.data.local.AppIconPreset) = Unit
+
 actual fun openAppSettings() {
     val url = NSURL(string = UIApplicationOpenSettingsURLString)
     val app = UIApplication.sharedApplication

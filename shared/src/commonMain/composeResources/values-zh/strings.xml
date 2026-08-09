@@ -138,6 +138,8 @@
     <string name="star_need_login">登录后即可 Star 该仓库</string>
     <string name="favorites_delete_confirm">确定从收藏中移除？</string>
     <string name="theme_color">主题色</string>
+    <string name="app_icon">应用图标</string>
+    <string name="app_icon_cream">奶油</string>
     <string name="theme_color_default">默认紫</string>
     <string name="theme_color_plum">梅红</string>
     <string name="theme_color_berry">莓红</string>

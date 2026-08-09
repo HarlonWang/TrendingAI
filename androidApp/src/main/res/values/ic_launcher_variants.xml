@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 动态图标变体底色。色值必须与 shared 的 AppIconPreset.backgroundArgb 一致（外观页预览用同一组色） -->
+<resources>
+    <color name="ic_launcher_bg_graphite">#46464A</color>
+    <color name="ic_launcher_bg_steel">#4A5C92</color>
+    <color name="ic_launcher_bg_pine">#206A5D</color>
+    <color name="ic_launcher_bg_berry">#A03B49</color>
+    <color name="ic_launcher_bg_cream">#F1E7D8</color>
+</resources>
