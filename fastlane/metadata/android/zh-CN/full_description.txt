@@ -1,20 +1,15 @@
-Trending AI 是面向开发者的开源技术趋势精选。聚合 GitHub Trending、Hacker News、Product Hunt 三大热门技术源，通过 AI 精选与中文化解读，让你用最少的时间把握全球技术趋势。
+全球技术热点，AI 精选速递。
 
-【Daily Picks AI 精选】
-每天从三大数据源中精选最值得关注的内容，附 AI 生成的中文摘要与深度解读，5 分钟把握当日技术热点，告别信息过载。
+Trending AI 聚合 GitHub Trending、Hacker News、Product Hunt 三大技术信息源，通过 AI 智能摘要和每日精选，帮你在喧嚣中高效发现全网最值得关注的技术项目。
 
-【核心特性】
-• AI 中文摘要 —— 每个项目附带 AI 生成的中文解读，快速了解项目价值
-• 历史回溯 —— 查看任意日期的 Trending 数据，不错过任何热点
-• 本地收藏 —— 一键保存感兴趣的内容，方便稍后查看
+核心功能
 
-【隐私与透明】
-应用内提供完整的隐私政策入口，数据本地存储，零广告 SDK。我们对你的数据保持透明、克制。
+- 多源聚合 —— GitHub Trending、Hacker News、Product Hunt 一站浏览。
+- AI 智能摘要 —— 每个项目自动生成 AI 分析，快速了解核心价值。
+- 每日精选 —— AI 从全网筛选每天最值得关注的技术项目。
+- 历史回溯 —— 查看任意日期的趋势榜单，不错过每一天。
+- 中英双语 —— 跟随应用语言设置，完整支持简体中文与英文。
+- 分享到 AI —— 一键把资讯发送到你常用的 AI App 深入解读。
+- Material 3 设计，支持浅色与深色主题。
 
-【反馈与支持】
-应用内提供反馈表单，欢迎随时提交意见、建议或问题。开源代码托管在 GitHub，欢迎 Star、Issue 和 PR。
-
-适合开发者、工程师、技术管理者、创业者、独立开发者，以及一切关注海外技术趋势的人。
-
-开源地址：https://github.com/HarlonWang/TrendingAI
-官方网站：https://trendingai.cn
+基于 Kotlin Multiplatform 与 Compose Multiplatform 构建。源码见 GitHub：HarlonWang/TrendingAI。
