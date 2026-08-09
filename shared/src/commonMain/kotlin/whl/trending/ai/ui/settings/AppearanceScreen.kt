@@ -294,7 +294,14 @@ private fun AppIconSwatch(
     val ringColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
 
     Column(
-        modifier = modifier,
+        // selectable 放在整列上，图标 + 标签构成一个完整触摸目标（标签也可点）
+        modifier = modifier
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = name },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -304,13 +311,7 @@ private fun AppIconSwatch(
                 .border(3.dp, ringColor, CircleShape)
                 .padding(6.dp)
                 .clip(CircleShape)
-                .background(Color(preset.backgroundArgb))
-                .selectable(
-                    selected = selected,
-                    role = Role.RadioButton,
-                    onClick = onClick,
-                )
-                .semantics { contentDescription = name },
+                .background(Color(preset.backgroundArgb)),
             contentAlignment = Alignment.Center,
         ) {
             Image(
