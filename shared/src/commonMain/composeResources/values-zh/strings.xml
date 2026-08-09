@@ -53,8 +53,6 @@
     <string name="daily_picks_notification">每日精选提醒</string>
     <string name="daily_picks_notification_desc">每日精选更新后本地通知提醒，无需推送服务</string>
     <string name="notification_permission_denied">未获得通知权限，请在系统设置中允许通知</string>
-    <string name="exact_alarm_title">准点提醒</string>
-    <string name="exact_alarm_desc">提醒可能延迟几分钟，在系统设置允许「闹钟与提醒」后可准点送达</string>
     <string name="picks_newsletter_title">邮件订阅每日精选</string>
     <string name="picks_newsletter_desc">每天一封，随时可退订</string>
     <string name="retry">重试</string>

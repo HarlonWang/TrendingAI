@@ -17,16 +17,6 @@ interface DailyPicksNotifier {
 
     /** 关闭每日通知：取消已调度的任务。 */
     fun disable()
-
-    /**
-     * 是否缺少精确闹钟权限（Android 14+ 新装默认拒绝）：true 时设置页在开关下方
-     * 显示「准点提醒」入口。它没有运行时弹窗形态，只能经 [openExactAlarmSettings]
-     * 引导用户去系统页开启；缺权限时提醒自动降级为不精确闹钟，功能不受阻。
-     */
-    val needsExactAlarmPermission: Boolean get() = false
-
-    /** 跳系统「闹钟与提醒」授权页 */
-    fun openExactAlarmSettings() {}
 }
 
 object NoOpDailyPicksNotifier : DailyPicksNotifier {

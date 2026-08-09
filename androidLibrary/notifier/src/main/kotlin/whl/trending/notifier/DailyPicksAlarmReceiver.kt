@@ -1,6 +1,5 @@
 package whl.trending.notifier
 
-import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -76,14 +75,6 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
             -> {
                 if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {
                     DailyPicksAlarmScheduler.scheduleNextDay(appContext)
-                }
-            }
-
-            // 精确闹钟权限变化：同槽换档，不动触发时刻与重试进度——重排下一天会把
-            // 进行中的当日首发/重试梯子覆盖到明天，白丢一次
-            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED -> {
-                if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {
-                    DailyPicksAlarmScheduler.rescheduleSameSlot(appContext)
                 }
             }
         }

@@ -1,15 +1,11 @@
 package whl.trending.notifier
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.net.toUri
 import androidx.work.WorkManager
 import kotlinx.coroutines.CompletableDeferred
 import whl.trending.ai.data.local.globalSettingsManager
@@ -42,24 +38,6 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
 
     override fun disable() {
         DailyPicksAlarmScheduler.cancel(activity.applicationContext)
-    }
-
-    override val needsExactAlarmPermission: Boolean
-        get() = !DailyPicksAlarmScheduler.canExact(activity)
-
-    override fun openExactAlarmSettings() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-        val packageUri = "package:${activity.packageName}".toUri()
-        try {
-            activity.startActivity(
-                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, packageUri)
-            )
-        } catch (_: ActivityNotFoundException) {
-            // 个别 ROM 没实现「闹钟与提醒」页：退到应用详情页
-            activity.startActivity(
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri)
-            )
-        }
     }
 
     private suspend fun ensurePermission(): Boolean {
