@@ -32,6 +32,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Publish to Google Play 步骤要 gem install fastlane；系统 Ruby 装 gem 需 sudo，用工具链 Ruby
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
       - name: Prepare Version Info
         run: |
           # 仅传 tag 名；versionCode 由 build.gradle.kts 从 tag 推导（apk/play/fdroid 三渠道统一）

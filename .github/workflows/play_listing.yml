@@ -14,6 +14,7 @@ on:
       - main
     paths:
       - 'fastlane/metadata/android/**'
+  workflow_dispatch: # 手动补跑入口（如工作流自身修复后重试）
 
 jobs:
   sync-listing:
@@ -21,6 +22,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # 系统 Ruby 装 gem 需 sudo（/var/lib/gems 无写权限），用工具链 Ruby
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
 
       - name: Sync listing to Google Play
         env:
