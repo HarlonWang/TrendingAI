@@ -1,0 +1,33 @@
+# Play 商品详情同步：fastlane/metadata 下的文案或截图变更 push 到 main 时自动同步到
+# Google Play。与发版（android_release.yml 的 Publish to Google Play 步骤）解耦——
+# 商店物料偶尔才改，改了即同步，不必等发版；发版侧则固定跳过 metadata/截图。
+#
+# 口径（见 memory/reference_fastlane_supply.md）：
+#   - 仓库 fastlane/metadata 是商品详情的唯一事实源，截图上传是整体替换，文案勿在 Play 后台手改
+#   - changelogs 跳过：发版说明随 AAB 在发版工作流上传
+#   - 密钥经 SUPPLY_JSON_KEY_DATA 环境变量传入（fastlane 原生识别），不落盘
+name: Play Listing Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'fastlane/metadata/android/**'
+
+jobs:
+  sync-listing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync listing to Google Play
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          gem install fastlane --no-document
+          fastlane supply --package_name whl.trending.ai \
+            --metadata_path fastlane/metadata/android \
+            --skip_upload_apk true --skip_upload_aab true \
+            --skip_upload_changelogs true

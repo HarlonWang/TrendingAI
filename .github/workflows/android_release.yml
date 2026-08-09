@@ -378,25 +378,76 @@ jobs:
 
           echo "✅ Upload completed. Download link: https://download.trendingai.cn/TrendingAI-latest.apk"
 
-      # 把 fastlane/metadata 的商店物料（文案 + 手机/平板截图）同步到 Google Play 商品详情。
-      # 与本地手动 supply 完全同参（见 memory/reference_fastlane_supply.md）：
-      #   - 只同步 listing，不上传 APK/AAB、不动发版轨道；
-      #   - changelogs 跳过——CI 不往 Play 轨道传包，changelog 挂不上 versionCode 会报错；
-      #   - 截图是整体替换，仓库 fastlane/metadata 即唯一事实源，文案勿在 Play 后台手改。
+      # 发布到 Google Play 正式轨道：上传 play 渠道 AAB + 发版说明，上传即送审、过审自动上线。
+      # 商品详情（文案/截图）不在这里同步——那是 play_listing.yml 的职责（fastlane/metadata
+      # 变更 push 到 main 时触发），发版与商店物料两个生命周期各走各的。
+      # 发版说明优先用仓库 changelogs/<versionCode>.txt（手动模式发版流程已写入并随 tag 提交）；
+      # 缺失时（自动模式）从 whatsnew.json 就地生成，只喂 supply、不回写仓库。
       # 密钥经 SUPPLY_JSON_KEY_DATA 环境变量传入（fastlane 原生识别），不落盘。
-      - name: Sync Play Store Listing
+      - name: Publish to Google Play
         env:
           SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          # 预发布不同步商店物料（判定与 R2 步骤一致）：灰度期间商店页应保持正式版口径
+          # 预发布不上 Play（判定与 R2 步骤一致）：灰度走 GitHub Release 附件
           if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc) ]]; then
-            echo "⏭️ Prerelease tag，跳过 Play listing 同步"
+            echo "⏭️ Prerelease tag，跳过 Play 发布"
             exit 0
           fi
 
+          # versionCode 复用 Create Release 步骤从 APK badging 提取的结果（version_code.txt）
+          VCODE=$(sed -n 's/^versionCode=//p' version_code.txt)
+          if [ -z "$VCODE" ]; then
+            echo "❌ version_code.txt 中未找到 versionCode"
+            exit 1
+          fi
+
+          # changelog 兜底：仓库没有本版 changelog 文件时，从 whatsnew.json 生成。
+          # Play 发版说明单语言上限 500 字符，逐条累加、放不下的整条丢弃（不截半句）。
+          python3 - "$VCODE" <<'EOF'
+          import json, os, sys
+
+          vcode = sys.argv[1]
+          try:
+              with open(os.environ["WHATSNEW_PATH"]) as f:
+                  whatsnew = json.load(f)
+          except Exception:
+              whatsnew = {}
+
+          for key, loc in (("zh", "zh-CN"), ("en", "en-US")):
+              path = f"fastlane/metadata/android/{loc}/changelogs/{vcode}.txt"
+              if os.path.exists(path):
+                  print(f"✅ 已有 {path}，沿用仓库版本")
+                  continue
+              items = [x.strip() for x in whatsnew.get(key, []) if isinstance(x, str) and x.strip()]
+              if not items:
+                  print(f"⚠️ whatsnew.json 无 {key} 内容，{loc} 发版说明留空")
+                  continue
+              text = ""
+              for item in items:
+                  line = f"• {item}\n"
+                  if len(text) + len(line) > 500:
+                      break
+                  text += line
+              os.makedirs(os.path.dirname(path), exist_ok=True)
+              with open(path, "w") as f:
+                  f.write(text.rstrip("\n"))
+              print(f"✅ 生成 {path}（{len(text)} 字符）")
+          EOF
+
+          AAB_PATH=$(find androidApp/build/outputs/bundle/playRelease -name "*.aab" | head -n 1)
+          if [ -z "$AAB_PATH" ]; then
+            echo "❌ 未找到 play 渠道 AAB"
+            exit 1
+          fi
+
           gem install fastlane --no-document
+          # 不跳过 changelogs：随本次 versionCode 一起作为发版说明上传
           fastlane supply --package_name whl.trending.ai \
+            --aab "$AAB_PATH" \
+            --track production \
             --metadata_path fastlane/metadata/android \
-            --skip_upload_apk true --skip_upload_aab true \
-            --skip_upload_changelogs true
+            --skip_upload_apk true \
+            --skip_upload_metadata true \
+            --skip_upload_images true \
+            --skip_upload_screenshots true
 
