@@ -23,32 +23,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,10 +52,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about
-import trendingai.shared.generated.resources.more_label
-import trendingai.shared.generated.resources.settings
-import whl.trending.ai.ui.common.TrendingDropdownMenu
+import trendingai.shared.generated.resources.chat_title
 
 /**
  * 悬浮底栏胶囊本体的高度，不含系统导航栏 inset 与外边距。
@@ -82,7 +68,6 @@ private val BarMaxWidth: Dp = 480.dp
 
 /**
  * 底栏一项。图标备实心/描边两态，选中切实心——与 Echo 的 `Screens.iconIdActive/Inactive` 同构。
- * [selected] 为 false 且点击后不改变选中态的项（AI 对话）也走这里，见 [HomeTab.Chat]。
  */
 internal data class HomeBarItem(
     val key: HomeTab,
@@ -94,35 +79,51 @@ internal data class HomeBarItem(
 )
 
 /**
- * 首页悬浮底栏：M3 Expressive 的胶囊工具栏 + 右侧一颗独立的「⋯」FAB。
+ * 首页悬浮底栏：M3 Expressive 的胶囊工具栏 + 右侧一颗独立的 AI 对话 FAB。
  *
- * 实现照搬 Echo Music 的 `FloatingNavigationToolbar`：外层 [BoxWithConstraints] 撑满并居中，
+ * 骨架照搬 Echo Music 的 `FloatingNavigationToolbar`：外层 [BoxWithConstraints] 撑满并居中，
  * 工具栏用 `widthIn(max)` 收住宽度，FAB 放在工具栏自带的槽位里。
  * 选中态是一块跟着选中项滑动的药丸（见 [SlidingPillItems]）；只有图标、没有文字标签
  * ——Echo 那边 `showSelectedLabels` 写死为 false。
+ *
+ * FAB 槽位的内容是有意偏离 Echo 的产品决策（1.1 起）：Chat 是动作入口而非 tab 落点
+ * （点击推全屏页、从不进选中态），按 M3 浮动工具栏语义应占主动作槽位——参照 Gmail
+ * 底栏的写信 FAB；此前放这里的「⋯」溢出菜单（设置/关于）已删，两者在设置页内都有路径。
+ *
+ * [onOpenChat] 为 null 时（iOS 未接入 chat）不渲染 FAB，底栏退化为纯胶囊。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun HomeFloatingBar(
     items: List<HomeBarItem>,
-    onOpenSettings: () -> Unit,
-    onOpenAbout: () -> Unit,
+    onOpenChat: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
-        HorizontalFloatingToolbar(
-            expanded = true,
-            floatingActionButton = { OverflowFab(onOpenSettings = onOpenSettings, onOpenAbout = onOpenAbout) },
-            modifier = Modifier.widthIn(max = BarMaxWidth),
-            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(
-                toolbarContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            ),
-            animationSpec = FloatingToolbarDefaults.animationSpec(),
-        ) {
-            SlidingPillItems(items)
+        val colors = FloatingToolbarDefaults.standardFloatingToolbarColors(
+            toolbarContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        )
+        if (onOpenChat != null) {
+            HorizontalFloatingToolbar(
+                expanded = true,
+                floatingActionButton = { ChatFab(onClick = onOpenChat) },
+                modifier = Modifier.widthIn(max = BarMaxWidth),
+                colors = colors,
+                animationSpec = FloatingToolbarDefaults.animationSpec(),
+            ) {
+                SlidingPillItems(items)
+            }
+        } else {
+            HorizontalFloatingToolbar(
+                expanded = true,
+                modifier = Modifier.widthIn(max = BarMaxWidth),
+                colors = colors,
+            ) {
+                SlidingPillItems(items)
+            }
         }
     }
 }
@@ -262,71 +263,22 @@ private fun BarItem(item: HomeBarItem, modifier: Modifier = Modifier) {
     }
 }
 
-/** 「⋯」扩展菜单：设置 / 关于。图标各自套一层圆形 tonal 底，与 M3 菜单的分量匹配。 */
+/**
+ * AI 对话入口 FAB：占浮动工具栏的主动作槽位（缘由见 [HomeFloatingBar] 的 KDoc）。
+ * 图标沿用改版前 chat 入口的 ✨（AutoAwesome）；底色与胶囊同为 surfaceContainer，
+ * 不用 vibrant 强调色——FAB 靠悬浮位置区分即可，撞色反而比胶囊抢眼。
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun OverflowFab(onOpenSettings: () -> Unit, onOpenAbout: () -> Unit) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-
-    Box {
-        FloatingToolbarDefaults.VibrantFloatingActionButton(
-            onClick = { expanded = !expanded },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            // Echo 用的是默认形状——androidx 版默认就是圆；CMP 这版默认是圆角方形，
-            // 显式传 CircleShape 才能得到与 Echo 相同的外观。
-            shape = CircleShape,
-        ) {
-            Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(Res.string.more_label))
-        }
-
-        // 容器色与 elevation 是底栏特有的「浮在胶囊之上」的观感，圆角走统一组件
-        TrendingDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-            tonalElevation = 8.dp,
-        ) {
-            OverflowMenuItem(
-                text = stringResource(Res.string.settings),
-                icon = Icons.Default.Settings,
-                onClick = {
-                    expanded = false
-                    onOpenSettings()
-                },
-            )
-            OverflowMenuItem(
-                text = stringResource(Res.string.about),
-                icon = Icons.Default.Info,
-                onClick = {
-                    expanded = false
-                    onOpenAbout()
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverflowMenuItem(text: String, icon: ImageVector, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(text) },
+private fun ChatFab(onClick: () -> Unit) {
+    FloatingToolbarDefaults.VibrantFloatingActionButton(
         onClick = onClick,
-        leadingIcon = {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null)
-                }
-            }
-        },
-        colors = MenuDefaults.itemColors(
-            textColor = MaterialTheme.colorScheme.onSurface,
-            leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
-    )
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        // Echo 用的是默认形状——androidx 版默认就是圆；CMP 这版默认是圆角方形，
+        // 显式传 CircleShape 才能得到与 Echo 相同的外观。
+        shape = CircleShape,
+    ) {
+        Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(Res.string.chat_title))
+    }
 }

@@ -24,14 +24,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,7 +71,6 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.batch_am
 import trendingai.shared.generated.resources.batch_pm
-import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.filter_new_only
 import trendingai.shared.generated.resources.hackernews_title
 import trendingai.shared.generated.resources.history_trending
@@ -106,12 +103,13 @@ import whl.trending.ai.ui.trending.TrendingViewModel
 import kotlin.time.Clock
 
 /**
- * 首页骨架：底栏四项（首页 / Picks / AI 对话 / 我的）。
+ * 首页骨架：底栏胶囊三项（首页 / Picks / 我的）+ 右侧独立的 AI 对话 FAB。
  *
  * 首页内含 GitHub / Hacker News / Product Hunt 三个子源，用 [SecondaryTabRow] 切换——
  * 只点击、不横滑：三个源各自有下拉刷新与横向可滚内容，再叠一层横向手势会互相抢。
  *
- * AI 对话是入口不是落点：点它直接推全屏聊天页，底栏选中态仍留在原 tab（见 [HomeTab.Chat]）。
+ * AI 对话是入口不是落点：点 FAB 直接推全屏聊天页，不占 tab 选中态（缘由见
+ * [HomeFloatingBar] 的 KDoc；[HomeTab.Chat] 仅为深链等历史路径保留）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,7 +122,6 @@ fun HomeScreen(
     onNavigateToGithubProfile: () -> Unit = {},
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {},
 ) {
     // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
     var selectedTabName by rememberSaveable {
@@ -179,8 +176,8 @@ fun HomeScreen(
         }
     }
 
-    // 进设置页有两条路径，统一在这里记一条事件、用 entry 区分来源：
-    // topbar = 顶栏常驻齿轮（0.24.0 新增），more = 底栏「⋯」里的那项。
+    // 首页进设置页统一记一条事件，entry 区分来源。1.1 起只剩 topbar（顶栏常驻齿轮）——
+    // 底栏「⋯」菜单随 Chat FAB 上位而删除，历史数据里的 entry=more 即那条已死路径。
     val openSettings = { entry: String ->
         trackEvent("home_open_settings", mapOf("entry" to entry))
         onNavigateToSettings()
@@ -318,29 +315,6 @@ fun HomeScreen(
                     onClick = { switchTo(HomeTab.Picks) },
                 )
             )
-            // 聊天未接入的平台（iOS）隐藏该项，底栏退化成三项
-            if (globalChatScreen != null) {
-                add(
-                    HomeBarItem(
-                        key = HomeTab.Chat,
-                        iconSelected = Icons.Filled.ChatBubble,
-                        // Outlined.ChatBubble 仍是实心气泡，空心的那个叫 ChatBubbleOutline；
-                        // Chat 永远不进选中态，露出的就是这一个
-                        iconUnselected = Icons.Outlined.ChatBubbleOutline,
-                        label = stringResource(Res.string.chat_title),
-                        // 选中态不给它：点击只是推一页，回来后仍在原 tab
-                        selected = false,
-                        onClick = {
-                            trackEvent("tab_switch", mapOf("tab" to HomeTab.Chat.name.lowercase()))
-                            // 与 README 页的入口共用 chat_entry_click，把分散在两处的进入
-                            // 路径收进同一事件的 from 维度（tab_switch 保留，口径不同：
-                            // 那个是底栏行为，这个是 chat 入口漏斗）
-                            trackEvent("chat_entry_click", mapOf("from" to "home_tab"))
-                            onNavigateToChat()
-                        },
-                    )
-                )
-            }
             add(
                 HomeBarItem(
                     key = HomeTab.Me,
@@ -430,15 +404,16 @@ fun HomeScreen(
 
             HomeFloatingBar(
                 items = barItems,
-                // 底栏「⋯」是关于页的唯一入口、设置页的次要入口（主入口是顶栏齿轮），各记一条：
-                // 0.22.0 的 settings_app_settings 随「应用设置」子页删除而作废，此前这两条路径
-                // 完全无埋点，「进入设置页」的量统计不到（见 docs/analytics-notes.md）。
-                // 事件名用 home_ 前缀与设置页内部的 settings_* 区分，一眼看出是从首页进的。
-                onOpenSettings = { openSettings("more") },
-                onOpenAbout = {
-                    trackEvent("home_open_about")
-                    onNavigateToAbout()
-                },
+                // 聊天未接入的平台（iOS）传 null，底栏不渲染 FAB、退化成纯胶囊
+                onOpenChat = if (globalChatScreen != null) {
+                    {
+                        // 与 README 页的入口共用 chat_entry_click，把分散多处的进入路径收进
+                        // 同一事件的 from 维度；home_fab 是 1.1 起的新值（此前 Chat 在胶囊里
+                        // 当伪 tab，记的是 home_tab + tab_switch，前后可对比入口点击量）
+                        trackEvent("chat_entry_click", mapOf("from" to "home_fab"))
+                        onNavigateToChat()
+                    }
+                } else null,
                 // 定高与内容底部留白同源（contentBottomPadding 也按它算），两者不能各算各的。
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier

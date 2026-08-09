@@ -170,7 +170,6 @@ fun App() {
                                     onNavigateToGithubProfile = { backStack.add(GithubProfile) },
                                     onNavigateToFavorites = { backStack.add(Favorites) },
                                     onNavigateToSettings = { backStack.add(Settings) },
-                                    onNavigateToAbout = { backStack.add(About) },
                                 )
                             }
 
