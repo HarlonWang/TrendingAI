@@ -54,12 +54,6 @@ Trending AI is a cross-platform application built with Kotlin Multiplatform (KMP
 
 ---
 
-## 📈 Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=HarlonWang/TrendingAI&type=date&legend=top-left)](https://www.star-history.com/#HarlonWang/TrendingAI&type=date&legend=top-left)
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

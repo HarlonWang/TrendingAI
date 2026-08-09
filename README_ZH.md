@@ -54,12 +54,6 @@ Trending AI 是一款使用 Kotlin Multiplatform (KMP) 构建的跨平台应用�
 
 ---
 
-## 📈 Star 趋势
-
-[![Star History Chart](https://api.star-history.com/svg?repos=HarlonWang/TrendingAI&type=date&legend=top-left)](https://www.star-history.com/#HarlonWang/TrendingAI&type=date&legend=top-left)
-
----
-
 ## 📄 开源协议
 
 本项目采用 MIT 协议开源 - 详情请参阅 [LICENSE](LICENSE) 文件。
