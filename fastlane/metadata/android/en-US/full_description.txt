@@ -1,15 +1,20 @@
-Global tech trends, fast-picked by AI.
+Trending AI is a curated feed of open-source tech trends, built for developers. It aggregates three of the most popular tech sources — GitHub Trending, Hacker News, and Product Hunt — then uses AI to pick the standout stories and explain them, so you can keep up with global tech trends in the least time possible.
 
-Trending AI aggregates three major tech sources — GitHub Trending, Hacker News, and Product Hunt — into one place, with AI-powered summaries and daily picks so you can discover the most noteworthy projects across the web without the noise.
+[Daily Picks — AI Curated]
+Every day we hand-pick the most noteworthy items from all three sources, each paired with an AI-generated summary and in-depth analysis. Catch up on the day's tech highlights in 5 minutes and leave information overload behind.
 
-FEATURES
+[Key Features]
+- AI Summaries — Every project comes with an AI-generated breakdown so you can grasp its value at a glance
+- History Browsing — Revisit Trending data from any date and never miss a hot topic
+- Local Bookmarks — Save anything that catches your eye with one tap and read it later
 
-- Multi-source aggregation — browse GitHub Trending, Hacker News, and Product Hunt in a single app.
-- AI summaries — every project gets an automatic AI analysis so you grasp its core value at a glance.
-- Daily Picks — AI curates the most noteworthy tech projects from across the web, every day.
-- Historical records — jump to the trending list of any date and never miss a day.
-- Bilingual — full English and Simplified Chinese, following your app language setting.
-- Share to AI — send any item straight to your favorite AI app for deeper reading.
-- Material 3 design with light and dark themes.
+[Privacy & Transparency]
+The app provides a full in-app privacy policy, stores data locally, and ships with zero ad SDKs. We stay transparent and restrained when it comes to your data.
 
-Built with Kotlin Multiplatform and Compose Multiplatform. Source on GitHub at HarlonWang/TrendingAI.
+[Feedback & Support]
+An in-app feedback form lets you send opinions, suggestions, or issues anytime. The source code is hosted on GitHub — Stars, Issues, and PRs are all welcome.
+
+Built for developers, engineers, tech leaders, founders, indie hackers, and anyone keeping an eye on global tech trends.
+
+Source code: https://github.com/HarlonWang/TrendingAI
+Website: https://trendingai.cn
