@@ -1,5 +1,9 @@
 # TrendingAI 客户端
 
+## 埋点数据分析（Aptabase）
+
+分析埋点导出 CSV 或看板数据前，**必读 `docs/analytics-notes.md`**——各版本埋点断点（同名不同义、事件改名、词汇换代）、留存基线、口径坑都记在那里，跨版本看曲线不按它切段必然误读。最容易忘的三条：跨天/留存一律用 `install_id`（`user_id` 每日轮换，不能跨天）；chat 用量必须按设备去重（单设备重度用户占总量可达 70%+）；分渠道看留存（Play 渠道量虚，混渠道总留存会被构成效应带偏）。
+
 ## UI 规范
 
 - **加载指示统一**：所有加载态（页面级 / 列表 / 下拉刷新 / 按钮内 / 列表项 trailing 等内嵌场景）一律用 M3 Expressive 的 `androidx.compose.material3.LoadingIndicator`，**全 app 不用 `CircularProgressIndicator`**。
