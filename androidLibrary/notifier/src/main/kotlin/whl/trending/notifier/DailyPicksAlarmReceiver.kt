@@ -69,14 +69,21 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
             }
 
             // 闹钟不持久化：重启后重排；改时间/换时区后重瞄本地 9:30（RTC 闹钟锚定
-            // 绝对时刻，不重排会落在错误的墙钟时间）；精确闹钟权限变化后换档重排
+            // 绝对时刻，不重排会落在错误的墙钟时间）
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
-            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED,
             -> {
                 if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {
                     DailyPicksAlarmScheduler.scheduleNextDay(appContext)
+                }
+            }
+
+            // 精确闹钟权限变化：同槽换档，不动触发时刻与重试进度——重排下一天会把
+            // 进行中的当日首发/重试梯子覆盖到明天，白丢一次
+            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED -> {
+                if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {
+                    DailyPicksAlarmScheduler.rescheduleSameSlot(appContext)
                 }
             }
         }

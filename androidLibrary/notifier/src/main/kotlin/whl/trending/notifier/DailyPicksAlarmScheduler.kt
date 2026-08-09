@@ -91,6 +91,26 @@ object DailyPicksAlarmScheduler {
         }
     }
 
+    /**
+     * 同槽重排：保持触发时刻与重试进度不变，只按当前权限重挑档位。
+     * 用于精确闹钟权限变更广播——直接 scheduleNextDay 会把进行中的当日首发或
+     * 重试梯子覆盖到明天（Sourcery 审查指出）；换成 reconcile 又会在排期健康时
+     * 什么都不做、升档永不生效。排期缺失或已过期时退回重排下一天。
+     */
+    fun rescheduleSameSlot(context: Context) {
+        val triggerAt = DailyPicksPrefs.nextTriggerAt(context)
+        if (triggerAt > System.currentTimeMillis()) {
+            set(
+                context,
+                triggerAt = triggerAt,
+                targetAt = DailyPicksPrefs.nextTargetAt(context).takeIf { it != 0L } ?: triggerAt,
+                attempt = DailyPicksPrefs.nextAttempt(context),
+            )
+        } else {
+            scheduleNextDay(context)
+        }
+    }
+
     /** 精确闹钟当前是否可用（分档依据；设置页「准点提醒」入口按它决定显隐） */
     fun canExact(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
@@ -109,14 +129,14 @@ object DailyPicksAlarmScheduler {
         if (exact) {
             try {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-                DailyPicksPrefs.setNextTriggerAt(context, triggerAt)
+                DailyPicksPrefs.setSchedule(context, triggerAt, targetAt, attempt)
                 return
             } catch (_: SecurityException) {
                 // canExact 与 set 之间权限恰被收回的竞态：落到不精确档
             }
         }
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-        DailyPicksPrefs.setNextTriggerAt(context, triggerAt)
+        DailyPicksPrefs.setSchedule(context, triggerAt, targetAt, attempt)
     }
 
     private fun pendingIntent(
@@ -149,6 +169,8 @@ internal object DailyPicksPrefs {
     private const val NAME = "daily_picks_notifier"
     private const val KEY_LAST_NOTIFIED_DATE = "last_notified_date"
     private const val KEY_NEXT_TRIGGER_AT = "next_trigger_at"
+    private const val KEY_NEXT_TARGET_AT = "next_target_at"
+    private const val KEY_NEXT_ATTEMPT = "next_attempt"
     private const val KEY_LAST_OPENED_DATE = "last_opened_date"
 
     private fun prefs(context: Context) =
@@ -164,12 +186,27 @@ internal object DailyPicksPrefs {
     fun nextTriggerAt(context: Context): Long =
         prefs(context).getLong(KEY_NEXT_TRIGGER_AT, 0L)
 
-    fun setNextTriggerAt(context: Context, at: Long) {
-        prefs(context).edit { putLong(KEY_NEXT_TRIGGER_AT, at) }
+    fun nextTargetAt(context: Context): Long =
+        prefs(context).getLong(KEY_NEXT_TARGET_AT, 0L)
+
+    fun nextAttempt(context: Context): Int =
+        prefs(context).getInt(KEY_NEXT_ATTEMPT, 0)
+
+    /** 记录在排闹钟的完整载荷，供对账与同槽重排（换档不换排期）使用 */
+    fun setSchedule(context: Context, triggerAt: Long, targetAt: Long, attempt: Int) {
+        prefs(context).edit {
+            putLong(KEY_NEXT_TRIGGER_AT, triggerAt)
+            putLong(KEY_NEXT_TARGET_AT, targetAt)
+            putInt(KEY_NEXT_ATTEMPT, attempt)
+        }
     }
 
     fun clearNextTriggerAt(context: Context) {
-        prefs(context).edit { remove(KEY_NEXT_TRIGGER_AT) }
+        prefs(context).edit {
+            remove(KEY_NEXT_TRIGGER_AT)
+            remove(KEY_NEXT_TARGET_AT)
+            remove(KEY_NEXT_ATTEMPT)
+        }
     }
 
     /**
