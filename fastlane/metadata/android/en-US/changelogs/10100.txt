@@ -1,0 +1,4 @@
+• Refreshed home screen with a floating pill navigation bar
+• AI chat now has its own button on the bottom bar — one tap away
+• Refreshed visual style across the app — dialogs, sheets and card lists now feel consistent
+• Product Hunt items now show multiple images you can swipe through
