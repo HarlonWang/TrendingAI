@@ -378,3 +378,25 @@ jobs:
 
           echo "✅ Upload completed. Download link: https://download.trendingai.cn/TrendingAI-latest.apk"
 
+      # 把 fastlane/metadata 的商店物料（文案 + 手机/平板截图）同步到 Google Play 商品详情。
+      # 与本地手动 supply 完全同参（见 memory/reference_fastlane_supply.md）：
+      #   - 只同步 listing，不上传 APK/AAB、不动发版轨道；
+      #   - changelogs 跳过——CI 不往 Play 轨道传包，changelog 挂不上 versionCode 会报错；
+      #   - 截图是整体替换，仓库 fastlane/metadata 即唯一事实源，文案勿在 Play 后台手改。
+      # 密钥经 SUPPLY_JSON_KEY_DATA 环境变量传入（fastlane 原生识别），不落盘。
+      - name: Sync Play Store Listing
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          # 预发布不同步商店物料（判定与 R2 步骤一致）：灰度期间商店页应保持正式版口径
+          if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc) ]]; then
+            echo "⏭️ Prerelease tag，跳过 Play listing 同步"
+            exit 0
+          fi
+
+          gem install fastlane --no-document
+          fastlane supply --package_name whl.trending.ai \
+            --metadata_path fastlane/metadata/android \
+            --skip_upload_apk true --skip_upload_aab true \
+            --skip_upload_changelogs true
+
