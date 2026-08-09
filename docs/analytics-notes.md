@@ -117,7 +117,7 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 
 **同一个事件名跨越三代词汇**。按 `tab` 分组的看板跨版本聚合会得到割裂的曲线，且 `home` 与旧的 `github`/`trending` 虽然落点相近，含义已从「某一源」变成「三源合一的首页」，不能直接接续。
 
-`chat` 是个特例：AI 对话是入口不是落点（点击直接推全屏聊天页，底栏选中态留在原 tab），所以 `tab=chat` 只会出现在 `tab_switch`，永远不会出现在 `tab_double_tap_refresh`。
+`chat` 是个特例：AI 对话是入口不是落点（点击直接推全屏聊天页，底栏选中态留在原 tab），所以 `tab=chat` 只会出现在 `tab_switch`，永远不会出现在 `tab_double_tap_refresh`。（1.1.0 起 `tab=chat` 整体停产，见「1.1.0 埋点断点」。）
 
 ### 新增 `trending_source_switch`
 
@@ -132,7 +132,7 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 - **「进入设置页」的量自 0.23.0 起统计不到**，只能靠设置页内的子事件（`settings_appearance` / `settings_language_change` 等）间接推断，会低估只进去看一眼就退出的用户；
 - `settings_about` 仍然只在设置页那个入口上报（`SettingsScreen.kt:427`），从底栏「⋯」直接进关于页的路径不计入——所以它现在**只覆盖部分进入**，跨 0.23.0 的下跌可能纯粹是入口分流，不是兴趣下降。
 
-补两行 `trackEvent` 即可消除（底栏菜单的 settings / about 各一条）——已于 2026-08-04（commit `e08fc26`）补上 `home_open_settings` / `home_open_about`，盲区自那之后消失，但 0.23.0 期间的空档仍在。
+补两行 `trackEvent` 即可消除（底栏菜单的 settings / about 各一条）——已于 2026-08-04（commit `e08fc26`）补上 `home_open_settings` / `home_open_about`，盲区自那之后消失，但 0.23.0 期间的空档仍在。（1.1.0 起底栏「⋯」菜单删除，这两个事件的口径再次变化，见「1.1.0 埋点断点」。）
 
 ## chat 入口漏斗：补齐分母（2026-08-05，尚未发版）
 
@@ -144,7 +144,7 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 |---|---|---|
 | `readme_view` | README 详情页每次进入（记在 `ReadmeViewModel.init`，VM 随页面实例创建、旋转复用，天然不重复） | `source`：目前恒为 `github` |
 | `readme_ai_menu_open` | README 页 AI FAB 菜单展开（`ReadmeScreen`） | `detail_summary_available`：README 是否 ≥1500 字，即菜单里有没有「一键解读」项 |
-| `chat_entry_click` | 所有进入 chat 的点击 | `from`：`home_tab` / `readme_chat` / `readme_detail_summary` / `readme_deep_research` |
+| `chat_entry_click` | 所有进入 chat 的点击 | `from`：`home_tab`（1.1.0 起改为 `home_fab`，见下文）/ `readme_chat` / `readme_detail_summary` / `readme_deep_research` |
 
 可算的转化率：
 
@@ -153,8 +153,19 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 
 口径注意：
 
-- `chat_entry_click`(from=home_tab) 与既有的 `tab_switch`(tab=chat) **同一次点击报两条**，刻意保留：前者是 chat 入口漏斗，后者是底栏行为分析，分开看板各取所需，**不要相加**。
+- `chat_entry_click`(from=home_tab) 与既有的 `tab_switch`(tab=chat) **同一次点击报两条**，刻意保留：前者是 chat 入口漏斗，后者是底栏行为分析，分开看板各取所需，**不要相加**。（1.1.0 起双报消失：`tab_switch(chat)` 停产，底栏入口只剩 `chat_entry_click`(from=home_fab) 一条。）
 - `readme_ai_menu_open` 每次展开都算（类广告 impression），同一次浏览里反复开合会多计。要按人看时用独立 `install_id` 计数。
 - **仍缺的一个分母**：chat 页内「一键详细解读」chip 的曝光没有埋点（评估后决定暂不加），所以 `detail_summary_generate` 只有分子，**解读的点击转化率算不出**。能算的只是「从 README 菜单直接点进解读入口」那条路径（`chat_entry_click`(from=readme_detail_summary)），不含进了 chat 之后才点 chip 的那部分。
 
 > 背景：2026-08-05 评估「条目入口是否鸡肋」时发现，全时段条目会话 318 条消息 / 153 人（其中 96 人只用条目入口、从没用过通用入口），而一键解读只有 23 个 repo、深度调研 3 次。绝对量小但分母未知，无法判断是需求问题还是曝光问题——这批埋点就是为回答该问题补的，建议积累 4 周后再做取舍决策。同期还发现 `usage_events` 里 detail_summary 自 7-30 起零成功（`upstream_region_blocked`），排查前不要把 8 月的低使用量当需求信号。
+
+## 1.1.0 埋点断点：底栏 Chat FAB 改版（2026-08-09 发布）
+
+底栏「⋯」溢出菜单删除，AI 对话从胶囊里的伪 tab 升级为独立 FAB（commit `4717ed7`）。四个事件受影响：
+
+| 事件 | 1.1.0 起的变化 |
+|---|---|
+| `chat_entry_click` | `from=home_tab` 停产，改报 **`from=home_fab`**。看「底栏进 chat」的曲线跨 1.1.0 要把两个值接起来；改用新值而非沿用旧值，正是为了能对比改版前后入口点击量的变化 |
+| `tab_switch` | `tab=chat` 停产（Chat 不再是底栏 tab）。与 `chat_entry_click` 的双报随之消失，底栏 chat 点击只剩漏斗事件一条 |
+| `home_open_settings` | `entry=more` 停产，只剩 `entry=topbar`（顶栏齿轮成为首页唯一设置入口）。看总量不受影响，按 entry 分组时 more 的归零是入口删除，不是行为变化 |
+| `home_open_about` | 整体停产（底栏的关于入口删除）。关于页唯一入口回到设置页内，`settings_about`（`SettingsScreen.kt`）自此**重新覆盖全部进入**——0.23.0 节里「只覆盖部分进入」的告警对 ≥1.1.0 不再成立 |
