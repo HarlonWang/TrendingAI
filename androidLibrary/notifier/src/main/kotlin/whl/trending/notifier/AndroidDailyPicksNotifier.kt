@@ -6,7 +6,6 @@ import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
-import androidx.work.WorkManager
 import kotlinx.coroutines.CompletableDeferred
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.notification.DailyPicksNotifier
@@ -55,22 +54,13 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
     }
 
     companion object {
-        // 闹钟方案之前的 WorkManager 排期：v1 周期任务与 v2 自续期一次性链
-        private const val LEGACY_PERIODIC_WORK_NAME = "daily_picks_notification"
-        private const val LEGACY_CHAIN_WORK_NAME = "daily_picks_notification_v2"
-
         /**
-         * 冷启动对账：清掉迁移前的 WorkManager 排期（androidx.work 依赖仅为这两行保留，
-         * 观察几个版本后连依赖一起删），开关为开时核对闹钟链是否完好。
+         * 冷启动对账：开关为开时核对闹钟链是否完好，断链则补排。升级安装与
+         * force-stop 都会让系统清掉闹钟，没有这步兜底，每次发版后提醒链就断了。
          */
         fun syncOnAppStart(context: Context) {
-            val appContext = context.applicationContext
-            WorkManager.getInstance(appContext).apply {
-                cancelUniqueWork(LEGACY_PERIODIC_WORK_NAME)
-                cancelUniqueWork(LEGACY_CHAIN_WORK_NAME)
-            }
             if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {
-                DailyPicksAlarmScheduler.reconcile(appContext)
+                DailyPicksAlarmScheduler.reconcile(context.applicationContext)
             }
         }
     }

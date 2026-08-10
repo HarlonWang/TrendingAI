@@ -174,7 +174,7 @@ dependencies {
     "githubImplementation"(project(":androidLibrary:updater"))
     "r2Implementation"(project(":androidLibrary:updater"))
     implementation(project(":androidLibrary:chat"))
-    // 每日 Picks 本地通知：纯 androidx.work 方案，不依赖 GMS/FCM，四渠道（含 F-Droid）通用
+    // 每日 Picks 本地通知：纯 AlarmManager 方案，不依赖 GMS/FCM，四渠道（含 F-Droid）通用
     implementation(project(":androidLibrary:notifier"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
