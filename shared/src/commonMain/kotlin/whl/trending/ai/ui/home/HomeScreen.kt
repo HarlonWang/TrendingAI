@@ -7,15 +7,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +51,7 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.digest.DigestPage
@@ -117,70 +121,18 @@ fun HomeScreen(
     }
 
     TrendingScaffold(
-        topBar = {
-            when (selectedTab) {
-                HomeTab.Home -> when (selectedSource) {
-                    TrendingSource.GitHub -> TrendingTopBar(
-                        onSettingsClick = { openSettings("topbar") },
-                    )
-                    TrendingSource.HackerNews -> {
-                        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                        FeedTopBar(
-                            title = stringResource(Res.string.hackernews_title),
-                            navigationIcon = {
-                                Icon(
-                                    imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
-                                    contentDescription = "Hacker News",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified
-                                )
-                            },
-                            onSettingsClick = { openSettings("topbar") },
-                        )
-                    }
-                    TrendingSource.ProductHunt -> {
-                        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                        FeedTopBar(
-                            title = stringResource(Res.string.producthunt_title),
-                            navigationIcon = {
-                                Icon(
-                                    painter = painterResource(
-                                        if (isDark) Res.drawable.icon_producthunt_dark
-                                        else Res.drawable.icon_producthunt_light
-                                    ),
-                                    contentDescription = "Product Hunt",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified
-                                )
-                            },
-                            onSettingsClick = { openSettings("topbar") },
-                        )
-                    }
-                }
-                HomeTab.Picks -> PicksTopBar(
-                    onSettingsClick = { openSettings("topbar") },
-                )
-                HomeTab.Me -> TrendingTopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(Res.string.me_title),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    },
-                    actions = { SettingsAction(onClick = { openSettings("topbar") }) },
-                )
-                // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
-                HomeTab.Chat -> Unit
-            }
-        },
-        // 底栏是浮在内容之上的胶囊，不占 Scaffold 的 bottomBar 槽位——占了内容就被顶上去，
-        // 拿不到「内容从底栏下面穿过去」的观感。
-    ) { innerPadding ->
-        // 只取顶部：底部留给悬浮底栏自己算（见 LocalContentBottomPadding），
-        // 内容层不做底部 padding，列表才能滚到底栏之下。
-        val contentModifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+        // 顶栏不占 Scaffold 的 topBar 槽位：与悬浮底栏不占 bottomBar 同理——头部要浮在
+        // 铺满全高的内容之上（沉浸式地基，见 LocalContentTopPadding 的 KDoc），
+        // 占了槽位内容就被顶下去，将来头部收起时内容没法原地全展开。
+    ) { _ ->
+        // 内容层不消费 Scaffold padding：顶部由各页按 LocalContentTopPadding 让出，
+        // 底部由 LocalContentBottomPadding 让出，列表才能从头部/底栏下面穿过去。
         val barBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val contentBottomPadding = barBottomInset + FloatingBarHeight + FloatingBarBottomMargin * 2
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        // 头部高度用 M3 规范定值（TopAppBar 容器 64dp + SecondaryTabRow 48dp）而非实测上报：
+        // 它是内容 contentPadding 的输入，实测 onSizeChanged 回写会引入首帧跳动。
+        val topBarBottom = statusBarTop + TopBarHeight
 
         val barItems = homeTabSpecs.map { spec ->
             HomeBarItem(
@@ -214,43 +166,126 @@ fun HomeScreen(
                 ) { tab ->
                     // 各页（与各自顶栏）都就地 viewModel() 自取：同一 ViewModelStore 返回同一
                     // 实例，不会多创建；转场期间旧页仍在组合树里，也不依赖任何外部提升的引用。
-                    when (tab) {
-                        HomeTab.Home -> Column(modifier = contentModifier) {
-                            TrendingSourceTabs(
-                                selected = selectedSource,
-                                onSelect = { homeViewModel.selectSource(it) },
-                            )
-                            when (selectedSource) {
-                                TrendingSource.GitHub -> TrendingScreen(
-                                    onNavigateToDetail = onNavigateToDetail,
-                                    viewModel = viewModel { TrendingViewModel() }
-                                )
-                                TrendingSource.HackerNews -> FeedScreen(
-                                    viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
-                                    onOpenUrl = onOpenUrl,
-                                    onOpenDigest = onOpenDigest
-                                )
-                                TrendingSource.ProductHunt -> FeedScreen(
-                                    viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
-                                    onOpenUrl = onOpenUrl
-                                )
+                    //
+                    // LocalContentTopPadding 必须 provide 在页级（此 lambda 内）：转场期间新旧
+                    // 两页同时在树，Home 的头部比 Picks/我的多一条子 tab 行，provide 在外层
+                    // 会让其中一页拿错高度。
+                    val contentTopPadding =
+                        topBarBottom + if (tab == HomeTab.Home) SourceTabRowHeight else 0.dp
+                    CompositionLocalProvider(LocalContentTopPadding provides contentTopPadding) {
+                        when (tab) {
+                            // 子 tab 行是 Home 页内的 overlay 而非外层头部的一部分：留在
+                            // AnimatedContent 里，切 tab 时随页面横滑（与改造前一致）。沉浸式
+                            // 需要的「钻进顶栏底下」不要求两者同容器——外层顶栏画在整个内容层
+                            // 之后，z-order 天然在子 tab 行之上；将来只需让两者共享同一手势进度。
+                            HomeTab.Home -> Box(modifier = Modifier.fillMaxSize()) {
+                                when (selectedSource) {
+                                    TrendingSource.GitHub -> TrendingScreen(
+                                        onNavigateToDetail = onNavigateToDetail,
+                                        viewModel = viewModel { TrendingViewModel() }
+                                    )
+                                    TrendingSource.HackerNews -> FeedScreen(
+                                        viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
+                                        onOpenUrl = onOpenUrl,
+                                        onOpenDigest = onOpenDigest
+                                    )
+                                    TrendingSource.ProductHunt -> FeedScreen(
+                                        viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
+                                        onOpenUrl = onOpenUrl
+                                    )
+                                }
+                                // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
+                                // 它是透明底、透出的正是这块颜色；悬浮后透明会透出滚动中的列表。
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = topBarBottom)
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.background)
+                                ) {
+                                    TrendingSourceTabs(
+                                        selected = selectedSource,
+                                        onSelect = { homeViewModel.selectSource(it) },
+                                    )
+                                }
                             }
+                            HomeTab.Picks -> PicksScreen(
+                                onNavigateToDetail = onNavigateToDetail,
+                                onOpenUrl = onOpenUrl,
+                                onNavigateToSubscribe = onNavigateToSubscribe,
+                                viewModel = viewModel { PicksViewModel() },
+                                onOpenDigest = onOpenDigest
+                            )
+                            HomeTab.Me -> ProfileScreen(
+                                onNavigateToGithubProfile = onNavigateToGithubProfile,
+                                onNavigateToFavorites = onNavigateToFavorites,
+                            )
+                            HomeTab.Chat -> Unit
                         }
-                        HomeTab.Picks -> PicksScreen(
-                            onNavigateToDetail = onNavigateToDetail,
-                            onOpenUrl = onOpenUrl,
-                            onNavigateToSubscribe = onNavigateToSubscribe,
-                            modifier = contentModifier,
-                            viewModel = viewModel { PicksViewModel() },
-                            onOpenDigest = onOpenDigest
-                        )
-                        HomeTab.Me -> ProfileScreen(
-                            modifier = contentModifier,
-                            onNavigateToGithubProfile = onNavigateToGithubProfile,
-                            onNavigateToFavorites = onNavigateToFavorites,
-                        )
-                        HomeTab.Chat -> Unit
                     }
+                }
+            }
+
+            // 顶栏层：浮在内容之上、与悬浮底栏同构。画在内容层之后，z-order 盖住页内的
+            // 子 tab 行——沉浸式的视差（子 tab 行钻进顶栏底下）靠的就是这层跨层绘制顺序。
+            //
+            // 触摸不穿透的依据：M3 TopAppBar/TabRow 外层的 Surface 自带空 pointerInput，
+            // 会吞掉落在其区域内的触摸，列表滚到头部背后也点不到被遮的 item。若将来把
+            // 头部换成非 Surface 容器，必须自行补上这层消费，否则点击会穿透。
+            Box(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+                when (selectedTab) {
+                    HomeTab.Home -> when (selectedSource) {
+                        TrendingSource.GitHub -> TrendingTopBar(
+                            onSettingsClick = { openSettings("topbar") },
+                        )
+                        TrendingSource.HackerNews -> {
+                            val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                            FeedTopBar(
+                                title = stringResource(Res.string.hackernews_title),
+                                navigationIcon = {
+                                    Icon(
+                                        imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
+                                        contentDescription = "Hacker News",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = Color.Unspecified
+                                    )
+                                },
+                                onSettingsClick = { openSettings("topbar") },
+                            )
+                        }
+                        TrendingSource.ProductHunt -> {
+                            val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                            FeedTopBar(
+                                title = stringResource(Res.string.producthunt_title),
+                                navigationIcon = {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (isDark) Res.drawable.icon_producthunt_dark
+                                            else Res.drawable.icon_producthunt_light
+                                        ),
+                                        contentDescription = "Product Hunt",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = Color.Unspecified
+                                    )
+                                },
+                                onSettingsClick = { openSettings("topbar") },
+                            )
+                        }
+                    }
+                    HomeTab.Picks -> PicksTopBar(
+                        onSettingsClick = { openSettings("topbar") },
+                    )
+                    HomeTab.Me -> TrendingTopAppBar(
+                        title = {
+                            Text(
+                                text = stringResource(Res.string.me_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        },
+                        actions = { SettingsAction(onClick = { openSettings("topbar") }) },
+                    )
+                    // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
+                    HomeTab.Chat -> Unit
                 }
             }
 
@@ -277,3 +312,9 @@ fun HomeScreen(
         }
     }
 }
+
+/** M3 TopAppBar 的容器高度（TopAppBarSmallTokens.ContainerHeight），不含状态栏 inset。 */
+private val TopBarHeight = 64.dp
+
+/** [TrendingSourceTabs] 的高度：SecondaryTabRow 纯文字 tab 的规范定高。 */
+private val SourceTabRowHeight = 48.dp

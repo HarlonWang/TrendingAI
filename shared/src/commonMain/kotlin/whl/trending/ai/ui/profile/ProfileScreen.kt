@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.LinkGithubDialog
 import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.SettingsGroup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -196,14 +197,21 @@ fun ProfileScreen(
             PullToRefreshDefaults.LoadingIndicator(
                 state = pullToRefreshState,
                 isRefreshing = uiState.isRefreshing,
-                modifier = Modifier.align(Alignment.TopCenter),
+                // 列表铺满全高后指示器的出生点在头部背后，要往下让（静止截图看不出，拉一下才见）
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = LocalContentTopPadding.current),
             )
         },
         modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
+            // 首条从悬浮头部下面滚出来，末条从悬浮底栏下面滚出来
+            contentPadding = PaddingValues(
+                top = LocalContentTopPadding.current,
+                bottom = LocalContentBottomPadding.current,
+            ),
         ) {
             if (authSupported) {
                 // ① 身份区
