@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.InfoDialog
 import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -244,7 +245,10 @@ private fun RepoList(
             PullToRefreshDefaults.LoadingIndicator(
                 state = state,
                 isRefreshing = uiState.isRefreshing,
-                modifier = Modifier.align(Alignment.TopCenter),
+                // 列表铺满全高后指示器的出生点在头部背后，要往下让（静止截图看不出，拉一下才见）
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = LocalContentTopPadding.current),
             )
         },
         modifier = modifier.fillMaxSize()
@@ -253,14 +257,20 @@ private fun RepoList(
         val displayRepos = if (uiState.newOnly) uiState.repos.filter { it.isNew } else uiState.repos
         when {
             uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(top = LocalContentTopPadding.current),
+                    contentAlignment = Alignment.Center,
+                ) {
                     LoadingIndicator(modifier = Modifier.size(48.dp))
                 }
             }
 
             uiState.error != null -> {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = LocalContentTopPadding.current)
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -278,7 +288,10 @@ private fun RepoList(
             }
 
             displayRepos.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(top = LocalContentTopPadding.current),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(text = stringResource(if (uiState.newOnly) Res.string.no_new_repos else Res.string.no_data))
                 }
             }
@@ -289,8 +302,11 @@ private fun RepoList(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    // 末条要能从悬浮底栏下面滚出来
-                    contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
+                    // 首条从悬浮头部下面滚出来，末条从悬浮底栏下面滚出来
+                    contentPadding = PaddingValues(
+                        top = LocalContentTopPadding.current,
+                        bottom = LocalContentBottomPadding.current,
+                    ),
                 ) {
                 items(
                     count = displayRepos.size,

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
@@ -96,21 +97,30 @@ fun PicksScreen(
             PullToRefreshDefaults.LoadingIndicator(
                 state = pullToRefreshState,
                 isRefreshing = uiState.isRefreshing,
-                modifier = Modifier.align(Alignment.TopCenter),
+                // 列表铺满全高后指示器的出生点在头部背后，要往下让（静止截图看不出，拉一下才见）
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = LocalContentTopPadding.current),
             )
         },
         modifier = modifier.fillMaxSize()
     ) {
         when {
             uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(top = LocalContentTopPadding.current),
+                    contentAlignment = Alignment.Center,
+                ) {
                     LoadingIndicator(modifier = Modifier.size(48.dp))
                 }
             }
 
             uiState.error != null -> {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = LocalContentTopPadding.current)
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -206,8 +216,11 @@ private fun PicksList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp),
-        // 末条要能从悬浮底栏下面滚出来
-        contentPadding = PaddingValues(bottom = LocalContentBottomPadding.current),
+        // 首条从悬浮头部下面滚出来，末条从悬浮底栏下面滚出来
+        contentPadding = PaddingValues(
+            top = LocalContentTopPadding.current,
+            bottom = LocalContentBottomPadding.current,
+        ),
     ) {
         // Newsletter 订阅入口（已订阅或手动关闭后隐藏）：把埋在设置深处的订阅提到每日回访的主场景
         if (showNewsletterBanner) {

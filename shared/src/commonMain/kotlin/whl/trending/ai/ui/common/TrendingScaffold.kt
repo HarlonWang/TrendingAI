@@ -25,7 +25,11 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
  *
  * 走 CompositionLocal 而不是逐层传参，是因为顶栏常被拆成独立的私有 composable（首页四个 tab 各一个），
  * 手工传参时只要有一处忘了写，那一页就静默漏接——顶栏底色现已恒定（见 [TrendingTopAppBar]），
- * 这套接线只剩「让顶栏正常参与 nestedScroll」这一层作用，保留是为了将来要折叠时不用重接。
+ * 这套接线只剩「让顶栏正常参与 nestedScroll」这一层作用。
+ *
+ * 注意：将来的沉浸式浏览（#88）**不走** M3 的折叠机制——那套改的是顶栏测量高度，会引起内容
+ * 重排；沉浸式走独立的共享偏移 + translationY，且首页顶栏已移出 Scaffold 的 topBar 槽位、
+ * 不再经过这条接线。保留它只为二级页写法统一。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 val LocalTopAppBarScrollBehavior = compositionLocalOf<TopAppBarScrollBehavior?> { null }
