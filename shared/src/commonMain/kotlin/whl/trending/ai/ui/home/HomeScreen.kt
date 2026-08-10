@@ -30,9 +30,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -110,18 +107,6 @@ fun HomeScreen(
         onBackCompleted = { homeViewModel.backToHome() },
     )
 
-    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
-    var showHistorySheet by rememberSaveable { mutableStateOf(false) }
-
-    val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
-    val trendingUiState by trendingViewModel.uiState.collectAsState()
-
-    // Picks tab 被选中时才创建 ViewModel，topBar 和 content 共享同一实例
-    val picksViewModel: PicksViewModel? = if (selectedTab == HomeTab.Picks) {
-        viewModel { PicksViewModel() }
-    } else null
-    val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
-
     // syncMe（建档 + 头像/GitHub 身份/isPro 缓存）不在此触发——已随收藏同步一起挂在 App 根部
     // （见 App.kt）：登录常发生在「我的」tab，Home 的 LaunchedEffect 彼时仍在，但登录也可能
     // 发生在被推到栈顶的子页，挂这里会漏掉那条路径（isPro 不回写，Pro 用户被当免费档）。
@@ -143,14 +128,6 @@ fun HomeScreen(
             when (selectedTab) {
                 HomeTab.Home -> when (selectedSource) {
                     TrendingSource.GitHub -> TrendingTopBar(
-                        selectedPeriod = trendingUiState.selectedPeriod,
-                        selectedLanguage = trendingUiState.selectedLanguage,
-                        selectedDate = trendingUiState.selectedDate,
-                        selectedBatch = trendingUiState.selectedBatch,
-                        newOnly = trendingUiState.newOnly,
-                        onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
-                        onTitleClick = { showFilterSheet = true },
-                        onHistoryClick = { showHistorySheet = true },
                         onSettingsClick = { openSettings("topbar") },
                     )
                     TrendingSource.HackerNews -> {
@@ -188,7 +165,6 @@ fun HomeScreen(
                     }
                 }
                 HomeTab.Picks -> PicksTopBar(
-                    date = picksUiState?.picks?.metadata?.date,
                     onSettingsClick = { openSettings("topbar") },
                 )
                 HomeTab.Me -> TrendingTopAppBar(
@@ -259,9 +235,8 @@ fun HomeScreen(
                     },
                     label = "homeTabContent",
                 ) { tab ->
-                    // 各页在这里自取 ViewModel，不用外面那几个可空的：转场期间旧页仍在组合树里，
-                    // 而外面的实例是「当前选中才创建」，此刻已是 null，直接用会崩。
-                    // viewModel() 取的是同一个 ViewModelStore 里的同一实例，不会多创建。
+                    // 各页（与各自顶栏）都就地 viewModel() 自取：同一 ViewModelStore 返回同一
+                    // 实例，不会多创建；转场期间旧页仍在组合树里，也不依赖任何外部提升的引用。
                     when (tab) {
                         HomeTab.Home -> Column(modifier = contentModifier) {
                             TrendingSourceTabs(
@@ -271,11 +246,7 @@ fun HomeScreen(
                             when (selectedSource) {
                                 TrendingSource.GitHub -> TrendingScreen(
                                     onNavigateToDetail = onNavigateToDetail,
-                                    showFilterSheet = showFilterSheet,
-                                    onDismissFilterSheet = { showFilterSheet = false },
-                                    showHistorySheet = showHistorySheet,
-                                    onDismissHistorySheet = { showHistorySheet = false },
-                                    viewModel = trendingViewModel
+                                    viewModel = viewModel { TrendingViewModel() }
                                 )
                                 TrendingSource.HackerNews -> FeedScreen(
                                     viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },

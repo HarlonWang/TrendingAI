@@ -26,10 +26,13 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.app_name
@@ -44,20 +47,26 @@ import trendingai.shared.generated.resources.period_weekly
 import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.settings
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.ai.ui.picks.PicksViewModel
+import whl.trending.ai.ui.trending.TrendingViewModel
 
+/**
+ * GitHub 源的顶栏：标题点开筛选弹窗，副标题实时显示筛选态。
+ *
+ * 状态自取 [TrendingViewModel]——与内容区的 TrendingScreen 同处 Home entry 的
+ * ViewModelStore，`viewModel()` 拿到的是同一实例，无须由 HomeScreen 透传。
+ * 弹窗本体在 TrendingScreen，这里只负责置位可见性。
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun TrendingTopBar(
-    selectedPeriod: String,
-    selectedLanguage: String,
-    selectedDate: String?,
-    selectedBatch: String?,
-    newOnly: Boolean,
-    onToggleNewOnly: () -> Unit,
-    onTitleClick: () -> Unit,
-    onHistoryClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-) {
+internal fun TrendingTopBar(onSettingsClick: () -> Unit) {
+    val viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
+    val uiState by viewModel.uiState.collectAsState()
+    val selectedPeriod = uiState.selectedPeriod
+    val selectedLanguage = uiState.selectedLanguage
+    val selectedDate = uiState.selectedDate
+    val selectedBatch = uiState.selectedBatch
+
     val periodLabel = when (selectedPeriod) {
         "daily" -> stringResource(Res.string.period_daily)
         "weekly" -> stringResource(Res.string.period_weekly)
@@ -69,7 +78,7 @@ internal fun TrendingTopBar(
         title = {
             Column(
                 modifier = Modifier
-                    .clickable { onTitleClick() }
+                    .clickable { viewModel.setFilterSheetVisible(true) }
                     .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.Center
             ) {
@@ -127,8 +136,8 @@ internal fun TrendingTopBar(
                     state = rememberTooltipState(),
                 ) {
                     FilledIconToggleButton(
-                        checked = newOnly,
-                        onCheckedChange = { onToggleNewOnly() },
+                        checked = uiState.newOnly,
+                        onCheckedChange = { viewModel.toggleNewOnly() },
                         colors = IconButtonDefaults.filledIconToggleButtonColors(
                             containerColor = Color.Transparent,                        // 未选中：无底色，与其他图标一致
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -143,7 +152,7 @@ internal fun TrendingTopBar(
                     }
                 }
             }
-            IconButton(onClick = onHistoryClick) {
+            IconButton(onClick = { viewModel.setHistorySheetVisible(true) }) {
                 Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
             }
             SettingsAction(onClick = onSettingsClick)
@@ -164,9 +173,16 @@ internal fun SettingsAction(onClick: () -> Unit) {
     }
 }
 
+/**
+ * Picks 顶栏：副标题带当期日期。日期自取 [PicksViewModel]（同 store 同实例）；
+ * 本顶栏只在 Picks tab 选中时组合，VM 的创建时机与改造前「选中才建」一致。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PicksTopBar(date: String?, onSettingsClick: () -> Unit) {
+internal fun PicksTopBar(onSettingsClick: () -> Unit) {
+    val viewModel: PicksViewModel = viewModel { PicksViewModel() }
+    val uiState by viewModel.uiState.collectAsState()
+    val date = uiState.picks?.metadata?.date
     TrendingTopAppBar(
         title = {
             Column {

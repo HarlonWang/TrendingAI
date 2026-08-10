@@ -126,10 +126,6 @@ import kotlin.time.Clock
 @Composable
 fun TrendingScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
-    showFilterSheet: Boolean,
-    onDismissFilterSheet: () -> Unit,
-    showHistorySheet: Boolean,
-    onDismissHistorySheet: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
 ) {
@@ -176,11 +172,11 @@ fun TrendingScreen(
         )
     }
 
-    if (showFilterSheet) {
+    if (uiState.showFilterSheet) {
         FilterBottomSheet(
             selectedPeriod = uiState.selectedPeriod,
             selectedLanguage = uiState.selectedLanguage,
-            onDismiss = onDismissFilterSheet,
+            onDismiss = { viewModel.setFilterSheetVisible(false) },
             onConfirm = { period, language ->
                 trackEvent(
                     "filter_confirm",
@@ -190,16 +186,16 @@ fun TrendingScreen(
                     )
                 )
                 viewModel.updateFilter(period, language)
-                onDismissFilterSheet()
+                viewModel.setFilterSheetVisible(false)
             }
         )
     }
 
-    if (showHistorySheet) {
+    if (uiState.showHistorySheet) {
         HistoryBottomSheet(
             selectedDate = uiState.selectedDate,
             selectedBatch = uiState.selectedBatch,
-            onDismiss = onDismissHistorySheet,
+            onDismiss = { viewModel.setHistorySheetVisible(false) },
             onConfirm = { date, batch ->
                 trackEvent(
                     "history_confirm",
@@ -209,7 +205,7 @@ fun TrendingScreen(
                     )
                 )
                 viewModel.updateHistoryFilter(date, batch)
-                onDismissHistorySheet()
+                viewModel.setHistorySheetVisible(false)
             }
         )
     }
