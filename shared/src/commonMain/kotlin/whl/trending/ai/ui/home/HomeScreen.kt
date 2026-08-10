@@ -228,6 +228,10 @@ fun HomeScreen(
 
             // 顶栏层：浮在内容之上、与悬浮底栏同构。画在内容层之后，z-order 盖住页内的
             // 子 tab 行——沉浸式的视差（子 tab 行钻进顶栏底下）靠的就是这层跨层绘制顺序。
+            //
+            // 触摸不穿透的依据：M3 TopAppBar/TabRow 外层的 Surface 自带空 pointerInput，
+            // 会吞掉落在其区域内的触摸，列表滚到头部背后也点不到被遮的 item。若将来把
+            // 头部换成非 Surface 容器，必须自行补上这层消费，否则点击会穿透。
             Box(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
                 when (selectedTab) {
                     HomeTab.Home -> when (selectedSource) {
