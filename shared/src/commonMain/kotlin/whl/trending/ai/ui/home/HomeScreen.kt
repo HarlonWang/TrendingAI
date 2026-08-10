@@ -16,11 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,11 +40,9 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.hackernews_title
-import trendingai.shared.generated.resources.home_title
 import trendingai.shared.generated.resources.icon_producthunt_dark
 import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.me_title
-import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
@@ -189,32 +182,16 @@ fun HomeScreen(
         val barBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val contentBottomPadding = barBottomInset + FloatingBarHeight + FloatingBarBottomMargin * 2
 
-        val barItems = listOf(
+        val barItems = homeTabSpecs.map { spec ->
             HomeBarItem(
-                key = HomeTab.Home,
-                iconSelected = Icons.Filled.Home,
-                iconUnselected = Icons.Outlined.Home,
-                label = stringResource(Res.string.home_title),
-                selected = selectedTab == HomeTab.Home,
-                onClick = { homeViewModel.selectTab(HomeTab.Home) },
-            ),
-            HomeBarItem(
-                key = HomeTab.Picks,
-                iconSelected = KidStarFilled,
-                iconUnselected = KidStarOutlined,
-                label = stringResource(Res.string.picks_title),
-                selected = selectedTab == HomeTab.Picks,
-                onClick = { homeViewModel.selectTab(HomeTab.Picks) },
-            ),
-            HomeBarItem(
-                key = HomeTab.Me,
-                iconSelected = Icons.Filled.Person,
-                iconUnselected = Icons.Outlined.Person,
-                label = stringResource(Res.string.me_title),
-                selected = selectedTab == HomeTab.Me,
-                onClick = { homeViewModel.selectTab(HomeTab.Me) },
-            ),
-        )
+                key = spec.tab,
+                iconSelected = spec.iconSelected,
+                iconUnselected = spec.iconUnselected,
+                label = stringResource(spec.label),
+                selected = selectedTab == spec.tab,
+                onClick = { homeViewModel.selectTab(spec.tab) },
+            )
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             CompositionLocalProvider(LocalContentBottomPadding provides contentBottomPadding) {
