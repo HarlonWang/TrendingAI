@@ -28,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,6 +50,7 @@ import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
@@ -95,6 +97,11 @@ fun HomeScreen(
     val selectedTab by homeViewModel.selectedTab.collectAsState()
     val selectedSource by homeViewModel.selectedSource.collectAsState()
 
+    // 沉浸式浏览开关（设置 › 个性化，默认关）。初值同步读，避免已开启用户冷启动闪一帧关闭态
+    val immersiveEnabled by globalSettingsManager.immersiveBrowsing.collectAsState(
+        remember { globalSettingsManager.currentImmersiveBrowsing() }
+    )
+
     // 系统返回键/手势在非 Home tab 上先降级回 Home，再退才交给路由出栈（Material 底栏规范）。
     // 与 NavDisplay 共用同一 NavigationEventDispatcher；本 handler 只在 Home entry 位于栈顶时
     // 在组合树里，二级页在顶时不会误拦。
@@ -134,6 +141,16 @@ fun HomeScreen(
         // 它是内容 contentPadding 的输入，实测 onSizeChanged 回写会引入首帧跳动。
         val topBarBottom = statusBarTop + TopBarHeight
 
+        // 沉浸式状态：开关关闭时为 null，下游 modifier 全部原样返回（零开销，见 HomeImmersive）。
+        // 手势行程取所有栏中最长的行程（Home 的子 tab 行底缘），它将 1:1 跟手、其余栏按行程
+        // 比例减速——第 3 步的视差即由此来；本阶段只接了底栏这一个消费点。
+        val immersiveState = if (immersiveEnabled) {
+            rememberImmersiveState(
+                topBarBottom + SourceTabRowHeight,
+                selectedTab, selectedSource,
+            )
+        } else null
+
         val barItems = homeTabSpecs.map { spec ->
             HomeBarItem(
                 key = spec.tab,
@@ -145,7 +162,7 @@ fun HomeScreen(
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().immersiveNestedScroll(immersiveState)) {
             CompositionLocalProvider(LocalContentBottomPadding provides contentBottomPadding) {
                 // 切 tab 的方向性转场：新页从前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms
                 // 淡入淡出。位移量、时长与方向判定照搬 Echo 的 NavHost enter/exitTransition；
@@ -305,6 +322,12 @@ fun HomeScreen(
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    // 沉浸位移：行程 = 胶囊高 + 外边距 + 导航栏 inset（胶囊顶边正好推到屏幕底沿）
+                    .immersiveExit(
+                        immersiveState,
+                        ImmersiveEdge.Bottom,
+                        travel = FloatingBarHeight + FloatingBarBottomMargin + barBottomInset,
+                    )
                     .padding(horizontal = 16.dp)
                     .padding(bottom = barBottomInset + FloatingBarBottomMargin)
                     .height(FloatingBarHeight),
