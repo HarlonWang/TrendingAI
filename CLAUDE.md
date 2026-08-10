@@ -1,5 +1,11 @@
 # TrendingAI 客户端
 
+## Android Studio 运行（动态图标坑）
+
+在**切换过 App 图标**的设备/模拟器上点 Run 会报 `Activity class {…/whl.trending.ai.MainActivityDefault} does not exist`。**报错文案有误导**：组件存在，只是被动态图标机制（#90，activity-alias 任何时刻只启用一个）disable 了——AS 的 "Default Activity" 启动策略从 merged manifest 里固定挑 `MainActivityDefault`，撞上 disabled 就报"不存在"。安装本身是成功的。
+
+修法：Run → Edit Configurations → androidApp → Launch Options 改为 **Specified Activity** → `whl.trending.ai.MainActivity`（本体 `exported="true"`，显式启动不需要 LAUNCHER filter），一次配置后与图标状态永不打架。**不要**用 adb 强行 enable `MainActivityDefault`——app 内持久化的图标选择不会跟着变，状态不一致还可能桌面双图标。adb 脚本侧无此问题（`monkey -c LAUNCHER` 解析的是当前启用的入口）。
+
 ## 埋点数据分析（Aptabase）
 
 分析埋点导出 CSV 或看板数据前，**必读 `docs/analytics-notes.md`**——各版本埋点断点（同名不同义、事件改名、词汇换代）、留存基线、口径坑都记在那里，跨版本看曲线不按它切段必然误读。最容易忘的三条：跨天/留存一律用 `install_id`（`user_id` 每日轮换，不能跨天）；chat 用量必须按设备去重（单设备重度用户占总量可达 70%+）；分渠道看留存（Play 渠道量虚，混渠道总留存会被构成效应带偏）。
