@@ -32,6 +32,7 @@ import whl.trending.chat.ui.ChatScreen
 import whl.trending.notifier.AndroidDailyPicksNotifier
 import whl.trending.notifier.EXTRA_OPEN_TAB
 import whl.trending.notifier.TAB_PICKS
+import whl.trending.notifier.consumeDailyPicksNotificationOpen
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,11 +106,17 @@ class MainActivity : AppCompatActivity() {
         handleOpenTabIntent(intent)
     }
 
-    /** 通知点击深链：带 open_tab=picks 的 intent 切到 Picks tab（消费后清掉，防配置变更重放） */
+    /**
+     * 通知点击深链：带 open_tab=picks 的 intent 切到 Picks tab（消费后清掉，防配置变更重放）。
+     * open 埋点另按通知携带的日期去重——最近任务重建会重投原始 intent，removeExtra 挡不住，
+     * 8 月数据里 open 因此有重放虚高。
+     */
     private fun handleOpenTabIntent(intent: Intent?) {
         if (intent?.getStringExtra(EXTRA_OPEN_TAB) == TAB_PICKS) {
             intent.removeExtra(EXTRA_OPEN_TAB)
-            trackEvent("daily_picks_notification_open")
+            if (consumeDailyPicksNotificationOpen(applicationContext, intent)) {
+                trackEvent("daily_picks_notification_open")
+            }
             HomeTabRequest.request(HomeTab.Picks)
         }
     }

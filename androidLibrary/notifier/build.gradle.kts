@@ -26,7 +26,6 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.ktx)
-    implementation(libs.androidx.work.runtime)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlin.test.junit)

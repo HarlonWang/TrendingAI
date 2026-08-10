@@ -2,7 +2,7 @@ package whl.trending.ai.notification
 
 /**
  * 每日 Picks 本地通知的平台能力接口（仿 [whl.trending.ai.update.UpdateChecker] 的接口反转）：
- * shared 只感知接口，Android 实现在 androidLibrary/notifier（WorkManager 本地定时，
+ * shared 只感知接口，Android 实现在 androidLibrary/notifier（AlarmManager 本地定时，
  * 不依赖 GMS/FCM，F-Droid 等无 Play 服务设备同样可用）；iOS 保持 NoOp，设置页隐藏开关。
  */
 interface DailyPicksNotifier {
