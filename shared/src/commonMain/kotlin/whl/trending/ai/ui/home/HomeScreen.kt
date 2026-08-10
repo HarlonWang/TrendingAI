@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.home
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -175,20 +174,40 @@ fun HomeScreen(
                         topBarBottom + if (tab == HomeTab.Home) SourceTabRowHeight else 0.dp
                     CompositionLocalProvider(LocalContentTopPadding provides contentTopPadding) {
                         when (tab) {
-                            HomeTab.Home -> when (selectedSource) {
-                                TrendingSource.GitHub -> TrendingScreen(
-                                    onNavigateToDetail = onNavigateToDetail,
-                                    viewModel = viewModel { TrendingViewModel() }
-                                )
-                                TrendingSource.HackerNews -> FeedScreen(
-                                    viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
-                                    onOpenUrl = onOpenUrl,
-                                    onOpenDigest = onOpenDigest
-                                )
-                                TrendingSource.ProductHunt -> FeedScreen(
-                                    viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
-                                    onOpenUrl = onOpenUrl
-                                )
+                            // 子 tab 行是 Home 页内的 overlay 而非外层头部的一部分：留在
+                            // AnimatedContent 里，切 tab 时随页面横滑（与改造前一致）。沉浸式
+                            // 需要的「钻进顶栏底下」不要求两者同容器——外层顶栏画在整个内容层
+                            // 之后，z-order 天然在子 tab 行之上；将来只需让两者共享同一手势进度。
+                            HomeTab.Home -> Box(modifier = Modifier.fillMaxSize()) {
+                                when (selectedSource) {
+                                    TrendingSource.GitHub -> TrendingScreen(
+                                        onNavigateToDetail = onNavigateToDetail,
+                                        viewModel = viewModel { TrendingViewModel() }
+                                    )
+                                    TrendingSource.HackerNews -> FeedScreen(
+                                        viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
+                                        onOpenUrl = onOpenUrl,
+                                        onOpenDigest = onOpenDigest
+                                    )
+                                    TrendingSource.ProductHunt -> FeedScreen(
+                                        viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
+                                        onOpenUrl = onOpenUrl
+                                    )
+                                }
+                                // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
+                                // 它是透明底、透出的正是这块颜色；悬浮后透明会透出滚动中的列表。
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = topBarBottom)
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.background)
+                                ) {
+                                    TrendingSourceTabs(
+                                        selected = selectedSource,
+                                        onSelect = { homeViewModel.selectSource(it) },
+                                    )
+                                }
                             }
                             HomeTab.Picks -> PicksScreen(
                                 onNavigateToDetail = onNavigateToDetail,
@@ -207,10 +226,9 @@ fun HomeScreen(
                 }
             }
 
-            // 头部层：顶栏 +（Home 时）三源子 tab 行，浮在内容之上、与悬浮底栏同构。
-            // 归拢成一个单元是沉浸式的地基——将来两者绑同一手势进度做视差（子 tab 行
-            // 钻进顶栏底下）时，只有同层才能控制绘制顺序与相对位移。
-            Column(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+            // 顶栏层：浮在内容之上、与悬浮底栏同构。画在内容层之后，z-order 盖住页内的
+            // 子 tab 行——沉浸式的视差（子 tab 行钻进顶栏底下）靠的就是这层跨层绘制顺序。
+            Box(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
                 when (selectedTab) {
                     HomeTab.Home -> when (selectedSource) {
                         TrendingSource.GitHub -> TrendingTopBar(
@@ -264,25 +282,6 @@ fun HomeScreen(
                     )
                     // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
                     HomeTab.Chat -> Unit
-                }
-                // 子 tab 行挪进头部层后不再随 Home 页横向滑动，改为 200ms 淡入淡出（与页
-                // 转场同时长）。底色显式补 background：在内容区里时它是透明底、透出的正是
-                // 这块颜色；悬浮之后透明会透出滚动中的列表内容。
-                AnimatedVisibility(
-                    visible = selectedTab == HomeTab.Home,
-                    enter = fadeIn(tween(200)),
-                    exit = fadeOut(tween(200)),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.background)
-                    ) {
-                        TrendingSourceTabs(
-                            selected = selectedSource,
-                            onSelect = { homeViewModel.selectSource(it) },
-                        )
-                    }
                 }
             }
 
