@@ -56,7 +56,13 @@ internal data class HomeTabSpec(
     val label: StringResource,
 )
 
-/** 底栏展示的 tab 清单（顺序即展示顺序）。Chat 是 FAB 入口不进胶囊，因此不在其中。 */
+/**
+ * 底栏展示的 tab 清单（顺序即展示顺序）。Chat 是 FAB 入口不进胶囊，因此不在其中。
+ *
+ * lazy 不是装饰：本属性与 [HomeTab] 同文件，普通 val 会在文件 facade 初始化时连带
+ * 构建三对 ImageVector（含 KidStar 的 path 解析），而 HomeViewModel 及其 host 单测
+ * 只用枚举、不碰 UI 资源——lazy 把这层隔开。
+ */
 internal val homeTabSpecs: List<HomeTabSpec> by lazy {
     listOf(
         HomeTabSpec(HomeTab.Home, Icons.Filled.Home, Icons.Outlined.Home, Res.string.home_title),
