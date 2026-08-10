@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.common
 
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -12,7 +11,7 @@ import androidx.compose.ui.unit.dp
  *
  * 只有首页四个 tab 的内容需要消费它；其余页面拿到默认值 0，行为不变。
  */
-val LocalContentBottomPadding = compositionLocalOf<Dp> { 0.dp }
+val LocalContentBottomPadding = compositionLocalOf { 0.dp }
 
 /**
  * 首页头部（状态栏 + 顶栏 + Home tab 的三源子 tab 行）挡住的高度，对称于
@@ -27,4 +26,4 @@ val LocalContentBottomPadding = compositionLocalOf<Dp> { 0.dp }
  * 同时在组合树，Home 有子 tab 行、Picks/我的没有，头部高度不同，provide 在外层会拿错值。
  * 其余页面拿到默认值 0，行为不变。
  */
-val LocalContentTopPadding = compositionLocalOf<Dp> { 0.dp }
+val LocalContentTopPadding = compositionLocalOf { 0.dp }
