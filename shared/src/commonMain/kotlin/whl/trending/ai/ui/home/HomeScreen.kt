@@ -7,47 +7,24 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.FiberNew
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.RichTooltip
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -59,7 +36,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -68,23 +44,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.app_name
-import trendingai.shared.generated.resources.batch_am
-import trendingai.shared.generated.resources.batch_pm
-import trendingai.shared.generated.resources.filter_new_only
 import trendingai.shared.generated.resources.hackernews_title
-import trendingai.shared.generated.resources.history_trending
+import trendingai.shared.generated.resources.home_title
 import trendingai.shared.generated.resources.icon_producthunt_dark
 import trendingai.shared.generated.resources.icon_producthunt_light
-import trendingai.shared.generated.resources.new_only_hint
-import trendingai.shared.generated.resources.period_daily
-import trendingai.shared.generated.resources.period_monthly
-import trendingai.shared.generated.resources.period_weekly
+import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.picks_title
 import trendingai.shared.generated.resources.producthunt_title
-import trendingai.shared.generated.resources.settings
-import trendingai.shared.generated.resources.me_title
-import trendingai.shared.generated.resources.home_title
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
@@ -105,7 +71,7 @@ import kotlin.time.Clock
 /**
  * 首页骨架：底栏胶囊三项（首页 / Picks / 我的）+ 右侧独立的 AI 对话 FAB。
  *
- * 首页内含 GitHub / Hacker News / Product Hunt 三个子源，用 [SecondaryTabRow] 切换——
+ * 首页内含 GitHub / Hacker News / Product Hunt 三个子源，用 [TrendingSourceTabs] 切换——
  * 只点击、不横滑：三个源各自有下拉刷新与横向可滚内容，再叠一层横向手势会互相抢。
  *
  * AI 对话是入口不是落点：点 FAB 直接推全屏聊天页，不占 tab 选中态（缘由见
@@ -424,220 +390,4 @@ fun HomeScreen(
             )
         }
     }
-}
-
-/**
- * Trending 的三源子 tab。文案用各源全称，图标交给顶栏——一行三项不必再塞图标。
- *
- * 样式照搬 Echo 搜索页的内部 tab（`SearchScreen` 的 Explore / Echo Chart / Album）：
- * [SecondaryTabRow] + 透明底，指示器不是整宽下划线，而是一条 32dp 宽、3dp 高、
- * 上缘带圆角的短横条，居中在选中项下方。切内容同样是硬切，Echo 那边也没有转场。
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TrendingSourceTabs(
-    selected: TrendingSource,
-    onSelect: (TrendingSource) -> Unit,
-) {
-    SecondaryTabRow(
-        selectedTabIndex = selected.ordinal,
-        containerColor = Color.Transparent,
-        indicator = {
-            Box(
-                modifier = Modifier
-                    .tabIndicatorOffset(selected.ordinal)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-            }
-        },
-    ) {
-        TrendingSource.entries.forEach { source ->
-            val label = when (source) {
-                TrendingSource.GitHub -> "GitHub"
-                TrendingSource.HackerNews -> stringResource(Res.string.hackernews_title)
-                TrendingSource.ProductHunt -> stringResource(Res.string.producthunt_title)
-            }
-            Tab(
-                selected = source == selected,
-                onClick = { onSelect(source) },
-                selectedContentColor = MaterialTheme.colorScheme.primary,
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                text = { Text(label) },
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun TrendingTopBar(
-    selectedPeriod: String,
-    selectedLanguage: String,
-    selectedDate: String?,
-    selectedBatch: String?,
-    newOnly: Boolean,
-    onToggleNewOnly: () -> Unit,
-    onTitleClick: () -> Unit,
-    onHistoryClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-) {
-    val periodLabel = when (selectedPeriod) {
-        "daily" -> stringResource(Res.string.period_daily)
-        "weekly" -> stringResource(Res.string.period_weekly)
-        "monthly" -> stringResource(Res.string.period_monthly)
-        else -> selectedPeriod
-    }
-
-    TrendingTopAppBar(
-        title = {
-            Column(
-                modifier = Modifier
-                    .clickable { onTitleClick() }
-                    .padding(vertical = 4.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp).padding(start = 4.dp)
-                    )
-                }
-
-                val langLabel = selectedLanguage.replaceFirstChar { it.uppercase() }
-                val subTitle = buildString {
-                    append("$periodLabel · $langLabel")
-                    if (!selectedDate.isNullOrEmpty()) {
-                        val batchLabel = if (selectedBatch == "am") stringResource(Res.string.batch_am) else stringResource(Res.string.batch_pm)
-                        append(" · $selectedDate ($batchLabel)")
-                    }
-                }
-
-                Text(
-                    text = subTitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        navigationIcon = {
-            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = githubLogoPainter(),
-                    contentDescription = "GitHub",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        },
-        actions = {
-            // 「只看 New」仅 daily 全语言榜有效，其他视图（按语言/周/月）隐藏该按钮
-            if (selectedPeriod == "daily" && selectedLanguage == "all") {
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        TooltipAnchorPosition.Above
-                    ),
-                    tooltip = {
-                        RichTooltip(
-                            title = { Text(stringResource(Res.string.filter_new_only)) },
-                        ) {
-                            Text(stringResource(Res.string.new_only_hint))
-                        }
-                    },
-                    state = rememberTooltipState(),
-                ) {
-                    FilledIconToggleButton(
-                        checked = newOnly,
-                        onCheckedChange = { onToggleNewOnly() },
-                        colors = IconButtonDefaults.filledIconToggleButtonColors(
-                            containerColor = Color.Transparent,                        // 未选中：无底色，与其他图标一致
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            checkedContainerColor = MaterialTheme.colorScheme.primary,  // 选中：品牌紫实心
-                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    ) {
-                        Icon(
-                            Icons.Default.FiberNew,
-                            contentDescription = stringResource(Res.string.filter_new_only)
-                        )
-                    }
-                }
-            }
-            IconButton(onClick = onHistoryClick) {
-                Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
-            }
-            SettingsAction(onClick = onSettingsClick)
-        }
-    )
-}
-
-/**
- * 首页各 tab 顶栏右上角统一的设置入口。
- *
- * 底栏「⋯」里那项藏在浮层里，用户不点开就看不见；顶栏给一个常驻齿轮当主入口，
- * 「⋯」保留作为次要路径（关于页仍只在那里）。位置与 Echo 一致：actions 的最末一个。
- */
-@Composable
-private fun SettingsAction(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PicksTopBar(date: String?, onSettingsClick: () -> Unit) {
-    TrendingTopAppBar(
-        title = {
-            Column {
-                Text(
-                    text = stringResource(Res.string.picks_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = buildString {
-                        append("GitHub · Hacker News · Product Hunt")
-                        if (!date.isNullOrBlank()) append(" · $date")
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        actions = { SettingsAction(onClick = onSettingsClick) },
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FeedTopBar(
-    title: String,
-    navigationIcon: @Composable () -> Unit,
-    onSettingsClick: () -> Unit,
-) {
-    TrendingTopAppBar(
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium
-            )
-        },
-        navigationIcon = {
-            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                navigationIcon()
-            }
-        },
-        actions = { SettingsAction(onClick = onSettingsClick) },
-    )
 }
