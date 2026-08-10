@@ -7,87 +7,45 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.FiberNew
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.RichTooltip
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.app_name
-import trendingai.shared.generated.resources.batch_am
-import trendingai.shared.generated.resources.batch_pm
-import trendingai.shared.generated.resources.filter_new_only
 import trendingai.shared.generated.resources.hackernews_title
-import trendingai.shared.generated.resources.history_trending
 import trendingai.shared.generated.resources.icon_producthunt_dark
 import trendingai.shared.generated.resources.icon_producthunt_light
-import trendingai.shared.generated.resources.new_only_hint
-import trendingai.shared.generated.resources.period_daily
-import trendingai.shared.generated.resources.period_monthly
-import trendingai.shared.generated.resources.period_weekly
-import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.producthunt_title
-import trendingai.shared.generated.resources.settings
 import trendingai.shared.generated.resources.me_title
-import trendingai.shared.generated.resources.home_title
+import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.TrendingScaffold
@@ -100,13 +58,14 @@ import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
-import kotlin.time.Clock
 
 /**
  * 首页骨架：底栏胶囊三项（首页 / Picks / 我的）+ 右侧独立的 AI 对话 FAB。
  *
- * 首页内含 GitHub / Hacker News / Product Hunt 三个子源，用 [SecondaryTabRow] 切换——
+ * 首页内含 GitHub / Hacker News / Product Hunt 三个子源，用 [TrendingSourceTabs] 切换——
  * 只点击、不横滑：三个源各自有下拉刷新与横向可滚内容，再叠一层横向手势会互相抢。
+ *
+ * tab / 子源的状态与切换逻辑都在 [HomeViewModel]；本函数只负责按状态摆布局。
  *
  * AI 对话是入口不是落点：点 FAB 直接推全屏聊天页，不占 tab 选中态（缘由见
  * [HomeFloatingBar] 的 KDoc；[HomeTab.Chat] 仅为深链等历史路径保留）。
@@ -123,47 +82,23 @@ fun HomeScreen(
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
 ) {
-    // 冷启动进入设置页选的默认 tab；仅初始值，会话内切换与 rememberSaveable 恢复不受影响
-    var selectedTabName by rememberSaveable {
-        mutableStateOf(HomeTab.defaultFromName(globalSettingsManager.currentDefaultHomeTab()).name)
+    val homeViewModel: HomeViewModel = viewModel {
+        // Nav3 的默认 entry decorator 已接 SavedStateRegistry，createSavedStateHandle 应当可用；
+        // 万一宿主没接（自定义 decorator 等），回退空 handle——代价只是进程被杀后回默认 tab。
+        val handle = runCatching { createSavedStateHandle() }.getOrElse { SavedStateHandle() }
+        HomeViewModel(savedStateHandle = handle)
     }
-    val selectedTab = HomeTab.fromNameOrDefault(selectedTabName)
+    val selectedTab by homeViewModel.selectedTab.collectAsState()
+    val selectedSource by homeViewModel.selectedSource.collectAsState()
 
-    // 子源与 tab 不同：每次切换都回写，冷启动回到上次看的那个源
-    var selectedSourceName by rememberSaveable {
-        mutableStateOf(TrendingSource.fromNameOrDefault(globalSettingsManager.currentTrendingSource()).name)
-    }
-    val selectedSource = TrendingSource.fromNameOrDefault(selectedSourceName)
-
-    // 组合树外的切 tab 请求（通知点击深链等）：置位状态可跨冷启动等到这里再消费
-    LaunchedEffect(Unit) {
-        HomeTabRequest.pending.collect { tab ->
-            if (tab != null) {
-                selectedTabName = tab.name
-                HomeTabRequest.consume()
-            }
-        }
-    }
-    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
-    var showHistorySheet by rememberSaveable { mutableStateOf(false) }
-
-    val trendingViewModel: TrendingViewModel = viewModel { TrendingViewModel() }
-    val trendingUiState by trendingViewModel.uiState.collectAsState()
-
-    // Picks tab 被选中时才创建 ViewModel，topBar 和 content 共享同一实例
-    val picksViewModel: PicksViewModel? = if (selectedTab == HomeTab.Picks) {
-        viewModel { PicksViewModel() }
-    } else null
-    val picksUiState = picksViewModel?.uiState?.collectAsState()?.value
-
-    // HN / PH 同样按需创建；提升到这里是为了 bottomBar 双击刷新能拿到同一实例
-    val onHomeTab = selectedTab == HomeTab.Home
-    val hnViewModel: FeedViewModel? = if (onHomeTab && selectedSource == TrendingSource.HackerNews) {
-        viewModel(key = "hackernews") { FeedViewModel("hackernews") }
-    } else null
-    val phViewModel: FeedViewModel? = if (onHomeTab && selectedSource == TrendingSource.ProductHunt) {
-        viewModel(key = "producthunt") { FeedViewModel("producthunt") }
-    } else null
+    // 系统返回键/手势在非 Home tab 上先降级回 Home，再退才交给路由出栈（Material 底栏规范）。
+    // 与 NavDisplay 共用同一 NavigationEventDispatcher；本 handler 只在 Home entry 位于栈顶时
+    // 在组合树里，二级页在顶时不会误拦。
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = selectedTab != HomeTab.Home,
+        onBackCompleted = { homeViewModel.backToHome() },
+    )
 
     // syncMe（建档 + 头像/GitHub 身份/isPro 缓存）不在此触发——已随收藏同步一起挂在 App 根部
     // （见 App.kt）：登录常发生在「我的」tab，Home 的 LaunchedEffect 彼时仍在，但登录也可能
@@ -176,10 +111,8 @@ fun HomeScreen(
         }
     }
 
-    // 首页进设置页统一记一条事件，entry 区分来源。1.1 起只剩 topbar（顶栏常驻齿轮）——
-    // 底栏「⋯」菜单随 Chat FAB 上位而删除，历史数据里的 entry=more 即那条已死路径。
     val openSettings = { entry: String ->
-        trackEvent("home_open_settings", mapOf("entry" to entry))
+        homeViewModel.onSettingsOpened(entry)
         onNavigateToSettings()
     }
 
@@ -188,14 +121,6 @@ fun HomeScreen(
             when (selectedTab) {
                 HomeTab.Home -> when (selectedSource) {
                     TrendingSource.GitHub -> TrendingTopBar(
-                        selectedPeriod = trendingUiState.selectedPeriod,
-                        selectedLanguage = trendingUiState.selectedLanguage,
-                        selectedDate = trendingUiState.selectedDate,
-                        selectedBatch = trendingUiState.selectedBatch,
-                        newOnly = trendingUiState.newOnly,
-                        onToggleNewOnly = { trendingViewModel.toggleNewOnly() },
-                        onTitleClick = { showFilterSheet = true },
-                        onHistoryClick = { showHistorySheet = true },
                         onSettingsClick = { openSettings("topbar") },
                     )
                     TrendingSource.HackerNews -> {
@@ -233,7 +158,6 @@ fun HomeScreen(
                     }
                 }
                 HomeTab.Picks -> PicksTopBar(
-                    date = picksUiState?.picks?.metadata?.date,
                     onSettingsClick = { openSettings("topbar") },
                 )
                 HomeTab.Me -> TrendingTopAppBar(
@@ -258,72 +182,14 @@ fun HomeScreen(
         val barBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val contentBottomPadding = barBottomInset + FloatingBarHeight + FloatingBarBottomMargin * 2
 
-        val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
-        var lastTapTime by remember { mutableStateOf(0L) }
-        // 双击当前 tab 触发下拉刷新（#38）：仅当两次点击都落在已选中的 tab 上才算，
-        // 双击未选中的 tab 只切换不刷新（切换会重置计时）
-        val refreshCurrentTab = {
-            trackEvent(
-                "tab_double_tap_refresh",
-                mapOf("tab" to selectedTab.name.lowercase()),
-            )
-            when (selectedTab) {
-                HomeTab.Home -> when (selectedSource) {
-                    TrendingSource.GitHub -> trendingViewModel.fetchData(isRefresh = true)
-                    TrendingSource.HackerNews -> hnViewModel?.refresh()
-                    TrendingSource.ProductHunt -> phViewModel?.refresh()
-                }
-                HomeTab.Picks -> picksViewModel?.refresh()
-                // 「我的」自带下拉刷新，Chat 不是落点：都不参与双击刷新
-                HomeTab.Me, HomeTab.Chat -> Unit
-            }
-        }
-        val switchTo = { tab: HomeTab ->
-            if (selectedTab != tab) {
-                trackEvent("tab_switch", mapOf("tab" to tab.name.lowercase()))
-                selectedTabName = tab.name
-                lastTapTime = 0L
-            } else {
-                val now = Clock.System.now().toEpochMilliseconds()
-                if (now - lastTapTime <= doubleTapMillis) {
-                    refreshCurrentTab()
-                    lastTapTime = 0L // 已触发一次，三连击不重复刷新
-                } else {
-                    lastTapTime = now
-                }
-            }
-        }
-
-        val barItems = buildList {
-            add(
-                HomeBarItem(
-                    key = HomeTab.Home,
-                    iconSelected = Icons.Filled.Home,
-                    iconUnselected = Icons.Outlined.Home,
-                    label = stringResource(Res.string.home_title),
-                    selected = selectedTab == HomeTab.Home,
-                    onClick = { switchTo(HomeTab.Home) },
-                )
-            )
-            add(
-                HomeBarItem(
-                    key = HomeTab.Picks,
-                    iconSelected = KidStarFilled,
-                    iconUnselected = KidStarOutlined,
-                    label = stringResource(Res.string.picks_title),
-                    selected = selectedTab == HomeTab.Picks,
-                    onClick = { switchTo(HomeTab.Picks) },
-                )
-            )
-            add(
-                HomeBarItem(
-                    key = HomeTab.Me,
-                    iconSelected = Icons.Filled.Person,
-                    iconUnselected = Icons.Outlined.Person,
-                    label = stringResource(Res.string.me_title),
-                    selected = selectedTab == HomeTab.Me,
-                    onClick = { switchTo(HomeTab.Me) },
-                )
+        val barItems = homeTabSpecs.map { spec ->
+            HomeBarItem(
+                key = spec.tab,
+                iconSelected = spec.iconSelected,
+                iconUnselected = spec.iconUnselected,
+                label = stringResource(spec.label),
+                selected = selectedTab == spec.tab,
+                onClick = { homeViewModel.selectTab(spec.tab) },
             )
         }
 
@@ -346,32 +212,18 @@ fun HomeScreen(
                     },
                     label = "homeTabContent",
                 ) { tab ->
-                    // 各页在这里自取 ViewModel，不用外面那几个可空的：转场期间旧页仍在组合树里，
-                    // 而外面的实例是「当前选中才创建」，此刻已是 null，直接用会崩。
-                    // viewModel() 取的是同一个 ViewModelStore 里的同一实例，不会多创建。
+                    // 各页（与各自顶栏）都就地 viewModel() 自取：同一 ViewModelStore 返回同一
+                    // 实例，不会多创建；转场期间旧页仍在组合树里，也不依赖任何外部提升的引用。
                     when (tab) {
                         HomeTab.Home -> Column(modifier = contentModifier) {
                             TrendingSourceTabs(
                                 selected = selectedSource,
-                                onSelect = { source ->
-                                    if (source != selectedSource) {
-                                        trackEvent(
-                                            "trending_source_switch",
-                                            mapOf("source" to source.name.lowercase()),
-                                        )
-                                        selectedSourceName = source.name
-                                        globalSettingsManager.setTrendingSource(source.name)
-                                    }
-                                },
+                                onSelect = { homeViewModel.selectSource(it) },
                             )
                             when (selectedSource) {
                                 TrendingSource.GitHub -> TrendingScreen(
                                     onNavigateToDetail = onNavigateToDetail,
-                                    showFilterSheet = showFilterSheet,
-                                    onDismissFilterSheet = { showFilterSheet = false },
-                                    showHistorySheet = showHistorySheet,
-                                    onDismissHistorySheet = { showHistorySheet = false },
-                                    viewModel = trendingViewModel
+                                    viewModel = viewModel { TrendingViewModel() }
                                 )
                                 TrendingSource.HackerNews -> FeedScreen(
                                     viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
@@ -424,220 +276,4 @@ fun HomeScreen(
             )
         }
     }
-}
-
-/**
- * Trending 的三源子 tab。文案用各源全称，图标交给顶栏——一行三项不必再塞图标。
- *
- * 样式照搬 Echo 搜索页的内部 tab（`SearchScreen` 的 Explore / Echo Chart / Album）：
- * [SecondaryTabRow] + 透明底，指示器不是整宽下划线，而是一条 32dp 宽、3dp 高、
- * 上缘带圆角的短横条，居中在选中项下方。切内容同样是硬切，Echo 那边也没有转场。
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TrendingSourceTabs(
-    selected: TrendingSource,
-    onSelect: (TrendingSource) -> Unit,
-) {
-    SecondaryTabRow(
-        selectedTabIndex = selected.ordinal,
-        containerColor = Color.Transparent,
-        indicator = {
-            Box(
-                modifier = Modifier
-                    .tabIndicatorOffset(selected.ordinal)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-            }
-        },
-    ) {
-        TrendingSource.entries.forEach { source ->
-            val label = when (source) {
-                TrendingSource.GitHub -> "GitHub"
-                TrendingSource.HackerNews -> stringResource(Res.string.hackernews_title)
-                TrendingSource.ProductHunt -> stringResource(Res.string.producthunt_title)
-            }
-            Tab(
-                selected = source == selected,
-                onClick = { onSelect(source) },
-                selectedContentColor = MaterialTheme.colorScheme.primary,
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                text = { Text(label) },
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun TrendingTopBar(
-    selectedPeriod: String,
-    selectedLanguage: String,
-    selectedDate: String?,
-    selectedBatch: String?,
-    newOnly: Boolean,
-    onToggleNewOnly: () -> Unit,
-    onTitleClick: () -> Unit,
-    onHistoryClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-) {
-    val periodLabel = when (selectedPeriod) {
-        "daily" -> stringResource(Res.string.period_daily)
-        "weekly" -> stringResource(Res.string.period_weekly)
-        "monthly" -> stringResource(Res.string.period_monthly)
-        else -> selectedPeriod
-    }
-
-    TrendingTopAppBar(
-        title = {
-            Column(
-                modifier = Modifier
-                    .clickable { onTitleClick() }
-                    .padding(vertical = 4.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp).padding(start = 4.dp)
-                    )
-                }
-
-                val langLabel = selectedLanguage.replaceFirstChar { it.uppercase() }
-                val subTitle = buildString {
-                    append("$periodLabel · $langLabel")
-                    if (!selectedDate.isNullOrEmpty()) {
-                        val batchLabel = if (selectedBatch == "am") stringResource(Res.string.batch_am) else stringResource(Res.string.batch_pm)
-                        append(" · $selectedDate ($batchLabel)")
-                    }
-                }
-
-                Text(
-                    text = subTitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        navigationIcon = {
-            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = githubLogoPainter(),
-                    contentDescription = "GitHub",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        },
-        actions = {
-            // 「只看 New」仅 daily 全语言榜有效，其他视图（按语言/周/月）隐藏该按钮
-            if (selectedPeriod == "daily" && selectedLanguage == "all") {
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        TooltipAnchorPosition.Above
-                    ),
-                    tooltip = {
-                        RichTooltip(
-                            title = { Text(stringResource(Res.string.filter_new_only)) },
-                        ) {
-                            Text(stringResource(Res.string.new_only_hint))
-                        }
-                    },
-                    state = rememberTooltipState(),
-                ) {
-                    FilledIconToggleButton(
-                        checked = newOnly,
-                        onCheckedChange = { onToggleNewOnly() },
-                        colors = IconButtonDefaults.filledIconToggleButtonColors(
-                            containerColor = Color.Transparent,                        // 未选中：无底色，与其他图标一致
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            checkedContainerColor = MaterialTheme.colorScheme.primary,  // 选中：品牌紫实心
-                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    ) {
-                        Icon(
-                            Icons.Default.FiberNew,
-                            contentDescription = stringResource(Res.string.filter_new_only)
-                        )
-                    }
-                }
-            }
-            IconButton(onClick = onHistoryClick) {
-                Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.history_trending))
-            }
-            SettingsAction(onClick = onSettingsClick)
-        }
-    )
-}
-
-/**
- * 首页各 tab 顶栏右上角统一的设置入口。
- *
- * 底栏「⋯」里那项藏在浮层里，用户不点开就看不见；顶栏给一个常驻齿轮当主入口，
- * 「⋯」保留作为次要路径（关于页仍只在那里）。位置与 Echo 一致：actions 的最末一个。
- */
-@Composable
-private fun SettingsAction(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PicksTopBar(date: String?, onSettingsClick: () -> Unit) {
-    TrendingTopAppBar(
-        title = {
-            Column {
-                Text(
-                    text = stringResource(Res.string.picks_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = buildString {
-                        append("GitHub · Hacker News · Product Hunt")
-                        if (!date.isNullOrBlank()) append(" · $date")
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        actions = { SettingsAction(onClick = onSettingsClick) },
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FeedTopBar(
-    title: String,
-    navigationIcon: @Composable () -> Unit,
-    onSettingsClick: () -> Unit,
-) {
-    TrendingTopAppBar(
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium
-            )
-        },
-        navigationIcon = {
-            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                navigationIcon()
-            }
-        },
-        actions = { SettingsAction(onClick = onSettingsClick) },
-    )
 }

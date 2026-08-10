@@ -37,6 +37,9 @@ data class TrendingUiState(
     val selectedBatch: String? = null,
     /** 「只看 New」开关：仅对 daily 全语言榜有效，开启时只展示 isNew 的项目 */
     val newOnly: Boolean = false,
+    /** 筛选/历史两个底部弹窗的可见性。触发按钮在首页顶栏、弹窗在本页，状态放这里两边共享 */
+    val showFilterSheet: Boolean = false,
+    val showHistorySheet: Boolean = false,
     val error: String? = null
 )
 
@@ -198,6 +201,14 @@ class TrendingViewModel(
         settingsManager.setTrendingNewOnly(turnOn)
         trackEvent("trending_new_only", mapOf("on" to turnOn))
         if (needFetch) fetchData()
+    }
+
+    fun setFilterSheetVisible(visible: Boolean) {
+        _uiState.update { it.copy(showFilterSheet = visible) }
+    }
+
+    fun setHistorySheetVisible(visible: Boolean) {
+        _uiState.update { it.copy(showHistorySheet = visible) }
     }
 
     fun updateHistoryFilter(date: String?, batch: String?) {
