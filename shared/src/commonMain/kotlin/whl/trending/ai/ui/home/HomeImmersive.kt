@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.Dp
 /**
  * 沉浸式浏览（#88）的统一隐藏状态：一条 [NestedScrollConnection] 产出隐藏进度
  * [ImmersiveState.progress]，各栏按**自己的行程**消费——同一进度 × 不同行程，速率差
- * 即视差。本阶段只接了底栏（issue 实施切分第 2 步）；顶栏与子 tab 行随第 3 步接入。
+ * 即视差：子 tab 行行程最长（1:1 跟手）、顶栏次之、底栏向下——三栏 + 状态栏 scrim
+ * 四个消费点全部挂在 HomeScreen。
  *
  * 由设置项开关（`SettingsManager.immersiveBrowsing`，默认关）决定要不要接入。
  * 关闭时调用方传 null：[immersiveNestedScroll] 与 [immersiveExit] 原样返回 receiver，
