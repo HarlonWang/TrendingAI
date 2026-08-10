@@ -143,9 +143,9 @@ fun HomeScreen(
         // 它是内容 contentPadding 的输入，实测 onSizeChanged 回写会引入首帧跳动。
         val topBarBottom = statusBarTop + TopBarHeight
 
-        // 沉浸式状态：开关关闭时为 null，下游 modifier 全部原样返回（零开销，见 HomeImmersive）。
-        // 手势行程取所有栏中最长的行程（Home 的子 tab 行底缘），它将 1:1 跟手、其余栏按行程
-        // 比例减速——第 3 步的视差即由此来；本阶段只接了底栏这一个消费点。
+        // 沉浸式状态：开关关闭时为 null，下游四个挂点全部原样返回（零开销，见 HomeImmersive)。
+        // 手势行程取所有栏中最长的行程（Home 的子 tab 行底缘），它 1:1 跟手、其余栏按行程
+        // 比例减速——视差即由此来。
         val immersiveState = if (immersiveEnabled) {
             rememberImmersiveState(
                 topBarBottom + SourceTabRowHeight,
