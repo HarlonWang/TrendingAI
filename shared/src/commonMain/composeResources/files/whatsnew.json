@@ -1,15 +1,13 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "zh": [
-    "首页焕新：底部导航改为悬浮胶囊，切换更顺手",
-    "AI 对话升级为底栏右侧独立按钮，一键直达",
-    "界面整体风格升级，弹窗、浮层与卡片列表观感更统一",
-    "Product Hunt 产品支持多图，图片可左右滑动浏览"
+    "新增「沉浸式浏览」：滑动时自动收起顶栏与底栏（外观设置开启，默认关闭）",
+    "新增 6 款应用图标配色，可随时更换",
+    "每日 Daily Picks 提醒到点推送更准时（设置中开启，默认关闭）"
   ],
   "en": [
-    "Refreshed home screen with a floating pill navigation bar",
-    "AI chat now has its own button on the bottom bar — one tap away",
-    "Refreshed visual style across the app — dialogs, sheets and card lists now feel consistent",
-    "Product Hunt items now show multiple images you can swipe through"
+    "New \"Immersive browsing\": bars tuck away as you scroll (enable in Appearance, off by default)",
+    "6 new app icon colorways to pick from",
+    "Daily Picks reminders now arrive on time (enable in Settings, off by default)"
   ]
 }

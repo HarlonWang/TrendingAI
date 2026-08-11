@@ -1,0 +1,3 @@
+• New "Immersive browsing": bars tuck away as you scroll (enable in Appearance, off by default)
+• 6 new app icon colorways to pick from
+• Daily Picks reminders now arrive on time (enable in Settings, off by default)
