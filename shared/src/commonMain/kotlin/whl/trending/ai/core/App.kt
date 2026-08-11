@@ -11,6 +11,7 @@ import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.settings.ColorLabScreen
+import whl.trending.ai.ui.settings.DataSourcesScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.digest.DigestScreen
@@ -59,6 +60,7 @@ data object Appearance
 data object ColorLab
 data object Settings
 data object About
+data object DataSources
 data object Feedback
 data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
@@ -203,6 +205,10 @@ fun App() {
                                 )
                             }
 
+                            is DataSources -> NavEntry(key) {
+                                DataSourcesScreen(onBack = { backStack.safePop() })
+                            }
+
                             is Feedback -> NavEntry(key) {
                                 FeedbackScreen(
                                     onBack = {
@@ -249,6 +255,7 @@ fun App() {
                                     onNavigateToSubscribe = { backStack.add(Subscribe) },
                                     onNavigateToFeedback = { backStack.add(Feedback) },
                                     onNavigateToAbout = { backStack.add(About) },
+                                    onNavigateToDataSources = { backStack.add(DataSources) },
                                 )
                             }
 

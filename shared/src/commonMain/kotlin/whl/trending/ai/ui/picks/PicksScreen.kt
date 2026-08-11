@@ -49,6 +49,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.generatedStampText
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
@@ -156,6 +158,7 @@ fun PicksScreen(
                     PicksList(
                         debut = picks.debut,
                         deepDive = picks.deepDive,
+                        generatedAt = picks.metadata.generatedAt,
                         favoriteUrls = favoriteUrls,
                         showNewsletterBanner = subscribedEmail == null && !bannerDismissed,
                         onSubscribeClick = {
@@ -206,6 +209,8 @@ private fun handleItemClick(
 private fun PicksList(
     debut: List<PickItem>,
     deepDive: List<PickItem>,
+    /** 本批 picks 的生成时刻（UTC 原串），空串时不渲染生成时机行 */
+    generatedAt: String,
     favoriteUrls: Set<String>,
     showNewsletterBanner: Boolean,
     onSubscribeClick: () -> Unit,
@@ -257,7 +262,12 @@ private fun PicksList(
         }
 
         // 尾部间距
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        // 生成时机行：Picks 是每天一批生成的，说「生成」而不是「更新」。
+        // 它自带 24dp 上下留白，接替了原先收尾用的 16dp Spacer
+        item {
+            generatedStampText(generatedAt)?.let { SourceMetaFooter(text = it) }
+                ?: Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 

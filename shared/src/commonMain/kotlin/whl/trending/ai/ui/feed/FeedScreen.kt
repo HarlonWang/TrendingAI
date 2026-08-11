@@ -37,6 +37,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.updateStampText
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -197,6 +199,11 @@ fun FeedScreen(
                         if (index < uiState.items.lastIndex) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
+                    }
+
+                    // 抓取时机行：本源最近一次抓取时刻
+                    item {
+                        updateStampText(uiState.capturedAt)?.let { SourceMetaFooter(text = it) }
                     }
                 }
             }

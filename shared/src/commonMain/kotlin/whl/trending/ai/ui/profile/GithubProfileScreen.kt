@@ -418,10 +418,18 @@ private fun emphasizeRepoName(summary: String, repoName: String): AnnotatedStrin
     }
 }
 
-/** 相对时间文案；超 7 天或解析失败回退到绝对时间。now 在首次组合时取定，列表项足够用。 */
+/**
+ * 相对时间文案；超 7 天或解析失败回退到绝对时间。
+ *
+ * 不 `remember`：里面只是几个 Instant 算术，而缓存住 now 会让「3 小时前」在页面长时间
+ * 停留、或从后台切回后仍显示旧值（key 只有时间戳本身，永不失效）。
+ *
+ * 只服务这里的动态列表——那是连续流式的时间点。列表的**更新时机**不用它：三源是日更节律，
+ * 相对时间会把正常节律说成「13 小时前」，那边走 [DateTimeUtils.updateStamp]。
+ */
 @Composable
 private fun relativeTimeText(createdAt: String): String {
-    val rt = remember(createdAt) { DateTimeUtils.relativeTime(createdAt) }
+    val rt = DateTimeUtils.relativeTime(createdAt)
     return when (rt.unit) {
         DateTimeUtils.RelativeUnit.JUST_NOW -> stringResource(Res.string.time_just_now)
         DateTimeUtils.RelativeUnit.MINUTES -> stringResource(Res.string.time_minutes_ago, rt.value)

@@ -15,7 +15,10 @@ data class PicksResponse(
 
 @Serializable
 data class PicksMetadata(
-    val date: String = ""
+    val date: String = "",
+    /** 本批 picks 的生成时刻（UTC）。0.24.0 之前的后端不返回，缺省空串表示无从得知。 */
+    @SerialName("generated_at")
+    val generatedAt: String = ""
 )
 
 @Serializable

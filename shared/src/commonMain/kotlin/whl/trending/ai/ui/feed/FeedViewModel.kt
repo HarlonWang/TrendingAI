@@ -23,7 +23,9 @@ data class FeedUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val items: List<FeedItem> = emptyList()
+    val items: List<FeedItem> = emptyList(),
+    /** 本源最近一次抓取时刻，**UTC 原串**——展示侧（抓取时机条）自行换算本地时区并决定格式 */
+    val capturedAt: String = ""
 )
 
 class FeedViewModel(
@@ -56,7 +58,14 @@ class FeedViewModel(
         fetchJob = viewModelScope.launch {
             val cached = cache.get<FeedResponse>(cacheKey(settingsManager.currentContentLang()))
             if (cached != null) {
-                _uiState.update { it.copy(isLoading = false, isRefreshing = true, items = cached.data) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = true,
+                        items = cached.data,
+                        capturedAt = cached.metadata.capturedAt,
+                    )
+                }
             }
             fetch()
         }
@@ -86,6 +95,7 @@ class FeedViewModel(
                     isLoading = false,
                     isRefreshing = false,
                     items = response.data,
+                    capturedAt = response.metadata.capturedAt,
                     error = null
                 )
             }
