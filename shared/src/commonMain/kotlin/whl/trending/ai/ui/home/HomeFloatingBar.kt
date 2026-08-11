@@ -2,10 +2,12 @@ package whl.trending.ai.ui.home
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.LocalIndication
@@ -35,9 +37,12 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -142,20 +147,29 @@ private fun SlidingPillItems(items: List<HomeBarItem>) {
     val targetWidth = active?.let { itemWidths[it.key] } ?: 0.dp
     val targetPosition = active?.let { itemPositions[it.key] } ?: 0.dp
 
+    // 首个实测值必须瞬时到位，之后才准动画。位置/宽度来自 onGloballyPositioned，在布局之后
+    // 才有值；本组合的第一帧只能拿到 0dp 兜底，实测值回填是「target 变了」，会被弹簧当成一次
+    // 正常切换播出来。首页被推进二级页时整棵 composition 会销毁（NavDisplay 单窗格只组合栈顶），
+    // 返回重组即命中此路径：选中态从 SavedStateHandle 恢复是对的，但药丸会从最左侧（0dp，恰好
+    // 是第一项的位置）滑回选中项——看着像 tab 又被纠正了一次。选中第一项时因 0 == 目标而不可见。
+    var pillMeasured by remember { mutableStateOf(false) }
+    val pillSpec: AnimationSpec<Dp> = if (pillMeasured) {
+        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+    } else {
+        snap()
+    }
+    LaunchedEffect(targetWidth > 0.dp) {
+        if (targetWidth > 0.dp) pillMeasured = true
+    }
+
     val slidingPillWidth by animateDpAsState(
         targetValue = targetWidth,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
+        animationSpec = pillSpec,
         label = "pillWidth",
     )
     val slidingPillOffset by animateDpAsState(
         targetValue = targetPosition,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
+        animationSpec = pillSpec,
         label = "pillOffset",
     )
 
