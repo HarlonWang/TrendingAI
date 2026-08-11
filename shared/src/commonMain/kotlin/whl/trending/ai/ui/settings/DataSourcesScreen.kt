@@ -19,19 +19,14 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.data_sources_desc
 import trendingai.shared.generated.resources.data_sources_title
-import trendingai.shared.generated.resources.ds_github_schedule
 import trendingai.shared.generated.resources.ds_github_scope
 import trendingai.shared.generated.resources.ds_github_source
-import trendingai.shared.generated.resources.ds_hn_schedule
 import trendingai.shared.generated.resources.ds_hn_scope
 import trendingai.shared.generated.resources.ds_hn_source
-import trendingai.shared.generated.resources.ds_label_schedule
 import trendingai.shared.generated.resources.ds_label_scope
 import trendingai.shared.generated.resources.ds_label_source
-import trendingai.shared.generated.resources.ds_ph_schedule
 import trendingai.shared.generated.resources.ds_ph_scope
 import trendingai.shared.generated.resources.ds_ph_source
-import trendingai.shared.generated.resources.ds_picks_schedule
 import trendingai.shared.generated.resources.ds_picks_scope
 import trendingai.shared.generated.resources.ds_picks_source
 import trendingai.shared.generated.resources.github_title
@@ -90,10 +85,6 @@ fun DataSourcesScreen(onBack: () -> Unit) {
                         description = { Text(stringResource(section.source)) },
                     )
                     settingsItem(
-                        title = { Text(stringResource(Res.string.ds_label_schedule)) },
-                        description = { Text(stringResource(section.schedule)) },
-                    )
-                    settingsItem(
                         title = { Text(stringResource(Res.string.ds_label_scope)) },
                         description = { Text(stringResource(section.scope)) },
                     )
@@ -103,11 +94,17 @@ fun DataSourcesScreen(onBack: () -> Unit) {
     }
 }
 
-/** 一个源的说明区块。 */
+/**
+ * 一个源的说明区块：来源（含更新节奏）+ 收录口径两行。
+ *
+ * 节奏并进 source 而不单列一行：模糊到「每天更新一次」之后，四组里三组的节奏行文案
+ * 一模一样，一整行卡片承载这点信息是空的。**精确时刻刻意不写**——它由各列表尾部的
+ * 抓取时机行按本地时区动态给出（「今天 08:17 更新」），静态文案只答「多久一次」；
+ * 把 cron 的 UTC 时刻写死在这里，既要用户自己换算时区，调度一改还会过期。
+ */
 private data class SourceSection(
     val title: StringResource,
     val source: StringResource,
-    val schedule: StringResource,
     val scope: StringResource,
 )
 
@@ -115,25 +112,21 @@ private val SourceSections = listOf(
     SourceSection(
         title = Res.string.github_title,
         source = Res.string.ds_github_source,
-        schedule = Res.string.ds_github_schedule,
         scope = Res.string.ds_github_scope,
     ),
     SourceSection(
         title = Res.string.hackernews_title,
         source = Res.string.ds_hn_source,
-        schedule = Res.string.ds_hn_schedule,
         scope = Res.string.ds_hn_scope,
     ),
     SourceSection(
         title = Res.string.producthunt_title,
         source = Res.string.ds_ph_source,
-        schedule = Res.string.ds_ph_schedule,
         scope = Res.string.ds_ph_scope,
     ),
     SourceSection(
         title = Res.string.picks_title,
         source = Res.string.ds_picks_source,
-        schedule = Res.string.ds_picks_schedule,
         scope = Res.string.ds_picks_scope,
     ),
 )
