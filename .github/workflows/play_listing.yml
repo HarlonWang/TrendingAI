@@ -13,7 +13,13 @@
 # 带提审（2026-08-11 的 #97 就是这么触发的：图片自 08-09 起一字节未动，仍全量重传）。
 # 开启后 supply 用 edits.images.list 返回的 sha256 与本地文件 hash 比对，相同则跳过；
 # 截图是按文件名排序的顺序敏感贪心匹配，中间插一张会导致其后的远端图被删掉重传。
-# 验证方式：看日志有无「🟰 Skipping upload ... as remote sha256 matches.」。
+#
+# 2026-08-11 发 1.2.0 时已实测生效：那次只新增了 changelogs 文件、图片一字未动，21 张图
+# 全部「🟰 Skipping upload ... as remote sha256 matches.」，零上传零删除，两语言耗时从
+# 21.6s / 35.5s 降到 0.98s / 1.16s，且未产生任何图片类审核项。即 Google 侧存的 sha256
+# 严格等于本地原文件 hash，此前担心的「服务端重编码导致每次不匹配」不成立。
+# 回归判据仍是这行日志：若哪天又变成清一色「⬆️ Uploading」，说明 hash 语义变了，
+# 退到按 diff 决定是否带 --skip_upload_images / --skip_upload_screenshots。
 name: Play Listing Sync
 
 on:
