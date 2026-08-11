@@ -60,7 +60,6 @@ data object Appearance
 data object ColorLab
 data object Settings
 data object About
-
 data object DataSources
 data object Feedback
 data object Subscribe
@@ -202,7 +201,7 @@ fun App() {
                                     },
                                     onNavigateToWebPage = { url, title ->
                                         openExternalUrl(url, title)
-                                    },
+                                    }
                                 )
                             }
 

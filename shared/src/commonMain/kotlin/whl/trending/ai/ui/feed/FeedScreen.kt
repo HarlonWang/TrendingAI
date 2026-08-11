@@ -35,10 +35,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.SourceMetaFooter
-import whl.trending.ai.ui.common.updateStampText
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.updateStampText
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -94,7 +94,7 @@ fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel,
     onOpenUrl: (url: String) -> Unit,
-    onOpenDigest: (DigestPage) -> Unit = {},
+    onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()

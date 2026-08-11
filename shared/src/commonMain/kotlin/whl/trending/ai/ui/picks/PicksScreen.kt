@@ -47,10 +47,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.SourceMetaFooter
-import whl.trending.ai.ui.common.generatedStampText
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.generatedStampText
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.picks_label_action
@@ -86,7 +86,7 @@ fun PicksScreen(
     onNavigateToSubscribe: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PicksViewModel,
-    onOpenDigest: (DigestPage) -> Unit = {},
+    onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()

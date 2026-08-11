@@ -206,11 +206,11 @@ fun HomeScreen(
                                     TrendingSource.HackerNews -> FeedScreen(
                                         viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
                                         onOpenUrl = onOpenUrl,
-                                        onOpenDigest = onOpenDigest,
+                                        onOpenDigest = onOpenDigest
                                     )
                                     TrendingSource.ProductHunt -> FeedScreen(
                                         viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
-                                        onOpenUrl = onOpenUrl,
+                                        onOpenUrl = onOpenUrl
                                     )
                                 }
                                 // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
@@ -240,7 +240,7 @@ fun HomeScreen(
                                 onOpenUrl = onOpenUrl,
                                 onNavigateToSubscribe = onNavigateToSubscribe,
                                 viewModel = viewModel { PicksViewModel() },
-                                onOpenDigest = onOpenDigest,
+                                onOpenDigest = onOpenDigest
                             )
                             HomeTab.Me -> ProfileScreen(
                                 onNavigateToGithubProfile = onNavigateToGithubProfile,
