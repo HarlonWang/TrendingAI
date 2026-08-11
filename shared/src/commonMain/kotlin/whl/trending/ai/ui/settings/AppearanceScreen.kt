@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.settings
 
 import whl.trending.ai.data.local.AppIconPreset
-import whl.trending.ai.data.local.DEFAULT_SEED_ARGB
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.applyAppIcon
@@ -104,8 +103,14 @@ fun AppearanceScreen(
     onBack: () -> Unit,
     onNavigateToColorLab: () -> Unit,
 ) {
-    val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
-    val seedColor by globalSettingsManager.seedColor.collectAsState(DEFAULT_SEED_ARGB)
+    // 初值同步读，理由同 SettingsScreen：写默认常量会让分段控件的选中指示器从「跟随系统」
+    // 滑到实际档位、颜色预览闪一次默认色。
+    val themeMode by globalSettingsManager.themeMode.collectAsState(
+        remember { globalSettingsManager.currentThemeMode() }
+    )
+    val seedColor by globalSettingsManager.seedColor.collectAsState(
+        remember { globalSettingsManager.currentSeedColor() }
+    )
     val isCustom by globalSettingsManager.themeCustom.collectAsState(
         remember { globalSettingsManager.currentThemeCustom() }
     )

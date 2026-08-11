@@ -107,7 +107,6 @@ import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SummaryLanguage
-import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
@@ -139,11 +138,24 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit = {},
 ) {
     val isIos = isIosPlatform()
-    val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
-    val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
-    val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(SummaryLanguage.FOLLOW_SYSTEM)
-    val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
-    val immersiveBrowsing by globalSettingsManager.immersiveBrowsing.collectAsState(false)
+    // 初值一律同步读，不写默认常量：flow 的首次发射晚于首帧组合，写常量等于先渲染一次
+    // 默认值再跳到真实值——开关会当成「用户刚拨动」播一遍 thumb 滑动动画（M3 Switch 的
+    // checked 是 Transition 驱动），下拉行的 trailing 文案也会闪一下。
+    val themeMode by globalSettingsManager.themeMode.collectAsState(
+        remember { globalSettingsManager.currentThemeMode() }
+    )
+    val appLanguage by globalSettingsManager.appLanguage.collectAsState(
+        remember { globalSettingsManager.currentAppLanguage() }
+    )
+    val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(
+        remember { globalSettingsManager.currentSummaryLanguage() }
+    )
+    val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(
+        remember { globalSettingsManager.currentOpenLinksInCustomTab() }
+    )
+    val immersiveBrowsing by globalSettingsManager.immersiveBrowsing.collectAsState(
+        remember { globalSettingsManager.currentImmersiveBrowsing() }
+    )
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
     )

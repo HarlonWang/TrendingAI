@@ -350,6 +350,11 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.getStringFlow(SUMMARY_LANGUAGE_KEY, SummaryLanguage.FOLLOW_SYSTEM.storageValue)
             .map { SummaryLanguage.fromStorage(it) }
 
+    /** 同步读当前摘要语言，供 Compose 取 collectAsState 初值用（避免首帧显示默认值再跳变）。 */
+    fun currentSummaryLanguage(): SummaryLanguage = SummaryLanguage.fromStorage(
+        settings.getString(SUMMARY_LANGUAGE_KEY, SummaryLanguage.FOLLOW_SYSTEM.storageValue)
+    )
+
     fun setSummaryLanguage(language: SummaryLanguage) {
         settings.putString(SUMMARY_LANGUAGE_KEY, language.storageValue)
     }
