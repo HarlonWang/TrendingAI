@@ -3,9 +3,17 @@
 # 商店物料偶尔才改，改了即同步，不必等发版；发版侧则固定跳过 metadata/截图。
 #
 # 口径（见 memory/reference_fastlane_supply.md）：
-#   - 仓库 fastlane/metadata 是商品详情的唯一事实源，截图上传是整体替换，文案勿在 Play 后台手改
+#   - 仓库 fastlane/metadata 是商品详情的唯一事实源，文案勿在 Play 后台手改
 #   - changelogs 跳过：发版说明随 AAB 在发版工作流上传
 #   - 密钥经 SUPPLY_JSON_KEY_DATA 环境变量传入（fastlane 原生识别），不落盘
+#
+# sync_image_upload 必须开：默认（false）下 supply 对图片是无条件全量重传——截图先
+# clear_screenshots 再逐张上传，icon/featureGraphic 直接覆盖。Play 不做内容去重，重传
+# 即算资源替换，于是「只改了一行文案」也会被记成「更改应用图标 / 截图 / 置顶大图」并连
+# 带提审（2026-08-11 的 #97 就是这么触发的：图片自 08-09 起一字节未动，仍全量重传）。
+# 开启后 supply 用 edits.images.list 返回的 sha256 与本地文件 hash 比对，相同则跳过；
+# 截图是按文件名排序的顺序敏感贪心匹配，中间插一张会导致其后的远端图被删掉重传。
+# 验证方式：看日志有无「🟰 Skipping upload ... as remote sha256 matches.」。
 name: Play Listing Sync
 
 on:
@@ -37,4 +45,5 @@ jobs:
           fastlane supply --package_name whl.trending.ai \
             --metadata_path fastlane/metadata/android \
             --skip_upload_apk true --skip_upload_aab true \
-            --skip_upload_changelogs true
+            --skip_upload_changelogs true \
+            --sync_image_upload true
