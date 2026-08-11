@@ -3,9 +3,11 @@ package whl.trending.ai.ui.common
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
@@ -37,6 +39,11 @@ import whl.trending.ai.core.DateTimeUtils
  * 放在列表的第一个 item 里、随内容滚动退场，不做常驻栏——常驻会挤内容，也会跟沉浸式浏览
  * 的头部退场逻辑打架。
  *
+ * **居中不是装饰**：左对齐时它与列表项同宽同边距、文字起点又跟序号圆点对齐而非标题对齐，
+ * 读起来像"第 0 条内容"。居中本身就是「我不属于内容流」的信号——这行文字原先待在列表
+ * 尾部时就是居中灰字，从不显突，挪到头部后一并把那个信号带过来。与首项之间留出比自身
+ * 内边距更大的空隙，进一步和 divider 分隔的内容项拉开。
+ *
  * 时间为什么不用相对时间（"3 小时前"）：三源都是日更节律，相对时间会把正常节律说成
  * 「13 小时前更新」，读起来像陈旧数据。详见 [DateTimeUtils.updateStamp] 的说明。
  *
@@ -52,21 +59,21 @@ fun SourceMetaBar(
         modifier = modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.Center,
     ) {
         Text(
             text = text,
-            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.width(6.dp))
         Icon(
             imageVector = Icons.Outlined.Info,
             contentDescription = stringResource(Res.string.action_help),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(14.dp),
         )
     }
 }

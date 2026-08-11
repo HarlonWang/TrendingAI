@@ -85,7 +85,7 @@
     <string name="meta_generated">Generated %1$s</string>
     <string name="meta_batch">%1$s · %2$s batch</string>
     <string name="meta_snapshot">%1$s · %2$s batch snapshot</string>
-    <string name="meta_ph_scope">%1$s · covers the previous day&apos;s launches</string>
+    <string name="meta_ph_scope">%1$s · previous day&apos;s launches</string>
 
     <!-- 数据来源与更新说明页 -->
     <string name="data_sources_title">Data Sources &amp; Updates</string>
