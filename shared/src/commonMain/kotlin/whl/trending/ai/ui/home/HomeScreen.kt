@@ -89,8 +89,6 @@ fun HomeScreen(
     onNavigateToGithubProfile: () -> Unit = {},
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    /** 各列表头部抓取时机条的落点：带源标识跳「数据来源与更新」页 */
-    onOpenDataSources: (source: String) -> Unit = {},
 ) {
     val homeViewModel: HomeViewModel = viewModel {
         // Nav3 的默认 entry decorator 已接 SavedStateRegistry，createSavedStateHandle 应当可用；
@@ -203,19 +201,16 @@ fun HomeScreen(
                                 when (selectedSource) {
                                     TrendingSource.GitHub -> TrendingScreen(
                                         onNavigateToDetail = onNavigateToDetail,
-                                        onOpenDataSources = onOpenDataSources,
                                         viewModel = viewModel { TrendingViewModel() }
                                     )
                                     TrendingSource.HackerNews -> FeedScreen(
                                         viewModel = viewModel(key = "hackernews") { FeedViewModel("hackernews") },
                                         onOpenUrl = onOpenUrl,
                                         onOpenDigest = onOpenDigest,
-                                        onOpenDataSources = onOpenDataSources,
                                     )
                                     TrendingSource.ProductHunt -> FeedScreen(
                                         viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
                                         onOpenUrl = onOpenUrl,
-                                        onOpenDataSources = onOpenDataSources,
                                     )
                                 }
                                 // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
@@ -246,7 +241,6 @@ fun HomeScreen(
                                 onNavigateToSubscribe = onNavigateToSubscribe,
                                 viewModel = viewModel { PicksViewModel() },
                                 onOpenDigest = onOpenDigest,
-                                onOpenDataSources = onOpenDataSources,
                             )
                             HomeTab.Me -> ProfileScreen(
                                 onNavigateToGithubProfile = onNavigateToGithubProfile,

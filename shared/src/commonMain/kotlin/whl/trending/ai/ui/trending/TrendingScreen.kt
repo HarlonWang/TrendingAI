@@ -65,7 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.InfoDialog
-import whl.trending.ai.ui.common.SourceMetaBar
+import whl.trending.ai.ui.common.SourceMetaFooter
 import whl.trending.ai.ui.common.snapshotStampText
 import whl.trending.ai.ui.common.updateStampText
 import whl.trending.ai.ui.common.withBatchSuffix
@@ -129,8 +129,6 @@ import kotlin.time.Clock
 fun TrendingScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     modifier: Modifier = Modifier,
-    /** 列表头部抓取时机条的落点：带源标识跳「数据来源与更新」页 */
-    onOpenDataSources: (source: String) -> Unit = {},
     viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -166,7 +164,6 @@ fun TrendingScreen(
             onRefresh = { viewModel.fetchData(isRefresh = true) },
             onNavigateToDetail = onNavigateToDetail,
             onStarRepo = if (starEnabled) viewModel::starRepo else null,
-            onOpenDataSources = onOpenDataSources,
         )
         SnackbarHost(
             hostState = snackbarHostState,
@@ -225,7 +222,6 @@ private fun RepoList(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     /** 非空时列表项菜单显示「Star 到 GitHub」，null（不支持登录的平台）则隐藏 */
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
-    onOpenDataSources: (source: String) -> Unit = {},
 ) {
     val state = rememberPullToRefreshState()
     val listState = rememberLazyListState()
@@ -313,19 +309,6 @@ private fun RepoList(
                         bottom = LocalContentBottomPadding.current,
                     ),
                 ) {
-                // 抓取时机条：历史快照态显示所看批次的日期，实时态显示最近一次抓取时刻
-                item {
-                    val stampText = if (uiState.selectedDate != null) {
-                        snapshotStampText(uiState.selectedDate, uiState.selectedBatch ?: "am")
-                    } else {
-                        updateStampText(uiState.capturedAt)?.let {
-                            withBatchSuffix(it, uiState.currentBatch)
-                        }
-                    }
-                    stampText?.let {
-                        SourceMetaBar(text = it, onClick = { onOpenDataSources("github") })
-                    }
-                }
                 items(
                     count = displayRepos.size,
                     key = { index -> displayRepos[index].url }
@@ -368,6 +351,17 @@ private fun RepoList(
                     }
                 }
 
+                // 抓取时机行：历史快照态显示所看批次的日期，实时态显示最近一次抓取时刻
+                item {
+                    val stampText = if (uiState.selectedDate != null) {
+                        snapshotStampText(uiState.selectedDate, uiState.selectedBatch ?: "am")
+                    } else {
+                        updateStampText(uiState.capturedAt)?.let {
+                            withBatchSuffix(it, uiState.currentBatch)
+                        }
+                    }
+                    stampText?.let { SourceMetaFooter(text = it) }
+                }
             }
             }
         }

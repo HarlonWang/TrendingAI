@@ -24,8 +24,6 @@ data class FeedUiState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val items: List<FeedItem> = emptyList(),
-    /** 本页数据源标识（hackernews / producthunt），抓取时机条据此挂口径后缀与跳转锚点 */
-    val source: String = "",
     /** 本源最近一次抓取时刻，**UTC 原串**——展示侧（抓取时机条）自行换算本地时区并决定格式 */
     val capturedAt: String = ""
 )
@@ -36,7 +34,7 @@ class FeedViewModel(
     private val settingsManager: SettingsManager = globalSettingsManager,
     private val cache: LastDataCache = globalLastDataCache
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(FeedUiState(source = source))
+    private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
     private var fetchJob: Job? = null

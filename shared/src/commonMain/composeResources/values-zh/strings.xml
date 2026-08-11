@@ -77,7 +77,7 @@
     <string name="history_info_title">历史存档</string>
     <string name="history_info_content">系统记录了每日两个批次（上午/下午）的数据快照，您可以回溯并查看过往任何时段的趋势。</string>
 
-    <!-- 列表头部的抓取时机条：时间片 → 动词包装 → 各源后缀，三层拼出整句 -->
+    <!-- 列表尾部的抓取时机行：时间片 → 动词包装 → 批次后缀，三层拼出整句 -->
     <string name="update_stamp_today">今天 %1$s</string>
     <string name="update_stamp_yesterday">昨天 %1$s</string>
     <string name="update_stamp_earlier">%1$s月%2$s日 %3$s</string>
@@ -85,7 +85,6 @@
     <string name="meta_generated">%1$s 生成</string>
     <string name="meta_batch">%1$s · %2$s批次</string>
     <string name="meta_snapshot">%1$s · %2$s批次快照</string>
-    <string name="meta_ph_scope">%1$s · 收录前一日发布</string>
 
     <!-- 数据来源与更新说明页 -->
     <string name="data_sources_title">数据来源与更新</string>

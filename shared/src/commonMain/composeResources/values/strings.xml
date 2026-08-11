@@ -77,7 +77,7 @@
     <string name="history_info_title">History Snapshot</string>
     <string name="history_info_content">The system records data snapshots for both morning (AM) and afternoon (PM) sessions daily, allowing you to trace project growth over time.</string>
 
-    <!-- 列表头部的抓取时机条：时间片 → 动词包装 → 各源后缀，三层拼出整句 -->
+    <!-- 列表尾部的抓取时机行：时间片 → 动词包装 → 批次后缀，三层拼出整句 -->
     <string name="update_stamp_today">today at %1$s</string>
     <string name="update_stamp_yesterday">yesterday at %1$s</string>
     <string name="update_stamp_earlier">%1$s/%2$s at %3$s</string>
@@ -85,7 +85,6 @@
     <string name="meta_generated">Generated %1$s</string>
     <string name="meta_batch">%1$s · %2$s batch</string>
     <string name="meta_snapshot">%1$s · %2$s batch snapshot</string>
-    <string name="meta_ph_scope">%1$s · previous day&apos;s launches</string>
 
     <!-- 数据来源与更新说明页 -->
     <string name="data_sources_title">Data Sources &amp; Updates</string>

@@ -47,7 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.SourceMetaBar
+import whl.trending.ai.ui.common.SourceMetaFooter
 import whl.trending.ai.ui.common.generatedStampText
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
@@ -87,8 +87,6 @@ fun PicksScreen(
     modifier: Modifier = Modifier,
     viewModel: PicksViewModel,
     onOpenDigest: (DigestPage) -> Unit = {},
-    /** 列表头部生成时机条的落点：跳「数据来源与更新」页的 Picks 组 */
-    onOpenDataSources: (source: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -161,7 +159,6 @@ fun PicksScreen(
                         debut = picks.debut,
                         deepDive = picks.deepDive,
                         generatedAt = picks.metadata.generatedAt,
-                        onOpenDataSources = { onOpenDataSources("picks") },
                         favoriteUrls = favoriteUrls,
                         showNewsletterBanner = subscribedEmail == null && !bannerDismissed,
                         onSubscribeClick = {
@@ -212,9 +209,8 @@ private fun handleItemClick(
 private fun PicksList(
     debut: List<PickItem>,
     deepDive: List<PickItem>,
-    /** 本批 picks 的生成时刻（UTC 原串），空串时不渲染生成时机条 */
+    /** 本批 picks 的生成时刻（UTC 原串），空串时不渲染生成时机行 */
     generatedAt: String,
-    onOpenDataSources: () -> Unit,
     favoriteUrls: Set<String>,
     showNewsletterBanner: Boolean,
     onSubscribeClick: () -> Unit,
@@ -231,13 +227,6 @@ private fun PicksList(
             bottom = LocalContentBottomPadding.current,
         ),
     ) {
-        // 生成时机条：Picks 是每天一批生成的，说「生成」而不是「更新」
-        item {
-            generatedStampText(generatedAt)?.let {
-                SourceMetaBar(text = it, onClick = onOpenDataSources)
-            }
-        }
-
         // Newsletter 订阅入口（已订阅或手动关闭后隐藏）：把埋在设置深处的订阅提到每日回访的主场景
         if (showNewsletterBanner) {
             item { NewsletterBanner(onClick = onSubscribeClick, onDismiss = onDismissBanner) }
@@ -273,7 +262,12 @@ private fun PicksList(
         }
 
         // 尾部间距
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        // 生成时机行：Picks 是每天一批生成的，说「生成」而不是「更新」。
+        // 它自带 24dp 上下留白，接替了原先收尾用的 16dp Spacer
+        item {
+            generatedStampText(generatedAt)?.let { SourceMetaFooter(text = it) }
+                ?: Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
