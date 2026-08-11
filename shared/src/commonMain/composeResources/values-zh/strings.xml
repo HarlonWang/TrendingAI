@@ -41,7 +41,6 @@
     <string name="donate">捐助我们</string>
     <string name="donate_message">我们利用有限的业余时间打造 Trending AI，希望帮你更高效地发现全球技术热点。\n如果它对你有帮助，欢迎捐赠支持我们。\n\n所有捐赠都将用于改善服务器与运营，让产品持续前行。</string>
     <string name="donate_github_desc">GitHub 赞助 Pro · 解锁更宽裕的每日聊天额度，以及更强、更新的模型</string>
-    <string name="last_updated">最后更新于: %1$s</string>
     <string name="stars_total">Stars %1$s</string>
     <string name="stars_period">Stars (%1$s) %2$s</string>
     <string name="no_data">暂无数据</string>
@@ -75,10 +74,38 @@
     <string name="cancel">取消</string>
     <string name="select_date">选择日期</string>
     <string name="action_help">帮助</string>
-    <string name="update_info_title">更新机制</string>
-    <string name="update_info_content">数据来源于 GitHub 官方 Trending 榜单，与官网内容保持一致。\n\n榜单数据每日更新两次（间隔约 12 小时），确保您能及时发现最新的热门项目。</string>
     <string name="history_info_title">历史存档</string>
     <string name="history_info_content">系统记录了每日两个批次（上午/下午）的数据快照，您可以回溯并查看过往任何时段的趋势。</string>
+
+    <!-- 列表头部的抓取时机条：时间片 → 动词包装 → 各源后缀，三层拼出整句 -->
+    <string name="update_stamp_today">今天 %1$s</string>
+    <string name="update_stamp_yesterday">昨天 %1$s</string>
+    <string name="update_stamp_earlier">%1$s月%2$s日 %3$s</string>
+    <string name="meta_updated">%1$s 更新</string>
+    <string name="meta_generated">%1$s 生成</string>
+    <string name="meta_batch">%1$s · %2$s批次</string>
+    <string name="meta_snapshot">%1$s · %2$s批次快照</string>
+    <string name="meta_ph_scope">%1$s · 收录前一日发布</string>
+
+    <!-- 数据来源与更新说明页 -->
+    <string name="data_sources_title">数据来源与更新</string>
+    <string name="github_title">GitHub</string>
+    <string name="data_sources_desc">三源抓取时机与收录口径</string>
+    <string name="ds_label_source">来源</string>
+    <string name="ds_label_schedule">更新节奏</string>
+    <string name="ds_label_scope">收录口径</string>
+    <string name="ds_github_source">GitHub 官方 Trending daily 榜</string>
+    <string name="ds_github_schedule">每天两批 — UTC 00:17、11:17</string>
+    <string name="ds_github_scope">NEW 标表示 24 小时内首次登上榜单</string>
+    <string name="ds_hn_source">Hacker News 官方 API — Top / Best Stories</string>
+    <string name="ds_hn_schedule">每天一批 — UTC 00:30</string>
+    <string name="ds_hn_scope">按日归档，所以一天之内榜面不变</string>
+    <string name="ds_ph_source">Product Hunt GraphQL API — Top Products</string>
+    <string name="ds_ph_schedule">每天一批 — UTC 00:30</string>
+    <string name="ds_ph_scope">收录前一日发布的产品，等投票充分积累后再抓，不是延迟</string>
+    <string name="ds_picks_source">由 AI 从三个来源中精选</string>
+    <string name="ds_picks_schedule">每天一批 — UTC 01:00</string>
+    <string name="ds_picks_scope">近 5 天入选过的会降权，所以昨天的热门今天可能不再出现</string>
     <string name="feedback">反馈建议</string>
     <string name="feedback_desc">提交反馈、问题或改进建议</string>
     <string name="feedback_content_placeholder">描述你的反馈或建议…</string>

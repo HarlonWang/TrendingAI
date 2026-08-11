@@ -65,6 +65,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.ui.common.InfoDialog
+import whl.trending.ai.ui.common.SourceMetaBar
+import whl.trending.ai.ui.common.snapshotStampText
+import whl.trending.ai.ui.common.updateStampText
+import whl.trending.ai.ui.common.withBatchSuffix
 import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
@@ -91,7 +95,6 @@ import trendingai.shared.generated.resources.history_date
 import trendingai.shared.generated.resources.history_info_content
 import trendingai.shared.generated.resources.history_info_title
 import trendingai.shared.generated.resources.history_trending
-import trendingai.shared.generated.resources.last_updated
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.no_new_repos
 import trendingai.shared.generated.resources.period_daily
@@ -105,8 +108,6 @@ import trendingai.shared.generated.resources.star_need_login
 import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.stars_period
 import trendingai.shared.generated.resources.stars_total
-import trendingai.shared.generated.resources.update_info_content
-import trendingai.shared.generated.resources.update_info_title
 import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
@@ -128,6 +129,8 @@ import kotlin.time.Clock
 fun TrendingScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** 列表头部抓取时机条的落点：带源标识跳「数据来源与更新」页 */
+    onOpenDataSources: (source: String) -> Unit = {},
     viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -163,6 +166,7 @@ fun TrendingScreen(
             onRefresh = { viewModel.fetchData(isRefresh = true) },
             onNavigateToDetail = onNavigateToDetail,
             onStarRepo = if (starEnabled) viewModel::starRepo else null,
+            onOpenDataSources = onOpenDataSources,
         )
         SnackbarHost(
             hostState = snackbarHostState,
@@ -221,6 +225,7 @@ private fun RepoList(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     /** 非空时列表项菜单显示「Star 到 GitHub」，null（不支持登录的平台）则隐藏 */
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
+    onOpenDataSources: (source: String) -> Unit = {},
 ) {
     val state = rememberPullToRefreshState()
     val listState = rememberLazyListState()
@@ -308,6 +313,19 @@ private fun RepoList(
                         bottom = LocalContentBottomPadding.current,
                     ),
                 ) {
+                // 抓取时机条：历史快照态显示所看批次的日期，实时态显示最近一次抓取时刻
+                item {
+                    val stampText = if (uiState.selectedDate != null) {
+                        snapshotStampText(uiState.selectedDate, uiState.selectedBatch ?: "am")
+                    } else {
+                        updateStampText(uiState.capturedAt)?.let {
+                            withBatchSuffix(it, uiState.currentBatch)
+                        }
+                    }
+                    stampText?.let {
+                        SourceMetaBar(text = it, onClick = { onOpenDataSources("github") })
+                    }
+                }
                 items(
                     count = displayRepos.size,
                     key = { index -> displayRepos[index].url }
@@ -350,17 +368,6 @@ private fun RepoList(
                     }
                 }
 
-                if (uiState.capturedAt.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(Res.string.last_updated, uiState.capturedAt),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                            textAlign = TextAlign.Center,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
             }
             }
         }
@@ -574,29 +581,14 @@ private fun FilterBottomSheet(
 
     var tempPeriod by remember { mutableStateOf(selectedPeriod) }
     var tempLanguage by remember { mutableStateOf(selectedLanguage) }
-    var showHelpDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    if (showHelpDialog) {
-        InfoDialog(
-            title = stringResource(Res.string.update_info_title),
-            content = stringResource(Res.string.update_info_content),
-            onDismiss = { showHelpDialog = false }
-        )
-    }
-
+    // 这里曾挂一个「更新机制」InfoDialog：更新节奏与筛选周期/语言无关，位置本就错了，
+    // 且那份文案已并入「数据来源与更新」页（从列表头部的抓取时机条进入）。
     TrendingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         title = stringResource(Res.string.filter_options),
-        titleAction = {
-            IconButton(onClick = { showHelpDialog = true }) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = stringResource(Res.string.action_help),
-                )
-            }
-        },
     ) {
 
             Text(

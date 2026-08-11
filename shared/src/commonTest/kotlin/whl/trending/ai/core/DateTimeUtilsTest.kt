@@ -98,4 +98,40 @@ class DateTimeUtilsTest {
         assertEquals(DateTimeUtils.RelativeUnit.ABSOLUTE, result.unit)
         assertEquals("not-a-date", result.absolute)
     }
+
+    // updateStamp 的断言刻意避开 YESTERDAY：本地日期由运行环境时区决定，"now - 24h"
+    // 在 DST 切换日的某些时区会仍落在同一天。同一时刻（diff=0）与 -30 天则在任何时区都成立。
+    @Test
+    fun update_stamp_same_instant_is_today() {
+        val now = Instant.parse("2026-06-13T12:00:00Z")
+        val stamp = DateTimeUtils.updateStamp(now.toString(), now)
+        assertEquals(DateTimeUtils.UpdateStampUnit.TODAY, stamp.unit)
+        // HH:mm，零填充到定长 5
+        assertEquals(5, stamp.time.length)
+        assertEquals(':', stamp.time[2])
+    }
+
+    @Test
+    fun update_stamp_long_past_is_earlier_with_date_parts() {
+        val now = Instant.parse("2026-06-13T12:00:00Z")
+        val stamp = DateTimeUtils.updateStamp((now - 30.days).toString(), now)
+        assertEquals(DateTimeUtils.UpdateStampUnit.EARLIER, stamp.unit)
+        assertTrue(stamp.month in 1..12)
+        assertTrue(stamp.day in 1..31)
+    }
+
+    @Test
+    fun update_stamp_future_instant_degrades_to_today() {
+        // 设备时钟慢于服务端时，抓取时刻会落在"未来"——宁可说今天，也不要冒出负数天
+        val now = Instant.parse("2026-06-13T12:00:00Z")
+        val stamp = DateTimeUtils.updateStamp((now + 2.days).toString(), now)
+        assertEquals(DateTimeUtils.UpdateStampUnit.TODAY, stamp.unit)
+    }
+
+    @Test
+    fun update_stamp_unparsable_is_unknown() {
+        val now = Instant.parse("2026-06-13T12:00:00Z")
+        assertEquals(DateTimeUtils.UpdateStampUnit.UNKNOWN, DateTimeUtils.updateStamp("", now).unit)
+        assertEquals(DateTimeUtils.UpdateStampUnit.UNKNOWN, DateTimeUtils.updateStamp("not-a-date", now).unit)
+    }
 }

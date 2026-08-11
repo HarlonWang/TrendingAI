@@ -4,7 +4,6 @@ import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.data.model.TrendingRepo
 import whl.trending.ai.data.model.TrendingResponse
 import whl.trending.ai.data.repository.TrendingRepository
-import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.SettingsManager
@@ -28,7 +27,10 @@ import kotlinx.coroutines.launch
 data class TrendingUiState(
     val repos: List<TrendingRepo> = emptyList(),
     val since: String = "",
+    /** 本批数据的抓取时刻，**UTC 原串**——展示侧（抓取时机条）自行换算本地时区并决定格式 */
     val capturedAt: String = "",
+    /** 本批数据所属批次：'am' / 'pm'，随抓取时机条一起显示 */
+    val currentBatch: String = "",
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val selectedPeriod: String = "daily",
@@ -90,7 +92,8 @@ class TrendingViewModel(
                     it.copy(
                         repos = cached.data,
                         since = cached.metadata.since,
-                        capturedAt = DateTimeUtils.formatToLocalTime(cached.metadata.capturedAt),
+                        capturedAt = cached.metadata.capturedAt,
+                        currentBatch = cached.metadata.batch,
                         isLoading = false,
                         isRefreshing = true,
                     )
@@ -131,7 +134,8 @@ class TrendingViewModel(
                 it.copy(
                     repos = response.data,
                     since = response.metadata.since,
-                    capturedAt = DateTimeUtils.formatToLocalTime(response.metadata.capturedAt),
+                    capturedAt = response.metadata.capturedAt,
+                    currentBatch = response.metadata.batch,
                     isLoading = false,
                     isRefreshing = false,
                     error = null

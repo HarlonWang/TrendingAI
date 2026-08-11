@@ -36,6 +36,46 @@ object DateTimeUtils {
     }
 
     /**
+     * 抓取时刻的日期锚定分桶。
+     *
+     * 刻意不复用 [relativeTime]：三源都是**日更节律**（HN/PH 每天一批、GitHub 每天两批，
+     * 间隔 11~13 小时），相对时间会把正常节律说成「13 小时前更新」，读起来像陈旧数据；
+     * 「今天 08:30 更新」传达的才是「这是今天的数据」。相对时间擅长的是连续流，不是日更。
+     *
+     * [UNKNOWN] 覆盖解析失败与空串，展示侧据此整行不渲染。
+     */
+    enum class UpdateStampUnit { TODAY, YESTERDAY, EARLIER, UNKNOWN }
+
+    /** [time] 为本地时区的 HH:mm；[month]/[day] 仅 [UpdateStampUnit.EARLIER] 有意义。 */
+    data class UpdateStamp(
+        val unit: UpdateStampUnit,
+        val time: String = "",
+        val month: Int = 0,
+        val day: Int = 0,
+    )
+
+    /**
+     * 把 UTC 抓取时刻换算成本地时区的日期锚定描述。
+     *
+     * 未来时刻（设备时钟慢、或时钟漂移）一律归入 [UpdateStampUnit.TODAY]——宁可说「今天」，
+     * 也不要冒出「-1 天前」这种自证 bug 的文案。
+     */
+    fun updateStamp(utcString: String, now: Instant = Clock.System.now()): UpdateStamp {
+        val instant = parseInstantOrNull(utcString) ?: return UpdateStamp(UpdateStampUnit.UNKNOWN)
+        val tz = TimeZone.currentSystemDefault()
+        val local = instant.toLocalDateTime(tz)
+        val today = now.toLocalDateTime(tz).date
+        val time = "${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
+        val diffDays = today.toEpochDays().toLong() - local.date.toEpochDays().toLong()
+        val unit = when {
+            diffDays <= 0L -> UpdateStampUnit.TODAY
+            diffDays == 1L -> UpdateStampUnit.YESTERDAY
+            else -> UpdateStampUnit.EARLIER
+        }
+        return UpdateStamp(unit, time, local.month.number, local.day)
+    }
+
+    /**
      * 距未来时刻的剩余整小时数（向上取整；已过期返回 0）。解析失败返回 null。
      * 用于配额卡「约 N 小时后重置」——分钟级精度对每日重置没有意义，不做倒计时刷新。
      */

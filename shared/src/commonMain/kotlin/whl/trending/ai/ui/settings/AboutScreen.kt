@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -60,6 +61,8 @@ import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.account_link_sponsor_note
+import trendingai.shared.generated.resources.data_sources_desc
+import trendingai.shared.generated.resources.data_sources_title
 import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.official_website
@@ -71,6 +74,7 @@ import trendingai.shared.generated.resources.version_up_to_date
 fun AboutScreen(
     onBack: () -> Unit,
     onNavigateToWebPage: (url: String, title: String) -> Unit,
+    onNavigateToDataSources: () -> Unit = {},
 ) {
     val isIos = isIosPlatform()
     val uriHandler = LocalUriHandler.current
@@ -166,6 +170,15 @@ fun AboutScreen(
                     icon = Icons.Default.Public,
                     title = { Text(stringResource(Res.string.official_website)) },
                     onClick = { uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL) },
+                )
+                settingsItem(
+                    icon = Icons.Outlined.Info,
+                    title = { Text(stringResource(Res.string.data_sources_title)) },
+                    description = { Text(stringResource(Res.string.data_sources_desc)) },
+                    onClick = {
+                        trackEvent("settings_data_sources")
+                        onNavigateToDataSources()
+                    },
                 )
                 settingsItem(
                     icon = Icons.Default.VolunteerActivism,

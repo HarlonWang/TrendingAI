@@ -35,6 +35,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import whl.trending.ai.ui.common.SourceMetaBar
+import whl.trending.ai.ui.common.updateStampText
+import whl.trending.ai.ui.common.withPhScopeSuffix
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import androidx.compose.ui.unit.sp
@@ -92,7 +95,9 @@ fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel,
     onOpenUrl: (url: String) -> Unit,
-    onOpenDigest: (DigestPage) -> Unit = {}
+    onOpenDigest: (DigestPage) -> Unit = {},
+    /** 列表头部抓取时机条的落点：带源标识跳「数据来源与更新」页 */
+    onOpenDataSources: (source: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -165,6 +170,18 @@ fun FeedScreen(
                         bottom = LocalContentBottomPadding.current,
                     ),
                 ) {
+                    // 抓取时机条：PH 额外挂收录口径后缀——「收录前一日发布」是最容易被误读成
+                    // 「数据慢一天」的一条，值得在现场就说清，而不是等用户点进说明页
+                    item {
+                        updateStampText(uiState.capturedAt)?.let { stamp ->
+                            val text = if (uiState.source == "producthunt") {
+                                withPhScopeSuffix(stamp)
+                            } else {
+                                stamp
+                            }
+                            SourceMetaBar(text = text, onClick = { onOpenDataSources(uiState.source) })
+                        }
+                    }
                     itemsIndexed(
                         uiState.items,
                         key = { _, item -> "${item.source}_${item.externalId}" }

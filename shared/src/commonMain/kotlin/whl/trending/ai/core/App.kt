@@ -11,6 +11,7 @@ import whl.trending.ai.ui.profile.RepoListScreen
 import whl.trending.ai.ui.settings.AboutScreen
 import whl.trending.ai.ui.settings.AppearanceScreen
 import whl.trending.ai.ui.settings.ColorLabScreen
+import whl.trending.ai.ui.settings.DataSourcesScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.digest.DigestScreen
@@ -59,6 +60,9 @@ data object Appearance
 data object ColorLab
 data object Settings
 data object About
+
+/** 数据来源与更新说明。[anchor] 为源标识（github/hackernews/producthunt/picks），进页面后定位到对应组。 */
+data class DataSources(val anchor: String? = null)
 data object Feedback
 data object Subscribe
 data class RepoDetail(val owner: String, val repo: String)
@@ -170,6 +174,7 @@ fun App() {
                                     onNavigateToGithubProfile = { backStack.add(GithubProfile) },
                                     onNavigateToFavorites = { backStack.add(Favorites) },
                                     onNavigateToSettings = { backStack.add(Settings) },
+                                    onOpenDataSources = { source -> backStack.add(DataSources(source)) },
                                 )
                             }
 
@@ -199,7 +204,15 @@ fun App() {
                                     },
                                     onNavigateToWebPage = { url, title ->
                                         openExternalUrl(url, title)
-                                    }
+                                    },
+                                    onNavigateToDataSources = { backStack.add(DataSources()) },
+                                )
+                            }
+
+                            is DataSources -> NavEntry(key) {
+                                DataSourcesScreen(
+                                    onBack = { backStack.safePop() },
+                                    anchor = key.anchor,
                                 )
                             }
 
