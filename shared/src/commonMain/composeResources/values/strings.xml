@@ -89,7 +89,7 @@
     <!-- 数据来源与更新说明页 -->
     <string name="data_sources_title">Data Sources &amp; Updates</string>
     <string name="github_title">GitHub</string>
-    <string name="data_sources_desc">When each source is crawled and what it covers</string>
+    <string name="data_sources_desc">How often each source updates and what it covers</string>
     <string name="ds_label_source">Source</string>
     <string name="ds_label_scope">Coverage</string>
     <string name="ds_github_source">GitHub&apos;s official Trending board · updated twice a day</string>
@@ -97,7 +97,7 @@
     <string name="ds_hn_source">Hacker News&apos; official top stories · updated once a day</string>
     <string name="ds_hn_scope">Archived by day, so the board stays put within a single day</string>
     <string name="ds_ph_source">Product Hunt&apos;s daily top products · updated once a day</string>
-    <string name="ds_ph_scope">Covers the previous day&apos;s launches — crawled once community voting has settled, not a delay</string>
+    <string name="ds_ph_scope">Covers the previous day&apos;s launches, by which point community voting has settled</string>
     <string name="ds_picks_source">Curated by AI across all three sources · generated once a day</string>
     <string name="ds_picks_scope">Recent picks are down-weighted, so yesterday&apos;s hit may not show up again</string>
     <string name="feedback">Feedback</string>
