@@ -203,7 +203,6 @@ fun App() {
                                     onNavigateToWebPage = { url, title ->
                                         openExternalUrl(url, title)
                                     },
-                                    onNavigateToDataSources = { backStack.add(DataSources) },
                                 )
                             }
 
@@ -257,6 +256,7 @@ fun App() {
                                     onNavigateToSubscribe = { backStack.add(Subscribe) },
                                     onNavigateToFeedback = { backStack.add(Feedback) },
                                     onNavigateToAbout = { backStack.add(About) },
+                                    onNavigateToDataSources = { backStack.add(DataSources) },
                                 )
                             }
 

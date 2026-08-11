@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SwipeVertical
 import androidx.compose.material.icons.filled.Translate
@@ -57,6 +58,8 @@ import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.close
+import trendingai.shared.generated.resources.data_sources_desc
+import trendingai.shared.generated.resources.data_sources_title
 import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.default_home_tab
@@ -132,6 +135,7 @@ fun SettingsScreen(
     onNavigateToAppearance: () -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onNavigateToDataSources: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
 ) {
     val isIos = isIosPlatform()
@@ -433,6 +437,17 @@ fun SettingsScreen(
                             val enabled = !openLinksInCustomTab
                             trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
                             globalSettingsManager.setOpenLinksInCustomTab(enabled)
+                        },
+                    )
+                    // 三源抓取时机与收录口径。挂在设置而非「关于」里：它解释的是**每天看到的
+                    // 内容从哪来**，属于日常疑问，不是版本/致谢那类身份信息
+                    settingsItem(
+                        icon = Icons.Default.Schedule,
+                        title = { Text(stringResource(Res.string.data_sources_title)) },
+                        description = { Text(stringResource(Res.string.data_sources_desc)) },
+                        onClick = {
+                            trackEvent("settings_data_sources")
+                            onNavigateToDataSources()
                         },
                     )
                     settingsItem(
