@@ -90,9 +90,12 @@ import trendingai.shared.generated.resources.feed_unavailable
 import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_following
 import trendingai.shared.generated.resources.profile_repos
+import trendingai.shared.generated.resources.time_days_ago
+import trendingai.shared.generated.resources.time_hours_ago
+import trendingai.shared.generated.resources.time_just_now
+import trendingai.shared.generated.resources.time_minutes_ago
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.TrendingBottomSheet
-import whl.trending.ai.ui.common.relativeTimeText
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 
@@ -415,3 +418,23 @@ private fun emphasizeRepoName(summary: String, repoName: String): AnnotatedStrin
     }
 }
 
+/**
+ * 相对时间文案；超 7 天或解析失败回退到绝对时间。
+ *
+ * 不 `remember`：里面只是几个 Instant 算术，而缓存住 now 会让「3 小时前」在页面长时间
+ * 停留、或从后台切回后仍显示旧值（key 只有时间戳本身，永不失效）。
+ *
+ * 只服务这里的动态列表——那是连续流式的时间点。列表的**更新时机**不用它：三源是日更节律，
+ * 相对时间会把正常节律说成「13 小时前」，那边走 [DateTimeUtils.updateStamp]。
+ */
+@Composable
+private fun relativeTimeText(createdAt: String): String {
+    val rt = DateTimeUtils.relativeTime(createdAt)
+    return when (rt.unit) {
+        DateTimeUtils.RelativeUnit.JUST_NOW -> stringResource(Res.string.time_just_now)
+        DateTimeUtils.RelativeUnit.MINUTES -> stringResource(Res.string.time_minutes_ago, rt.value)
+        DateTimeUtils.RelativeUnit.HOURS -> stringResource(Res.string.time_hours_ago, rt.value)
+        DateTimeUtils.RelativeUnit.DAYS -> stringResource(Res.string.time_days_ago, rt.value)
+        DateTimeUtils.RelativeUnit.ABSOLUTE -> rt.absolute
+    }
+}

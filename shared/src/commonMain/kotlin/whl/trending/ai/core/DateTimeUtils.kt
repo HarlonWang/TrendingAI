@@ -66,7 +66,7 @@ object DateTimeUtils {
         val local = instant.toLocalDateTime(tz)
         val today = now.toLocalDateTime(tz).date
         val time = "${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
-        val diffDays = today.toEpochDays().toLong() - local.date.toEpochDays().toLong()
+        val diffDays = today.toEpochDays() - local.date.toEpochDays()
         val unit = when {
             diffDays <= 0L -> UpdateStampUnit.TODAY
             diffDays == 1L -> UpdateStampUnit.YESTERDAY
