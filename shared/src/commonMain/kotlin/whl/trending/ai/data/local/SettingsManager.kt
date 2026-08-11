@@ -159,6 +159,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
     private val TRENDING_SOURCE_KEY = "prefs_trending_source"
+    private val IMMERSIVE_BROWSING_KEY = "prefs_immersive_browsing"
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
@@ -588,6 +589,20 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setOpenLinksInCustomTab(value: Boolean) {
         settings.putBoolean(OPEN_LINKS_IN_CUSTOM_TAB_KEY, value)
+    }
+
+    /**
+     * 沉浸式浏览：首页各栏跟随滚动收起/恢复（当前阶段为底栏，顶栏与子 tab 行随 #88
+     * 第 3 步接入）。默认 false——常驻的顶/底栏是导航锚点，藏起来换到的屏幕空间不值得
+     * 让所有人默认承担「想操作得先往回滑」的代价，留给需要的人自己打开。
+     * 关闭时首页不接入任何滚动监听（见 ui/home/HomeImmersive.kt 的 null 模式）。
+     */
+    val immersiveBrowsing: Flow<Boolean> = settings.getBooleanFlow(IMMERSIVE_BROWSING_KEY, false)
+
+    fun currentImmersiveBrowsing(): Boolean = settings.getBoolean(IMMERSIVE_BROWSING_KEY, false)
+
+    fun setImmersiveBrowsing(value: Boolean) {
+        settings.putBoolean(IMMERSIVE_BROWSING_KEY, value)
     }
 
     /**

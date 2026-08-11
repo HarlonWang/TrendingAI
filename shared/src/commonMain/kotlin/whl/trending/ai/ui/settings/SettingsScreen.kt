@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SwipeVertical
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -60,6 +61,8 @@ import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.default_home_tab
 import trendingai.shared.generated.resources.default_home_tab_desc
+import trendingai.shared.generated.resources.immersive_browsing
+import trendingai.shared.generated.resources.immersive_browsing_desc
 import trendingai.shared.generated.resources.feedback
 import trendingai.shared.generated.resources.feedback_email_invalid
 import trendingai.shared.generated.resources.feedback_email_placeholder
@@ -136,6 +139,7 @@ fun SettingsScreen(
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(SummaryLanguage.FOLLOW_SYSTEM)
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(true)
+    val immersiveBrowsing by globalSettingsManager.immersiveBrowsing.collectAsState(false)
     val defaultHomeTab by globalSettingsManager.defaultHomeTab.collectAsState(
         remember { globalSettingsManager.currentDefaultHomeTab() }
     )
@@ -329,6 +333,26 @@ fun SettingsScreen(
                             }
                         },
                         onClick = { homeTabMenuExpanded = true },
+                    )
+                    // 沉浸式浏览：默认关。行点击与开关同为切换（与「外链打开方式」一致）
+                    settingsItem(
+                        icon = Icons.Default.SwipeVertical,
+                        title = { Text(stringResource(Res.string.immersive_browsing)) },
+                        description = { Text(stringResource(Res.string.immersive_browsing_desc)) },
+                        trailing = {
+                            Switch(
+                                checked = immersiveBrowsing,
+                                onCheckedChange = { enabled ->
+                                    trackEvent("settings_immersive_toggle", mapOf("enabled" to enabled.toString()))
+                                    globalSettingsManager.setImmersiveBrowsing(enabled)
+                                },
+                            )
+                        },
+                        onClick = {
+                            val enabled = !immersiveBrowsing
+                            trackEvent("settings_immersive_toggle", mapOf("enabled" to enabled.toString()))
+                            globalSettingsManager.setImmersiveBrowsing(enabled)
+                        },
                     )
                 }
             }

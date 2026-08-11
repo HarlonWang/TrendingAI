@@ -173,6 +173,13 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 | `home_open_settings` | `entry=more` 停产，只剩 `entry=topbar`（顶栏齿轮成为首页唯一设置入口）。看总量不受影响，按 entry 分组时 more 的归零是入口删除，不是行为变化 |
 | `home_open_about` | 整体停产（底栏的关于入口删除）。关于页唯一入口回到设置页内，`settings_about`（`SettingsScreen.kt`）自此**重新覆盖全部进入**——0.23.0 节里「只覆盖部分进入」的告警对 ≥1.1.0 不再成立 |
 
+## 沉浸式浏览：新增 `settings_immersive_toggle`（2026-08-10 实现，尚未发版）
+
+设置 › 个性化「沉浸式浏览」开关的切换事件，属性 `enabled`（"true"/"false"）。默认关，
+事件量 = 主动改动开关的人数上界。滚动中的收起/恢复**不打点**（高频无价值）；「开了的人
+是否在用」暂无直接口径，若需要再评估补一条低频首触发事件。#86 时代拟用的
+`settings_hide_bottom_bar_on_scroll` 从未发出，看板上不会有该名字。
+
 ## 首页重构：`tab_double_tap_refresh` 停产（2026-08-10 实现，尚未发版）
 
 双击底栏 tab 触发刷新的功能（#38）随首页重构整体移除（产品决策，各页自带下拉刷新已覆盖），`tab_double_tap_refresh` 事件随之**整体停产**。看板上该事件归零是功能下线，不是采集回归。

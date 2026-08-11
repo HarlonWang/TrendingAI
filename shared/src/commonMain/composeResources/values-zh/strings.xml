@@ -50,6 +50,8 @@
     <string name="new_only_hint">24 小时内首次登上 GitHub 日榜（全语言）的新项目</string>
     <string name="default_home_tab">默认首页</string>
     <string name="default_home_tab_desc">启动时进入的标签页</string>
+    <string name="immersive_browsing">沉浸式浏览</string>
+    <string name="immersive_browsing_desc">向下滑动收起底栏、向上滑动恢复 · 让内容多占一点屏幕</string>
     <string name="daily_picks_notification">每日精选提醒</string>
     <string name="daily_picks_notification_desc">每日精选更新后本地通知提醒，无需推送服务</string>
     <string name="notification_permission_denied">未获得通知权限，请在系统设置中允许通知</string>

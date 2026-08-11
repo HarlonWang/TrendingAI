@@ -159,4 +159,17 @@ class SettingsManagerTest {
         val rebuilt = SettingsManager(settings)
         assertEquals("HackerNews", rebuilt.currentTrendingSource())
     }
+
+    @Test
+    fun immersiveBrowsing_defaults_off_and_persists() = runTest {
+        // 默认关：常驻顶/底栏是导航锚点，沉浸式留给需要的人自己打开
+        assertEquals(false, manager.currentImmersiveBrowsing())
+
+        manager.setImmersiveBrowsing(true)
+        assertEquals(true, manager.currentImmersiveBrowsing())
+
+        // 模拟应用重启：开关状态要能带回来
+        val rebuilt = SettingsManager(settings)
+        assertEquals(true, rebuilt.currentImmersiveBrowsing())
+    }
 }
