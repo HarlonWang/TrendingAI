@@ -46,7 +46,7 @@
   ) { padding -> /* content */ }
   ```
 
-  - 效果：**顶栏底色恒定为 `surfaceContainer`**，比内容区（`background`）深一档，靠这层固定的层次差把顶栏和内容分开——**不随滚动变色**。全 app 统一为 `pinnedScrollBehavior`——顶栏不折叠隐藏。
+  - 效果：**顶栏底色恒定为 `surfaceContainer`**，比内容区（`background`）深一档，靠这层固定的层次差把顶栏和内容分开——**不随滚动变色**。全 app 统一为 `pinnedScrollBehavior`——顶栏不走 M3 折叠。**唯一例外是首页的沉浸式浏览**（设置项，默认关）：开启时首页顶栏/子 tab 行/底栏随滚动经 `translationY` 退场（`ui/home/HomeImmersive.kt`，不改测量高度、内容不重排），与 M3 折叠机制无关；二级页不受影响。
   - **不要改回 M3 默认的滚动变色**（`surface` → `scrolledContainerColor`）。0.22.0～0.23.0 期间用过那套，代价是：顶栏下面挂子 tab 的页面头部会被劈成两截——首页的三源 `SecondaryTabRow` 是内容区的第一项、底色跟着 `background`，顶栏一变色就出现一条突兀的横向断层，而 tab 行自带的 divider 早已承担了分隔职责；pinned 行为下那个变色还是 0→1 的阶跃，断层是"啪"地出现的。参照物 Echo 从一开始就是恒定底色（`MainActivity.kt` 的 `topAppBarColors` 里 `containerColor` 与 `scrolledContainerColor` 同值）。
   - `scrollBehavior` 的创建、`Modifier.nestedScroll` 挂载、传给 `TopAppBar` 这三步都封在组件内部，经 `LocalTopAppBarScrollBehavior` 送达。**页面不要自己 `remember` behavior，也不要把它当参数往下传**。底色恒定后这套接线只剩"让顶栏正常参与 nestedScroll"这一层作用，保留是为了将来要折叠时不用重接。
   - 顶栏拆成子 composable 时，子函数里直接调 `TrendingTopAppBar` 即可，不需要任何参数透传。

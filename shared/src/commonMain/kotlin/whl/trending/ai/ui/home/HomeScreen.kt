@@ -31,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
@@ -141,9 +143,9 @@ fun HomeScreen(
         // 它是内容 contentPadding 的输入，实测 onSizeChanged 回写会引入首帧跳动。
         val topBarBottom = statusBarTop + TopBarHeight
 
-        // 沉浸式状态：开关关闭时为 null，下游 modifier 全部原样返回（零开销，见 HomeImmersive）。
-        // 手势行程取所有栏中最长的行程（Home 的子 tab 行底缘），它将 1:1 跟手、其余栏按行程
-        // 比例减速——第 3 步的视差即由此来；本阶段只接了底栏这一个消费点。
+        // 沉浸式状态：开关关闭时为 null，下游四个挂点全部原样返回（零开销，见 HomeImmersive)。
+        // 手势行程取所有栏中最长的行程（Home 的子 tab 行底缘），它 1:1 跟手、其余栏按行程
+        // 比例减速——视差即由此来。
         val immersiveState = if (immersiveEnabled) {
             rememberImmersiveState(
                 topBarBottom + SourceTabRowHeight,
@@ -213,9 +215,16 @@ fun HomeScreen(
                                 }
                                 // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
                                 // 它是透明底、透出的正是这块颜色；悬浮后透明会透出滚动中的列表。
+                                // 沉浸位移：行程 = 顶栏底缘 + 自身高（三栏中最长），与手势行程相等
+                                // ——1:1 跟手，比顶栏快，从顶栏底下钻过（顶栏在外层、画在其上）。
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopCenter)
+                                        .immersiveExit(
+                                            immersiveState,
+                                            ImmersiveEdge.Top,
+                                            travel = topBarBottom + SourceTabRowHeight,
+                                        )
                                         .padding(top = topBarBottom)
                                         .fillMaxWidth()
                                         .background(MaterialTheme.colorScheme.background)
@@ -249,7 +258,13 @@ fun HomeScreen(
             // 触摸不穿透的依据：M3 TopAppBar/TabRow 外层的 Surface 自带空 pointerInput，
             // 会吞掉落在其区域内的触摸，列表滚到头部背后也点不到被遮的 item。若将来把
             // 头部换成非 Surface 容器，必须自行补上这层消费，否则点击会穿透。
-            Box(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+            // 沉浸位移：行程 = 状态栏 + 容器高（短于子 tab 行的行程 → 速率较慢，视差由此来）
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .immersiveExit(immersiveState, ImmersiveEdge.Top, travel = topBarBottom)
+                    .fillMaxWidth()
+            ) {
                 when (selectedTab) {
                     HomeTab.Home -> when (selectedSource) {
                         TrendingSource.GitHub -> TrendingTopBar(
@@ -304,6 +319,25 @@ fun HomeScreen(
                     // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
                     HomeTab.Chat -> Unit
                 }
+            }
+
+            // 状态栏 scrim：头部退场后内容会滚到状态栏图标底下，垫一层同色系渐变保可读。
+            // alpha 走 graphicsLayer 随进度淡入（draw 阶段读，滚动零重组）；常驻态 alpha=0
+            // 完全不可见，不破坏关闭态/常驻态的逐像素一致。无 pointerInput，不挡触摸。
+            if (immersiveState != null) {
+                val scrimColor = MaterialTheme.colorScheme.background
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(statusBarTop)
+                        .graphicsLayer { alpha = immersiveState.progress }
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(scrimColor, scrimColor.copy(alpha = 0f)),
+                            )
+                        )
+                )
             }
 
             HomeFloatingBar(
