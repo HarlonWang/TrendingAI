@@ -55,6 +55,8 @@
 
 - **设置项用卡片组**：设置页 / 关于页 /「我的」页的列表行一律用 `ui/common` 的 `SettingsGroup`，slot API 写法（`settingsItem(...)`），不要再用裸 `ListItem` + `HorizontalDivider`。图标进 40dp 圆形容器（`secondaryContainer`），头像这类自带形状的前导元素走 `leading` slot。规格与取舍见 `docs/settings-style-comparison.md`。
 
+  - **边界：纯展示的说明页不走 `SettingsGroup`**。它是为「可点击设置项 + trailing 控件」而生，整页一行都不可点时用它会长出假的可点感；且 title/description 的两段式结构逼着每条配一个标签，「来源」「收录范围」这类零信息量的标签会以 titleMedium 粗体压过灰色正文——最醒目的东西最没用。这类页面改成每块内容一张卡、卡内标题直接写实际主体（如源名）。参照 `ui/settings/DataSourcesScreen.kt`（数据来源与更新）。**这是有意偏离，别改回 `SettingsGroup`。**
+
 - **弹窗 / 浮层 / 下拉的选型**（见 `docs/interaction-consistency-audit.md`）：
 
   | 场景 | 用什么 |
