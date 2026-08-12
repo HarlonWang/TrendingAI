@@ -14,20 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
-import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -36,22 +31,15 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.ToggleFloatingActionButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,8 +49,6 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_star
 import trendingai.shared.generated.resources.action_unstar
 import trendingai.shared.generated.resources.back
-import trendingai.shared.generated.resources.readme_fab_chat
-import trendingai.shared.generated.resources.readme_fab_deep_research
 import trendingai.shared.generated.resources.readme_fab_detail_summary
 import trendingai.shared.generated.resources.readme_no_content
 import trendingai.shared.generated.resources.retry
@@ -103,16 +89,15 @@ fun ReadmeScreen(
     val uriHandler = LocalUriHandler.current
     // README 摘录涉及多次正则替换，缓存结果避免每次重组重算（分享栏与 FAB 共用）
     val summary = remember(uiState.html) { readmeExcerpt(uiState.html) }
-    // README 正文长度估计（HTML 去标签）；未加载完为 null → 解读 chip / 「一键解读」子项不显示
+    // README 正文长度估计（HTML 去标签）；未加载完为 null → 解读 chip / 「一键解读」FAB 不显示
     val readmeLength = remember(uiState.html) {
         uiState.html
             .takeIf { it.isNotBlank() }
             ?.replace(Regex("<[^>]+>"), "")
             ?.length
     }
-    // 构造进入 chat 的上下文；autoDetailSummary=true 时进 chat 自动触发「一键详细解读」，
-    // autoDeepResearch=true 时预选 Deep Research 模式 + 预填主题（发送由用户确认）
-    fun buildChatContext(autoDetailSummary: Boolean = false, autoDeepResearch: Boolean = false) = ChatContext(
+    // 构造进入 chat 的上下文：本页只有「一键解读」一个 chat 入口，故 autoDetailSummary 恒为 true
+    fun buildDetailSummaryContext() = ChatContext(
         title = "$owner/$repo",
         // 带上 README 摘录作为依据，让 AI 能介绍冷门项目；未加载完为 null，退化为仅 title + url
         summary = summary,
@@ -121,8 +106,7 @@ fun ReadmeScreen(
         source = "github",
         externalId = "$owner/$repo",
         readmeLength = readmeLength,
-        autoDetailSummary = autoDetailSummary,
-        autoDeepResearch = autoDeepResearch,
+        autoDetailSummary = true,
     )
     // 与 chat 模块 DetailSummaryPolicy.MIN_README_CHARS 保持一致（shared 无法跨模块引用该常量）
     val detailSummaryAvailable = (readmeLength ?: 0) >= 1500
@@ -215,87 +199,28 @@ fun ReadmeScreen(
             )
         },
         floatingActionButton = {
-            if (globalChatScreen != null) {
-                // 点击主按钮展开菜单：「AI 对话」进普通会话，「一键解读」进会话并自动触发详细解读
-                var menuExpanded by rememberSaveable { mutableStateOf(false) }
-                FloatingActionButtonMenu(
-                    expanded = menuExpanded,
-                    button = {
-                        ToggleFloatingActionButton(
-                            checked = menuExpanded,
-                            // 三个 chat 入口都藏在这个菜单里，不展开就看不见——展开量是
-                            // 「用户是否发现了入口」的直接代理，比页面浏览量更贴近转化率分母
-                            onCheckedChange = {
-                                if (it) {
-                                    trackEvent(
-                                        "readme_ai_menu_open",
-                                        mapOf("detail_summary_available" to detailSummaryAvailable),
-                                    )
-                                }
-                                menuExpanded = it
-                            },
-                            // 显式配对容器色，避免依赖默认值，保证与下面图标 tint 的对比度
-                            containerColor = ToggleFloatingActionButtonDefaults.containerColor(
-                                MaterialTheme.colorScheme.primaryContainer,
-                                MaterialTheme.colorScheme.primary,
-                            ),
-                        ) {
-                            Icon(
-                                imageVector = if (checkedProgress > 0.5f) {
-                                    Icons.Default.Close
-                                } else {
-                                    Icons.Default.Menu
-                                },
-                                contentDescription = "AI",
-                                // 图标色随展开进度从「容器上前景」过渡到「主色上前景」，
-                                // 避免展开态深紫背景上 ✕ 对比度不足
-                                tint = lerp(
-                                    MaterialTheme.colorScheme.onPrimaryContainer,
-                                    MaterialTheme.colorScheme.onPrimary,
-                                    checkedProgress,
-                                ),
-                            )
-                        }
+            // 「一键解读」独占主动作位，一次点击直达（2026-08-12 起）。此前三个 chat 入口
+            // 都藏在 FAB 二级菜单里，埋点显示瓶颈在发现而非意愿（进页后仅 18% 展开菜单，
+            // 但展开者有 41% 点了解读），故把它提到一级；「AI 对话」与首页 FAB 重复、
+            // 「深度调研」在解读卡尾部已有更靠后的热入口，两者一并下掉，别再加回来。
+            //
+            // 三条约束：
+            // - 埋点 from 值不可改动，改版前后的转化率要可比（基线 7.5%）
+            // - 常驻展开态：WebView 滚动不进 nestedScroll 链，收不到收起信号
+            // - README < 1500 字时整颗 FAB 不渲染（与 chat 内 chip 同规则），此时本页无 AI 入口
+            if (globalChatScreen != null && detailSummaryAvailable) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        trackEvent("chat_entry_click", mapOf("from" to "readme_detail_summary"))
+                        onNavigateToChat(buildDetailSummaryContext())
                     },
-                ) {
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            menuExpanded = false
-                            trackEvent("chat_entry_click", mapOf("from" to "readme_chat"))
-                            onNavigateToChat(buildChatContext())
-                        },
-                        icon = {
-                            Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
-                        },
-                        text = { Text(stringResource(Res.string.readme_fab_chat)) },
-                    )
-                    // README 正文过短（< 1500 字）时不提供「一键解读」，与 chat 里 chip 显示规则一致
-                    if (detailSummaryAvailable) {
-                        FloatingActionButtonMenuItem(
-                            onClick = {
-                                menuExpanded = false
-                                trackEvent("chat_entry_click", mapOf("from" to "readme_detail_summary"))
-                                onNavigateToChat(buildChatContext(autoDetailSummary = true))
-                            },
-                            icon = {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null)
-                            },
-                            text = { Text(stringResource(Res.string.readme_fab_detail_summary)) },
-                        )
-                    }
-                    // 「深度调研」不受 README 长度限制：research 联网检索，不依赖 README 正文
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            menuExpanded = false
-                            trackEvent("chat_entry_click", mapOf("from" to "readme_deep_research"))
-                            onNavigateToChat(buildChatContext(autoDeepResearch = true))
-                        },
-                        icon = {
-                            Icon(Icons.Outlined.TravelExplore, contentDescription = null)
-                        },
-                        text = { Text(stringResource(Res.string.readme_fab_deep_research)) },
-                    )
-                }
+                    icon = {
+                        // 摊开的书：与首页 chat FAB 的 AutoAwesome(✨) 区分开——✨ 是开放式对话，
+                        // 这里通往的是一篇可读完的解读。也不与 DigestScreen 的 Description（读原文）撞形。
+                        Icon(Icons.Outlined.AutoStories, contentDescription = null)
+                    },
+                    text = { Text(stringResource(Res.string.readme_fab_detail_summary)) },
+                )
             }
         }
     ) { innerPadding ->
