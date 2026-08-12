@@ -123,9 +123,7 @@
     <string name="subscribe_error">网络错误，请稍后重试</string>
     <string name="view_on_github">在 GitHub 中查看</string>
     <string name="share_to_ai">分享</string>
-    <string name="readme_fab_chat">AI 对话</string>
     <string name="readme_fab_detail_summary">一键解读</string>
-    <string name="readme_fab_deep_research">深度调研</string>
     <string name="share_ai_text_full">请帮我解读这条技术资讯并提炼核心要点：\n\n标题：%1$s\n\n摘要：%2$s\n\n原文：%3$s</string>
     <string name="share_ai_text_brief">请帮我解读这条技术资讯并提炼核心要点：\n\n标题：%1$s\n\n原文：%2$s</string>
     <string name="readme_no_content">该仓库暂无 README 文件。</string>

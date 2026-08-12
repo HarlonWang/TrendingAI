@@ -10,8 +10,6 @@ import androidx.compose.runtime.Composable
  * @param externalId 条目在数据源内的 ID（GitHub 为 `owner/repo`），detail-summary API 入参
  * @param readmeLength README 正文长度估计（ReadmeScreen 进 chat 时填充；未加载完为 null → chip 不显示）
  * @param autoDetailSummary 进入 chat 后是否自动触发「一键详细解读」（README 详情页「一键解读」入口置 true）
- * @param autoDeepResearch 进入 chat 后预选 Deep Research 模式并预填调研主题（README 详情页「深度调研」
- *   入口置 true）；只预选不自动发送——research 计价高，发送必须由用户确认
  */
 data class ChatContext(
     val title: String,
@@ -21,7 +19,6 @@ data class ChatContext(
     val externalId: String? = null,
     val readmeLength: Int? = null,
     val autoDetailSummary: Boolean = false,
-    val autoDeepResearch: Boolean = false,
 )
 
 /**

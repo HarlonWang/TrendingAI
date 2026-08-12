@@ -109,15 +109,10 @@ fun ChatScreen(
         }
     }
 
-    // README 详情页「深度调研」入口：只预选模式 + 预填主题，发送仍由用户确认——
-    // research 计价高（10 credits），不做自动触发（有别于解读入口的 auto 语义）
+    // 解读卡尾部「深度调研此项目」升级漏斗的调研主题（见下方 onResearchUpsell）。
+    // README 详情页曾有一个冷入口（进 chat 即预选 research 模式 + 预填主题），2026-08-12 下线——
+    // 11 天仅 2 次点击，且这里的热入口位置更靠后、转化语义更顺（读完解读才升级）
     val researchPrefill = stringResource(R.string.chat_research_repo_prefill)
-    LaunchedEffect(entryKey) {
-        if (initialContext?.autoDeepResearch == true) {
-            viewModel.enableDeepResearch()
-            if (viewModel.uiState.value.input.isBlank()) viewModel.updateInput(researchPrefill)
-        }
-    }
 
     // AI 一开始回复就收起键盘：把屏幕让给正文，用户不用先手动关键盘才能读回复。
     // clearFocus 同时清焦点（而非只 hide），避免留下「键盘没了但光标还在闪」的中间态。

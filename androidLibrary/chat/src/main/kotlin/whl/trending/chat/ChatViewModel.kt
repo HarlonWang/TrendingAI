@@ -90,11 +90,6 @@ class ChatViewModel(
     fun toggleWebSearch() = toggleMode(ChatMode.WebSearch)
     fun toggleDeepResearch() = toggleMode(ChatMode.DeepResearch)
 
-    /** README 详情页「深度调研」入口：定向开启（非 toggle——重进已开启的会话不能反把模式关掉） */
-    fun enableDeepResearch() {
-        _chatMode.value = ChatMode.DeepResearch
-    }
-
     private fun toggleMode(mode: ChatMode) {
         _chatMode.value = if (_chatMode.value == mode) ChatMode.Normal else mode
     }
