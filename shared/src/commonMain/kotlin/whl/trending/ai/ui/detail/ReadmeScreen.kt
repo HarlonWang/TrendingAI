@@ -199,18 +199,15 @@ fun ReadmeScreen(
             )
         },
         floatingActionButton = {
-            // 「一键解读」独占主动作位，一次点击直达（2026-08-12 起）。
-            // 此前三个 chat 入口都藏在 FAB 二级菜单里：147 次进页只有 27 次展开（发现率 18%），
-            // 但展开后有 41% 点了解读——瓶颈在发现而非意愿，故把解读提到一级、另两个入口下掉：
-            // 「AI 对话」11 天仅 1 次且首页 FAB 同期 100 次（纯冗余）；「深度调研」11 天 2 次，
-            // 且解读卡尾部已有更靠后的热入口（MessageItem 的 research 升级漏斗），冷入口是重复。
+            // 「一键解读」独占主动作位，一次点击直达（2026-08-12 起）。此前三个 chat 入口
+            // 都藏在 FAB 二级菜单里，埋点显示瓶颈在发现而非意愿（进页后仅 18% 展开菜单，
+            // 但展开者有 41% 点了解读），故把它提到一级；「AI 对话」与首页 FAB 重复、
+            // 「深度调研」在解读卡尾部已有更靠后的热入口，两者一并下掉，别再加回来。
             //
-            // 埋点 from 值保持 "readme_detail_summary" 不变——改版前后的转化率要可比
-            // （基线 11/147 = 7.5%）。ExtendedFAB 常驻展开：WebView 滚动不进 nestedScroll 链，
-            // 收不到滚动信号，正好文字一直在（图标本身没有心智）。
-            //
-            // README 正文过短（< 1500 字）时整颗 FAB 不渲染，与 chat 里 chip 的显示规则一致；
-            // 此时本页没有 AI 入口，属预期——实测仅约 7% 的条目命中。
+            // 三条约束：
+            // - 埋点 from 值不可改动，改版前后的转化率要可比（基线 7.5%）
+            // - 常驻展开态：WebView 滚动不进 nestedScroll 链，收不到收起信号
+            // - README < 1500 字时整颗 FAB 不渲染（与 chat 内 chip 同规则），此时本页无 AI 入口
             if (globalChatScreen != null && detailSummaryAvailable) {
                 ExtendedFloatingActionButton(
                     onClick = {
