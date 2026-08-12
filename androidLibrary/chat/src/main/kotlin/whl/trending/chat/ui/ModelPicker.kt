@@ -2,6 +2,7 @@ package whl.trending.chat.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -10,6 +11,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults
@@ -173,6 +175,17 @@ internal fun ModelPicker(
                     },
                 )
             }
+            // 模型出处。放在菜单末尾而不是常驻行内：起疑的人会点开选择器（型号名就是疑问的原点），
+            // 而常驻行受 horizontalScroll + 防输入框跳位约束，塞不下也留不住。
+            // 视觉压到 bodySmall + onSurfaceVariant——OpenAI 品牌指南要求其展示不得比我们自己的
+            // 名称更显著，且醒目的供应商声明本身会读作辩解。
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            Text(
+                text = stringResource(R.string.chat_model_provider),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            )
         }
     }
 }

@@ -48,6 +48,15 @@ fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.height(6.dp))
+        // 模型出处，与额度说明并成同一组小字：不做视觉强调。醒目的供应商声明会读作辩解，
+        // 且 OpenAI 品牌指南要求其展示不得比我们自己的名称更显著。完整说明在模型选择器菜单里。
+        Text(
+            text = stringResource(R.string.chat_model_provider),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

@@ -27,6 +27,10 @@
     <string name="chat_model_unlock_title">Pro-only model</string>
     <string name="chat_model_unlock_message">%1$s is currently available to Pro only. You can keep using the default model.</string>
     <string name="chat_model_unlock_dismiss">Got it</string>
+    <!-- 模型出处。刻意是事实陈述而非 "Powered by OpenAI" 那类品牌宣传语——后者读起来像背书。
+         措辞受 OpenAI 品牌指南约束：提及模型必须表述精确，且禁止 "Powered by ChatGPT"/
+         "Built with ChatGPT" 之类说法；改文案前先核对 openai.com/brand -->
+    <string name="chat_model_provider">Models provided via the OpenAI API</string>
     <string name="chat_quota_unlocked">More quota unlocked — resend to continue.</string>
     <string name="chat_quota_auth_degraded">Signed in, but this request was treated as signed out — check your network and retry, or sign out and sign in again.</string>
     <string name="chat_error_auth_invalid">Your session has expired — sign out and sign in again to continue.</string>
