@@ -66,6 +66,7 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.material.kolor)
             implementation(libs.kmp.webview)
+            implementation(libs.loginbase.kt)
             implementation(libs.jetbrains.navigationevent.compose)
         }
         iosMain.dependencies {

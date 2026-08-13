@@ -306,4 +306,20 @@
     <string name="digest_unavailable_desc">Public information wasn\'t enough to generate a reliable digest. Use the buttons above to read the original or browse the HN discussion.</string>
     <string name="digest_generated_at">AI-generated on %1$s · may lag behind the latest discussion</string>
     <string name="digest_load_failed">Failed to load, please retry</string>
+
+    <!-- 登录（loginbase 自建登录 UI） -->
+    <string name="login_title">Sign in</string>
+    <string name="login_code_title">Enter code</string>
+    <string name="login_email_hint">Email address</string>
+    <string name="login_code_hint">6-digit code</string>
+    <string name="login_code_sent_to">Code sent to %s</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_resend">Resend code</string>
+    <string name="login_resend_in">Resend in %ds</string>
+    <string name="login_email_invalid">Please enter a valid email address</string>
+    <string name="login_code_invalid">Incorrect code</string>
+    <string name="login_code_expired">Code expired, please resend</string>
+    <string name="login_too_many_attempts">Too many attempts, please resend the code</string>
+    <string name="login_too_many_requests">Please try again in %d seconds</string>
+    <string name="login_generic_error">Something went wrong, please try again</string>
 </resources>
