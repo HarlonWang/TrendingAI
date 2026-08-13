@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import wang.harlon.loginbase.AuthClient
 import wang.harlon.loginbase.TokenStore
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import wang.harlon.loginbase.AuthState as LoginbaseState
@@ -77,6 +78,24 @@ class LoginbaseAuthManager(
     }
 
     override suspend fun getAccessToken(): String? = client.accessToken()
+
+    /**
+     * 401 → 单飞刷新 → 重试一次。只重试一次：刷新后仍 401 说明不是过期问题
+     * （会话已被撤销、或该端点本就拒绝这个身份），再试无益。
+     *
+     * 刷新走 [AuthClient.refresh] 的单飞路径——并发的多个业务请求同时 401 时，
+     * 只会产生一次真实刷新，不会打爆服务端的救活配额。
+     */
+    override suspend fun <T> authorized(block: suspend (String) -> T): T? {
+        val token = client.accessToken() ?: return null
+        return try {
+            block(token)
+        } catch (e: ApiException) {
+            if (e.statusCode != 401) throw e
+            val fresh = client.accessToken(forceRefresh = true) ?: return null
+            block(fresh)
+        }
+    }
 
     /**
      * 登出的本地清理（与 [LogtoAuthManager.clearLocalUserState] 同集合）。

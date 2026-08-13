@@ -379,10 +379,17 @@ class ProfileViewModel(
         // Hub 对未登录用户可达：匿名用户按 install-id 拉匿名档额度（5/日），token 传 null 即可。
         // 唯一要防的是「登录态但 token 处于刷新瞬态暂为 null」——此时不请求，否则不带 Bearer 的
         // /api/quota 会回落匿名档、用 5 覆盖登录/Pro 用户真实的 10/100。保留旧值等下次刷新。
-        val token = authManager().getAccessToken()
-        if (token == null && authManager().authState.value is AuthState.LoggedIn) return
+        val loggedIn = authManager().authState.value is AuthState.LoggedIn
         try {
-            val quota = repository.fetchQuota(token)
+            // 登录态走 authorized：token 过期时刷新后重试，不再把「加载失败」直接摆给用户
+            // （实测过 access token 过期后账户页显示 "Couldn't load credits right now"）。
+            // 拿不到 token 的登录态是刷新瞬态，此时不请求——不带 Bearer 的 /api/quota
+            // 会回落匿名档、用 5 覆盖登录/Pro 用户真实的 10/100。
+            val quota = if (loggedIn) {
+                authManager().authorized { repository.fetchQuota(it) } ?: return
+            } else {
+                repository.fetchQuota(null)
+            }
             _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -405,8 +412,13 @@ class ProfileViewModel(
             _uiState.value = _uiState.value.copy(isRefreshing = false, isError = loggedIn, loggedIn = false, user = null)
             return
         }
+        // authorized 返回 null = 刷新后仍无会话（会话已终结），按错误态收尾，
+        // 与请求抛异常同路——用户看到可重试的失败，而不是空白的登录态
         val user = try {
-            repository.fetchMe(token)
+            authManager().authorized { repository.fetchMe(it) } ?: run {
+                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
+                return
+            }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)

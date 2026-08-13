@@ -99,6 +99,22 @@ interface AuthManager {
 
     fun signOut()
     suspend fun getAccessToken(): String?
+
+    /**
+     * 带鉴权执行一次请求：拿 token 交给 [block]，**若因 401 失败则刷新后重试一次**。
+     *
+     * 为什么需要它：access token 是短命的（1 小时），过期后业务请求会 401，
+     * 而调用方各自 `getAccessToken()` 后直接发请求——没有重试就直接把
+     * 「加载失败」摆给用户看，实际上刷新一下就能继续（实测：账户页显示
+     * "Couldn't load credits right now"，其实只是 token 过期）。
+     *
+     * 默认实现不重试（Logto SDK 自己管刷新）；loginbase 实现覆盖它。
+     * 返回 null 表示无会话——调用方按未登录处理，与 [getAccessToken] 一致。
+     */
+    suspend fun <T> authorized(block: suspend (String) -> T): T? {
+        val token = getAccessToken() ?: return null
+        return block(token)
+    }
 }
 
 object NoopAuthManager : AuthManager {
