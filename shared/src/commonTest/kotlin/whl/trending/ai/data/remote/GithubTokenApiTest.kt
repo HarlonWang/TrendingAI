@@ -4,7 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class LogtoAccountApiTest {
+class GithubTokenApiTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
