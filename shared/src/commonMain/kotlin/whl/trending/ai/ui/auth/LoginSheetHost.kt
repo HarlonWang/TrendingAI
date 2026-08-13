@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -108,6 +110,9 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var cooldown by remember { mutableStateOf(0) }
+    // 已打开浏览器、正在等 OAuth 回跳。与 busy 分开：busy 是"有请求在飞"，
+    // 这个是"人跑到浏览器去了"——后者需要 ON_RESUME 兜底解除，前者不需要。
+    var awaitingOauth by remember { mutableStateOf(false) }
 
     val genericError = stringResource(Res.string.login_generic_error)
     val emailInvalid = stringResource(Res.string.login_email_invalid)
@@ -151,6 +156,17 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         }
     }
 
+    // 用户直接关掉浏览器时**没有任何回调**——Android Custom Tabs 不像 Logto SDK
+    // 会回 USER_CANCELED。不兜底的话面板就永远转圈、按钮全禁用（实测踩到）。
+    // 回跳成功的路径也会经过 ON_RESUME，但那条会紧接着收到总线事件重新置 busy，
+    // 顺序上不冲突。
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (awaitingOauth) {
+            awaitingOauth = false
+            busy = false
+        }
+    }
+
     // GitHub 授权回跳：浏览器完成后 MainActivity 把参数投到总线，这里消费。
     // 面板此时通常还开着（Activity 未被销毁），故由面板自己收尾最自然。
     LaunchedEffect(Unit) {
@@ -158,6 +174,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
             when (cb) {
                 is OauthCallback.SignedIn -> {
                     OauthCallbackBus.consume()
+                    awaitingOauth = false
                     busy = true
                     runCatching { client.exchangeOtc(cb.otc) }
                         .onSuccess {
@@ -175,6 +192,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 }
                 is OauthCallback.Failed -> {
                     OauthCallbackBus.consume()
+                    awaitingOauth = false
                     error = oauthFailed
                     busy = false
                     trackEvent("sign_in_error", mapOf("source" to source, "method" to "github"))
@@ -277,7 +295,8 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 OutlinedButton(
                     onClick = {
                         error = null
-                        busy = true // 等回跳；用户若直接关掉浏览器则由 onResume 复位（见下）
+                        busy = true
+                        awaitingOauth = true // 由上方 ON_RESUME 兜底解除
                         trackEvent("sign_in_start", mapOf("source" to source, "method" to "github"))
                         // OAuth 授权页必须走系统浏览器：用户要能看见地址栏，
                         // 且 GitHub 对嵌入式 WebView 有限制
