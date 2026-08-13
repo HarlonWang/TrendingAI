@@ -83,6 +83,13 @@ android {
         val logtoRedirectScheme = "cn.trendingai"
         manifestPlaceholders["logtoRedirectScheme"] = logtoRedirectScheme
         buildConfigField("String", "LOGTO_REDIRECT_SCHEME", "\"$logtoRedirectScheme\"")
+
+        // loginbase 的 OAuth 回跳 deepLink。与 Logto 同 scheme、以 ${applicationId} 为 host
+        // （debug 与 release 各自独立，装同一台设备不会互相抢 deepLink）。
+        // 完整形如 cn.trendingai://whl.trending.ai/auth，服务端 allowedRedirects 需与之匹配
+        // （结构化校验：scheme+host 精确、path 允许前缀扩展）。
+        manifestPlaceholders["authRedirectScheme"] = logtoRedirectScheme
+        buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$logtoRedirectScheme\"")
     }
 
     // 签名配置：从环境变量读取加密存储的密钥信息

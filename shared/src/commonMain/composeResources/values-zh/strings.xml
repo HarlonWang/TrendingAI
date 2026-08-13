@@ -322,4 +322,7 @@
     <string name="login_too_many_attempts">错误次数过多，请重新发送验证码</string>
     <string name="login_too_many_requests">请 %d 秒后再试</string>
     <string name="login_generic_error">出了点问题，请重试</string>
+    <string name="login_or">或</string>
+    <string name="login_continue_github">使用 GitHub 继续</string>
+    <string name="login_oauth_failed">GitHub 登录失败，请重试</string>
 </resources>

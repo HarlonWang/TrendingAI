@@ -17,6 +17,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import whl.trending.ai.auth.OauthCallbackBus
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.App
@@ -42,13 +43,18 @@ class MainActivity : AppCompatActivity() {
 
         // 注入 loginbase 登录实现（替代 Logto；仿 globalChatScreen 的依赖反转）。
         // 存储与协议细节封在 shared 内，这里只给 Context。
-        whl.trending.ai.auth.initLoginbaseAuth(applicationContext)
+        whl.trending.ai.auth.initLoginbaseAuth(
+            applicationContext,
+            // 与 AndroidManifest 的 intent-filter 同源（build.gradle.kts 的 authRedirectScheme）
+            "${BuildConfig.AUTH_REDIRECT_SCHEME}://${BuildConfig.APPLICATION_ID}/auth",
+        )
 
         // 注入每日 Picks 本地通知实现（须在 onCreate：权限 launcher 要求 STARTED 前注册），
         // 并对账调度状态；处理通知点击带来的切 tab 深链
         whl.trending.ai.notification.globalDailyPicksNotifier = AndroidDailyPicksNotifier(this)
         AndroidDailyPicksNotifier.syncOnAppStart(applicationContext)
         handleOpenTabIntent(intent)
+        handleAuthCallback(intent)
 
         // 注册 Android-only 的 ChatScreen 到 CMP 导航 slot（仿 UpdateWrapper 的依赖反转）
         globalChatScreen = { context, onBack ->
@@ -105,6 +111,20 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleOpenTabIntent(intent)
+        handleAuthCallback(intent)
+    }
+
+    /**
+     * loginbase OAuth 回跳：系统浏览器完成 GitHub 授权后回到这里，
+     * 参数带 otc（登录）/ linked（绑定成功）/ error。投递给 [OauthCallbackBus]
+     * 由 UI 消费；**data 消费后清掉**——否则配置变更重建 Activity 会重放同一个 otc，
+     * 而 otc 是单次使用的，第二次必然失败并给用户一个假错误。
+     */
+    private fun handleAuthCallback(intent: Intent?) {
+        val data = intent?.data?.toString() ?: return
+        val callback = OauthCallbackBus.parse(data) ?: return
+        intent.data = null
+        OauthCallbackBus.emit(callback)
     }
 
     /**

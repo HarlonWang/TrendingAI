@@ -322,4 +322,7 @@
     <string name="login_too_many_attempts">Too many attempts, please resend the code</string>
     <string name="login_too_many_requests">Please try again in %d seconds</string>
     <string name="login_generic_error">Something went wrong, please try again</string>
+    <string name="login_or">or</string>
+    <string name="login_continue_github">Continue with GitHub</string>
+    <string name="login_oauth_failed">GitHub sign-in failed, please try again</string>
 </resources>

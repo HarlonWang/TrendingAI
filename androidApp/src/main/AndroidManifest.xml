@@ -18,7 +18,20 @@
         <activity
             android:exported="true"
             android:name=".MainActivity"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+            <!-- loginbase OAuth 回跳：系统浏览器完成 GitHub 授权后回到这里，
+                 参数带 otc（登录）或 linked/error（绑定身份）。
+                 Logto 时代这条由 SDK 的 manifest 合并注入，自建后需自己注册。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="${authRedirectScheme}"
+                    android:host="${applicationId}"
+                    android:pathPrefix="/auth" />
+            </intent-filter>
+        </activity>
 
         <activity-alias
             android:name=".MainActivityDefault"

@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +40,9 @@ import trendingai.shared.generated.resources.login_code_invalid
 import trendingai.shared.generated.resources.login_code_sent_to
 import trendingai.shared.generated.resources.login_code_title
 import trendingai.shared.generated.resources.login_continue
+import trendingai.shared.generated.resources.login_continue_github
+import trendingai.shared.generated.resources.login_oauth_failed
+import trendingai.shared.generated.resources.login_or
 import trendingai.shared.generated.resources.login_email_hint
 import trendingai.shared.generated.resources.login_email_invalid
 import trendingai.shared.generated.resources.login_generic_error
@@ -45,12 +51,18 @@ import trendingai.shared.generated.resources.login_resend_in
 import trendingai.shared.generated.resources.login_title
 import trendingai.shared.generated.resources.login_too_many_attempts
 import trendingai.shared.generated.resources.login_too_many_requests
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import wang.harlon.loginbase.AuthApiException
 import wang.harlon.loginbase.AuthError
 import whl.trending.ai.auth.LoginSheetBus
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.auth.OauthCallback
+import whl.trending.ai.auth.OauthCallbackBus
+import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.ui.home.githubLogoPainter
 import whl.trending.ai.ui.common.TrendingBottomSheet
 
 /**
@@ -103,6 +115,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     val codeExpired = stringResource(Res.string.login_code_expired)
     val tooManyAttempts = stringResource(Res.string.login_too_many_attempts)
     val tooManyRequestsTemplate = stringResource(Res.string.login_too_many_requests)
+    val oauthFailed = stringResource(Res.string.login_oauth_failed)
 
     // 服务端给的冷却秒数倒计时，不写死 60
     LaunchedEffect(cooldown) {
@@ -135,6 +148,40 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 }
                 .onFailure { error = describe(it) }
             busy = false
+        }
+    }
+
+    // GitHub 授权回跳：浏览器完成后 MainActivity 把参数投到总线，这里消费。
+    // 面板此时通常还开着（Activity 未被销毁），故由面板自己收尾最自然。
+    LaunchedEffect(Unit) {
+        OauthCallbackBus.events.collect { cb ->
+            when (cb) {
+                is OauthCallback.SignedIn -> {
+                    OauthCallbackBus.consume()
+                    busy = true
+                    runCatching { client.exchangeOtc(cb.otc) }
+                        .onSuccess {
+                            trackEvent(
+                                "sign_in_success",
+                                mapOf("source" to source, "method" to "github", "is_new" to (it.isNewUser == true)),
+                            )
+                            onDismiss()
+                        }
+                        .onFailure {
+                            error = describe(it)
+                            trackEvent("sign_in_error", mapOf("source" to source, "method" to "github"))
+                        }
+                    busy = false
+                }
+                is OauthCallback.Failed -> {
+                    OauthCallbackBus.consume()
+                    error = oauthFailed
+                    busy = false
+                    trackEvent("sign_in_error", mapOf("source" to source, "method" to "github"))
+                }
+                // 绑定身份的回跳不归登录面板管，留给账户页消费
+                OauthCallback.Linked -> Unit
+            }
         }
     }
 
@@ -214,6 +261,37 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
 
             error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            if (step == Step.EMAIL) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                    Text(
+                        text = stringResource(Res.string.login_or),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                }
+                OutlinedButton(
+                    onClick = {
+                        error = null
+                        busy = true // 等回跳；用户若直接关掉浏览器则由 onResume 复位（见下）
+                        trackEvent("sign_in_start", mapOf("source" to source, "method" to "github"))
+                        // OAuth 授权页必须走系统浏览器：用户要能看见地址栏，
+                        // 且 GitHub 对嵌入式 WebView 有限制
+                        openUrl(client.githubSignInUrl(manager.redirectUri))
+                    },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Image(painter = githubLogoPainter(), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        text = stringResource(Res.string.login_continue_github),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
             }
 
             Button(

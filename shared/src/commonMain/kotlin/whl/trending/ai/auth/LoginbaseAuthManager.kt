@@ -3,8 +3,11 @@ package whl.trending.ai.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import wang.harlon.loginbase.AuthClient
@@ -29,6 +32,8 @@ private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
  */
 class LoginbaseAuthManager(
     val client: AuthClient,
+    /** OAuth 回跳 deepLink，如 `cn.trendingai://whl.trending.ai/auth`；须与服务端白名单匹配 */
+    val redirectUri: String,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
 ) : AuthManager {
 
@@ -118,8 +123,72 @@ object LoginSheetBus {
  * 配套的硬要求，别改用 App 自己那份 `Settings`（multiplatform-settings 默认走
  * 异步 apply，进程被杀会丢刚轮换的令牌）。
  */
-fun initLoginbaseAuth(tokenStore: TokenStore): LoginbaseAuthManager {
-    val manager = LoginbaseAuthManager(AuthClient(AUTH_BASE_URL, tokenStore))
+fun initLoginbaseAuth(tokenStore: TokenStore, redirectUri: String): LoginbaseAuthManager {
+    val manager = LoginbaseAuthManager(AuthClient(AUTH_BASE_URL, tokenStore), redirectUri)
     globalAuthManager = manager
     return manager
+}
+
+/**
+ * OAuth 回跳结果总线。系统浏览器完成 GitHub 授权后回跳 App，平台层（Android 的
+ * MainActivity）把 deepLink 参数投递到这里，由登录面板/账户页消费。
+ *
+ * 用一次性事件而非状态：回跳是事件，处理完就没了；replay=1 让「回跳先到、收集者后
+ * 组合」（进程被系统回收后从 deepLink 冷启动）的情况也拿得到。
+ */
+object OauthCallbackBus {
+    private val _events = MutableSharedFlow<OauthCallback>(replay = 1, extraBufferCapacity = 1)
+    val events: SharedFlow<OauthCallback> = _events.asSharedFlow()
+
+    fun emit(callback: OauthCallback) {
+        _events.tryEmit(callback)
+    }
+
+    fun consume() {
+        _events.resetReplayCache()
+    }
+
+    /**
+     * 解析回跳 URL 的 query。三种结局对应协议的三种回跳形态：
+     * `?otc=` 登录成功、`?linked=github` 绑定成功、`?error=` 两者的失败。
+     */
+    fun parse(url: String): OauthCallback? {
+        val query = url.substringAfter('?', "").takeIf { it.isNotEmpty() } ?: return null
+        val params = query.split('&').mapNotNull {
+            val i = it.indexOf('=')
+            if (i <= 0) null else it.substring(0, i) to decodeUrlComponent(it.substring(i + 1))
+        }.toMap()
+        return when {
+            params["otc"] != null -> OauthCallback.SignedIn(params.getValue("otc"))
+            params["linked"] != null -> OauthCallback.Linked
+            params["error"] != null -> OauthCallback.Failed(params.getValue("error"))
+            else -> null
+        }
+    }
+
+    private fun decodeUrlComponent(raw: String): String {
+        val bytes = mutableListOf<Byte>()
+        var i = 0
+        while (i < raw.length) {
+            when {
+                raw[i] == '%' && i + 2 < raw.length -> {
+                    val hex = raw.substring(i + 1, i + 3).toIntOrNull(16)
+                    if (hex == null) { bytes.add(raw[i].code.toByte()); i++ }
+                    else { bytes.add(hex.toByte()); i += 3 }
+                }
+                raw[i] == '+' -> { bytes.add(' '.code.toByte()); i++ }
+                else -> { raw[i].toString().encodeToByteArray().forEach { bytes.add(it) }; i++ }
+            }
+        }
+        return bytes.toByteArray().decodeToString()
+    }
+}
+
+sealed interface OauthCallback {
+    /** 登录回跳：拿 otc 去换令牌 */
+    data class SignedIn(val otc: String) : OauthCallback
+    /** 绑定身份成功 */
+    data object Linked : OauthCallback
+    /** 失败，reason 为协议错误码或 App 自定义的绑定冲突原因 */
+    data class Failed(val error: String) : OauthCallback
 }
