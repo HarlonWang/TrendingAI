@@ -61,7 +61,6 @@ fun SignInHintHost() {
                     stringResource(
                         when (reason) {
                             SignInFailureReason.SESSION_EXPIRED -> Res.string.sign_in_hint_session_expired
-                            SignInFailureReason.CLOCK_SKEW -> Res.string.sign_in_hint_clock_skew
                             else -> Res.string.sign_in_hint_connectivity
                         },
                     ),
@@ -69,7 +68,7 @@ fun SignInHintHost() {
             },
             confirmButton = {
                 if (sessionExpired) {
-                    // 浏览器侧 Logto 会话通常还在（本地只清了凭证），重登多为一跳静默回到原账号
+                    // 确认键直接拉起登录面板：会话已终结，用户需要重新登录
                     TextButton(onClick = {
                         hint = null
                         globalAuthManager.signIn("session_expired_hint")
@@ -103,7 +102,6 @@ fun SignInHintHost() {
 private fun SignInFailureReason.shouldHint(): Boolean = when (this) {
     SignInFailureReason.NETWORK,
     SignInFailureReason.TIMEOUT,
-    SignInFailureReason.CLOCK_SKEW,
     SignInFailureReason.SESSION_EXPIRED -> true
     SignInFailureReason.USER_CANCELED,
     SignInFailureReason.NO_BROWSER,

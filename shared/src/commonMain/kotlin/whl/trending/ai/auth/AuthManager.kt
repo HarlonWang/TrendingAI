@@ -13,19 +13,22 @@ sealed interface AuthState {
 }
 
 /**
- * 登录失败的粗粒度归因，同时喂埋点（USER_CANCELED 上报 sign_in_canceled 事件，
- * 其余映射为 sign_in_error 的 reason）与失败后的连通性提示。分类逻辑见 androidApp 的 LogtoAuthManager。
+ * 登录失败的粗粒度归因，喂 [SignInHintHost] 的提示弹窗。
+ *
+ * 登录**面板内**的失败（错误码、OAuth 回跳失败）不走这里——那些用户正看着面板，
+ * 内联红字比弹窗合适。这里只留「发生在别处、用户需要被明确告知」的那类。
+ *
+ * 2026-08 随 Logto 退场删掉了 CLOCK_SKEW：它是 id_token 本地校验的产物，
+ * 而 loginbase 客户端刻意不解析 JWT、不校验 exp，设备时钟偏差这一整类问题
+ * 在客户端不复存在（见 loginbase docs/design.md 客户端节）。
  */
 enum class SignInFailureReason {
     USER_CANCELED, TIMEOUT, NETWORK, NO_BROWSER, CONFIG,
 
-    /** 设备时钟偏差超出 id_token 校验容差（Logto SDK 60s）：重试无用，提示修时间（见 SignInHintHost） */
-    CLOCK_SKEW,
-
     /**
-     * 静默刷新被 Logto 以 invalid_grant 拒绝——refresh token 在服务端已不存在（吊销/到期/轮换竞态）。
-     * 与登录流程失败不同：此时本地会话已被清除（见 LogtoAuthManager 的会话失效处理），
-     * 提示的目的是让用户知道「需要重新登录」，而不是对着账户页的失败态反复重试。
+     * 刷新被服务端以 `invalid_refresh_token` 拒绝——refresh token 已不存在
+     * （吊销 / 重用检测 / 救活护栏）。此时本地会话已被清除，且这发生在**任意页面**
+     * 的后台刷新里，用户没在看登录面板：不提示的话他只会发现自己莫名未登录。
      */
     SESSION_EXPIRED,
     OTHER,

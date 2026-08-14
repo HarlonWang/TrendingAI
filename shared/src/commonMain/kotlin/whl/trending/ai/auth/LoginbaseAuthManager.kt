@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import wang.harlon.loginbase.AuthClient
+import wang.harlon.loginbase.RefreshOutcome
 import wang.harlon.loginbase.TokenStore
 import whl.trending.ai.core.UpgradeNotice
 import whl.trending.ai.core.platform.trackEvent
@@ -98,8 +99,18 @@ class LoginbaseAuthManager(
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             if (!e.isUnauthorized()) throw e
-            val fresh = client.accessToken(forceRefresh = true) ?: return null
-            block(fresh)
+            when (val outcome = client.refresh()) {
+                is RefreshOutcome.Success -> block(outcome.tokens.accessToken)
+                // 服务端明确说这个 refresh token 不存在了（吊销/重用检测/护栏）——本地会话
+                // 已被清除。**必须告诉用户**：否则他只会发现自己莫名未登录，而这发生在
+                // 任意页面（后台刷新），他根本没在看登录面板，没有别的地方能给出解释。
+                is RefreshOutcome.SessionEnded -> {
+                    SignInFailureBus.emit(SignInFailureReason.SESSION_EXPIRED)
+                    null
+                }
+                // Failed（网络等暂时性）/ NoSession：会话可能好好的，不提示、不打扰
+                else -> null
+            }
         }
     }
 

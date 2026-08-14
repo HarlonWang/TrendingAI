@@ -8,6 +8,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -91,6 +93,42 @@ class AuthorizedRetryTest {
         }
         assertNull(result)
         assertEquals(1, calls)
+    }
+
+    @Test
+    fun `会话被服务端终结时发出提示——否则用户只会发现自己莫名未登录`() = runTest {
+        SignInFailureBus.consume() // 清掉别的用例可能留下的重放
+        val seen = mutableListOf<SignInFailureReason>()
+        val collector = launch { SignInFailureBus.events.collect { seen += it } }
+
+        managerWith(refreshOk = false).authorized { throw ApiException(401, "expired") }
+        runCurrent()
+
+        assertEquals(listOf(SignInFailureReason.SESSION_EXPIRED), seen)
+        collector.cancel()
+        SignInFailureBus.consume()
+    }
+
+    @Test
+    fun `网络原因刷新失败不提示——会话可能好好的，别打扰`() = runTest {
+        SignInFailureBus.consume()
+        val seen = mutableListOf<SignInFailureReason>()
+        val collector = launch { SignInFailureBus.events.collect { seen += it } }
+
+        // 刷新请求直接抛（网络不通）→ RefreshOutcome.Failed，不是 SessionEnded
+        val engine = MockEngine { throw RuntimeException("network down") }
+        val client = AuthClient(
+            "https://x/auth",
+            InMemoryTokenStore(TokenPair("a0", "r0")),
+            HttpClient(engine),
+        )
+        LoginbaseAuthManager(client, "app://cb", CoroutineScope(Dispatchers.Unconfined))
+            .authorized { throw ApiException(401, "expired") }
+        runCurrent()
+
+        assertEquals(emptyList(), seen)
+        collector.cancel()
+        SignInFailureBus.consume()
     }
 
     @Test
