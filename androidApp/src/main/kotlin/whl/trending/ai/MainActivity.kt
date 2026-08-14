@@ -44,8 +44,9 @@ class MainActivity : AppCompatActivity() {
         // 存储与协议细节封在 shared 内，这里只给 Context。
         whl.trending.ai.auth.initLoginbaseAuth(
             applicationContext,
-            // 与 AndroidManifest 的 intent-filter 同源（build.gradle.kts 的 authRedirectScheme）
-            "${BuildConfig.AUTH_REDIRECT_SCHEME}://${BuildConfig.APPLICATION_ID}/auth",
+            // 与 AndroidManifest 的 intent-filter 同源（build.gradle.kts 的 authRedirectScheme）。
+            // 单斜杠、不带 host——见 build.gradle.kts 里对形态的说明
+            "${BuildConfig.AUTH_REDIRECT_SCHEME}:${BuildConfig.AUTH_REDIRECT_PATH}",
         )
 
         // 注入每日 Picks 本地通知实现（须在 onCreate：权限 launcher 要求 STARTED 前注册），

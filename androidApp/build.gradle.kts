@@ -77,16 +77,26 @@ android {
 
         manifestPlaceholders["appName"] = "Trending AI"
 
-        // loginbase 的 OAuth 回跳 deepLink，以 ${applicationId} 为 host
-        // （debug 与 release 各自独立，装同一台设备不会互相抢 deepLink）。
-        // 完整形如 cn.trendingai://whl.trending.ai/auth，服务端 allowedRedirects 需与之匹配
-        // （结构化校验：scheme+host 精确、path 允许前缀扩展）。
+        // loginbase 的 OAuth 回跳 deepLink，形如 cn.trendingai:/auth/callback
         //
-        // scheme 沿用 Logto 时代的值：**不能改**——它是已在服务端白名单里注册的回跳地址。
+        // scheme 取 **自有域名反写**（trendingai.cn → cn.trendingai）：RFC 8252 §7.1 对
+        // private-use scheme 的要求是 MUST 基于自己控制的域名反写，`myapp` 这类通用名不合格。
+        // 注意不能用 applicationId（whl.trending.ai 反写不对应任何真实域名，不合规）。
+        //
+        // **不带 host**（单斜杠）：private-use scheme 的 host 位没有所有权语义，纯粹是字符串，
+        // RFC 的示例形态也是 `com.example.app:/oauth2redirect/...`。
+        //
+        // **debug 用独立 scheme 而非 path 区分**：Android 的 <data> 规则是「没有 host 时所有
+        // path 属性都被忽略」，不带 host 就只剩 scheme 一个可过滤维度；且 scheme 是最粗、
+        // 最不可能被厂商 ROM 改坏的那一层，两个变体装同一台机器物理隔离。见下方 debug buildType。
+        //
         // 单一来源：同时喂给 manifest 占位符与 Kotlin（经 BuildConfig），避免两处漂移致回跳失效。
+        // 改动须与服务端 AUTH_DEEPLINKS 同步（github-ai-trending-api/wrangler.toml），
+        // 对不上服务端直接 400 invalid_redirect，GitHub 登录整条不可用。
         val authRedirectScheme = "cn.trendingai"
         manifestPlaceholders["authRedirectScheme"] = authRedirectScheme
         buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$authRedirectScheme\"")
+        buildConfigField("String", "AUTH_REDIRECT_PATH", "\"/auth/callback\"")
     }
 
     // 签名配置：从环境变量读取加密存储的密钥信息
@@ -165,6 +175,11 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             manifestPlaceholders["appName"] = "Trending AI (D)"
+            // 独立 scheme，与 release 物理隔离：装同一台设备时互不抢 deepLink。
+            // 对应 debug.trendingai.cn 反写，同样是自有域名，仍合 RFC 8252 §7.1
+            val debugScheme = "cn.trendingai.debug"
+            manifestPlaceholders["authRedirectScheme"] = debugScheme
+            buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$debugScheme\"")
         }
     }
     compileOptions {

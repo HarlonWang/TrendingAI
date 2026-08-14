@@ -32,10 +32,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="${authRedirectScheme}"
-                    android:host="${applicationId}"
-                    android:pathPrefix="/auth" />
+                <!-- 只按 scheme 过滤：回跳 URI 不带 host（cn.trendingai:/auth/callback），
+                     而 Android 的 <data> 规则是「没有 host 时所有 path 属性都被忽略」，
+                     写了也是摆设。debug/release 各占一个 scheme 来隔离，见 build.gradle.kts -->
+                <data android:scheme="${authRedirectScheme}" />
             </intent-filter>
         </activity>
 
