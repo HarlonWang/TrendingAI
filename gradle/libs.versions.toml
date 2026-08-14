@@ -34,7 +34,6 @@ highlights = "1.1.0"
 kmp-webview = "0.1.7"
 # 尚未发布 Maven Central，当前经 composite build 吃本地源码（见 settings.gradle.kts）
 loginbase-kt = "0.1.0"
-logto = "3.0.0-beta"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
 room = "2.8.4"
@@ -88,7 +87,6 @@ commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables
 highlights = { module = "dev.snipme:highlights", version.ref = "highlights" }
 kmp-webview = { module = "wang.harlon:kmp-webview", version.ref = "kmp-webview" }
 loginbase-kt = { module = "wang.harlon:loginbase-kt", version.ref = "loginbase-kt" }
-logto-android = { module = "io.logto.sdk:android", version.ref = "logto" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }

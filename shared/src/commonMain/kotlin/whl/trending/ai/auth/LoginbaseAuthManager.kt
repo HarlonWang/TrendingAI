@@ -26,7 +26,7 @@ private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
 private const val MAX_CAUSE_DEPTH = 8
 
 /**
- * loginbase 实现，替代 [LogtoAuthManager]。
+ * loginbase 实现（2026-08 替代已删除的 LogtoAuthManager）。
  *
  * 与 Logto 时代最大的结构差别：**登录 UI 在 App 内**（邮箱验证码全程原生，不再跳
  * 托管页），所以 [signIn] 不再"拉起外部流程"，而是发布一个请求让根部的
@@ -62,14 +62,6 @@ class LoginbaseAuthManager(
 
     /** 请求登录：弹 App 内登录面板（邮箱输入 + GitHub 按钮同屏，不再有方式选择器） */
     override fun signIn(source: String) {
-        LoginSheetBus.request(source)
-    }
-
-    /**
-     * 指定方式登录。保留双参重载是为了兼容既有调用点；新版两种方式在同一个面板里，
-     * 故这里与单参行为一致——method 仅作为面板的初始意图。
-     */
-    override fun signIn(source: String, method: SignInMethod) {
         LoginSheetBus.request(source)
     }
 
@@ -125,7 +117,7 @@ class LoginbaseAuthManager(
     }
 
     /**
-     * 登出的本地清理（与 [LogtoAuthManager.clearLocalUserState] 同集合）。
+     * 登出的本地清理（沿用 Logto 时代同一套清理集合）。
      *
      * **注意**：升级过渡期的"静默登出"**不得**复用这条路径——它会清收藏同步状态，
      * 而 C 方案的硬要求是升级导致的未登录态不能清任何用户数据（见 plan.md 第 4 步）。
@@ -148,7 +140,7 @@ class LoginbaseAuthManager(
 }
 
 /**
- * 登录面板请求总线。同 [SignInChooserBus] 的根部宿主思路：6 个登录入口零改动，
+ * 登录面板请求总线：6 个登录入口零改动，
  * 面板只实现一次。用 StateFlow 而非事件流——"当前是否有待处理的登录请求"是状态，
  * 配置变更重建后收集者能立刻恢复。
  */

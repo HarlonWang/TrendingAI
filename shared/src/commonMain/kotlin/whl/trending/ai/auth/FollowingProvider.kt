@@ -11,7 +11,7 @@ data class FollowingInfo(
 /**
  * 关注列表会话级缓存：按 type 分桶（User / Organization），all lowercase。
  * 任何异常返回 null（CancellationException 透传），null 不缓存。
- * 登出时由 LogtoAuthManager 调用 clear() 清缓存。
+ * 登出时由 [LoginbaseAuthManager] 调用 clear() 清缓存。
  */
 open class FollowingProvider(
     private val githubApi: GithubApi = GithubApi(),

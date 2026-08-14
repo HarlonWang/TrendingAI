@@ -91,7 +91,7 @@ fun LoginSheetHost() {
 
 private enum class Step { EMAIL, CODE }
 
-// TrendingBottomSheet 的默认 sheetState 用了实验 API，同 SignInMethodChooserHost
+// TrendingBottomSheet 的默认 sheetState 用了实验 API
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoginSheet(source: String, onDismiss: () -> Unit) {

@@ -53,34 +53,8 @@ object SignInFailureBus {
     }
 }
 
-/** 登录方式：GitHub 走 directSignIn 直达授权页；邮箱走托管页验证码（first_screen 直达邮箱输入屏） */
-enum class SignInMethod { GITHUB, EMAIL }
-
 /**
- * 登录方式选择请求总线：`signIn(source)` 不再直接拉起授权，而是发布一个「待选择」请求，
- * 由 App 根部的 SignInMethodChooserHost 弹底部选择器，选中后回调 `signIn(source, method)`。
- * 好处：6 个登录入口零改动，选择器 UI 只实现一次（同 [SignInFailureBus] 的根部宿主思路）。
- *
- * 用 StateFlow 而非 SharedFlow：选择器是「当前是否有待选请求」的状态而非事件流，
- * 配置变更重建后收集者能立刻恢复弹窗（replay 语义天然成立）。
- */
-object SignInChooserBus {
-    private val _request = MutableStateFlow<String?>(null)
-
-    /** 当前待选择的登录来源（null = 无待选请求） */
-    val request: StateFlow<String?> = _request
-
-    fun request(source: String) {
-        _request.value = source
-    }
-
-    fun clear() {
-        _request.value = null
-    }
-}
-
-/**
- * 登录态抽象：shared/UI 只依赖本接口，Logto SDK 只存在于 androidApp。
+ * 登录态抽象：shared/UI 只依赖本接口。
  * iOS 未接入前使用 NoopAuthManager（isSupported=false，UI 隐藏登录入口）。
  * 登录失败事件不经本接口，统一走 [SignInFailureBus]。
  */
@@ -89,13 +63,11 @@ interface AuthManager {
     val authState: StateFlow<AuthState>
 
     /**
-     * 请求登录：发布到 [SignInChooserBus]，待用户在根部选择器里选定方式后进入 [signIn] 双参重载。
+     * 请求登录：发布到 [LoginSheetBus]，由 App 根部的 LoginSheetHost 弹登录面板
+     * （邮箱验证码 + GitHub 同屏）。6 个登录入口零改动，面板只实现一次。
      * @param source 登录入口标识（如 "home_avatar"），随 sign_in_* 埋点上报做入口归因
      */
     fun signIn(source: String)
-
-    /** 以指定方式拉起授权流程（选择器回调；亦可跳过选择器直接指定方式） */
-    fun signIn(source: String, method: SignInMethod)
 
     fun signOut()
     suspend fun getAccessToken(): String?
@@ -108,7 +80,7 @@ interface AuthManager {
      * 「加载失败」摆给用户看，实际上刷新一下就能继续（实测：账户页显示
      * "Couldn't load credits right now"，其实只是 token 过期）。
      *
-     * 默认实现不重试（Logto SDK 自己管刷新）；loginbase 实现覆盖它。
+     * 默认实现不重试；loginbase 实现覆盖它。
      * 返回 null 表示无会话——调用方按未登录处理，与 [getAccessToken] 一致。
      */
     suspend fun <T> authorized(block: suspend (String) -> T): T? {
@@ -121,7 +93,6 @@ object NoopAuthManager : AuthManager {
     override val isSupported: Boolean = false
     override val authState: StateFlow<AuthState> = MutableStateFlow(AuthState.LoggedOut)
     override fun signIn(source: String) {}
-    override fun signIn(source: String, method: SignInMethod) {}
     override fun signOut() {}
     override suspend fun getAccessToken(): String? = null
 }
@@ -129,5 +100,3 @@ object NoopAuthManager : AuthManager {
 /** 仿 globalChatScreen 的依赖反转：Android 在 MainActivity.onCreate 注入实现 */
 var globalAuthManager: AuthManager = NoopAuthManager
 
-/** Logto 租户端点（自定义域名，与 api.trendingai.cn 同走 Cloudflare 边缘）：客户端 SDK 与 Account API 共用 */
-const val LOGTO_ENDPOINT = "https://auth.trendingai.cn"

@@ -8,7 +8,7 @@ import whl.trending.ai.data.remote.GithubEventDto
 /**
  * 自有仓库事件会话级缓存（精选档规则3 数据源）：仓库按 pushed 排序取前 N 个，
  * 并发拉取各仓库 events 后合并。任何异常返回 null（CancellationException 透传），null 不缓存。
- * 登出时由 LogtoAuthManager 调用 clear() 清缓存。
+ * 登出时由 [LoginbaseAuthManager] 调用 clear() 清缓存。
  */
 open class OwnRepoEventsProvider(
     private val githubApi: GithubApi = GithubApi(),

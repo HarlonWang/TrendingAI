@@ -77,19 +77,16 @@ android {
 
         manifestPlaceholders["appName"] = "Trending AI"
 
-        // Logto v3 登录/登出走系统浏览器（Chrome Custom Tabs），回跳经 OS intent-filter，
-        // SDK 用该 scheme + ${applicationId} 注册接收 Activity；缺失会导致 manifest 合并失败。
-        // 单一来源：同时喂给 manifest 占位符与 Kotlin（经 BuildConfig），避免两处 scheme 漂移致回跳失效。
-        val logtoRedirectScheme = "cn.trendingai"
-        manifestPlaceholders["logtoRedirectScheme"] = logtoRedirectScheme
-        buildConfigField("String", "LOGTO_REDIRECT_SCHEME", "\"$logtoRedirectScheme\"")
-
-        // loginbase 的 OAuth 回跳 deepLink。与 Logto 同 scheme、以 ${applicationId} 为 host
+        // loginbase 的 OAuth 回跳 deepLink，以 ${applicationId} 为 host
         // （debug 与 release 各自独立，装同一台设备不会互相抢 deepLink）。
         // 完整形如 cn.trendingai://whl.trending.ai/auth，服务端 allowedRedirects 需与之匹配
         // （结构化校验：scheme+host 精确、path 允许前缀扩展）。
-        manifestPlaceholders["authRedirectScheme"] = logtoRedirectScheme
-        buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$logtoRedirectScheme\"")
+        //
+        // scheme 沿用 Logto 时代的值：**不能改**——它是已在服务端白名单里注册的回跳地址。
+        // 单一来源：同时喂给 manifest 占位符与 Kotlin（经 BuildConfig），避免两处漂移致回跳失效。
+        val authRedirectScheme = "cn.trendingai"
+        manifestPlaceholders["authRedirectScheme"] = authRedirectScheme
+        buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$authRedirectScheme\"")
     }
 
     // 签名配置：从环境变量读取加密存储的密钥信息
@@ -185,6 +182,5 @@ dependencies {
     implementation(project(":androidLibrary:notifier"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
-    implementation(libs.logto.android)
     debugImplementation(libs.compose.uiTooling)
 }
