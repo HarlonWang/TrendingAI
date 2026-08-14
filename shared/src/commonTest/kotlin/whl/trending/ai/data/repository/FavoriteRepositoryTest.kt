@@ -61,7 +61,7 @@ class FavoriteRepositoryTest {
     private lateinit var api: FakeApi
 
     private fun repo(token: String? = "tok") =
-        FavoriteRepository(settings, api, tokenProvider = { token })
+        FavoriteRepository(settings, api, authorized = { block -> token?.let { block(it) } })
 
     private fun gh(name: String, ext: String = name) = FavoriteItem(
         url = "https://github.com/$name",
@@ -178,7 +178,7 @@ class FavoriteRepositoryTest {
         settings.setFavoritesMerged(true)
         settings.replaceFavorites(emptyList())
         api.seedServer(gh("a/b"), gh("c/d"))
-        val repo = FavoriteRepository(settings, api, tokenProvider = { "tok" }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val repo = FavoriteRepository(settings, api, authorized = { block -> block("tok") }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
 
         repo.requestSync()
         advanceUntilIdle()
@@ -190,7 +190,7 @@ class FavoriteRepositoryTest {
     fun requestSync_token为null时不动本地() = runTest {
         settings.setFavoritesMerged(true)
         settings.replaceFavorites(listOf(gh("x/y")))
-        val repo = FavoriteRepository(settings, api, tokenProvider = { null }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val repo = FavoriteRepository(settings, api, authorized = { }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
 
         repo.requestSync()
         advanceUntilIdle()

@@ -26,7 +26,15 @@ import whl.trending.ai.data.remote.TrendingApi
 class FavoriteRepository(
     private val settings: SettingsManager,
     private val api: TrendingApi,
-    private val tokenProvider: suspend () -> String?,
+    /**
+     * 带鉴权执行一次请求（见 [whl.trending.ai.auth.AuthManager.authorized]）：
+     * 拿 token 交给 block，**401 时刷新后重试一次**；无会话则不执行 block。
+     *
+     * 从「取 token 再自己发请求」换成这个形态，是因为收藏同步常发生在 App 启动或
+     * 回前台的瞬间——access token 恰好过期时，旧写法会静默失败、把用户的收藏留在
+     * 待推队列里，下次再撞。
+     */
+    private val authorized: suspend (suspend (String) -> Unit) -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     // 序列化所有网络同步，避免 flush 与全量覆盖交错导致缓存被旧快照回冲
@@ -86,8 +94,7 @@ class FavoriteRepository(
      */
     fun requestSync() {
         scope.launch {
-            val token = tokenProvider() ?: return@launch
-            sync(token)
+            authorized { sync(it) }
         }
     }
 
@@ -121,8 +128,8 @@ class FavoriteRepository(
     private suspend fun pushOp(op: PendingFavoriteOp) {
         mutex.withLock {
             enqueueLocked(op)
-            val token = tokenProvider() ?: return@withLock // 匿名/无 token：留队列，下次 sync 再推
-            runCatching { flushPending(token) }
+            // 匿名/无会话：留队列，下次 sync 再推
+            runCatching { authorized { flushPending(it) } }
         }
     }
 
@@ -172,6 +179,6 @@ val globalFavoriteRepository by lazy {
     FavoriteRepository(
         settings = globalSettingsManager,
         api = TrendingApi(),
-        tokenProvider = { globalAuthManager.getAccessToken() },
+        authorized = { block -> globalAuthManager.authorized(block) },
     )
 }
