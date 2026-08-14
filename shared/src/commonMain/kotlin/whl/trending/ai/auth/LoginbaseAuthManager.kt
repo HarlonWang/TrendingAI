@@ -164,11 +164,23 @@ object OauthCallbackBus {
     private val _events = MutableSharedFlow<OauthCallback>(replay = 1, extraBufferCapacity = 1)
     val events: SharedFlow<OauthCallback> = _events.asSharedFlow()
 
+    /**
+     * 是否有已投递但尚未被消费的回跳。
+     *
+     * 给「用户关掉浏览器」的兜底判定用：回跳成功时 emit 与收集者处理之间隔着一次
+     * 协程调度，而 ON_RESUME 可能插在中间——不看这个标记的话，会把成功的流程误判成
+     * 取消、把 loading 复位掉（用户在那一瞬间能点到按钮）。
+     */
+    var hasPending: Boolean = false
+        private set
+
     fun emit(callback: OauthCallback) {
+        hasPending = true
         _events.tryEmit(callback)
     }
 
     fun consume() {
+        hasPending = false
         _events.resetReplayCache()
     }
 

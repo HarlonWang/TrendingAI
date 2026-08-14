@@ -161,7 +161,9 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     // 回跳成功的路径也会经过 ON_RESUME，但那条会紧接着收到总线事件重新置 busy，
     // 顺序上不冲突。
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (awaitingOauth) {
+        // 有在途回跳时不复位——回跳成功也会经过 ON_RESUME，而事件的处理隔着一次协程
+        // 调度；不加这个条件就会把成功流程误判成取消，loading 闪一下没了
+        if (awaitingOauth && !OauthCallbackBus.hasPending) {
             awaitingOauth = false
             busy = false
         }

@@ -18,22 +18,16 @@
         <activity
             android:exported="true"
             android:name=".MainActivity"
-            android:windowSoftInputMode="adjustResize"
-            android:launchMode="singleTask">
-            <!-- loginbase OAuth 回跳：系统浏览器完成 GitHub 授权后回到这里，
-                 参数带 otc（登录）或 linked/error（绑定身份）。
-                 Logto 时代这条由 SDK 的 manifest 合并注入，自建后需自己注册。
+            android:windowSoftInputMode="adjustResize" />
 
-                 launchMode=singleTask 是回跳能复用现有实例的条件：默认的 standard
-                 会让浏览器在自己的 task 里新建一个 MainActivity——用户看到的是
-                 "跳回首页"，而登录面板不在这个新实例上，otc 投到总线后无人消费，
-                 登录实际上没完成（2026-08-13 实测）。
-
-                 Logto SDK 走的是另一条路：一个独立的透明 Activity
-                 （LogtoRedirectReceiverActivity，无 launchMode）接住回跳，
-                 经 SDK 内部静态回调转发后立刻 finish，主 Activity 不受影响。
-                 这里选 singleTask 是因为 App 只有一个 Activity，少一个中转件；
-                 代价是改变了主 Activity 的全局启动语义。 -->
+        <!-- OAuth 回跳接收：透明、一闪即逝，投递结果后把 MainActivity 带回前台。
+             刻意保持默认 launchMode（同 AppAuth 的 RedirectUriReceiverActivity）——
+             不把 OAuth 的特殊需求写进主 Activity 的全局启动语义。 -->
+        <activity
+            android:name=".AuthRedirectActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
