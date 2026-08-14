@@ -146,6 +146,13 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val USER_GITHUB_LOGIN_KEY = "prefs_user_github_login"
     private val USER_GITHUB_USER_ID_KEY = "prefs_user_github_user_id"
     private val USER_EMAIL_KEY = "prefs_user_email"
+
+    /**
+     * 「账号系统已升级」提示是否展示过（落地第 4 步 C 方案）。
+     * 触发人群单调归零（已展示 / 已重登 / 新装机 / 纯匿名均不再触发），
+     * 保留 2~3 个发版周期后可随例行清理删除——它是告示牌，不是基础设施。
+     */
+    private val UPGRADE_NOTICE_SHOWN_KEY = "prefs_upgrade_notice_shown"
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
@@ -496,6 +503,14 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     /** 已登录用户邮箱缓存：/api/me 写入、登出清除。存量会话的 token 无 email scope 时为 null（不追溯）。 */
     val userEmail: Flow<String?> = settings.getStringOrNullFlow(USER_EMAIL_KEY)
+
+    fun currentUserEmail(): String? = settings.getStringOrNull(USER_EMAIL_KEY)
+
+    fun currentUpgradeNoticeShown(): Boolean = settings.getBoolean(UPGRADE_NOTICE_SHOWN_KEY, false)
+
+    fun setUpgradeNoticeShown(shown: Boolean) {
+        settings.putBoolean(UPGRADE_NOTICE_SHOWN_KEY, shown)
+    }
 
     fun setUserEmail(email: String?) {
         if (email.isNullOrBlank()) {

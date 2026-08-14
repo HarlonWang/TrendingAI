@@ -328,4 +328,8 @@
     <string name="account_link_github_in_use">This GitHub account is already linked to another account</string>
     <string name="account_link_already_linked">Your account is already linked to a different GitHub account</string>
     <string name="account_link_failed">Couldn't link GitHub, please try again</string>
+    <string name="upgrade_notice_title">Account system upgraded</string>
+    <string name="upgrade_notice_message">Sign in again to restore your account — nothing was lost.</string>
+    <string name="upgrade_notice_action">Sign in</string>
+    <string name="upgrade_notice_dismiss">Got it</string>
 </resources>

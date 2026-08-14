@@ -131,3 +131,12 @@ fun trackItemClick(
     section?.let { props["section"] = it }
     trackEvent("item_click", props)
 }
+
+/**
+ * 是否存在 Logto SDK 时代遗留的本地凭证存储（**只看文件存在性，不解析内容**）。
+ *
+ * 仅用于「账号系统已升级」提示的触发判断，**不参与任何鉴权**——误判最坏是多显示或
+ * 少显示一张可关闭的卡片，失败模式无害。不解析内容也意味着不依赖 SDK 的内部格式，
+ * 将来 SDK 消失了这个函数照样安全。
+ */
+expect fun hasLegacyLogtoArtifacts(): Boolean

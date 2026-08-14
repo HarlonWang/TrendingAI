@@ -116,6 +116,8 @@ import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
+import whl.trending.ai.core.UpgradeNotice
+import whl.trending.ai.ui.common.UpgradeNoticeCard
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
@@ -224,6 +226,10 @@ private fun RepoList(
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
 ) {
     val state = rememberPullToRefreshState()
+
+    // 「账号系统已升级」一次性横幅：判定只读本地信号（缓存过的资料 / Logto 遗留文件），
+    // 不发请求。登录后 UpgradeNotice.shouldShow 自然为 false。
+    var showUpgradeNotice by remember { mutableStateOf(UpgradeNotice.shouldShow()) }
     val listState = rememberLazyListState()
     // 切换「只看 New」时滚回顶部：LazyColumn 按 key 会保持可视位置，
     // 关掉开关后画面几乎不变，用户容易以为切换没生效（#36）。
@@ -309,6 +315,22 @@ private fun RepoList(
                         bottom = LocalContentBottomPadding.current,
                     ),
                 ) {
+                if (showUpgradeNotice) {
+                    item(key = "upgrade_notice") {
+                        UpgradeNoticeCard(
+                            onSignIn = {
+                                UpgradeNotice.markShown()
+                                showUpgradeNotice = false
+                                globalAuthManager.signIn("upgrade_notice")
+                            },
+                            onDismiss = {
+                                UpgradeNotice.markShown()
+                                showUpgradeNotice = false
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
                 items(
                     count = displayRepos.size,
                     key = { index -> displayRepos[index].url }
