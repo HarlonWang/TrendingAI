@@ -94,6 +94,43 @@ class AuthorizedRetryTest {
     }
 
     @Test
+    fun `401 被别的异常包了一层，仍然刷新重试`() = runTest {
+        // 只认「直接抛出的 ApiException」的话，任何在中间包一层的调用点都会绕过刷新、
+        // 直接把失败摆给用户——那正是这次重试机制想消灭的表现
+        var calls = 0
+        val result = managerWith().authorized { token ->
+            calls++
+            if (calls == 1) throw IllegalStateException("wrapped", ApiException(401, "expired"))
+            "ok"
+        }
+        assertEquals("ok", result)
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun `包了一层的非 401 不触发刷新`() = runTest {
+        var calls = 0
+        assertFailsWith<IllegalStateException> {
+            managerWith().authorized {
+                calls++
+                throw IllegalStateException("wrapped", ApiException(500, "server"))
+            }
+        }
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun `自引用的 cause 链不会把回溯转成死循环`() = runTest {
+        // depth 封顶的意义：没有它，这个用例会挂死而不是失败
+        class SelfCaused : Exception() {
+            override val cause: Throwable get() = this
+        }
+        var calls = 0
+        assertFailsWith<SelfCaused> { managerWith().authorized { calls++; throw SelfCaused() } }
+        assertEquals(1, calls)
+    }
+
+    @Test
     fun `无会话时返回 null，业务块根本不执行`() = runTest {
         var calls = 0
         val result = managerWith(tokens = null).authorized { calls++; "never" }

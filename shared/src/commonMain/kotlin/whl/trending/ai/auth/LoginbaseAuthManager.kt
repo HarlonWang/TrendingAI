@@ -22,6 +22,9 @@ import wang.harlon.loginbase.AuthState as LoginbaseState
 /** loginbase 服务端挂载点（`/auth` 前缀，与 api.trendingai.cn 同域） */
 private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
 
+// 找 401 时沿 cause 链回溯的深度上限——自引用的 cause 会把回溯变成死循环
+private const val MAX_CAUSE_DEPTH = 8
+
 /**
  * loginbase 实现，替代 [LogtoAuthManager]。
  *
@@ -86,16 +89,39 @@ class LoginbaseAuthManager(
      *
      * 刷新走 [AuthClient.refresh] 的单飞路径——并发的多个业务请求同时 401 时，
      * 只会产生一次真实刷新，不会打爆服务端的救活配额。
+     *
+     * **调用契约：401 必须以异常形式冒出来**，本方法才看得见。沿 `cause` 链找
+     * [ApiException]，所以中间包一层别的异常类型也没关系，只要底层原因还在。
+     *
+     * **已知不覆盖的一类**：返回 `Boolean` 的写接口（`putFavorite` /
+     * `deleteFavorite` / `batchPutFavorites`）把 401 变成 `false` 而不抛异常，
+     * 这里无从感知。它们不会因此丢数据——失败的 op 留在待推队列里，下次 sync
+     * 重试（见 FavoriteRepository.flushPending）；代价只是这一次上行同步延后。
+     * 要让它们也参与重试，得先把那几个接口改成抛异常，属独立改动。
      */
     override suspend fun <T> authorized(block: suspend (String) -> T): T? {
         val token = client.accessToken() ?: return null
         return try {
             block(token)
-        } catch (e: ApiException) {
-            if (e.statusCode != 401) throw e
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (!e.isUnauthorized()) throw e
             val fresh = client.accessToken(forceRefresh = true) ?: return null
             block(fresh)
         }
+    }
+
+    /** 异常本身或其 `cause` 链上是否有 401 的 [ApiException]。 */
+    private fun Throwable.isUnauthorized(): Boolean {
+        var current: Throwable? = this
+        var depth = 0
+        // 深度封顶：防自引用的 cause 链把这里转成死循环
+        while (current != null && depth < MAX_CAUSE_DEPTH) {
+            if (current is ApiException && current.statusCode == 401) return true
+            current = current.cause
+            depth++
+        }
+        return false
     }
 
     /**

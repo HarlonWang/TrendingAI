@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.trackEvent
 
@@ -32,10 +33,20 @@ object AccountLink {
     /**
      * 是否有一次由本入口发起、尚未收到回跳的绑定。
      *
-     * 用途：协议里登录失败与绑定失败都回跳 `?error=`，两者形状相同；靠这个标记把失败
-     * 事件分派给正确的处理方（绑定失败归账户页提示，登录失败归登录面板）。
+     * 用途：协议里登录失败与绑定失败都回跳 `?error=`，两者形状相同（`internal` 两边都会
+     * 出现），仅凭回跳 URL 分不出来；靠这个标记把失败事件分派给正确的处理方
+     * （绑定失败归账户页提示，登录失败归登录面板）。
+     *
+     * **落盘而非内存变量**：绑定要跳出去开系统浏览器，授权期间进程随时可能被系统回收，
+     * 回跳时是冷启动。内存标记那时已经没了，绑定失败会被误判成登录失败、提示分派到错误
+     * 的地方。落盘后跨进程存活。
+     *
+     * 更彻底的解法在服务端——link 分支的错误回跳自带 `mode=link`，客户端就完全不需要这个
+     * 标记；已记入 loginbase 的协议待办，等那边落地后这里可以删掉。
      */
-    private var pending = false
+    private var pending: Boolean
+        get() = globalSettingsManager.accountLinkPending()
+        set(value) = globalSettingsManager.setAccountLinkPending(value)
 
     /**
      * 发起绑定：换取授权 URL 并用**系统浏览器**打开（OAuth 授权页不能内嵌）。

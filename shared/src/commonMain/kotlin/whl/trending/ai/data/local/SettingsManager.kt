@@ -140,6 +140,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FAVORITES_KEY = "prefs_favorites"
     private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
     private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
+    private val ACCOUNT_LINK_PENDING_KEY = "prefs_account_link_pending"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
@@ -457,6 +458,19 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setFavoritesMerged(value: Boolean) {
         settings.putBoolean(FAVORITES_MERGED_KEY, value)
+    }
+
+    /**
+     * 是否有一次已发起、尚未收到回跳的 GitHub 绑定（见 [whl.trending.ai.core.AccountLink]）。
+     *
+     * **必须落盘而不能只放内存**：绑定要跳出去开系统浏览器，授权期间 App 进程随时可能被
+     * 系统回收；回跳时是冷启动，内存标记早没了，绑定失败的 `?error=` 会被当成登录失败
+     * 分派错地方。落盘后跨进程存活。
+     */
+    fun accountLinkPending(): Boolean = settings.getBoolean(ACCOUNT_LINK_PENDING_KEY, false)
+
+    fun setAccountLinkPending(value: Boolean) {
+        settings.putBoolean(ACCOUNT_LINK_PENDING_KEY, value)
     }
 
     /**
