@@ -325,4 +325,7 @@
     <string name="login_or">或</string>
     <string name="login_continue_github">使用 GitHub 继续</string>
     <string name="login_oauth_failed">GitHub 登录失败，请重试</string>
+    <string name="account_link_github_in_use">该 GitHub 账号已绑定到其他账号</string>
+    <string name="account_link_already_linked">你的账号已绑定其他 GitHub 账号</string>
+    <string name="account_link_failed">关联 GitHub 失败，请重试</string>
 </resources>

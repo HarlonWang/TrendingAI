@@ -149,7 +149,6 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
-    private val ACCOUNT_LINK_OPENED_AT_KEY = "prefs_account_link_opened_at"
     // 存储 key 的字面量不随常量名改动——改了等于丢掉存量用户已选的模型
     private val CHAT_MODEL_CHOICE_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
@@ -530,15 +529,6 @@ class SettingsManager(private val settings: ObservableSettings) {
      * 最近一次打开 Logto 账户中心「关联 GitHub」页的时间戳（epoch millis），0 表示无待刷新的绑定意图。
      * 与赞助时间戳分开：两者回前台后要做的事不同（绑定要先刷身份，赞助只需对账 Pro）。
      */
-    fun currentAccountLinkOpenedAt(): Long = settings.getLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
-
-    fun setAccountLinkOpenedAt(time: Long) {
-        settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, time)
-    }
-
-    fun clearAccountLinkOpenedAt() {
-        settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
-    }
 
     /**
      * 用户的聊天模型意向：钉住的模型 id，或 [FOLLOW_SERVER_DEFAULT]（默认）＝跟随服务端默认、

@@ -45,7 +45,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.PaddingValues
@@ -138,6 +140,8 @@ fun ProfileScreen(
 
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showLinkGithubDialog by remember { mutableStateOf(false) }
+    // 发起绑定要先 POST 换 authorizeUrl（Bearer 鉴权，浏览器导航带不了这个头）
+    val linkScope = rememberCoroutineScope()
 
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -251,7 +255,7 @@ fun ProfileScreen(
                 } else if (uiState.loggedIn && uiState.user?.githubUserId == null) {
                     item(key = "link_github") {
                         LinkGithubCard(onClick = {
-                            AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)
+                            linkScope.launch { AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT) }
                         })
                     }
                 }

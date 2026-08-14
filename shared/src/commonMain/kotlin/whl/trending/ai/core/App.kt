@@ -52,6 +52,7 @@ import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.auth.LoginSheetHost
+import whl.trending.ai.ui.common.AccountLinkHost
 import whl.trending.ai.ui.common.SponsorLinkHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
@@ -130,6 +131,7 @@ fun App() {
                     SignInHintHost()
                     LoginSheetHost()
                     SponsorLinkHost()
+                    AccountLinkHost()
                     NavDisplay(
                         backStack = backStack,
                         onBack = { backStack.safePop() },

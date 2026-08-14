@@ -47,7 +47,7 @@ open class OwnRepoEventsProvider(
         /** 仓库列表已按 pushed 排序，最近活跃的前 20 个足以覆盖规则3 的 star/fork 来源 */
         private const val MAX_REPOS = 20
 
-        /** 全局共享实例：登出时由 LogtoAuthManager 清空 */
+        /** 全局共享实例：登出时由 LoginbaseAuthManager 清空 */
         val shared = OwnRepoEventsProvider()
     }
 }

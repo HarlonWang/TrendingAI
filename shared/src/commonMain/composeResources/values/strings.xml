@@ -325,4 +325,7 @@
     <string name="login_or">or</string>
     <string name="login_continue_github">Continue with GitHub</string>
     <string name="login_oauth_failed">GitHub sign-in failed, please try again</string>
+    <string name="account_link_github_in_use">This GitHub account is already linked to another account</string>
+    <string name="account_link_already_linked">Your account is already linked to a different GitHub account</string>
+    <string name="account_link_failed">Couldn't link GitHub, please try again</string>
 </resources>

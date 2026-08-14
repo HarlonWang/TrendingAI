@@ -50,7 +50,7 @@ open class FollowingProvider(
     }
 
     companion object {
-        /** 全局共享实例：登出时由 LogtoAuthManager 清空 */
+        /** 全局共享实例：登出时由 LoginbaseAuthManager 清空 */
         val shared = FollowingProvider()
     }
 }
