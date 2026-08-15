@@ -4,8 +4,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.auth.launchGithubLink
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.core.platform.trackEvent
 
 /**
@@ -49,24 +49,22 @@ object AccountLink {
         set(value) = globalSettingsManager.setAccountLinkPending(value)
 
     /**
-     * 发起绑定：换取授权 URL 并用**系统浏览器**打开（OAuth 授权页不能内嵌）。
+     * 发起绑定。浏览器环节归 loginbase-kt-browser：授权 URL 的换取（带 Bearer 的
+     * link/start）在库的管理页内完成，网络失败与用户取消都会从
+     * `client.oauthResults` 以 Failed / Cancelled 送达 [whl.trending.ai.ui.common.AccountLinkHost]。
      *
-     * @return 失败原因（未登录、网络失败等）；成功返回 null
+     * @return 失败原因（未初始化、无宿主 Activity）；成功发起返回 null
      */
-    suspend fun openLinkGithubPage(source: String): Throwable? {
+    fun openLinkGithubPage(source: String): Throwable? {
         val manager = globalAuthManager as? LoginbaseAuthManager
             ?: return IllegalStateException("loginbase auth not initialized")
         trackEvent("account_link_start", mapOf("source" to source))
-        return try {
-            val url = manager.client.githubLinkUrl(manager.redirectUri)
-            pending = true
-            openUrl(url)
-            null
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+        pending = true
+        if (!launchGithubLink(manager.client)) {
             pending = false
-            e
+            return IllegalStateException("no host activity for oauth")
         }
+        return null
     }
 
     /** 取走「本次失败是否属于绑定流程」的标记（一次性） */

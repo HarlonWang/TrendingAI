@@ -40,6 +40,8 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.aptabase)
             implementation(libs.androidx.browser)
+            // 社交登录浏览器环节（中转页/管理页/CCT 探测/取消判定）整体归库
+            implementation(libs.loginbase.kt.browser)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

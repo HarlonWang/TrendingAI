@@ -87,6 +87,8 @@ commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables
 highlights = { module = "dev.snipme:highlights", version.ref = "highlights" }
 kmp-webview = { module = "wang.harlon:kmp-webview", version.ref = "kmp-webview" }
 loginbase-kt = { module = "wang.harlon:loginbase-kt", version.ref = "loginbase-kt" }
+# 浏览器环节的可选模块（中转页/管理页/CCT），Android-only，与核心同版本发布
+loginbase-kt-browser = { module = "wang.harlon:loginbase-kt-browser", version.ref = "loginbase-kt" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }

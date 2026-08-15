@@ -17,8 +17,8 @@ import trendingai.shared.generated.resources.account_link_failed
 import trendingai.shared.generated.resources.account_link_github
 import trendingai.shared.generated.resources.account_link_github_in_use
 import trendingai.shared.generated.resources.sponsor_link_needed_later
-import whl.trending.ai.auth.OauthCallback
-import whl.trending.ai.auth.OauthCallbackBus
+import wang.harlon.loginbase.OAuthOutcome
+import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.platform.trackEvent
@@ -42,11 +42,14 @@ fun AccountLinkHost() {
     val repo = remember { UserRepository() }
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        OauthCallbackBus.events.collect { cb ->
-            when (cb) {
-                OauthCallback.Linked -> {
-                    OauthCallbackBus.consume()
+    val client = (globalAuthManager as? LoginbaseAuthManager)?.client
+
+    LaunchedEffect(client) {
+        client?.oauthResults?.collect { outcome ->
+            when (outcome) {
+                is OAuthOutcome.Linked -> {
+                    client.consumeOauthResult()
+                    AccountLink.consumePending() // 本流程收尾，标记别留给下一次登录失败
                     // 身份变了但登录态没变，authState 不会发射，只能靠 markLinked 通知界面
                     globalAuthManager.authorized { token ->
                         repo.syncMe(token, fresh = true)
@@ -55,12 +58,12 @@ fun AccountLinkHost() {
                     }
                 }
 
-                is OauthCallback.Failed -> {
+                is OAuthOutcome.Failed -> {
                     // 只处理由绑定入口发起的失败；登录失败归登录面板
                     if (!AccountLink.consumePending()) return@collect
-                    OauthCallbackBus.consume()
-                    trackEvent("account_link_error", mapOf("reason" to cb.error))
-                    errorText = when (cb.error) {
+                    client.consumeOauthResult()
+                    trackEvent("account_link_error", mapOf("reason" to outcome.reason))
+                    errorText = when (outcome.reason) {
                         // 后端 onLinked 的两种冲突（见 github-ai-trending-api 的 app-users.js）：
                         // 一律拒绝、绝不改绑——改绑会让 Pro 权益随 GitHub ID 漂移到别人账上
                         "github_in_use" -> getString(Res.string.account_link_github_in_use)
@@ -69,8 +72,13 @@ fun AccountLinkHost() {
                     }
                 }
 
+                OAuthOutcome.Cancelled ->
+                    // 用户放弃绑定：清掉落盘的 pending 标记，防它把下一次登录失败
+                    // 错认成绑定失败（登录/绑定共用 ?error= 形状，全靠这个标记分派）
+                    AccountLink.consumePending()
+
                 // 登录回跳不归这里管
-                is OauthCallback.SignedIn -> Unit
+                is OAuthOutcome.SignedIn, is OAuthOutcome.Unrecognized -> Unit
             }
         }
     }

@@ -51,6 +51,7 @@ if (!loginbaseKtDir.isNullOrBlank()) {
     includeBuild(dir) {
         dependencySubstitution {
             substitute(module("wang.harlon:loginbase-kt")).using(project(":library"))
+            substitute(module("wang.harlon:loginbase-kt-browser")).using(project(":library-browser"))
         }
     }
 }

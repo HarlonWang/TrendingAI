@@ -77,7 +77,10 @@ android {
 
         manifestPlaceholders["appName"] = "Trending AI"
 
-        // loginbase 的 OAuth 回跳 deepLink，形如 cn.trendingai:/auth/callback
+        // loginbase 的 OAuth 回跳 scheme。中转页 intent-filter 与运行时 redirect 推导都由
+        // loginbase-kt-browser 从这一个占位符取值（库内同源、不会漂移），App 不再写
+        // intent-filter / BuildConfig。完整 redirect 为 `cn.trendingai:/loginbase/callback`
+        // （Loginbase.redirectUri(context) 可查，debug 构建首次发起会打进日志）。
         //
         // scheme 取 **自有域名反写**（trendingai.cn → cn.trendingai）：RFC 8252 §7.1 对
         // private-use scheme 的要求是 MUST 基于自己控制的域名反写，`myapp` 这类通用名不合格。
@@ -90,13 +93,9 @@ android {
         // path 属性都被忽略」，不带 host 就只剩 scheme 一个可过滤维度；且 scheme 是最粗、
         // 最不可能被厂商 ROM 改坏的那一层，两个变体装同一台机器物理隔离。见下方 debug buildType。
         //
-        // 单一来源：同时喂给 manifest 占位符与 Kotlin（经 BuildConfig），避免两处漂移致回跳失效。
         // 改动须与服务端 AUTH_DEEPLINKS 同步（github-ai-trending-api/wrangler.toml），
         // 对不上服务端直接 400 invalid_redirect，GitHub 登录整条不可用。
-        val authRedirectScheme = "cn.trendingai"
-        manifestPlaceholders["authRedirectScheme"] = authRedirectScheme
-        buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$authRedirectScheme\"")
-        buildConfigField("String", "AUTH_REDIRECT_PATH", "\"/auth/callback\"")
+        manifestPlaceholders["loginbaseRedirectScheme"] = "cn.trendingai"
     }
 
     // 签名配置：从环境变量读取加密存储的密钥信息
@@ -177,9 +176,7 @@ android {
             manifestPlaceholders["appName"] = "Trending AI (D)"
             // 独立 scheme，与 release 物理隔离：装同一台设备时互不抢 deepLink。
             // 对应 debug.trendingai.cn 反写，同样是自有域名，仍合 RFC 8252 §7.1
-            val debugScheme = "cn.trendingai.debug"
-            manifestPlaceholders["authRedirectScheme"] = debugScheme
-            buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$debugScheme\"")
+            manifestPlaceholders["loginbaseRedirectScheme"] = "cn.trendingai.debug"
         }
     }
     compileOptions {

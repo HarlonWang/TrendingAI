@@ -41,13 +41,11 @@ class MainActivity : AppCompatActivity() {
         whl.trending.ai.core.platform.AndroidContextHolder.initialize(this)
 
         // 注入 loginbase 登录实现（替代 Logto；仿 globalChatScreen 的依赖反转）。
-        // 存储与协议细节封在 shared 内，这里只给 Context。
-        whl.trending.ai.auth.initLoginbaseAuth(
-            applicationContext,
-            // 与 AndroidManifest 的 intent-filter 同源（build.gradle.kts 的 authRedirectScheme）。
-            // 单斜杠、不带 host——见 build.gradle.kts 里对形态的说明
-            "${BuildConfig.AUTH_REDIRECT_SCHEME}:${BuildConfig.AUTH_REDIRECT_PATH}",
-        )
+        // 存储与协议细节封在 shared 内，这里只给 Context；OAuth 的 redirect 由
+        // loginbase-kt-browser 从 manifest meta-data 推导，不再手拼。
+        whl.trending.ai.auth.initLoginbaseAuth(applicationContext)
+        // OAuth 发起需要前台 Activity（库的管理页从它启动）
+        whl.trending.ai.auth.LoginbaseAuthUi.attach(this)
 
         // 注入每日 Picks 本地通知实现（须在 onCreate：权限 launcher 要求 STARTED 前注册），
         // 并对账调度状态；处理通知点击带来的切 tab 深链
