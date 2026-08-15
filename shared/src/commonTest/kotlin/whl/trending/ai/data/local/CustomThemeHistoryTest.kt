@@ -3,7 +3,6 @@ package whl.trending.ai.data.local
 import com.russhwolf.settings.MapSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * 自定义色历史：调色是试错过程，只留一个「当前自定义色」的话，调错一次或点一下

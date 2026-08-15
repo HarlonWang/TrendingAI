@@ -1,13 +1,13 @@
 package whl.trending.ai.auth
+import wang.harlon.loginbase.InMemoryTokenStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
 
-import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -16,7 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import wang.harlon.loginbase.AuthClient
-import wang.harlon.loginbase.InMemoryTokenStore
 import wang.harlon.loginbase.TokenPair
 import whl.trending.ai.data.remote.ApiException
 
@@ -47,9 +46,9 @@ class AuthorizedRetryTest {
                 )
             }
         }
-        val client = AuthClient("https://x/auth", InMemoryTokenStore(tokens), HttpClient(engine))
+        val client = AuthClient("https://x/auth", InMemoryTokenStore(tokens)) { httpEngine = engine }
         // 传入 scope：默认的 Dispatchers.Main 在单测环境不存在（init 块会立刻炸）
-        return LoginbaseAuthManager(client, "app://cb", CoroutineScope(Dispatchers.Unconfined))
+        return LoginbaseAuthManager(client, CoroutineScope(Dispatchers.Unconfined))
     }
 
     @Test
@@ -117,12 +116,10 @@ class AuthorizedRetryTest {
 
         // 刷新请求直接抛（网络不通）→ RefreshOutcome.Failed，不是 SessionEnded
         val engine = MockEngine { throw RuntimeException("network down") }
-        val client = AuthClient(
-            "https://x/auth",
-            InMemoryTokenStore(TokenPair("a0", "r0")),
-            HttpClient(engine),
-        )
-        LoginbaseAuthManager(client, "app://cb", CoroutineScope(Dispatchers.Unconfined))
+        val client = AuthClient("https://x/auth", InMemoryTokenStore(TokenPair("a0", "r0"))) {
+            httpEngine = engine
+        }
+        LoginbaseAuthManager(client, CoroutineScope(Dispatchers.Unconfined))
             .authorized { throw ApiException(401, "expired") }
         runCurrent()
 

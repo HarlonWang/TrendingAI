@@ -10,7 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.account_link_github
 import trendingai.shared.generated.resources.sponsor_link_needed_later
 import trendingai.shared.generated.resources.sponsor_link_needed_message
 import trendingai.shared.generated.resources.sponsor_link_needed_title

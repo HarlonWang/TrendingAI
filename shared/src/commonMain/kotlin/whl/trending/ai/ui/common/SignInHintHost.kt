@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.sign_in_hint_clock_skew
 import trendingai.shared.generated.resources.sign_in_hint_connectivity
 import trendingai.shared.generated.resources.sign_in_hint_dismiss
 import trendingai.shared.generated.resources.sign_in_hint_relogin
