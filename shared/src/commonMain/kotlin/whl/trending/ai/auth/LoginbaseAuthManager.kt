@@ -143,6 +143,9 @@ class LoginbaseAuthManager(
     }
 }
 
+/** GitHub 授权结束后，面板需要据此恢复 UI 的结果（成功不在此列——成功直接关面板） */
+enum class GithubAuthResult { FAILED, CANCELED }
+
 /**
  * 登录面板请求总线：6 个登录入口零改动，
  * 面板只实现一次。用 StateFlow 而非事件流——"当前是否有待处理的登录请求"是状态，
@@ -154,12 +157,29 @@ object LoginSheetBus {
     /** 当前待处理的登录来源（null = 无请求） */
     val request: StateFlow<String?> = _request
 
+    /**
+     * GitHub 授权的结果，由常驻的 [whl.trending.ai.ui.common.OAuthOutcomeHost] 写、面板读。
+     *
+     * 面板不直接订阅 `client.oauthResults`：授权要跳出 App，回来时面板可能已经不存在了
+     * （进程被回收 → 冷启动，本总线是内存态、`request` 已是 null），那条结果就没有消费者。
+     * 改由常驻宿主统一消费，面板只读这里。
+     */
+    private val _githubResult = MutableStateFlow<GithubAuthResult?>(null)
+    val githubResult: StateFlow<GithubAuthResult?> = _githubResult
+
     fun request(source: String) {
+        // 每次新请求都从干净状态开始：上一轮遗留的失败若留着，面板一打开就顶着红字
+        _githubResult.value = null
         _request.value = source
+    }
+
+    fun reportGithubResult(result: GithubAuthResult) {
+        _githubResult.value = result
     }
 
     fun clear() {
         _request.value = null
+        _githubResult.value = null
     }
 }
 

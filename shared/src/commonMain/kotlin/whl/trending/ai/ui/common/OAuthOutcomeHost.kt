@@ -18,6 +18,8 @@ import trendingai.shared.generated.resources.account_link_github
 import trendingai.shared.generated.resources.account_link_github_in_use
 import trendingai.shared.generated.resources.sponsor_link_needed_later
 import wang.harlon.loginbase.OAuthOutcome
+import whl.trending.ai.auth.GithubAuthResult
+import whl.trending.ai.auth.LoginSheetBus
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.AccountLink
@@ -25,20 +27,28 @@ import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.repository.UserRepository
 
 /**
- * 绑定 GitHub 身份的回跳宿主。挂在 App 根部（与 [SignInHintHost] 平级），
+ * OAuth 回跳结果的**唯一常驻消费者**。挂在 App 根部（与 [SignInHintHost] 平级），
  * 因为用户从浏览器回来时停在哪一页无法预期。
  *
- * 成功后要做三件事，**顺序不能反**：
+ * **为什么必须常驻**：`client.oauthResults` 是 `replay = 1` 的 SharedFlow，结果要有人
+ * 调 `consumeOauthResult()` 才清。授权要跳出 App，期间进程随时可能被回收——回跳时是
+ * 冷启动（库把 URL 停泊起来、由 `restore()` 排空），那时登录面板早已不存在
+ * （`LoginSheetBus` 是内存态），若由面板消费就没有消费者了。后果有二：
+ * - 登录成功却不上报 `sign_in_success`，漏斗里与「停在授权页直接杀进程」的真实流失混同；
+ * - 那条结果一直卡在 replay 里（登出也不清），用户下次打开登录面板的瞬间就会收到它——
+ *   旧的成功会让面板刚弹出就自己关掉，旧的失败会让面板一开就顶着红字报错，
+ *   两者还各自多上报一次假埋点。
+ *
+ * 面板因此不再订阅 `oauthResults`，只读 [LoginSheetBus.githubResult]。
+ *
+ * 绑定成功后要做三件事，**顺序不能反**：
  * 1. **fresh 刷身份**——绕开服务端 claims 缓存拿到新的 `github_user_id`；
  * 2. 通知界面重载（[AccountLink.markLinked]）；
  * 3. **补一次 Pro 对账**——用户很可能是「先赞助、后关联」，权益早发好了只是匹配不上，
  *    不补对账他还得自己再点一次升级（这正是 SponsorLinkHost 那条引导的终点）。
- *
- * 失败分派：协议里登录失败与绑定失败都回跳 `?error=`、形状相同，
- * 靠 [AccountLink.consumePending] 区分是不是本流程发起的。
  */
 @Composable
-fun AccountLinkHost() {
+fun OAuthOutcomeHost() {
     val repo = remember { UserRepository() }
     var errorText by remember { mutableStateOf<String?>(null) }
 
@@ -46,9 +56,25 @@ fun AccountLinkHost() {
 
     LaunchedEffect(client) {
         client?.oauthResults?.collect { outcome ->
+            // 无论哪一种结果都在这里消费掉：漏一种，它就会滞留到下一次面板打开
+            client.consumeOauthResult()
             when (outcome) {
+                is OAuthOutcome.SignedIn -> {
+                    // source 取当前登录请求；冷启动路径上面板已不在、取不到，
+                    // 记成 cold_start 而不是不报——漏斗少一个终态比来源不精确更难查
+                    trackEvent(
+                        "sign_in_success",
+                        mapOf(
+                            "source" to (LoginSheetBus.request.value ?: "cold_start"),
+                            "method" to "github",
+                            "is_new" to (outcome.session.isNewUser == true),
+                        ),
+                    )
+                    // 面板还开着就关掉；已经不在了这步是空操作
+                    LoginSheetBus.clear()
+                }
+
                 is OAuthOutcome.Linked -> {
-                    client.consumeOauthResult()
                     AccountLink.consumePending() // 本流程收尾，标记别留给下一次登录失败
                     // markLinked 带埋点和界面通知，必须留在重试块**外**：authorized 撞 401
                     // 会把整个 block 重跑一遍，放块内就会重复上报 account_link_success
@@ -64,10 +90,9 @@ fun AccountLinkHost() {
                     }
                 }
 
-                is OAuthOutcome.Failed -> {
-                    // 只处理由绑定入口发起的失败；登录失败归登录面板
-                    if (!AccountLink.consumePending()) return@collect
-                    client.consumeOauthResult()
+                // 协议里登录失败与绑定失败都回跳 `?error=`、形状相同，
+                // 靠这个落盘标记区分是哪条流程发起的
+                is OAuthOutcome.Failed -> if (AccountLink.consumePending()) {
                     trackEvent("account_link_error", mapOf("reason" to outcome.reason))
                     errorText = when (outcome.reason) {
                         // 后端 onLinked 的两种冲突（见 github-ai-trending-api 的 app-users.js）：
@@ -76,15 +101,22 @@ fun AccountLinkHost() {
                         "already_linked" -> getString(Res.string.account_link_already_linked)
                         else -> getString(Res.string.account_link_failed)
                     }
+                } else {
+                    trackEvent(
+                        "sign_in_error",
+                        mapOf("source" to (LoginSheetBus.request.value ?: "cold_start"), "method" to "github"),
+                    )
+                    LoginSheetBus.reportGithubResult(GithubAuthResult.FAILED)
                 }
 
-                OAuthOutcome.Cancelled ->
-                    // 用户放弃绑定：清掉落盘的 pending 标记，防它把下一次登录失败
-                    // 错认成绑定失败（登录/绑定共用 ?error= 形状，全靠这个标记分派）
+                OAuthOutcome.Cancelled -> {
+                    // 用户放弃：清掉落盘的绑定标记，防它把下一次登录失败错认成绑定失败
                     AccountLink.consumePending()
+                    LoginSheetBus.reportGithubResult(GithubAuthResult.CANCELED)
+                }
 
-                // 登录回跳不归这里管
-                is OAuthOutcome.SignedIn, is OAuthOutcome.Unrecognized -> Unit
+                // 配置类异常输入（详见库文档），开发期问题，不打扰用户
+                is OAuthOutcome.Unrecognized -> Unit
             }
         }
     }

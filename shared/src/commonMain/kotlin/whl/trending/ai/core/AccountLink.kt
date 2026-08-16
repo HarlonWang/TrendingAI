@@ -22,7 +22,7 @@ import whl.trending.ai.core.platform.trackEvent
  * 随之删掉的是一整套为 Logto 网页流程做的补偿：那个关联页是 web 单任务流程、
  * **回跳不了 App**，所以过去只能靠「用户手动返回 → ON_RESUME → 30 分钟窗口内刷新身份」
  * 去猜是否关联成功。现在 callback 直接 302 回 deepLink，结果是确定的——`?linked=github`
- * 或 `?error=<reason>`，由 [whl.trending.ai.ui.common.AccountLinkHost] 消费。
+ * 或 `?error=<reason>`，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 消费。
  */
 object AccountLink {
 
@@ -51,7 +51,7 @@ object AccountLink {
     /**
      * 发起绑定。浏览器环节归 loginbase-kt-browser：授权 URL 的换取（带 Bearer 的
      * link/start）在库的管理页内完成，网络失败与用户取消都会从
-     * `client.oauthResults` 以 Failed / Cancelled 送达 [whl.trending.ai.ui.common.AccountLinkHost]。
+     * `client.oauthResults` 以 Failed / Cancelled 送达 [whl.trending.ai.ui.common.OAuthOutcomeHost]。
      *
      * **发起阶段**的失败（未初始化、无宿主 Activity）到不了那条通道——浏览器还没开起来。
      * 走 [launchFailed]，与授权阶段的失败汇到同一个宿主、同一个提示，调用方不必各自兜。
@@ -67,7 +67,7 @@ object AccountLink {
     }
 
     /**
-     * 发起阶段失败的信号，由 [whl.trending.ai.ui.common.AccountLinkHost] 弹提示。
+     * 发起阶段失败的信号，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 弹提示。
      *
      * 没有它的话调用方拿到的是一个「返回失败原因」的返回值——而两个入口都只是把它丢掉，
      * 用户点了「关联 GitHub」什么也不会发生。
@@ -84,7 +84,7 @@ object AccountLink {
     fun consumePending(): Boolean = pending.also { pending = false }
 
     /**
-     * 关联成功信号。刷新身份的是 [whl.trending.ai.ui.common.AccountLinkHost]，而账户页的
+     * 关联成功信号。刷新身份的是 [whl.trending.ai.ui.common.OAuthOutcomeHost]，而账户页的
      * ProfileViewModel 早已组合完毕、不会自己重拉——没有这个信号，身份已经绑好了，
      * 界面却仍停在「关联 GitHub」。
      */

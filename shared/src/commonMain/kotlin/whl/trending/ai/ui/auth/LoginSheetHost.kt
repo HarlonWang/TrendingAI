@@ -56,10 +56,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import wang.harlon.loginbase.LoginbaseException
 import wang.harlon.loginbase.AuthError
+import whl.trending.ai.auth.GithubAuthResult
 import whl.trending.ai.auth.LoginSheetBus
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
-import wang.harlon.loginbase.OAuthOutcome
 import whl.trending.ai.auth.launchGithubSignIn
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.home.githubLogoPainter
@@ -151,42 +151,21 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         }
     }
 
-    // GitHub 授权回跳：结果从库的唯一通道送达。otc 兑换、登录/绑定分辨、取消判定
-    // 都已在库内完成——过去靠 ON_RESUME 启发式兜「关掉浏览器没有任何回调」的那段
-    // 没有了，用户关掉授权页会收到确定的 Cancelled。
-    // 面板此时通常还开着（Activity 未被销毁），故由面板自己收尾最自然。
-    LaunchedEffect(Unit) {
-        client.oauthResults.collect { outcome ->
-            when (outcome) {
-                is OAuthOutcome.SignedIn -> {
-                    client.consumeOauthResult()
-                    trackEvent(
-                        "sign_in_success",
-                        mapOf(
-                            "source" to source,
-                            "method" to "github",
-                            "is_new" to (outcome.session.isNewUser == true),
-                        ),
-                    )
-                    busy = false
-                    onDismiss()
-                }
-                is OAuthOutcome.Failed -> {
-                    client.consumeOauthResult()
-                    error = oauthFailed
-                    busy = false
-                    trackEvent("sign_in_error", mapOf("source" to source, "method" to "github"))
-                }
-                OAuthOutcome.Cancelled -> {
-                    // 用户放弃授权（关掉 CCT / 从浏览器返回）——库的确定信号
-                    client.consumeOauthResult()
-                    busy = false
-                }
-                // 绑定身份的回跳不归登录面板管，留给账户页消费
-                is OAuthOutcome.Linked -> Unit
-                // 配置类异常输入（详见库文档），开发期问题，不打扰用户
-                is OAuthOutcome.Unrecognized -> Unit
+    // GitHub 授权回跳：面板**不直接订阅** client.oauthResults——授权要跳出 App，回来时
+    // 面板可能已经不在了（进程被回收 → 冷启动），那条结果就没有消费者，会滞留在
+    // replay 里、在下一次面板打开的瞬间炸出来。统一由常驻的 OAuthOutcomeHost 消费，
+    // 埋点也归它（那样冷启动路径上的成功/失败才报得出去）；面板只读需要显示的部分。
+    // 成功不在这里处理：宿主会直接清掉 LoginSheetBus，面板随之消失。
+    val githubResult by LoginSheetBus.githubResult.collectAsState()
+    LaunchedEffect(githubResult) {
+        when (githubResult) {
+            GithubAuthResult.FAILED -> {
+                error = oauthFailed
+                busy = false
             }
+            // 用户放弃授权（关掉 CCT / 从浏览器返回）——库给的确定信号，不报错只解除等待
+            GithubAuthResult.CANCELED -> busy = false
+            null -> Unit
         }
     }
 

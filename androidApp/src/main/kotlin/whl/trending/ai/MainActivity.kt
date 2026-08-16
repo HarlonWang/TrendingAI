@@ -126,7 +126,7 @@ class MainActivity : AppCompatActivity() {
         if (!loggedIn) return
 
         // 绑定 GitHub 的回前台刷新窗口已随 loginbase link 流程删除——
-        // 回跳带确定结果（?linked=github / ?error=），由 AccountLinkHost 处理，
+        // 回跳带确定结果（?linked=github / ?error=），由 OAuthOutcomeHost 处理，
         // 不再需要「用户手动返回 + 30 分钟窗口内猜测」。
 
         // 赞助对账窗口
