@@ -2,16 +2,20 @@ package whl.trending.ai.auth
 
 import wang.harlon.loginbase.AuthClient
 
-/**
- * 拉起 GitHub OAuth 授权。浏览器环节（中转页/管理页/CCT 探测/取消判定/进程回收兜底）
- * 整体归 `loginbase-kt-browser`（Android-only），结果只从 [AuthClient.oauthResults] 送达。
- *
- * iOS 上 [globalAuthManager] 是 Noop、登录面板里的 GitHub 路径不可达，actual 只是
- * 编译占位（返回 false）。
- *
- * @return false = 平台不支持或宿主 Activity 不在（防御路径，正常流程不该走到）
- */
-internal expect fun launchGithubSignIn(client: AuthClient): Boolean
+enum class OAuthMode { SIGN_IN, LINK }
 
-/** 同 [launchGithubSignIn]，绑定流程。授权 URL 的换取（带 Bearer 的 link/start）在库内完成。 */
-internal expect fun launchGithubLink(client: AuthClient): Boolean
+/**
+ * GitHub OAuth 发起的注入点（仿 globalChatScreen 的依赖反转）。
+ *
+ * 浏览器环节归 loginbase-kt-browser（Android-only），**只由 androidApp 依赖并在
+ * MainActivity 注入**——shared 不碰它：它的 manifest（含 placeholder）会合并进
+ * 所有依赖方模块的单测 manifest，直接依赖会让 shared/chat 的 test 任务构建失败。
+ * iOS 不注入（globalAuthManager 是 Noop，此路径不可达）。
+ */
+var globalOAuthLauncher: ((AuthClient, OAuthMode) -> Boolean)? = null
+
+internal fun launchGithubSignIn(client: AuthClient): Boolean =
+    globalOAuthLauncher?.invoke(client, OAuthMode.SIGN_IN) ?: false
+
+internal fun launchGithubLink(client: AuthClient): Boolean =
+    globalOAuthLauncher?.invoke(client, OAuthMode.LINK) ?: false

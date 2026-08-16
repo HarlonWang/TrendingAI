@@ -12,9 +12,6 @@ android {
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
-        // loginbase-kt-browser 的 manifest 会合并进本模块的单测 manifest，
-        // 缺占位符会让 test 任务构建失败；单测不真用回跳，给个测试值即可
-        manifestPlaceholders["loginbaseRedirectScheme"] = "cn.trendingai.test"
     }
 
     compileOptions {

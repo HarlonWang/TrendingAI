@@ -194,5 +194,9 @@ dependencies {
     implementation(project(":androidLibrary:notifier"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
+    // 社交登录浏览器环节：只由本模块（持有 Activity 的那层）依赖，经
+    // globalOAuthLauncher 注入给 shared——直接让 shared 依赖会把它的 manifest
+    // 合并进所有中间模块的单测（placeholder 无值即构建失败）
+    implementation(libs.loginbase.kt.browser)
     debugImplementation(libs.compose.uiTooling)
 }

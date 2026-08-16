@@ -43,8 +43,9 @@ class MainActivity : AppCompatActivity() {
         // 存储与协议细节封在 shared 内，这里只给 Context；OAuth 的 redirect 由
         // loginbase-kt-browser 从 manifest meta-data 推导，不再手拼。
         whl.trending.ai.auth.initLoginbaseAuth(applicationContext)
-        // OAuth 发起需要前台 Activity（库的管理页从它启动）
-        whl.trending.ai.auth.LoginbaseAuthUi.attach(this)
+        // OAuth 发起需要前台 Activity（库的管理页从它启动）；browser 模块只在本模块，
+        // 经注入点交给 shared
+        LoginbaseOAuthLauncher.install(this)
 
         // 注入每日 Picks 本地通知实现（须在 onCreate：权限 launcher 要求 STARTED 前注册），
         // 并对账调度状态；处理通知点击带来的切 tab 深链
