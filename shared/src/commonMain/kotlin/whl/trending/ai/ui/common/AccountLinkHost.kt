@@ -50,11 +50,17 @@ fun AccountLinkHost() {
                 is OAuthOutcome.Linked -> {
                     client.consumeOauthResult()
                     AccountLink.consumePending() // 本流程收尾，标记别留给下一次登录失败
-                    // 身份变了但登录态没变，authState 不会发射，只能靠 markLinked 通知界面
+                    // markLinked 带埋点和界面通知，必须留在重试块**外**：authorized 撞 401
+                    // 会把整个 block 重跑一遍，放块内就会重复上报 account_link_success
+                    var synced = false
                     globalAuthManager.authorized { token ->
                         repo.syncMe(token, fresh = true)
+                        synced = true
+                    }
+                    if (synced) {
+                        // 身份变了但登录态没变，authState 不会发射，只能靠 markLinked 通知界面
                         AccountLink.markLinked()
-                        repo.refreshPro(token)
+                        globalAuthManager.authorized { token -> repo.refreshPro(token) }
                     }
                 }
 
@@ -81,6 +87,13 @@ fun AccountLinkHost() {
                 is OAuthOutcome.SignedIn, is OAuthOutcome.Unrecognized -> Unit
             }
         }
+    }
+
+    // 发起阶段就失败（未初始化 / 无宿主 Activity）：浏览器没开起来，到不了 oauthResults，
+    // 但对用户来说同样是「点了关联却没成」，用同一个提示收口
+    val launchFailedText = stringResource(Res.string.account_link_failed)
+    LaunchedEffect(Unit) {
+        AccountLink.launchFailed.collect { errorText = launchFailedText }
     }
 
     errorText?.let { text ->

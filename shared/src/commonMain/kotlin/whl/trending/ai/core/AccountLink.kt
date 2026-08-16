@@ -53,18 +53,31 @@ object AccountLink {
      * link/start）在库的管理页内完成，网络失败与用户取消都会从
      * `client.oauthResults` 以 Failed / Cancelled 送达 [whl.trending.ai.ui.common.AccountLinkHost]。
      *
-     * @return 失败原因（未初始化、无宿主 Activity）；成功发起返回 null
+     * **发起阶段**的失败（未初始化、无宿主 Activity）到不了那条通道——浏览器还没开起来。
+     * 走 [launchFailed]，与授权阶段的失败汇到同一个宿主、同一个提示，调用方不必各自兜。
      */
-    fun openLinkGithubPage(source: String): Throwable? {
-        val manager = globalAuthManager as? LoginbaseAuthManager
-            ?: return IllegalStateException("loginbase auth not initialized")
+    fun openLinkGithubPage(source: String) {
+        val manager = globalAuthManager as? LoginbaseAuthManager ?: return failToLaunch("not_initialized")
         trackEvent("account_link_start", mapOf("source" to source))
         pending = true
         if (!launchGithubLink(manager.client)) {
             pending = false
-            return IllegalStateException("no host activity for oauth")
+            failToLaunch("no_host_activity")
         }
-        return null
+    }
+
+    /**
+     * 发起阶段失败的信号，由 [whl.trending.ai.ui.common.AccountLinkHost] 弹提示。
+     *
+     * 没有它的话调用方拿到的是一个「返回失败原因」的返回值——而两个入口都只是把它丢掉，
+     * 用户点了「关联 GitHub」什么也不会发生。
+     */
+    private val _launchFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val launchFailed: SharedFlow<Unit> = _launchFailed
+
+    private fun failToLaunch(reason: String) {
+        trackEvent("account_link_error", mapOf("reason" to reason))
+        _launchFailed.tryEmit(Unit)
     }
 
     /** 取走「本次失败是否属于绑定流程」的标记（一次性） */
