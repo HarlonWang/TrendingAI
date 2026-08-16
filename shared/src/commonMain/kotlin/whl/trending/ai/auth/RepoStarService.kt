@@ -5,7 +5,8 @@ import whl.trending.ai.data.remote.GithubApi
 /**
  * GitHub 仓库 star / unstar 的共享业务逻辑：Trending 列表页与 README 详情页复用。
  * 统一处理「取 GitHub token → 鉴权 → 调 API」，把结果归一为 [Result] 交由 UI 映射文案。
- * token 经 [GithubTokenProvider] 从 Logto Secret Vault 取回，需含 `public_repo` scope 才能写 star。
+ * token 经 [GithubTokenProvider] 从自家后端取回（`app_users.gh_token_enc`，2026-08 起取代
+ * Logto Secret Vault），需含 `public_repo` scope 才能写 star。
  */
 class RepoStarService(
     private val githubApi: GithubApi = GithubApi(),

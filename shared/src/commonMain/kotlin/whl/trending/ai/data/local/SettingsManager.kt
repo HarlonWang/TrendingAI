@@ -555,11 +555,6 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 最近一次打开 Logto 账户中心「关联 GitHub」页的时间戳（epoch millis），0 表示无待刷新的绑定意图。
-     * 与赞助时间戳分开：两者回前台后要做的事不同（绑定要先刷身份，赞助只需对账 Pro）。
-     */
-
-    /**
      * 用户的聊天模型意向：钉住的模型 id，或 [FOLLOW_SERVER_DEFAULT]（默认）＝跟随服务端默认、
      * 请求不带 model 字段。两种取值对应下面的 [pinChatModel] / [followServerDefault]。
      *

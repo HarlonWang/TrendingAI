@@ -12,8 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -88,8 +89,8 @@ fun LoginSheetHost() {
 
 private enum class Step { EMAIL, CODE }
 
-// TrendingBottomSheet 的默认 sheetState 用了实验 API
-@OptIn(ExperimentalMaterial3Api::class)
+// TrendingBottomSheet 的默认 sheetState 与 LoadingIndicator 都是实验 API
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     val manager = globalAuthManager as? LoginbaseAuthManager
@@ -310,7 +311,10 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (busy) {
-                    CircularProgressIndicator(modifier = Modifier.height(20.dp))
+                    LoadingIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
                 } else {
                     Text(stringResource(Res.string.login_continue))
                 }

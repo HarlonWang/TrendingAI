@@ -23,9 +23,11 @@ import whl.trending.ai.auth.globalAuthManager
 
 /**
  * 全局登录失败提示宿主：收集 [SignInFailureBus] 的失败事件，对可行动的失败类别弹轻量弹窗——
- * 连通性类（NETWORK/TIMEOUT）引导检查网络；时钟偏差类（CLOCK_SKEW）引导修系统时间，
- * 后者若只给通用提示，用户会陷入「重试永远失败」的死循环（时钟不修，id_token 校验必败）。
- * 会话失效类（SESSION_EXPIRED）引导重新登录：本地会话已被清除，确认键直接拉起登录选择器。
+ * 连通性类（NETWORK/TIMEOUT）引导检查网络；会话失效类（SESSION_EXPIRED）引导重新登录：
+ * 本地会话已被清除，确认键直接拉起登录面板。
+ *
+ * 时钟偏差类（CLOCK_SKEW）随 Logto 退场一并删除——它是 id_token 本地校验的产物，
+ * loginbase 客户端不解析 JWT，这一整类问题在客户端不复存在（见 [SignInFailureReason]）。
  *
  * 用弹窗（独立窗口）而非 Snackbar：① 不占/不盖 app 布局；② 登录失败值得被明确看见，Snackbar 易被错过。
  * 放在 App 根部（与 WhatsNewHost 平级），是因为登录有 4 个触发点（首页头像 / Trending·Readme 的

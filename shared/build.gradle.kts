@@ -66,7 +66,11 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.material.kolor)
             implementation(libs.kmp.webview)
-            implementation(libs.loginbase.kt)
+            // api 而非 implementation：shared 的 public API 直接暴露了库的类型
+            // （LoginbaseAuthManager.client、globalOAuthLauncher、initLoginbaseAuth），
+            // 消费者必须在编译期看得见它们。眼下 androidApp 是从 loginbase-kt-browser
+            // 的 api(library) 间接拿到的，哪天那条依赖动了就会编译不过
+            api(libs.loginbase.kt)
             implementation(libs.jetbrains.navigationevent.compose)
         }
         iosMain.dependencies {

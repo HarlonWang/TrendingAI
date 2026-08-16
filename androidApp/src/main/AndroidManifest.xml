@@ -20,7 +20,6 @@
             android:name=".MainActivity"
             android:windowSoftInputMode="adjustResize" />
 
-
         <activity-alias
             android:name=".MainActivityDefault"
             android:enabled="true"
