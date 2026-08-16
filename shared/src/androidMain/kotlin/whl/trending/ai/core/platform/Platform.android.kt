@@ -157,14 +157,3 @@ actual fun getUserAgent(): String {
     val channel = ChannelHolder.get()
     return "TrendingAI/$appVersion (Android $osVersion; $model; channel=$channel)"
 }
-
-/**
- * Logto SDK 把凭证存在 `shared_prefs/io.logto.client:<appId>.xml`。
- * 这里只判断文件在不在——不读、不解析，见 expect 声明的说明。
- */
-actual fun hasLegacyLogtoArtifacts(): Boolean {
-    val ctx = AndroidContextHolder.get() ?: return false
-    val prefsDir = java.io.File(ctx.applicationInfo.dataDir, "shared_prefs")
-    if (!prefsDir.isDirectory) return false
-    return prefsDir.list()?.any { it.startsWith("io.logto.client") } == true
-}

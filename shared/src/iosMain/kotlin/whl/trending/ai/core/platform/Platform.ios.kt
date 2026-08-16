@@ -107,6 +107,3 @@ actual fun getUserAgent(): String {
     val channel = ChannelHolder.get()
     return "TrendingAI/$appVersion (iOS $osVersion; $model; channel=$channel)"
 }
-
-/** iOS 从未接入过 Logto（一直是 NoopAuthManager），无遗留可言 */
-actual fun hasLegacyLogtoArtifacts(): Boolean = false
