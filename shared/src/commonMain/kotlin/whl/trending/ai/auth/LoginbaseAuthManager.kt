@@ -175,6 +175,9 @@ object LoginSheetBus {
  * 异步 apply，进程被杀会丢刚轮换的令牌）。
  */
 fun initLoginbaseAuth(tokenStore: TokenStore): LoginbaseAuthManager {
+    // 幂等：已初始化则复用。AuthClient 的单飞锁是实例字段、每进程必须一个实例，
+    // 而本函数会被 Activity 重建路径反复经过
+    (globalAuthManager as? LoginbaseAuthManager)?.let { return it }
     val manager = LoginbaseAuthManager(AuthClient(AUTH_BASE_URL, tokenStore))
     globalAuthManager = manager
     return manager
