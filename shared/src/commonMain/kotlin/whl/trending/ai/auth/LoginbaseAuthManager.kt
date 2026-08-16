@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 import wang.harlon.loginbase.AuthClient
 import wang.harlon.loginbase.RefreshOutcome
 import wang.harlon.loginbase.TokenStore
-import whl.trending.ai.core.UpgradeNotice
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.local.globalSettingsManager
@@ -132,10 +131,6 @@ class LoginbaseAuthManager(
      * 而 C 方案的硬要求是升级导致的未登录态不能清任何用户数据（见 plan.md 第 4 步）。
      */
     private fun clearLocalUserState() {
-        // 主动登出的人不该看到「账号系统已升级」——那条是给「升级后发现自己莫名
-        // 未登录」的用户的。不标记的话，Logto 遗留文件还在、痕迹判定仍为真，
-        // 每个登出用户都会在首页被提示一次。
-        UpgradeNotice.markShown()
         globalSettingsManager.setUserAvatarUrl(null)
         globalSettingsManager.setGithubIdentity(null, null)
         globalSettingsManager.setUserEmail(null)

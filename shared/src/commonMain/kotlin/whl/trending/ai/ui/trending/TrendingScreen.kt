@@ -108,7 +108,6 @@ import trendingai.shared.generated.resources.star_need_login
 import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.stars_period
 import trendingai.shared.generated.resources.stars_total
-import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
@@ -117,8 +116,6 @@ import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.globalFavoriteRepository
-import whl.trending.ai.core.UpgradeNotice
-import whl.trending.ai.ui.common.UpgradeNoticeCard
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
@@ -227,22 +224,6 @@ private fun RepoList(
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
 ) {
     val state = rememberPullToRefreshState()
-
-    // 「账号系统已升级」一次性横幅：判定只读本地数据（缓存过的 /api/me 资料），不发请求。
-    //
-    // 登录态必须**响应式**读，不能和痕迹一起快照进 remember：登录态恢复是异步的
-    // （AuthClient.restore() 经 Dispatchers.IO 读令牌），而本列表首帧就组合、不等数据，
-    // 快照下来几乎必然读到尚未恢复的 LoggedOut——已登录用户会被告知「账号已升级、请重新
-    // 登录」，且 remember 不重算、卡片还不会自己消失。响应式读则恢复一到就消失。
-    val authState by globalAuthManager.authState.collectAsState()
-    val noticeShown = remember { UpgradeNotice.currentShown() }
-    val hasLoginTrace = remember { UpgradeNotice.hasLoginTrace() }
-    var noticeDismissed by remember { mutableStateOf(false) }
-    val showUpgradeNotice = !noticeDismissed && UpgradeNotice.decide(
-        shown = noticeShown,
-        loggedIn = authState is AuthState.LoggedIn,
-        hasTrace = hasLoginTrace,
-    )
     val listState = rememberLazyListState()
     // 切换「只看 New」时滚回顶部：LazyColumn 按 key 会保持可视位置，
     // 关掉开关后画面几乎不变，用户容易以为切换没生效（#36）。
@@ -328,22 +309,6 @@ private fun RepoList(
                         bottom = LocalContentBottomPadding.current,
                     ),
                 ) {
-                if (showUpgradeNotice) {
-                    item(key = "upgrade_notice") {
-                        UpgradeNoticeCard(
-                            onSignIn = {
-                                UpgradeNotice.markShown()
-                                noticeDismissed = true
-                                globalAuthManager.signIn("upgrade_notice")
-                            },
-                            onDismiss = {
-                                UpgradeNotice.markShown()
-                                noticeDismissed = true
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-                }
                 items(
                     count = displayRepos.size,
                     key = { index -> displayRepos[index].url }

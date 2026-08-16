@@ -327,8 +327,4 @@
     <string name="account_link_github_in_use">该 GitHub 账号已绑定到其他账号</string>
     <string name="account_link_already_linked">你的账号已绑定其他 GitHub 账号</string>
     <string name="account_link_failed">关联 GitHub 失败，请重试</string>
-    <string name="upgrade_notice_title">账号系统已升级</string>
-    <string name="upgrade_notice_message">重新登录即可恢复你的账号，数据都还在</string>
-    <string name="upgrade_notice_action">去登录</string>
-    <string name="upgrade_notice_dismiss">知道了</string>
 </resources>
