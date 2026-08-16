@@ -32,7 +32,8 @@ material-kolor = "5.0.0"
 commonmark = "0.29.0"
 highlights = "1.1.0"
 kmp-webview = "0.1.7"
-# 尚未发布 Maven Central，当前经 composite build 吃本地源码（见 settings.gradle.kts）
+# CI 只认这个版本；本机可经 composite build 改吃本地源码（见 settings.gradle.kts 的双轨说明）。
+# 改了 loginbase-kt 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
 loginbase-kt = "0.1.0"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
