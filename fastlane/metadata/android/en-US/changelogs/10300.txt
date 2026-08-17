@@ -1,0 +1,2 @@
+• Email sign-in is now a native in-app experience, and the GitHub sign-in flow has been improved
+• You'll need to sign in again after this update: use your original email or GitHub account and you'll land on the same account

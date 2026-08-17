@@ -1,13 +1,11 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0-beta.1",
   "zh": [
-    "新增「沉浸式浏览」：滑动时自动收起顶栏与底栏（外观设置开启，默认关闭）",
-    "新增 6 款应用图标配色，可随时更换",
-    "每日 Daily Picks 提醒到点推送更准时（设置中开启，默认关闭）"
+    "邮箱登录改为 App 内原生体验，并优化了 GitHub 登录流程",
+    "升级后需要手动重新登录一次：用原来的邮箱或 GitHub 账号登录即可，仍是同一个账号"
   ],
   "en": [
-    "New \"Immersive browsing\": bars tuck away as you scroll (enable in Appearance, off by default)",
-    "6 new app icon colorways to pick from",
-    "Daily Picks reminders now arrive on time (enable in Settings, off by default)"
+    "Email sign-in is now a native in-app experience, and the GitHub sign-in flow has been improved",
+    "You'll need to sign in again after this update: use your original email or GitHub account and you'll land on the same account"
   ]
 }
