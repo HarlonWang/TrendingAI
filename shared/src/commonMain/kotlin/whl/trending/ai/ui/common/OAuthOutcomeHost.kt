@@ -110,8 +110,18 @@ fun OAuthOutcomeHost() {
                 }
 
                 OAuthOutcome.Cancelled -> {
-                    // 用户放弃：清掉落盘的绑定标记，防它把下一次登录失败错认成绑定失败
-                    AccountLink.consumePending()
+                    // 用户放弃：清掉落盘的绑定标记，防它把下一次登录失败错认成绑定失败。
+                    // 返回值顺带告诉我们这次取消属于哪条流程，别浪费
+                    val wasLink = AccountLink.consumePending()
+                    // 取消必须有终态事件：不报的话漏斗里只剩一批悬空的 sign_in_start，
+                    // 「用户主动放弃」和「流程中途断了」就再也分不开——而后者正是需要排查的那类
+                    trackEvent(
+                        if (wasLink) "account_link_canceled" else "sign_in_canceled",
+                        mapOf(
+                            "source" to (LoginSheetBus.request.value ?: "cold_start"),
+                            "method" to "github",
+                        ),
+                    )
                     LoginSheetBus.reportGithubResult(GithubAuthResult.CANCELED)
                 }
 
