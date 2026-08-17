@@ -60,8 +60,8 @@ if (!loginbaseKtDir.isNullOrBlank()) {
     require(dir.exists()) { "local.properties 配置的 loginbase-kt.dir 不存在: $dir" }
     includeBuild(dir) {
         dependencySubstitution {
-            substitute(module("wang.harlon:loginbase-kt")).using(project(":library"))
-            substitute(module("wang.harlon:loginbase-kt-browser")).using(project(":library-browser"))
+            substitute(module("wang.harlon:loginbase-kt")).using(project(":core"))
+            substitute(module("wang.harlon:loginbase-kt-browser")).using(project(":browser"))
         }
     }
     // 让「我这次吃的是本地源码」这件事每次构建都可见，而不是要去翻 local.properties 才知道
