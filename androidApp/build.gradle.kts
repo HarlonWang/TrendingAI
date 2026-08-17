@@ -77,12 +77,25 @@ android {
 
         manifestPlaceholders["appName"] = "Trending AI"
 
-        // Logto v3 登录/登出走系统浏览器（Chrome Custom Tabs），回跳经 OS intent-filter，
-        // SDK 用该 scheme + ${applicationId} 注册接收 Activity；缺失会导致 manifest 合并失败。
-        // 单一来源：同时喂给 manifest 占位符与 Kotlin（经 BuildConfig），避免两处 scheme 漂移致回跳失效。
-        val logtoRedirectScheme = "cn.trendingai"
-        manifestPlaceholders["logtoRedirectScheme"] = logtoRedirectScheme
-        buildConfigField("String", "LOGTO_REDIRECT_SCHEME", "\"$logtoRedirectScheme\"")
+        // loginbase 的 OAuth 回跳 scheme。中转页 intent-filter 与运行时 redirect 推导都由
+        // loginbase-kt-browser 从这一个占位符取值（库内同源、不会漂移），App 不再写
+        // intent-filter / BuildConfig。完整 redirect 为 `cn.trendingai:/loginbase/callback`
+        // （Loginbase.redirectUri(context) 可查，debug 构建首次发起会打进日志）。
+        //
+        // scheme 取 **自有域名反写**（trendingai.cn → cn.trendingai）：RFC 8252 §7.1 对
+        // private-use scheme 的要求是 MUST 基于自己控制的域名反写，`myapp` 这类通用名不合格。
+        // 注意不能用 applicationId（whl.trending.ai 反写不对应任何真实域名，不合规）。
+        //
+        // **不带 host**（单斜杠）：private-use scheme 的 host 位没有所有权语义，纯粹是字符串，
+        // RFC 的示例形态也是 `com.example.app:/oauth2redirect/...`。
+        //
+        // **debug 用独立 scheme 而非 path 区分**：Android 的 <data> 规则是「没有 host 时所有
+        // path 属性都被忽略」，不带 host 就只剩 scheme 一个可过滤维度；且 scheme 是最粗、
+        // 最不可能被厂商 ROM 改坏的那一层，两个变体装同一台机器物理隔离。见下方 debug buildType。
+        //
+        // 改动须与服务端 AUTH_DEEPLINKS 同步（github-ai-trending-api/wrangler.toml），
+        // 对不上服务端直接 400 invalid_redirect，GitHub 登录整条不可用。
+        manifestPlaceholders["loginbaseRedirectScheme"] = "cn.trendingai"
     }
 
     // 签名配置：从环境变量读取加密存储的密钥信息
@@ -161,6 +174,9 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             manifestPlaceholders["appName"] = "Trending AI (D)"
+            // 独立 scheme，与 release 物理隔离：装同一台设备时互不抢 deepLink。
+            // 对应 debug.trendingai.cn 反写，同样是自有域名，仍合 RFC 8252 §7.1
+            manifestPlaceholders["loginbaseRedirectScheme"] = "cn.trendingai.debug"
         }
     }
     compileOptions {
@@ -178,6 +194,9 @@ dependencies {
     implementation(project(":androidLibrary:notifier"))
     implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
-    implementation(libs.logto.android)
+    // 社交登录浏览器环节：只由本模块（持有 Activity 的那层）依赖，经
+    // globalOAuthLauncher 注入给 shared——直接让 shared 依赖会把它的 manifest
+    // 合并进所有中间模块的单测（placeholder 无值即构建失败）
+    implementation(libs.loginbase.kt.browser)
     debugImplementation(libs.compose.uiTooling)
 }

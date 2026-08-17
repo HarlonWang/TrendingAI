@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.profile
 
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import whl.trending.ai.auth.FollowingInfo
 import whl.trending.ai.data.remote.GithubEventActor
 import whl.trending.ai.data.remote.GithubEventDto

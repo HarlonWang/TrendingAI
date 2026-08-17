@@ -12,7 +12,7 @@ import whl.trending.ai.notification.DailyPicksNotifier
 
 /**
  * [DailyPicksNotifier] 的 Android 实现：负责通知权限申请与每日闹钟的调度。
- * 在 MainActivity.onCreate 注入 globalDailyPicksNotifier（仿 LogtoAuthManager；
+ * 在 MainActivity.onCreate 注入 globalDailyPicksNotifier（仿 globalAuthManager；
  * 必须在 onCreate 构造——RequestPermission launcher 要求在 STARTED 前注册）。
  * 调度细节见 [DailyPicksAlarmScheduler]。
  */

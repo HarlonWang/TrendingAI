@@ -32,7 +32,7 @@ fun LinkGithubDialog(
         confirmButton = {
             TextButton(onClick = {
                 onDismissRequest()
-                // 关联成功后 MainActivity 的 AccountLink 分支会自动补一次 pro/refresh，
+                // 关联成功后 OAuthOutcomeHost 会自动刷身份 + 补一次 pro/refresh，
                 // 用户不需要再回赞助页，也不需要重启 app。
                 AccountLink.openLinkGithubPage(AccountLink.SOURCE_UPGRADE_DIALOG)
             }) {

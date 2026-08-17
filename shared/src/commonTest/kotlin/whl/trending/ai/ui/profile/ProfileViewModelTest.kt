@@ -46,7 +46,6 @@ class ProfileViewModelTest {
         override val isSupported: Boolean = true
         override val authState: StateFlow<AuthState> = state
         override fun signIn(source: String) {}
-        override fun signIn(source: String, method: whl.trending.ai.auth.SignInMethod) {}
         override fun signOut() {}
         override suspend fun getAccessToken(): String? = token
     }

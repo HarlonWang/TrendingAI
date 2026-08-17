@@ -140,6 +140,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FAVORITES_KEY = "prefs_favorites"
     private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
     private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
+    private val ACCOUNT_LINK_PENDING_KEY = "prefs_account_link_pending"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
@@ -149,7 +150,6 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
-    private val ACCOUNT_LINK_OPENED_AT_KEY = "prefs_account_link_opened_at"
     // 存储 key 的字面量不随常量名改动——改了等于丢掉存量用户已选的模型
     private val CHAT_MODEL_CHOICE_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
@@ -454,6 +454,19 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
+     * 是否有一次已发起、尚未收到回跳的 GitHub 绑定（见 [whl.trending.ai.core.AccountLink]）。
+     *
+     * **必须落盘而不能只放内存**：绑定要跳出去开系统浏览器，授权期间 App 进程随时可能被
+     * 系统回收；回跳时是冷启动，内存标记早没了，绑定失败的 `?error=` 会被当成登录失败
+     * 分派错地方。落盘后跨进程存活。
+     */
+    fun accountLinkPending(): Boolean = settings.getBoolean(ACCOUNT_LINK_PENDING_KEY, false)
+
+    fun setAccountLinkPending(value: Boolean) {
+        settings.putBoolean(ACCOUNT_LINK_PENDING_KEY, value)
+    }
+
+    /**
      * 登出时清空账号收藏与同步状态：收藏已安全存于该账号云端，清本地避免账号间数据串味
      * （下个账号登录时不会把上一个账号的收藏 batch 合并上去）。匿名重新收藏从空开始。
      */
@@ -524,20 +537,6 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun clearSponsorPageOpenedAt() {
         settings.putLong(SPONSOR_PAGE_OPENED_AT_KEY, 0L)
-    }
-
-    /**
-     * 最近一次打开 Logto 账户中心「关联 GitHub」页的时间戳（epoch millis），0 表示无待刷新的绑定意图。
-     * 与赞助时间戳分开：两者回前台后要做的事不同（绑定要先刷身份，赞助只需对账 Pro）。
-     */
-    fun currentAccountLinkOpenedAt(): Long = settings.getLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
-
-    fun setAccountLinkOpenedAt(time: Long) {
-        settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, time)
-    }
-
-    fun clearAccountLinkOpenedAt() {
-        settings.putLong(ACCOUNT_LINK_OPENED_AT_KEY, 0L)
     }
 
     /**

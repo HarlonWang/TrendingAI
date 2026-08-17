@@ -172,4 +172,17 @@ class SettingsManagerTest {
         val rebuilt = SettingsManager(settings)
         assertEquals(true, rebuilt.currentImmersiveBrowsing())
     }
+
+    @Test
+    fun accountLinkPending_persists_across_process_restart() = runTest {
+        assertEquals(false, manager.accountLinkPending())
+
+        manager.setAccountLinkPending(true)
+
+        // 绑定要跳出去开系统浏览器，授权期间进程随时可能被系统回收，回跳时是冷启动。
+        // 标记若只在内存里，那时已经没了——绑定失败的 ?error= 会被误判成登录失败，
+        // 提示分派到错误的地方（登录面板而非账户页）
+        val rebuilt = SettingsManager(settings)
+        assertEquals(true, rebuilt.accountLinkPending())
+    }
 }

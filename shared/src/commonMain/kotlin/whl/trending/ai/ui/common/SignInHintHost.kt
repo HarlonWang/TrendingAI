@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.sign_in_hint_clock_skew
 import trendingai.shared.generated.resources.sign_in_hint_connectivity
 import trendingai.shared.generated.resources.sign_in_hint_dismiss
 import trendingai.shared.generated.resources.sign_in_hint_relogin
@@ -24,9 +23,11 @@ import whl.trending.ai.auth.globalAuthManager
 
 /**
  * 全局登录失败提示宿主：收集 [SignInFailureBus] 的失败事件，对可行动的失败类别弹轻量弹窗——
- * 连通性类（NETWORK/TIMEOUT）引导检查网络；时钟偏差类（CLOCK_SKEW）引导修系统时间，
- * 后者若只给通用提示，用户会陷入「重试永远失败」的死循环（时钟不修，id_token 校验必败）。
- * 会话失效类（SESSION_EXPIRED）引导重新登录：本地会话已被清除，确认键直接拉起登录选择器。
+ * 连通性类（NETWORK/TIMEOUT）引导检查网络；会话失效类（SESSION_EXPIRED）引导重新登录：
+ * 本地会话已被清除，确认键直接拉起登录面板。
+ *
+ * 时钟偏差类（CLOCK_SKEW）随 Logto 退场一并删除——它是 id_token 本地校验的产物，
+ * loginbase 客户端不解析 JWT，这一整类问题在客户端不复存在（见 [SignInFailureReason]）。
  *
  * 用弹窗（独立窗口）而非 Snackbar：① 不占/不盖 app 布局；② 登录失败值得被明确看见，Snackbar 易被错过。
  * 放在 App 根部（与 WhatsNewHost 平级），是因为登录有 4 个触发点（首页头像 / Trending·Readme 的
@@ -61,7 +62,6 @@ fun SignInHintHost() {
                     stringResource(
                         when (reason) {
                             SignInFailureReason.SESSION_EXPIRED -> Res.string.sign_in_hint_session_expired
-                            SignInFailureReason.CLOCK_SKEW -> Res.string.sign_in_hint_clock_skew
                             else -> Res.string.sign_in_hint_connectivity
                         },
                     ),
@@ -69,7 +69,7 @@ fun SignInHintHost() {
             },
             confirmButton = {
                 if (sessionExpired) {
-                    // 浏览器侧 Logto 会话通常还在（本地只清了凭证），重登多为一跳静默回到原账号
+                    // 确认键直接拉起登录面板：会话已终结，用户需要重新登录
                     TextButton(onClick = {
                         hint = null
                         globalAuthManager.signIn("session_expired_hint")
@@ -103,7 +103,6 @@ fun SignInHintHost() {
 private fun SignInFailureReason.shouldHint(): Boolean = when (this) {
     SignInFailureReason.NETWORK,
     SignInFailureReason.TIMEOUT,
-    SignInFailureReason.CLOCK_SKEW,
     SignInFailureReason.SESSION_EXPIRED -> true
     SignInFailureReason.USER_CANCELED,
     SignInFailureReason.NO_BROWSER,

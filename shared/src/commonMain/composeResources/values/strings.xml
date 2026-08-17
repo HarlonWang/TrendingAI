@@ -212,7 +212,6 @@
     <string name="sign_in_method_email_desc">We&apos;ll send a verification code — no password needed</string>
     <string name="sign_in_hint_title">Sign-in not completed</string>
     <string name="sign_in_hint_connectivity">GitHub sign-in needs to reach github.com. Please check your connection and try again.</string>
-    <string name="sign_in_hint_clock_skew">Your device clock is off by more than a minute, so the sign-in security check fails. Turn on automatic date &amp; time in system settings, then try again.</string>
     <string name="sign_in_hint_dismiss">Got it</string>
     <string name="sign_in_hint_session_expired_title">Session expired</string>
     <string name="sign_in_hint_session_expired">Your sign-in has expired. Sign in again to keep using account features.</string>
@@ -306,4 +305,26 @@
     <string name="digest_unavailable_desc">Public information wasn\'t enough to generate a reliable digest. Use the buttons above to read the original or browse the HN discussion.</string>
     <string name="digest_generated_at">AI-generated on %1$s · may lag behind the latest discussion</string>
     <string name="digest_load_failed">Failed to load, please retry</string>
+
+    <!-- 登录（loginbase 自建登录 UI） -->
+    <string name="login_title">Sign in</string>
+    <string name="login_code_title">Enter code</string>
+    <string name="login_email_hint">Email address</string>
+    <string name="login_code_hint">6-digit code</string>
+    <string name="login_code_sent_to">Code sent to %s</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_resend">Resend code</string>
+    <string name="login_resend_in">Resend in %ds</string>
+    <string name="login_email_invalid">Please enter a valid email address</string>
+    <string name="login_code_invalid">Incorrect code</string>
+    <string name="login_code_expired">Code expired, please resend</string>
+    <string name="login_too_many_attempts">Too many attempts, please resend the code</string>
+    <string name="login_too_many_requests">Please try again in %d seconds</string>
+    <string name="login_generic_error">Something went wrong, please try again</string>
+    <string name="login_or">or</string>
+    <string name="login_continue_github">Continue with GitHub</string>
+    <string name="login_oauth_failed">GitHub sign-in failed, please try again</string>
+    <string name="account_link_github_in_use">This GitHub account is already linked to another account</string>
+    <string name="account_link_already_linked">Your account is already linked to a different GitHub account</string>
+    <string name="account_link_failed">Couldn't link GitHub, please try again</string>
 </resources>

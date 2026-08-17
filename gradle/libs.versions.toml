@@ -32,7 +32,9 @@ material-kolor = "5.0.0"
 commonmark = "0.29.0"
 highlights = "1.1.0"
 kmp-webview = "0.1.7"
-logto = "3.0.0-beta"
+# CI 只认这个版本；本机可经 composite build 改吃本地源码（见 settings.gradle.kts 的双轨说明）。
+# 改了 loginbase-kt 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
+loginbase-kt = "0.1.1"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
 room = "2.8.4"
@@ -63,6 +65,7 @@ androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinxJson = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -84,7 +87,9 @@ commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" 
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
 highlights = { module = "dev.snipme:highlights", version.ref = "highlights" }
 kmp-webview = { module = "wang.harlon:kmp-webview", version.ref = "kmp-webview" }
-logto-android = { module = "io.logto.sdk:android", version.ref = "logto" }
+loginbase-kt = { module = "wang.harlon:loginbase-kt", version.ref = "loginbase-kt" }
+# 浏览器环节的可选模块（中转页/管理页/CCT），Android-only，与核心同版本发布
+loginbase-kt-browser = { module = "wang.harlon:loginbase-kt-browser", version.ref = "loginbase-kt" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }

@@ -18,7 +18,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.App
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.ReconcileAction
@@ -40,8 +39,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         whl.trending.ai.core.platform.AndroidContextHolder.initialize(this)
 
-        // 注入 Logto 登录实现（仿 globalChatScreen 的依赖反转；配置变更重建时重新绑定 activity）
-        whl.trending.ai.auth.globalAuthManager = whl.trending.ai.auth.LogtoAuthManager(this)
+        // loginbase 全部接线（建单例 + OAuth 发起注入），幂等，重建安全——见其文档
+        installLoginbase(this)
 
         // 注入每日 Picks 本地通知实现（须在 onCreate：权限 launcher 要求 STARTED 前注册），
         // 并对账调度状态；处理通知点击带来的切 tab 深链
@@ -126,23 +125,11 @@ class MainActivity : AppCompatActivity() {
         val loggedIn = whl.trending.ai.auth.globalAuthManager.authState.value is whl.trending.ai.auth.AuthState.LoggedIn
         if (!loggedIn) return
 
-        // ① 刚去账户中心关联过 GitHub：先刷身份（fresh=1 绕开服务端 claims 缓存），
-        //    拿到 github_user_id 才谈得上对账 Pro——顺序反了会白跑一次 pro/refresh。
-        if (AccountLink.shouldRefreshIdentity()) {
-            lifecycleScope.launch {
-                val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
-                val repo = whl.trending.ai.data.repository.UserRepository()
-                val user = repo.syncMe(token, fresh = true)
-                if (user?.githubUserId != null) {
-                    AccountLink.markLinked()
-                    // 关联前可能早就赞助过（钱付了但身份对不上），补一次对账让 Pro 立即生效
-                    repo.refreshPro(token)
-                }
-            }
-            return
-        }
+        // 绑定 GitHub 的回前台刷新窗口已随 loginbase link 流程删除——
+        // 回跳带确定结果（?linked=github / ?error=），由 OAuthOutcomeHost 处理，
+        // 不再需要「用户手动返回 + 30 分钟窗口内猜测」。
 
-        // ② 常规赞助对账窗口
+        // 赞助对账窗口
         if (!globalSettingsManager.currentIsPro() && ProSponsor.shouldReconcile()) {
             lifecycleScope.launch {
                 val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()

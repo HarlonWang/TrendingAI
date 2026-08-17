@@ -51,7 +51,8 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
-import whl.trending.ai.ui.common.SignInMethodChooserHost
+import whl.trending.ai.ui.auth.LoginSheetHost
+import whl.trending.ai.ui.common.OAuthOutcomeHost
 import whl.trending.ai.ui.common.SponsorLinkHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
@@ -98,7 +99,7 @@ fun App() {
     LaunchedEffect(authState) {
         if (authState is AuthState.LoggedIn) {
             globalFavoriteRepository.requestSync()
-            userRepository.syncMe(globalAuthManager.getAccessToken())
+            globalAuthManager.authorized { userRepository.syncMe(it) }
         }
     }
 
@@ -128,8 +129,9 @@ fun App() {
                 ForceUpdateGate {
                     WhatsNewHost()
                     SignInHintHost()
-                    SignInMethodChooserHost()
+                    LoginSheetHost()
                     SponsorLinkHost()
+                    OAuthOutcomeHost()
                     NavDisplay(
                         backStack = backStack,
                         onBack = { backStack.safePop() },

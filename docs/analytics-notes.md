@@ -263,3 +263,40 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 | play | **5%** | **11%** | **2%** |
 
 Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量），**Play 的安装量基本是虚的**；官网/GitHub 直下用户意图最强。fdroid 是量与质的主力。任何「总留存下跌」先查是不是 Play/新装潮占比升高的构成效应。
+
+## 登录体系换底座：漏斗事件重构（2026-08-17 实现，尚未发版）
+
+登录实现整体替换（PR #99）后，登录相关埋点是**重写的一套**，不是在旧事件上加减。跨这个版本看任何登录曲线都要按下面切段。
+
+### 当前全部事件
+
+| 事件 | 属性 | 触发点 |
+|---|---|---|
+| `sign_in_start` | `source`, `method="sheet"` | 登录面板弹出（7 个入口共用） |
+| `sign_in_start` | `source`, `method="github"` | 面板内点「使用 GitHub 继续」 |
+| `sign_in_success` | `source`, `method`(`email`/`github`), `is_new` | 验证码通过 / OAuth 回跳成功 |
+| `sign_in_error` | `source`, `method` | 验证码失败 / OAuth 回跳带 error |
+| `sign_in_canceled` | `source`, `method="github"` | 用户放弃 GitHub 授权 |
+| `sign_out` | — | 退出登录 |
+| `account_link_start` | `source` | 点绑定入口 |
+| `account_link_success` | — | 绑定成功 |
+| `account_link_error` | `reason` | 绑定失败（回跳带 error，或发起阶段失败） |
+| `account_link_canceled` | `source`, `method="github"` | 绑定流程中用户放弃授权 |
+
+### ⚠️ `sign_in_canceled` 同名不同属性
+
+事件名与 0.22.0 那套**完全相同**，属性却换了：旧的带 `cancel_kind`（quick/wait），新的带 `source` / `method`。看板不会报错，但**跨版本按 `cancel_kind` 分组会在新版本上全部落空**。取消总量可以跨版本比，取消类型不行。
+
+### ⚠️ `auth_probe` 消失且无替代
+
+可达性探测（带 `result` / `latency_bucket`）随旧实现一并删除。上文「登录漏斗」一节提到的老盲区——**断网被计成用户取消**——原本靠「probe 失败 × cancel_kind=wait」交叉验证，这个方法在新版本上做不了了。新版本里连通性失败会走 `sign_in_error`（邮箱路径给通用错误提示），但 GitHub 路径上"浏览器没打开/中途断了"仍然只会表现为 `sign_in_canceled`，与主动放弃无法区分。
+
+### `sign_in_start` 每次登录会打两条
+
+面板弹出打一条 `method="sheet"`，点 GitHub 再打一条 `method="github"`。**算转化率必须先按 `method` 分组**，否则分母虚高一倍。邮箱路径只有 `sheet` 那一条。
+
+### 旧的 `account_link_success` 低估问题已消失
+
+0.22.0 一节写的「`account_link_success` 是下界，因为依赖用户在 30 分钟对账窗口内切回 App」——那套 30 分钟窗口补偿已整体删除，改由常驻宿主在 OAuth 回跳时直接触发。**那条结论对新版本不再成立**，转化率可以当真值看。
+
+唯一残留的低估来源变成了「回跳没能送达 App」（外部浏览器/系统层中断），与旧机制无关。

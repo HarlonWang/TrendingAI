@@ -29,7 +29,6 @@ import whl.trending.chat.model.ChatMode
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
-import whl.trending.chat.model.ResearchRun
 import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.SourceRef
 import whl.trending.chat.store.ChatStore
