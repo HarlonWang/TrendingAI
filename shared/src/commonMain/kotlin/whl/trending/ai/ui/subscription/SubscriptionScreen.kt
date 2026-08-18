@@ -54,9 +54,6 @@ import trendingai.shared.generated.resources.subscription_benefit_models_pro
 import trendingai.shared.generated.resources.subscription_benefit_quota
 import trendingai.shared.generated.resources.subscription_benefit_quota_free
 import trendingai.shared.generated.resources.subscription_benefit_quota_pro
-import trendingai.shared.generated.resources.subscription_benefit_research
-import trendingai.shared.generated.resources.subscription_benefit_research_free
-import trendingai.shared.generated.resources.subscription_benefit_research_pro
 import trendingai.shared.generated.resources.subscription_checkout_failed
 import trendingai.shared.generated.resources.subscription_col_free
 import trendingai.shared.generated.resources.subscription_col_pro
@@ -264,11 +261,6 @@ private fun BenefitTable(proModels: List<String>) {
                     }
                 }
             }
-            BenefitRow(
-                label = stringResource(Res.string.subscription_benefit_research),
-                free = stringResource(Res.string.subscription_benefit_research_free),
-                pro = stringResource(Res.string.subscription_benefit_research_pro),
-            )
         }
     }
 }

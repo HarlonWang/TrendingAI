@@ -261,9 +261,6 @@
     <string name="subscription_benefit_models">可用模型</string>
     <string name="subscription_benefit_models_free">默认模型</string>
     <string name="subscription_benefit_models_pro">解锁全部高阶模型</string>
-    <string name="subscription_benefit_research">深度调研</string>
-    <string name="subscription_benefit_research_free">单次就会吃掉当天大半额度</string>
-    <string name="subscription_benefit_research_pro">可以连着用</string>
     <string name="subscription_plan_annual">年付</string>
     <string name="subscription_plan_monthly">月付</string>
     <string name="subscription_plan_annual_unit">每年</string>

@@ -261,9 +261,6 @@
     <string name="subscription_benefit_models">Models</string>
     <string name="subscription_benefit_models_free">Default model</string>
     <string name="subscription_benefit_models_pro">All advanced models unlocked</string>
-    <string name="subscription_benefit_research">Deep research</string>
-    <string name="subscription_benefit_research_free">One run eats most of a day\'s allowance</string>
-    <string name="subscription_benefit_research_pro">Run it back to back</string>
     <string name="subscription_plan_annual">Yearly</string>
     <string name="subscription_plan_monthly">Monthly</string>
     <string name="subscription_plan_annual_unit">per year</string>
