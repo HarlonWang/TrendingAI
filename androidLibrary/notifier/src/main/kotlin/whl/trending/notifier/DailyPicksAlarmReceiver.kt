@@ -39,43 +39,32 @@ fun consumeDailyPicksNotificationOpen(context: Context, intent: Intent): Boolean
  * [DailyPicksAlarmScheduler.MAX_ATTEMPTS] 次后放弃当天，静默等下一天——
  * 通知宁缺勿错，不拿旧内容打扰用户。
  *
- * 自续期链：除「开关已关」和重试外，每个终局都必须重排下一天，漏排即断链
- * （[DailyPicksAlarmScheduler.reconcile] 冷启动对账兜底，但要等下次启动才恢复）。
+ * 自续期链：除「开关已关」和重试外，每个终局都必须重排下一天，漏排即断链。
+ * 断链后**唯一**的恢复路径是 [DailyPicksAlarmScheduler.reconcile] 的冷启动对账
+ * （系统广播重排已移除，理由见模块 manifest），要等用户下次打开 app 才生效——
+ * 这段真空期的频率与时长由 `daily_picks_alarm_relinked` 埋点量化。
  */
 class DailyPicksAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val appContext = context.applicationContext
-        when (intent.action) {
-            DailyPicksAlarmScheduler.ACTION_FIRE -> {
-                val targetAt = intent.getLongExtra(
-                    DailyPicksAlarmScheduler.EXTRA_TARGET_AT, System.currentTimeMillis()
-                )
-                val attempt = intent.getIntExtra(DailyPicksAlarmScheduler.EXTRA_ATTEMPT, 0)
-                val trigger = intent.getStringExtra(DailyPicksAlarmScheduler.EXTRA_TRIGGER)
-                    ?: "unknown"
-                val pending = goAsync()
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        deliver(appContext, targetAt, attempt, trigger)
-                    } catch (_: Exception) {
-                        // 任何漏网异常都不能断链
-                        DailyPicksAlarmScheduler.scheduleNextDay(appContext)
-                    } finally {
-                        pending.finish()
-                    }
-                }
-            }
+        // 只认自家闹钟：组件无 intent-filter，正常情况下收不到别的 action
+        if (intent.action != DailyPicksAlarmScheduler.ACTION_FIRE) return
 
-            // 闹钟不持久化：重启后重排；改时间/换时区后重瞄本地 9:30（RTC 闹钟锚定
-            // 绝对时刻，不重排会落在错误的墙钟时间）
-            Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_TIME_CHANGED,
-            Intent.ACTION_TIMEZONE_CHANGED,
-            -> {
-                if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {
-                    DailyPicksAlarmScheduler.scheduleNextDay(appContext)
-                }
+        val appContext = context.applicationContext
+        val targetAt = intent.getLongExtra(
+            DailyPicksAlarmScheduler.EXTRA_TARGET_AT, System.currentTimeMillis()
+        )
+        val attempt = intent.getIntExtra(DailyPicksAlarmScheduler.EXTRA_ATTEMPT, 0)
+        val trigger = intent.getStringExtra(DailyPicksAlarmScheduler.EXTRA_TRIGGER) ?: "unknown"
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                deliver(appContext, targetAt, attempt, trigger)
+            } catch (_: Exception) {
+                // 任何漏网异常都不能断链
+                DailyPicksAlarmScheduler.scheduleNextDay(appContext)
+            } finally {
+                pending.finish()
             }
         }
     }

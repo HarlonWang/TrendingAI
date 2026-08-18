@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.content.edit
 import java.util.Calendar
+import whl.trending.ai.core.platform.trackEvent
 
 /**
  * 每日 Picks 通知的闹钟调度器。触发时机走 AlarmManager 而非 WorkManager（JobScheduler）：
@@ -22,8 +23,11 @@ import java.util.Calendar
  * 降级不选 setWindow：一夜未动的设备 9:30 常还在 Doze 里，setWindow 要等
  * 维护窗口，前者 Doze 中也放行，最差情况更好。
  *
- * 闹钟不像 WorkManager 会持久化：重启/改时间/换时区由 [DailyPicksAlarmReceiver]
- * 收系统广播重排，冷启动走 [reconcile] 对账。
+ * 闹钟不像 WorkManager 会持久化：重启会连闹钟一起清掉，改时间/换时区则让 RTC 锚定的
+ * 绝对时刻落在错误的墙钟上。这三种情况**不再**监听系统广播重排（静态 filter 会绕开
+ * 开关唤醒全体用户的进程，理由见模块 manifest），统一由 [reconcile] 冷启动对账恢复：
+ * 改时间/换时区最多让当天那一次偏，之后 [scheduleNextDay] 按新时区自愈；重启则要等
+ * 用户下次打开 app。真空期由 `daily_picks_alarm_relinked` 埋点量化。
  */
 object DailyPicksAlarmScheduler {
 
@@ -83,14 +87,35 @@ object DailyPicksAlarmScheduler {
      * PendingIntent 不存在（force-stop / 重启会连闹钟一起清掉），或记录的触发时刻
      * 已过期超出宽限（进程死在终局重排之前）。PI 存在不代表闹钟还挂着（响过之后
      * PI 仍在注册表里），所以两个信号缺一不可。
+     *
+     * 系统广播重排移除后这里是断链的唯一恢复点，因此每次补排都上报
+     * `daily_picks_alarm_relinked`：`reason` 区分断链信号，`overdue_min` 是距记录
+     * 触发时刻的分钟数（负值＝闹钟本还没到点就没了，重启清空的典型形态）。这两个
+     * 维度用来回答「不要 BOOT_COMPLETED 到底漏了多少」，攒够数据再决定是否加回。
      */
     fun reconcile(context: Context) {
         val piMissing = pendingIntent(context, PendingIntent.FLAG_NO_CREATE) == null
         val nextAt = DailyPicksPrefs.nextTriggerAt(context)
-        val stale = nextAt == 0L || nextAt < System.currentTimeMillis() - RECONCILE_SLACK_MS
-        if (piMissing || stale) {
-            scheduleNextDay(context)
+        val now = System.currentTimeMillis()
+        val stale = nextAt != 0L && nextAt < now - RECONCILE_SLACK_MS
+        if (nextAt != 0L && !piMissing && !stale) return
+
+        scheduleNextDay(context)
+        val reason = when {
+            // 开关开着却没有排期记录：enable() 必定写入，走到这里即两者已脱节
+            nextAt == 0L -> "no_record"
+            piMissing && stale -> "pi_missing_stale"
+            piMissing -> "pi_missing"
+            else -> "stale"
         }
+        trackEvent(
+            "daily_picks_alarm_relinked",
+            // no_record 没有可比的基准时刻，索性不带 overdue_min，免得一堆 0 把分布压歪
+            buildMap {
+                put("reason", reason)
+                if (nextAt != 0L) put("overdue_min", ((now - nextAt) / 60_000L).toInt())
+            },
+        )
     }
 
     /** 精确闹钟当前是否可用（12/13 安装即授予；14+ 新装默认拒绝，接受晚几分钟） */
@@ -145,7 +170,8 @@ object DailyPicksAlarmScheduler {
 }
 
 /**
- * 通知链路的本地状态，沿用 Worker 时代的 prefs 文件（last_notified_date 记录跨迁移延续）。
+ * 通知链路的本地状态。**文件名与键名不要改**：`last_notified_date` 靠它跨版本延续，
+ * 换个名字等于清空，升级当天会对存量设备重复通知一次。
  */
 internal object DailyPicksPrefs {
     private const val NAME = "daily_picks_notifier"

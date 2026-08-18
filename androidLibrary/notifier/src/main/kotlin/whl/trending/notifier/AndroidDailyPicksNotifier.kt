@@ -55,8 +55,10 @@ class AndroidDailyPicksNotifier(private val activity: ComponentActivity) : Daily
 
     companion object {
         /**
-         * 冷启动对账：开关为开时核对闹钟链是否完好，断链则补排。升级安装与
-         * force-stop 都会让系统清掉闹钟，没有这步兜底，每次发版后提醒链就断了。
+         * 冷启动对账：开关为开时核对闹钟链是否完好，断链则补排。升级安装、force-stop
+         * 与**设备重启**都会让系统清掉闹钟，没有这步兜底，每次发版后提醒链就断了。
+         * 系统广播重排移除后这是唯一的恢复路径，补排时会上报
+         * `daily_picks_alarm_relinked`（见 [DailyPicksAlarmScheduler.reconcile]）。
          */
         fun syncOnAppStart(context: Context) {
             if (globalSettingsManager.currentDailyPicksNotificationEnabled()) {

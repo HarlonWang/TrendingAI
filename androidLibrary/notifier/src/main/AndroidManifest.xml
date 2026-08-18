@@ -6,22 +6,23 @@
     <!-- 精确闹钟（Android 12+ 特殊权限）：12/13 安装即授予、白拿准点；14+ 新装
          默认拒绝，直接降级不精确闹钟（接受晚几分钟），app 内不做权限引导 -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- 闹钟不随重启持久化，开机后由 receiver 重排（此前经 WorkManager 的库清单合并
-         获得，闹钟方案须自行声明） -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application>
-        <!-- exported=false 不影响接收：闹钟 PendingIntent 是显式投递，
-             三个系统广播的发送方是 system，均可送达未导出组件 -->
+        <!--
+            只收自家闹钟的 ACTION_FIRE：PendingIntent 是显式投递，不经过 intent-filter
+            匹配，所以这里不需要（也不该有）任何 filter。
+
+            曾挂过 BOOT_COMPLETED / TIME_SET / TIMEZONE_CHANGED 来重排闹钟，已删除：
+            静态 filter 由系统侧匹配，会绕开通知开关把全体用户的进程拉起来（Application
+            .onCreate 里的 app_started 因此凭空多出一批空 session，2026-08 实测坐实），
+            而重排收益极小——TIME_SET 多由 NTP 微调触发、偏差可忽略；TIMEZONE_CHANGED
+            后 scheduleNextDay 本就按新时区自愈；BOOT_COMPLETED 则在 Android 16 实测里
+            因包处于 stopped 状态压根没送达。断链统一由冷启动的 reconcile 兜底，代价
+            （断链频率与时长）由 daily_picks_alarm_relinked 埋点量化。
+        -->
         <receiver
             android:name="whl.trending.notifier.DailyPicksAlarmReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-        </receiver>
+            android:exported="false" />
     </application>
 
 </manifest>

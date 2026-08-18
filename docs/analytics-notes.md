@@ -237,6 +237,44 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 - `open ≤ 当日 shown` 恒成立，破了说明又有重放；
 - 按 `trigger` 分组可回答「不精确档实际差多少」（Android 12/13 自动精确、14+ 新装不精确；app 内无权限引导入口，评估后删除），为将来是否值得加回引导入口提供数据。
 
+## ⚠️ 1.2.0 起 `app_started` 被后台唤醒污染（2026-08-18 定位，2026-08-18 修 receiver）
+
+**症状**：Aptabase 看板 "Avg. Duration" 08-16 起显示 0s。该指标名叫 Avg 实为**中位数**（`median(max-min)`，按 `(user_id, session_id)` 分组，见 aptabase 源码 `etc/clickhouse/queries/key_metrics__v2.liquid`），单事件 session 的时长记 0，这类 session 一旦过半，中位数就落到 0。
+
+**根因**：`app_started` 在 `TrendingApplication.onCreate` **无条件上报**，只要进程被创建就发——包括没有任何界面的后台唤醒。1.2.0 随 AlarmManager 迁移新增的静态 receiver 挂了 `BOOT_COMPLETED` / `TIME_SET` / `TIMEZONE_CHANGED` 三条系统广播，**由系统侧 filter 匹配、与通知开关无关**，于是全体用户的进程被反复拉起，每次留下一个只含 `app_started` 的空 session。
+
+模拟器实测（Android 16，断网无污染）：`am kill` 后切换系统时区，logcat 出现 `am_proc_start: [...,broadcast,{.../DailyPicksAlarmReceiver}]` 紧跟 Aptabase 上报尝试，而该机通知开关是关的。
+
+**量化**（08-05~12 旧版 vs 08-15~17 用 1.2.0 的同一批 193 台设备）：
+
+| | 单事件 session 占比 | 含 UI 事件的 session |
+|---|---|---|
+| 旧版 | 24% | 63% |
+| 1.2.0 | **63%** | 31% |
+
+非孤立 session 的内部构成前后几乎不变——**真实使用行为没有退化**，纯粹是多出一批空 session。受影响 378 台里只有 22 台有过 `daily_picks_*` 事件，坐实唤醒源与通知功能无关。
+
+**分析时的修正口径**（1.2.0 ~ 修复版本之间的数据长期适用）：
+
+- 算 session 时长 / 参与度，**先剔除「只含一条 `app_started`」的 session**；剔除后中位停留 08-08~08-16 稳定在 70~95s，全程无恶化。
+- **Sessions 数虚高约一倍**，不能直接跨 1.2.0 对比。
+- **日活/留存会虚高**：整段数据里有 90 台设备只有 `app_started`，按「当天有任意埋点」的口径会被算成活跃。算留存前同样要剔。
+
+## 移除系统广播重排 + 新增 `daily_picks_alarm_relinked`（2026-08-18 实现，尚未发版）
+
+上一节的 receiver 三条 `<action>` 连同 `RECEIVE_BOOT_COMPLETED` 权限一并删除（闹钟自身走显式 `PendingIntent`，不需要 intent-filter）。断链恢复从此**只剩** `reconcile()` 冷启动对账一条路径，代价由新事件量化：
+
+| 属性 | 取值 |
+|---|---|
+| `reason` | `pi_missing`（PendingIntent 没了，force-stop/重启清空的典型形态）/ `stale`（有记录但过期超 6h 宽限，进程死在终局重排之前）/ `pi_missing_stale`（两者同时）/ `no_record`（开关开着却无 `next_trigger_at`） |
+| `overdue_min` | 距记录触发时刻的分钟数，**可为负**（闹钟还没到点就没了＝重启清空）。`reason=no_record` 时不带此属性 |
+
+解读要点：
+
+- **这个事件是「决定要不要把 `BOOT_COMPLETED` 加回来」的依据**。`pi_missing` 的频率 × `overdue_min` 的分布 ≈ 重启断链造成的通知真空期。真空期短或罕见就维持现状；若普遍且长，再考虑加回（届时要连带处理组件启停与开关的双状态对账——`allowBackup=true` 且无 backup rules，换机恢复会持续制造脱节）。
+- `reason=no_record` 在发版后会有**一次性尖峰**：Worker 时代升级上来的存量设备 prefs 里没有 `next_trigger_at`。之后应归零，不归零说明 `cancel` 与开关脱节，是 bug 信号。
+- 分母是「开着通知开关的设备的冷启动次数」，不是全体 DAU，绝对量本来就小（8 月量级：开过通知的约 55~78 台）。
+
 ## 留存与新老用户基线（2026-08-09，5~8 月导出数据实算）
 
 口径前提：`install_id` **2026-06-04 才上线**，此前（含 5 月整月）只有按天轮换的 `user_id`，设备级留存从 06-04 起算；「活跃」= 当天有任意埋点上报。5 月仅能看 DAU：日均 37 → 月末 19（F-Droid 06-22 上架前的小基数期）。
