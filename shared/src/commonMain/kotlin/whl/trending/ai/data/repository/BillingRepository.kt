@@ -1,0 +1,72 @@
+package whl.trending.ai.data.repository
+
+import whl.trending.ai.auth.AuthManager
+import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.model.CheckoutResponse
+import whl.trending.ai.data.model.PaddleSubscription
+import whl.trending.ai.data.model.PortalResponse
+import whl.trending.ai.data.model.PricesResponse
+import whl.trending.ai.data.remote.ApiException
+import whl.trending.ai.data.remote.TrendingApi
+
+/**
+ * Paddle 订阅数据源（后端 `src/api/billing.js`）。
+ *
+ * 三个需要身份的接口一律经 [AuthManager.authorized] 发出——access token 只有 1 小时寿命，
+ * 各自 `getAccessToken()` 后直接打请求会把「刷新一下就能继续」的 401 摆成购买失败。
+ * 这在下单路径上尤其要命：用户以为付款出了问题，实际只是 token 过期。
+ *
+ * 失败一律返回 null 而不抛：调用方是 UI，需要的是「展示降级形态」而不是崩溃路径。
+ * 失败原因经埋点上报（`billing_*_failed`，带 HTTP 状态码），漏斗断在哪一步查得到。
+ *
+ * open + 构造注入：与 [UserRepository] 同一套手动 DI，测试以子类替身注入。
+ */
+open class BillingRepository(
+    private val api: TrendingApi = TrendingApi(),
+    private val authManager: () -> AuthManager = { globalAuthManager },
+) {
+
+    /**
+     * 两档价格。公开接口、不带 token——定价页在登录之前就要看得见。
+     * 服务端拿不到 Paddle 时回 `{}`（各字段为 null），照样是成功响应，交由 UI 降级。
+     */
+    open suspend fun fetchPrices(): PricesResponse? = try {
+        api.fetchPrices()
+    } catch (e: Exception) {
+        trackEvent("billing_prices_failed", mapOf("status" to statusOf(e)))
+        null
+    }
+
+    /**
+     * 创建交易并拿收银台地址。[plan] 必填 `"annual"` / `"monthly"`，无默认值——
+     * 双档并列、不预设倾向是定价拍板的一部分，「主推年付」只体现在 UI 的默认选中与角标。
+     */
+    open suspend fun createCheckout(plan: String): CheckoutResponse? = try {
+        authManager().authorized { api.createCheckout(it, plan) }
+    } catch (e: Exception) {
+        trackEvent("billing_checkout_failed", mapOf("plan" to plan, "status" to statusOf(e)))
+        null
+    }
+
+    /** 当前订阅快照；无订阅时后端回 `{subscription: null}`，与请求失败（null）不同形。 */
+    open suspend fun fetchSubscription(): PaddleSubscription? = try {
+        authManager().authorized { api.fetchSubscription(it) }?.subscription
+    } catch (e: Exception) {
+        trackEvent("billing_subscription_failed", mapOf("status" to statusOf(e)))
+        null
+    }
+
+    /**
+     * Paddle 客户门户深链（取消订阅 / 更换支付方式）。会话临时、不可缓存，每次现取。
+     * 无订阅记录时后端回 404——不额外区分，UI 统一按「暂时打不开」处理即可。
+     */
+    open suspend fun createPortal(): PortalResponse? = try {
+        authManager().authorized { api.createPortalSession(it) }
+    } catch (e: Exception) {
+        trackEvent("billing_portal_failed", mapOf("status" to statusOf(e)))
+        null
+    }
+
+    private fun statusOf(e: Exception): Int = (e as? ApiException)?.statusCode ?: -1
+}

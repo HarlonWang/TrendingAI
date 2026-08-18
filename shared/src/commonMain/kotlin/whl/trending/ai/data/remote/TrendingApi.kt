@@ -2,6 +2,7 @@ package whl.trending.ai.data.remote
 
 import whl.trending.ai.core.platform.getUserAgent
 import whl.trending.ai.data.model.AppConfigResponse
+import whl.trending.ai.data.model.CheckoutResponse
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
@@ -10,9 +11,12 @@ import whl.trending.ai.data.model.DigestResponse
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.PicksResponse
+import whl.trending.ai.data.model.PortalResponse
+import whl.trending.ai.data.model.PricesResponse
 import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.model.ReadmeResponse
 import whl.trending.ai.data.model.SubscribeResponse
+import whl.trending.ai.data.model.SubscriptionResponse
 import whl.trending.ai.data.model.TrendingResponse
 
 import io.ktor.client.HttpClient
@@ -202,6 +206,62 @@ open class TrendingApi {
             throw ApiException(response.status.value, response.bodyAsText())
         }
         return response.body<ProRefreshResponse>()
+    }
+
+    /**
+     * 创建 Paddle 交易，返回收银台地址（Paddle 订阅，后端 `api/billing.js`）。
+     *
+     * [plan] 必填且无默认值——双档并列、不预设倾向是 2026-08-15 的定价拍板，
+     * 「主推年付」只体现在 UI 的默认选中与角标上，协议层不替用户选。
+     * 仅 loginbase 轨 token 可用，Logto 轨会收到 401（后端刻意收窄的契约）。
+     */
+    open suspend fun createCheckout(accessToken: String, plan: String): CheckoutResponse {
+        val response = client.post("$baseHost/api/billing/checkout") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            contentType(ContentType.Application.Json)
+            setBody(buildJsonObject { put("plan", plan) })
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<CheckoutResponse>()
+    }
+
+    /**
+     * 两档价格（按访客所在地）。公开只读、不需登录——定价要在登录之前就看得见。
+     * 服务端拿不到时回 `{}`，解析成全空的 [PricesResponse]，由订阅页降级处理。
+     */
+    open suspend fun fetchPrices(): PricesResponse {
+        val response = client.get("$baseHost/api/billing/prices")
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<PricesResponse>()
+    }
+
+    /** 当前用户的订阅快照（管理订阅页展示用）；无订阅时 `subscription` 为 null 而非 404。 */
+    open suspend fun fetchSubscription(accessToken: String): SubscriptionResponse {
+        val response = client.get("$baseHost/api/billing/subscription") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<SubscriptionResponse>()
+    }
+
+    /**
+     * 取 Paddle 客户门户深链（取消订阅 / 更换支付方式）。会话临时、不可缓存，每次现取。
+     * 无订阅记录时后端回 404 `no_subscription`——调用方据此提示，而不是当网络错误。
+     */
+    open suspend fun createPortalSession(accessToken: String): PortalResponse {
+        val response = client.post("$baseHost/api/billing/portal") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+        }
+        if (response.status.value !in 200..299) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return response.body<PortalResponse>()
     }
 
     /** 应用级配置（min_version 强更开关等），冷启动拉取，失败由调用方静默处理。 */

@@ -55,7 +55,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.LinkGithubDialog
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.SettingsGroup
@@ -68,9 +67,6 @@ import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
 import trendingai.shared.generated.resources.account_link_github
 import trendingai.shared.generated.resources.account_link_github_desc
-import trendingai.shared.generated.resources.account_link_required_message
-import trendingai.shared.generated.resources.account_link_required_title
-import trendingai.shared.generated.resources.account_link_sponsor_anyway
 import trendingai.shared.generated.resources.account_plan_title
 import trendingai.shared.generated.resources.account_pro_active
 import trendingai.shared.generated.resources.account_signed_out_prompt
@@ -98,7 +94,7 @@ import kotlin.time.Duration.Companion.minutes
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.AccountLink
-import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.ui.subscription.ManageSubscriptionItem
 import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.QuotaResponse
@@ -124,6 +120,7 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     onNavigateToGithubProfile: () -> Unit,
     onNavigateToFavorites: () -> Unit = {},
+    onNavigateToSubscription: () -> Unit = {},
 ) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
@@ -137,7 +134,6 @@ fun ProfileScreen(
     )
 
     var showSignOutDialog by remember { mutableStateOf(false) }
-    var showLinkGithubDialog by remember { mutableStateOf(false) }
 
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -164,24 +160,6 @@ fun ProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
                     Text(stringResource(Res.string.cancel))
-                }
-            },
-        )
-    }
-
-    // 邮箱用户点「升级 Pro」时的拦截：Pro 权益以 GitHub 账户为发放主体，不先关联就会
-    // 「钱付了但权益对不上」。次按钮保留直接前往赞助页——有人只是想单纯支持，不图权益。
-    if (showLinkGithubDialog) {
-        LinkGithubDialog(
-            title = stringResource(Res.string.account_link_required_title),
-            message = stringResource(Res.string.account_link_required_message),
-            onDismissRequest = { showLinkGithubDialog = false },
-            dismissButton = {
-                TextButton(onClick = {
-                    showLinkGithubDialog = false
-                    ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
-                }) {
-                    Text(stringResource(Res.string.account_link_sponsor_anyway))
                 }
             },
         )
@@ -231,13 +209,21 @@ fun ProfileScreen(
                         quotaError = uiState.quotaError,
                         loggedIn = uiState.loggedIn,
                         isPro = isPro,
-                        onUpgrade = {
-                            // 没有 GitHub 身份就直奔赞助页 = 让用户白花钱，先引导关联
-                            if (uiState.user?.githubUserId == null) showLinkGithubDialog = true
-                            else ProSponsor.openSponsorPage(ProSponsor.SOURCE_ACCOUNT)
-                        },
+                        // 进订阅页，不再直奔 Sponsors，也不再要求先关联 GitHub：
+                        // Paddle 的身份键是 app_users.user_id（走 custom_data），与 GitHub 无关。
+                        // 那道关联闸是 Sponsors 专属前置（权益以 GitHub 数字 ID 发放），
+                        // 留着会把纯邮箱注册的用户挡在购买之外。
+                        onUpgrade = onNavigateToSubscription,
                         onSignIn = { globalAuthManager.signIn("account_hub") },
                     )
+                }
+
+                // ②-b 管理订阅：仅 Paddle 订阅者出现（组件自己查，查不到整行不显示）。
+                // Sponsors 那条通道的 Pro 用户在 GitHub 上管续费，这里不给入口。
+                if (isPro) {
+                    item(key = "manage_subscription") {
+                        ManageSubscriptionItem(isPro = isPro)
+                    }
                 }
 
                 // ③ GitHub 区：已关联给主页入口，未关联给关联入口。

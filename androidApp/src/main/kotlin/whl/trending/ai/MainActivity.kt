@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.App
+import whl.trending.ai.core.ProCheckout
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.ReconcileAction
 import whl.trending.ai.data.local.AppLanguage
@@ -146,6 +147,25 @@ class MainActivity : AppCompatActivity() {
 
                     // 窗口留着，下次回前台再试
                     ReconcileAction.STAY_SILENT -> Unit
+                }
+            }
+        }
+
+        // Paddle 购买对账窗口。与上面的赞助对账各查各的：这条走 /api/me（纯 D1 查询），
+        // 不烧 pro/refresh 的 GitHub PAT 配额，因此可以重试多轮——权益要等 webhook 落库，
+        // 用户完全可能比 webhook 先回到 App，查一次就放弃会把「已付款」显示成免费档。
+        if (!globalSettingsManager.currentIsPro() && ProCheckout.shouldReconcile()) {
+            lifecycleScope.launch {
+                val repository = whl.trending.ai.data.repository.UserRepository()
+                val attempt = ProCheckout.reconcile {
+                    val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
+                    // syncMe 会把 isPro 落到本地设置，UI 各处（模型选择器、配额卡）随之解锁
+                    repository.syncMe(token) != null && globalSettingsManager.currentIsPro()
+                }
+                // attempt 区分「秒到」与「等满 26 秒」，是判断 webhook 时延是否需要调窗口的依据
+                if (attempt != null) {
+                    ProCheckout.markActivated()
+                    trackEvent("checkout_reconciled", mapOf("attempt" to attempt))
                 }
             }
         }

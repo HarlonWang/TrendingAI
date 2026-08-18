@@ -36,7 +36,9 @@ object ProSponsor {
      */
     const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
     const val SOURCE_SETTINGS_DONATE = "settings_donate"
-    const val SOURCE_ACCOUNT = "account"
+    // SOURCE_ACCOUNT 已随账户页「升级 Pro」改指 Paddle 订阅页而移除（见 ProCheckout）。
+    // 现存两个入口都是「支持项目」语义而非买权益，继续走 Sponsors 是对的：
+    // 语言支持请求后的赞助引导、关于页的捐赠。
 
     /**
      * 打开赞助页统一入口。[upsellSource] 非空时上报统一的 pro_upsell_clicked——各入口
