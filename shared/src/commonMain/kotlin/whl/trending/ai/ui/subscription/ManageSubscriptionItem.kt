@@ -88,11 +88,18 @@ fun ManageSubscriptionItem(
                 opening = true
                 trackEvent("manage_subscription_click")
                 scope.launch {
-                    val portal = repository.createPortal()
-                    opening = false
-                    // 优先落在取消页：点进「管理订阅」的人多数是来退订的，少一跳
-                    val url = portal?.cancel ?: portal?.overview
-                    if (url != null) openUrl(url) else failed = true
+                    // finally 而不是顺序赋值：请求被取消时（协程抛 CancellationException）
+                    // 也要放开点击态。当前 opening 与 scope 同属一个 composition、一起销毁，
+                    // 卡死不会真的发生；但一旦有人把它改成 rememberSaveable、或换成生命周期
+                    // 更长的 scope，这一行就是「整行永久点不动」与否的分界。
+                    try {
+                        val portal = repository.createPortal()
+                        // 优先落在取消页：点进「管理订阅」的人多数是来退订的，少一跳
+                        val url = portal?.cancel ?: portal?.overview
+                        if (url != null) openUrl(url) else failed = true
+                    } finally {
+                        opening = false
+                    }
                 }
             },
         )

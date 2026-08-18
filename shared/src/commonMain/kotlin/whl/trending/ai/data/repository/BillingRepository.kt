@@ -1,5 +1,6 @@
 package whl.trending.ai.data.repository
 
+import kotlinx.coroutines.CancellationException
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.platform.trackEvent
@@ -18,6 +19,9 @@ import whl.trending.ai.data.remote.TrendingApi
  * 这在下单路径上尤其要命：用户以为付款出了问题，实际只是 token 过期。
  *
  * 失败一律返回 null 而不抛：调用方是 UI，需要的是「展示降级形态」而不是崩溃路径。
+ * **但 CancellationException 必须原样抛出**——它是 Exception 的子类，被 catch 吞掉就等于
+ * 把「协程被取消」当成「请求失败」处理，结构化并发失效、调用方的取消再也传不下去
+ * （与 ProfileViewModel 里的既有做法一致）。
  * 失败原因经埋点上报（`billing_*_failed`，带 HTTP 状态码），漏斗断在哪一步查得到。
  *
  * open + 构造注入：与 [UserRepository] 同一套手动 DI，测试以子类替身注入。
@@ -34,6 +38,7 @@ open class BillingRepository(
     open suspend fun fetchPrices(): PricesResponse? = try {
         api.fetchPrices()
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         trackEvent("billing_prices_failed", mapOf("status" to statusOf(e)))
         null
     }
@@ -45,6 +50,7 @@ open class BillingRepository(
     open suspend fun createCheckout(plan: String): CheckoutResponse? = try {
         authManager().authorized { api.createCheckout(it, plan) }
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         trackEvent("billing_checkout_failed", mapOf("plan" to plan, "status" to statusOf(e)))
         null
     }
@@ -53,6 +59,7 @@ open class BillingRepository(
     open suspend fun fetchSubscription(): PaddleSubscription? = try {
         authManager().authorized { api.fetchSubscription(it) }?.subscription
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         trackEvent("billing_subscription_failed", mapOf("status" to statusOf(e)))
         null
     }
@@ -64,6 +71,7 @@ open class BillingRepository(
     open suspend fun createPortal(): PortalResponse? = try {
         authManager().authorized { api.createPortalSession(it) }
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         trackEvent("billing_portal_failed", mapOf("status" to statusOf(e)))
         null
     }
