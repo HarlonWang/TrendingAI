@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -212,6 +214,7 @@ fun SubscriptionScreen(
 }
 
 /** 权益对比：比「能做什么」而不是比数字。 */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BenefitTable(proModels: List<String>) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -244,19 +247,31 @@ private fun BenefitTable(proModels: List<String>) {
                 pro = stringResource(Res.string.subscription_benefit_models_pro),
             )
             // 目录拉到了才展示具体型号——空目录时不留一行空白，也不猜任何名字。
+            //
             // 必须带「Pro 专属」前缀：chip 横跨整行、不落在任何一列下面，
             // 不标归属会被读成「免费也能用这些模型」，正好把意思说反（真机截图暴露）。
+            //
+            // 用 FlowRow 且**不截断**：目录是后端动态下发的，模型增减不需要发版，
+            // 所以这里不能假设个数。Row 装不下会静默裁掉，take(n) 会静默丢弃——
+            // 两种静默都会让「解锁全部高阶模型」变成假话，而这一行本是全页唯一
+            // 给得出确切承诺的地方。换行是唯一不说谎的处理方式。
+            //
+            // 空列表只隐藏 chip 行、保留上面的权益行：目录没拉到（网络失败）与后端
+            // 确实没有 Pro 模型，在客户端是同一种形态（空列表），据此隐藏权益行
+            // 会在网络抖动时误伤——宁可少展示型号，不可少展示权益。
             if (proModels.isNotEmpty()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
                         stringResource(Res.string.subscription_pro_models_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.CenterVertically),
                     )
-                    proModels.take(3).forEach { name ->
+                    proModels.forEach { name ->
                         SuggestionChip(onClick = {}, label = { Text(name) })
                     }
                 }
