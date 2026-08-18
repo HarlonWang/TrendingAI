@@ -252,7 +252,7 @@
     <string name="account_manage_subscription">管理订阅</string>
     <string name="account_manage_subscription_hint">更改支付方式或取消续费</string>
     <string name="subscription_title">升级 Pro</string>
-    <string name="subscription_intro">情报内容始终免费。Pro 解锁的是 App 内的 AI 能力。</string>
+    <string name="subscription_intro">榜单与每日精选始终免费，Pro 提升的是 AI 的用量和更强模型。</string>
     <string name="subscription_col_free">免费</string>
     <string name="subscription_col_pro">Pro</string>
     <string name="subscription_benefit_quota">每日 AI 额度</string>
@@ -268,7 +268,8 @@
     <string name="subscription_plan_monthly">月付</string>
     <string name="subscription_plan_annual_unit">每年</string>
     <string name="subscription_plan_monthly_unit">每月</string>
-    <string name="subscription_savings_badge">省 %1$d%%</string>
+    <string name="subscription_savings_badge">省 %1$s</string>
+    <string name="subscription_pro_models_label">Pro 专属</string>
     <string name="subscription_cta_subscribe">订阅 Pro</string>
     <string name="subscription_cta_signin">登录后订阅</string>
     <string name="subscription_cta_view_price">查看价格并订阅</string>

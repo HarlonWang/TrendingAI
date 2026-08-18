@@ -65,6 +65,7 @@ import trendingai.shared.generated.resources.subscription_cta_subscribe
 import trendingai.shared.generated.resources.subscription_cta_view_price
 import trendingai.shared.generated.resources.subscription_intro
 import trendingai.shared.generated.resources.subscription_plan_annual
+import trendingai.shared.generated.resources.subscription_pro_models_label
 import trendingai.shared.generated.resources.subscription_plan_annual_unit
 import trendingai.shared.generated.resources.subscription_plan_monthly
 import trendingai.shared.generated.resources.subscription_plan_monthly_unit
@@ -245,9 +246,19 @@ private fun BenefitTable(proModels: List<String>) {
                 free = stringResource(Res.string.subscription_benefit_models_free),
                 pro = stringResource(Res.string.subscription_benefit_models_pro),
             )
-            // 目录拉到了才展示具体型号——空目录时不留一行空白，也不猜任何名字
+            // 目录拉到了才展示具体型号——空目录时不留一行空白，也不猜任何名字。
+            // 必须带「Pro 专属」前缀：chip 横跨整行、不落在任何一列下面，
+            // 不标归属会被读成「免费也能用这些模型」，正好把意思说反（真机截图暴露）。
             if (proModels.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        stringResource(Res.string.subscription_pro_models_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     proModels.take(3).forEach { name ->
                         SuggestionChip(onClick = {}, label = { Text(name) })
                     }
@@ -296,8 +307,10 @@ private fun PlanOptions(
             title = stringResource(Res.string.subscription_plan_annual),
             unit = stringResource(Res.string.subscription_plan_annual_unit),
             price = state.prices?.annual?.formatted,
+            // 百分号在这里拼而不写进资源串：CMP 的 stringResource 不做 printf 的
+            // `%%` → `%` 转义，资源里写 %% 会原样显示成「省 42%%」（真机实测）
             badge = state.prices?.savingsPercent
-                ?.let { stringResource(Res.string.subscription_savings_badge, it) },
+                ?.let { stringResource(Res.string.subscription_savings_badge, "$it%") },
             selected = state.selectedPlan == ProCheckout.PLAN_ANNUAL,
             onClick = { onSelect(ProCheckout.PLAN_ANNUAL) },
         )
