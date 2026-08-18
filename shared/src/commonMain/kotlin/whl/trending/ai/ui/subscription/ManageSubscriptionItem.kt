@@ -7,11 +7,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -53,9 +53,18 @@ fun ManageSubscriptionItem(
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // 只有 Pro 才查：免费用户不可能有生效订阅，没必要为每次进账户页多打一个请求
-    LaunchedEffect(isPro) {
-        subscription = if (isPro) repository.fetchSubscription() else null
+    // 只有 Pro 才查：免费用户不可能有生效订阅，没必要为每次进账户页多打一个请求。
+    //
+    // 用 ON_RESUME 而不是 LaunchedEffect：取消/换卡都发生在 Paddle 客户门户里，也就是
+    // App 之外，**没有任何回调会通知我们状态变了**。而取消后权益保留到期末（status 仍是
+    // active、isPro 仍是 true），拿 isPro 当 key 的话 key 根本不变、不会重拉——用户从门户
+    // 取消完回来，看到的还是「x 月 x 日到期」，会以为取消没成功（真机实测）。
+    // 回前台重新对账是唯一能覆盖门户操作的时机。
+    LifecycleResumeEffect(isPro) {
+        val job = scope.launch {
+            subscription = if (isPro) repository.fetchSubscription() else null
+        }
+        onPauseOrDispose { job.cancel() }
     }
 
     val sub = subscription ?: return
