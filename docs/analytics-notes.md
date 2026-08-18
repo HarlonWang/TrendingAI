@@ -2,6 +2,10 @@
 
 解读 Aptabase 数据时容易踩的坑与口径说明。看板上的原始数字不总等于字面意思，这里记录需要人工修正的解读。
 
+> **分工（2026-08-18 起）**：本文只记 **TrendingAI 自己的历史断点与解读坑**。
+> 指标口径、事件词汇、数据模型的权威在自建埋点仓 `~/eventbase/docs/telemetry-design.md`。
+> eventbase 切换后本文的历史内容仍然有效（用于解读切换前的数据），但**新口径不要再往这里加**。
+
 > 通用口径：留存/回访一律以 `install_id` 为准（Aptabase 默认 `user_id` 每日轮换哈希，不能跨天）。详见 memory `aptabase-retention-analysis`。
 
 ---

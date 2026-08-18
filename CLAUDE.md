@@ -6,7 +6,13 @@
 
 修法：Run → Edit Configurations → androidApp → Launch Options 改为 **Specified Activity** → `whl.trending.ai.MainActivity`（本体 `exported="true"`，显式启动不需要 LAUNCHER filter），一次配置后与图标状态永不打架。**不要**用 adb 强行 enable `MainActivityDefault`——app 内持久化的图标选择不会跟着变，状态不一致还可能桌面双图标。adb 脚本侧无此问题（`monkey -c LAUNCHER` 解析的是当前启用的入口）。
 
-## 埋点数据分析（Aptabase）
+## 埋点数据分析（Aptabase → eventbase 迁移中）
+
+**埋点体系正在自建替换**（eventbase，仓库 `~/eventbase` / `~/eventbase-kt`，设计已定稿、实现未开始）。两条纪律：
+
+- **新增或修改埋点事件前**，先读 `~/eventbase/docs/telemetry-design.md` 的事件词汇——那是唯一权威，**禁止在调用点就地发明事件名**；迁移期新增事件按新词汇写，避免又造一批要重构的历史。
+- 本文下面这节与 `docs/analytics-notes.md` 只负责**本 App 的历史断点与坑**；口径、指标定义、数据模型的权威在 eventbase 仓。
+
 
 分析埋点导出 CSV 或看板数据前，**必读 `docs/analytics-notes.md`**——各版本埋点断点（同名不同义、事件改名、词汇换代）、留存基线、口径坑都记在那里，跨版本看曲线不按它切段必然误读。最容易忘的三条：跨天/留存一律用 `install_id`（`user_id` 每日轮换，不能跨天）；chat 用量必须按设备去重（单设备重度用户占总量可达 70%+）；分渠道看留存（Play 渠道量虚，混渠道总留存会被构成效应带偏）。
 
