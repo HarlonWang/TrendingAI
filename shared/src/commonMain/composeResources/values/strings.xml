@@ -256,7 +256,7 @@
     <string name="subscription_col_free">Free</string>
     <string name="subscription_col_pro">Pro</string>
     <string name="subscription_benefit_quota">Daily AI allowance</string>
-    <string name="subscription_benefit_quota_free">Enough for everyday chats and summaries</string>
+    <string name="subscription_benefit_quota_free">A small amount each day</string>
     <string name="subscription_benefit_quota_pro">A more generous daily allowance</string>
     <string name="subscription_benefit_models">Models</string>
     <string name="subscription_benefit_models_free">Default model</string>

@@ -256,7 +256,7 @@
     <string name="subscription_col_free">免费</string>
     <string name="subscription_col_pro">Pro</string>
     <string name="subscription_benefit_quota">每日 AI 额度</string>
-    <string name="subscription_benefit_quota_free">日常对话与解读够用</string>
+    <string name="subscription_benefit_quota_free">每天少量</string>
     <string name="subscription_benefit_quota_pro">更宽裕的每日额度</string>
     <string name="subscription_benefit_models">可用模型</string>
     <string name="subscription_benefit_models_free">默认模型</string>
