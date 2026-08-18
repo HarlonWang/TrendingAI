@@ -3,6 +3,7 @@ package whl.trending.ai.core
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -84,8 +85,17 @@ object ProCheckout {
     suspend fun reconcile(refreshPro: suspend () -> Boolean): Int? {
         RETRY_DELAYS.forEachIndexed { index, wait ->
             if (wait > 0.seconds) delay(wait)
-            // 单次失败（网络抖动、token 刚过期）不该中断整轮：后面几次仍有机会拿到
-            val pro = runCatching { refreshPro() }.getOrDefault(false)
+            // 单次失败（网络抖动、token 刚过期）不该中断整轮：后面几次仍有机会拿到。
+            // 但 CancellationException 必须放行——runCatching 连它一起吞，会让「协程已被
+            // 取消」退化成「这次没查到」：最后一轮被取消时 reconcile 照常返回 null、
+            // 外层协程正常完成，取消再也传不出去，且已被取消的请求还会白跑一次。
+            val pro = try {
+                refreshPro()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
             if (pro) return index + 1
         }
         return null

@@ -2,8 +2,10 @@ package whl.trending.ai.core
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 
@@ -64,5 +66,28 @@ class ProCheckoutReconcileTest {
     fun `全程抛异常等价于没到账，不误判为已开通`() = runTest {
         val attempt = ProCheckout.reconcile { throw IllegalStateException("boom") }
         assertNull(attempt)
+    }
+
+    @Test
+    fun `协程取消必须抛出，不能退化成「这次没查到」`() = runTest {
+        var calls = 0
+        // 取消发生在最后一轮时最危险：吞掉它 reconcile 会照常返回 null、外层协程正常完成，
+        // 「已被取消」这件事再也传不出去（普通失败与取消必须走不同的路）
+        assertFailsWith<CancellationException> {
+            ProCheckout.reconcile {
+                calls++
+                if (calls < 4) false else throw CancellationException("cancelled")
+            }
+        }
+        assertEquals(4, calls)
+    }
+
+    @Test
+    fun `取消发生在第一轮时立刻中断，不再重试`() = runTest {
+        var calls = 0
+        assertFailsWith<CancellationException> {
+            ProCheckout.reconcile { calls++; throw CancellationException("cancelled") }
+        }
+        assertEquals(1, calls)
     }
 }

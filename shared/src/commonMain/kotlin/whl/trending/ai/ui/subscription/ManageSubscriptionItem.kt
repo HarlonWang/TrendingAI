@@ -1,14 +1,10 @@
 package whl.trending.ai.ui.subscription
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -35,6 +30,7 @@ import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.PaddleSubscription
 import whl.trending.ai.data.repository.BillingRepository
 import whl.trending.ai.ui.common.InfoDialog
+import whl.trending.ai.ui.common.SettingsGroup
 
 /**
  * 账户页的「管理订阅」行。取消订阅本身完全由 Paddle 客户门户承担，这里只做跳转入口——
@@ -72,19 +68,17 @@ fun ManageSubscriptionItem(
         )
     }
 
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        ListItem(
-            headlineContent = { Text(stringResource(Res.string.account_manage_subscription)) },
-            supportingContent = { Text(supportingTextOf(sub)) },
-            trailingContent = {
+    // 与账户页其余入口（GithubEntryCard / LinkGithubCard）同一套卡片语言：
+    // 这一行就排在它们旁边，用裸 ListItem 会在同一页出现两种卡片形状与间距。
+    SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        settingsItem(
+            title = { Text(stringResource(Res.string.account_manage_subscription)) },
+            description = { Text(supportingTextOf(sub)) },
+            trailing = {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
             },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable(enabled = !opening) {
+            enabled = !opening,
+            onClick = {
                 opening = true
                 trackEvent("manage_subscription_click")
                 scope.launch {
