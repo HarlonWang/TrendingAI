@@ -52,7 +52,9 @@ import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.auth.LoginSheetHost
+import whl.trending.ai.ui.subscription.SubscriptionScreen
 import whl.trending.ai.ui.common.OAuthOutcomeHost
+import whl.trending.ai.ui.common.CheckoutResultHost
 import whl.trending.ai.ui.common.SponsorLinkHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
@@ -64,6 +66,7 @@ data object About
 data object DataSources
 data object Feedback
 data object Subscribe
+data object ProSubscription
 data class RepoDetail(val owner: String, val repo: String)
 data class WebPage(val url: String, val title: String)
 data object Favorites
@@ -131,6 +134,7 @@ fun App() {
                     SignInHintHost()
                     LoginSheetHost()
                     SponsorLinkHost()
+                    CheckoutResultHost()
                     OAuthOutcomeHost()
                     NavDisplay(
                         backStack = backStack,
@@ -172,6 +176,7 @@ fun App() {
                                         backStack.add(page)
                                     },
                                     onNavigateToGithubProfile = { backStack.add(GithubProfile) },
+                                    onNavigateToSubscription = { backStack.add(ProSubscription) },
                                     onNavigateToFavorites = { backStack.add(Favorites) },
                                     onNavigateToSettings = { backStack.add(Settings) },
                                 )
@@ -248,6 +253,10 @@ fun App() {
                                         backStack.add(page)
                                     }
                                 )
+                            }
+
+                            is ProSubscription -> NavEntry(key) {
+                                SubscriptionScreen(onBack = { backStack.safePop() })
                             }
 
                             is Settings -> NavEntry(key) {

@@ -150,6 +150,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FEED_HIGHLIGHTS_ONLY_KEY = "prefs_feed_filter_highlights"
     private val IS_PRO_KEY = "prefs_is_pro"
     private val SPONSOR_PAGE_OPENED_AT_KEY = "prefs_sponsor_page_opened_at"
+    private val CHECKOUT_OPENED_AT_KEY = "prefs_checkout_opened_at"
     // 存储 key 的字面量不随常量名改动——改了等于丢掉存量用户已选的模型
     private val CHAT_MODEL_CHOICE_KEY = "prefs_selected_chat_model"
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
@@ -537,6 +538,23 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun clearSponsorPageOpenedAt() {
         settings.putLong(SPONSOR_PAGE_OPENED_AT_KEY, 0L)
+    }
+
+    /**
+     * 最近一次打开 Paddle 收银台的时间戳（epoch millis），0 表示无待对账的购买意图。
+     *
+     * 与 [currentSponsorPageOpenedAt] 分开存而不是共用一个「外跳意图」时间戳：两条路的对账
+     * 端点、成本与失败语义都不同（Sponsors 走 /api/pro/refresh，每次消耗维护者 PAT 配额；
+     * Paddle 走 /api/me，纯 D1 查询）。合并会让其中一条的窗口策略绑架另一条。
+     */
+    fun currentCheckoutOpenedAt(): Long = settings.getLong(CHECKOUT_OPENED_AT_KEY, 0L)
+
+    fun setCheckoutOpenedAt(time: Long) {
+        settings.putLong(CHECKOUT_OPENED_AT_KEY, time)
+    }
+
+    fun clearCheckoutOpenedAt() {
+        settings.putLong(CHECKOUT_OPENED_AT_KEY, 0L)
     }
 
     /**
