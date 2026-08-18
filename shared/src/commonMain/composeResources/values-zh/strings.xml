@@ -252,7 +252,7 @@
     <string name="account_manage_subscription">管理订阅</string>
     <string name="account_manage_subscription_hint">更改支付方式或取消续费</string>
     <string name="subscription_title">升级 Pro</string>
-    <string name="subscription_intro">榜单与每日精选始终免费，Pro 提升的是 AI 的用量和更强模型。</string>
+    <string name="subscription_intro">榜单与精选始终免费，Pro 提升 AI 用量与模型</string>
     <string name="subscription_col_free">免费</string>
     <string name="subscription_col_pro">Pro</string>
     <string name="subscription_benefit_quota">每日 AI 额度</string>
