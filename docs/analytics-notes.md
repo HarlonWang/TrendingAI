@@ -256,7 +256,8 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 
 **分析时的修正口径**（1.2.0 ~ 修复版本之间的数据长期适用）：
 
-- 算 session 时长 / 参与度、日活、留存，一律**先剔除单事件 session**（一个 `session_id` 只对应一条事件）。它们时长恒为 0，本就不代表一次真实使用；判据取「单事件」而非「只含 `app_started`」，是为了连带盖住后台上报的 `daily_picks_notification_shown` / `skipped`——那两个必须在后台发、不该消除，但同样各自造一个空 session（量级 ~20/天）。
+- 算 session 时长 / 参与度、日活、留存，一律**先剔除单事件 session**（一个 `session_id` 只对应一条事件）。判据取「单事件」而非「只含 `app_started`」，是为了连带盖住后台上报的 `daily_picks_notification_shown` / `skipped`——那两个必须在后台发、不该消除，但同样各自造一个空 session（量级 ~20/天）。
+- ⚠️ **这条剔除规则会误杀一小撮真实使用，接受它**：`onStop` 里 `durationSeconds > 0` 的闸门让**停留不足 1 秒的前台会话发不出 `app_session`**，于是一次真实启动也只剩一条 `app_started`；进程被系统杀在 `onStop` 之前也是同样结果。实测 `duration=1s` 有 257 条（占 `app_session` 的 3.28%），分布在极短端没有塌陷，据此外推被闸掉的 <1s 约每天十几条。落到日活上还要求该设备当天**唯一**的活动就是这次启动，实际影响估计 <1%——相对不剔就有的 55% 虚高，这个代价划算。**这段区间内没有更好的办法**：`app_started` 本身分不清前台后台，没有可靠的前台标记可用。
 - 剔除后中位停留 08-08~08-16 稳定在 **70~95s**，全程无恶化。
 - **Sessions 数虚高约一倍**，不能直接跨 1.2.0 对比。
 - **日活虚高，08-16 已达 55%**（看板 541 → 真实 246；08-01~08-12 的 11~19% 是旧版就有的基线噪声，1.2.0 的增量是 08-13 起抬到 55% 那一段）。整段数据里有 90 台设备只有 `app_started`。
@@ -275,7 +276,18 @@ Logto SDK 会**本地缓存 OIDC discovery 配置**。这导致断网登录的�
 
 发版铺开后看板日活会从 500 多掉回 250 上下、Sessions 腰斩，**那是回归真值，不是掉量**。
 
-> 为什么不能"保留 onCreate 上报 + 加 `foreground` 属性靠看板过滤"：Aptabase 的 session 由事件构成，事件发出 session 即成立；且看板首屏四指标走 `key_metrics` 查询，只支持 country / os / version / event_name 维度过滤，**不认自定义属性**。打了标日活照样虚高、时长照样 0s。
+### ⚠️ 剔除判据随之收窄，别沿用上一节的
+
+上一节那条「剔除所有单事件 session」是**为污染区间定制的**，因为那时 `app_started` 分不清前后台。修复后 `app_started` 只在前台发，判据必须跟着收窄：
+
+| 数据区间 | 剔除判据 |
+|---|---|
+| 1.2.0 ~ 修复版本 | 所有单事件 session（含误杀，见上一节） |
+| 修复版本之后 | **只剔「仅含后台事件」的 session**，即整个 session 只有 `daily_picks_notification_shown` / `skipped` |
+
+修复后若继续一刀切，会把「只含一条 `app_started`」的 session 全扔掉——而它们此时已经是**真实的前台短启动**（停留不足 1 秒、`app_session` 被 `durationSeconds > 0` 闸掉），每天白扔十几条。
+
+> 为什么不能"保留 onCreate 上报 + 加 `foreground` 属性靠看板过滤"：Aptabase 的 session 由事件构成，事件发出 session 即成立；且看板首屏那四个指标走 `key_metrics` 查询，只支持 country / os / version / event_name 维度过滤，**不认自定义属性**。打了标日活照样虚高、时长照样 0s。
 
 ## 移除系统广播重排 + 新增 `daily_picks_alarm_relinked`（2026-08-18 实现，尚未发版）
 
