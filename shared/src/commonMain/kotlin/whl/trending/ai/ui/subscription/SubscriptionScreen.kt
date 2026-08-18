@@ -282,19 +282,26 @@ private fun BenefitTable(proModels: List<String>) {
 
 @Composable
 private fun BenefitRow(label: String, free: String, pro: String) {
-    Row(verticalAlignment = Alignment.Top) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+    // 三列字号不同（行标题 bodyMedium 14sp，两个值 bodySmall 12sp），必须按**基线**对齐：
+    // Alignment.Top 对齐的是文字框顶部，字号一大一小时基线必然错开，肉眼看就是行标题
+    // 比同行的值高出一截（真机截图暴露）。alignByBaseline 对齐第一行基线，与字号无关。
+    Row {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f).alignByBaseline(),
+        )
         Text(
             free,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).alignByBaseline(),
         )
         Text(
             pro,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).alignByBaseline(),
         )
     }
 }
