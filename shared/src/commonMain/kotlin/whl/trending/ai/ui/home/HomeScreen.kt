@@ -50,7 +50,9 @@ import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
@@ -349,7 +351,7 @@ fun HomeScreen(
                         // 与 README 页的入口共用 chat_entry_click，把分散多处的进入路径收进
                         // 同一事件的 from 维度；home_fab 是 1.1 起的新值（此前 Chat 在胶囊里
                         // 当伪 tab，记的是 home_tab + tab_switch，前后可对比入口点击量）
-                        trackEvent("chat_entry_click", mapOf("from" to "home_fab"))
+                        track(AppEvent.ScreenViewed(Screen.CHAT, from = "home_fab"))
                         onNavigateToChat()
                     }
                 } else null,

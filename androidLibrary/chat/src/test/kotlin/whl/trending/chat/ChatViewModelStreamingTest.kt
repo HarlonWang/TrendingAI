@@ -1,11 +1,5 @@
 package whl.trending.chat
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -13,7 +7,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.core.analytics.AiKind
+import whl.trending.ai.core.analytics.AiOutcome
+import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.engine.DetailSummaryResult
@@ -76,7 +79,7 @@ class ChatViewModelStreamingTest {
         }
     }
 
-    private fun vm(engine: ChatEngine, track: (String, Map<String, String>) -> Unit = { _, _ -> }) =
+    private fun vm(engine: ChatEngine, track: (AppEvent) -> Unit = {}) =
         ChatViewModel(engine, context, loadModels = { whl.trending.ai.data.model.ChatModelsResponse() }, track = track)
 
     @Test
@@ -153,22 +156,31 @@ class ChatViewModelStreamingTest {
     }
 
     @Test
-    fun `埋点：generate、cache_hit、login_required`() = runTest(dispatcher) {
-        val events = mutableListOf<String>()
+    fun `埋点：requested 与 completed 成对，命中缓存与登录闸各自的 outcome`() = runTest(dispatcher) {
+        val events = mutableListOf<AppEvent>()
         val engine = ScriptedEngine(detailCached = true)
-        val viewModel = vm(engine) { name, _ -> events.add(name) }
+        val viewModel = vm(engine) { events.add(it) }
         viewModel.sendDetailSummary("一键详细解读")
         advanceUntilIdle()
-        assertTrue("detail_summary_generate" in events)
-        assertTrue("detail_summary_cache_hit" in events)
+        assertEquals(
+            listOf(AiKind.DETAIL_SUMMARY),
+            events.filterIsInstance<AppEvent.AiRequested>().map { it.kind },
+        )
+        assertEquals(
+            listOf(AiOutcome.CACHE_HIT),
+            events.filterIsInstance<AppEvent.AiCompleted>().map { it.outcome },
+        )
 
         val gated = ScriptedEngine(
             failWith = ChatError(ChatErrorCategory.BAD_REQUEST, code = ChatError.CODE_LOGIN_REQUIRED),
         )
-        val events2 = mutableListOf<String>()
-        val vm2 = vm(gated) { name, _ -> events2.add(name) }
+        val events2 = mutableListOf<AppEvent>()
+        val vm2 = vm(gated) { events2.add(it) }
         vm2.sendDetailSummary("一键详细解读")
         advanceUntilIdle()
-        assertTrue("detail_summary_login_required" in events2)
+        assertEquals(
+            listOf(AiOutcome.ERROR to ChatError.CODE_LOGIN_REQUIRED),
+            events2.filterIsInstance<AppEvent.AiCompleted>().map { it.outcome to it.reason },
+        )
     }
 }

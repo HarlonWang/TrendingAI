@@ -1,55 +1,22 @@
 package whl.trending.ai
 
 import android.app.Application
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ProcessLifecycleOwner
-import com.aptabase.Aptabase
+import wang.harlon.eventbase.Eventbase
+import wang.harlon.eventbase.init
+import whl.trending.ai.core.analytics.analyticsConfig
 import whl.trending.ai.core.platform.ChannelHolder
-import whl.trending.ai.core.platform.trackEvent
 
-class TrendingApplication : Application(), DefaultLifecycleObserver {
-    private var sessionStartTime: Long = 0
-
-    /** 每进程只报一次 app_started，前后台来回切不重复计 */
-    private var startedReported = false
+/**
+ * app_opened / app_backgrounded 与会话时长全部由 eventbase-kt 自己算——它挂
+ * ProcessLifecycleOwner，无界面的后台唤醒进程不会造出空会话（1.2.0 把日活推高 55%
+ * 的那个坑，口径已定死在库里）。这里只负责初始化。
+ */
+class TrendingApplication : Application() {
 
     override fun onCreate() {
-        super<Application>.onCreate()
-        // 写入分发渠道（须在任何 trackEvent / 网络请求之前），供 shared 埋点与 UA 统一打标
+        super.onCreate()
+        // 须在任何埋点 / 网络请求之前：埋点配置与 UA 都读它
         ChannelHolder.set(BuildConfig.CHANNEL)
-
-        // 只初始化，不上报——初始化本身不产生事件
-        Aptabase.instance.initialize(this, "A-US-1808698868")
-
-        // Register lifecycle observer
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-    }
-
-    override fun onStart(owner: LifecycleOwner) {
-        super.onStart(owner)
-        // 挂首次进前台而非 onCreate：后台唤醒建的进程没有界面，在那里上报只会造出一个
-        // 空 session（Aptabase 的 session 由事件构成，发出即成立）。口径见 analytics-notes
-        if (!startedReported) {
-            startedReported = true
-            trackEvent("app_started")
-        }
-
-        // Record start time when app comes to foreground
-        sessionStartTime = System.currentTimeMillis()
-    }
-
-    override fun onStop(owner: LifecycleOwner) {
-        super.onStop(owner)
-        // Calculate duration and track event when app goes to background
-        if (sessionStartTime > 0) {
-            val durationSeconds = (System.currentTimeMillis() - sessionStartTime) / 1000
-            if (durationSeconds > 0) {
-                trackEvent("app_session", mapOf(
-                    "duration" to durationSeconds.toInt()
-                ))
-            }
-            sessionStartTime = 0
-        }
+        Eventbase.init(context = this, config = analyticsConfig(isDebug = BuildConfig.DEBUG))
     }
 }

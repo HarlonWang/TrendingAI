@@ -3,7 +3,8 @@ package whl.trending.ai.data.repository
 import kotlinx.coroutines.CancellationException
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.model.CheckoutResponse
 import whl.trending.ai.data.model.PaddleSubscription
 import whl.trending.ai.data.model.PortalResponse
@@ -39,7 +40,7 @@ open class BillingRepository(
         api.fetchPrices()
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        trackEvent("billing_prices_failed", mapOf("status" to statusOf(e)))
+        track(AppEvent.ApiFailed("billing/prices", statusOf(e)))
         null
     }
 
@@ -51,7 +52,7 @@ open class BillingRepository(
         authManager().authorized { api.createCheckout(it, plan) }
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        trackEvent("billing_checkout_failed", mapOf("plan" to plan, "status" to statusOf(e)))
+        track(AppEvent.ApiFailed("billing/checkout", statusOf(e)))
         null
     }
 
@@ -60,7 +61,7 @@ open class BillingRepository(
         authManager().authorized { api.fetchSubscription(it) }?.subscription
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        trackEvent("billing_subscription_failed", mapOf("status" to statusOf(e)))
+        track(AppEvent.ApiFailed("billing/subscription", statusOf(e)))
         null
     }
 
@@ -72,7 +73,7 @@ open class BillingRepository(
         authManager().authorized { api.createPortalSession(it) }
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        trackEvent("billing_portal_failed", mapOf("status" to statusOf(e)))
+        track(AppEvent.ApiFailed("billing/portal", statusOf(e)))
         null
     }
 

@@ -95,10 +95,6 @@ actual fun getSystemLanguageDisplayName(): String {
 actual fun getSystemLocaleTag(): String =
     NSLocale.preferredLanguages.firstOrNull() as? String ?: "en"
 
-internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
-    // iOS 暂不接入事件上报
-}
-
 actual fun getUserAgent(): String {
     val appVersion = getAppVersion()
     val device = UIDevice.currentDevice

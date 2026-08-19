@@ -13,7 +13,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.chat.R
 import whl.trending.chat.model.ChatError
 
@@ -66,7 +65,6 @@ internal fun QuotaLimitCard(
                         QuotaText(R.string.chat_detail_login_message)
                         if (globalAuthManager.isSupported) {
                             Button(onClick = {
-                                trackEvent("detail_summary_login_click")
                                 globalAuthManager.signIn("detail_summary_quota_card")
                             }) {
                                 Text(stringResource(R.string.chat_quota_login_cta))
@@ -100,7 +98,6 @@ internal fun QuotaLimitCard(
                 QuotaText(R.string.chat_quota_exceeded)
                 if (globalAuthManager.isSupported) {
                     Button(onClick = {
-                        trackEvent("chat_quota_login_click")
                         globalAuthManager.signIn("chat_quota_card")
                     }) {
                         Text(stringResource(R.string.chat_quota_login_cta))

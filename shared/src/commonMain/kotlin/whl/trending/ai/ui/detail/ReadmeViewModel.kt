@@ -1,11 +1,5 @@
 package whl.trending.ai.ui.detail
 
-import whl.trending.ai.auth.AuthManager
-import whl.trending.ai.auth.RepoStarService
-import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.repository.TrendingRepository
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,6 +10,13 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import whl.trending.ai.auth.AuthManager
+import whl.trending.ai.auth.RepoStarService
+import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.data.repository.TrendingRepository
 
 data class ReadmeUiState(
     val html: String = "",
@@ -47,7 +48,7 @@ class ReadmeViewModel(
     init {
         // chat 入口漏斗的分母（见 docs/analytics-notes.md）：记在 VM init 而非 Composable，
         // 一次进入恰好一条——VM 随页面实例创建、配置变更（旋转）复用，天然不重复计数
-        trackEvent("readme_view", mapOf("source" to "github"))
+        track(AppEvent.ScreenViewed(Screen.README))
         fetchReadme()
         refreshStarState()
     }

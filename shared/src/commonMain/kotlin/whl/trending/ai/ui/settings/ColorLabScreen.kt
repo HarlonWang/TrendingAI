@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -45,8 +45,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +73,7 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.color_lab_contrast
+import trendingai.shared.generated.resources.color_lab_discard
 import trendingai.shared.generated.resources.color_lab_hex
 import trendingai.shared.generated.resources.color_lab_hex_invalid
 import trendingai.shared.generated.resources.color_lab_hue
@@ -82,11 +83,12 @@ import trendingai.shared.generated.resources.color_lab_preview_desc
 import trendingai.shared.generated.resources.color_lab_preview_item
 import trendingai.shared.generated.resources.color_lab_preview_title
 import trendingai.shared.generated.resources.color_lab_recent
-import trendingai.shared.generated.resources.color_lab_discard
 import trendingai.shared.generated.resources.color_lab_saturation_value
 import trendingai.shared.generated.resources.color_lab_style
 import trendingai.shared.generated.resources.color_lab_title
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.SettingKey
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.CustomThemeEntry
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.common.TrendingScaffold
@@ -196,13 +198,8 @@ fun ColorLabScreen(onBack: () -> Unit) {
             // 埋点同样只在离开时上报一次：拖动中的中间值没有分析价值，
             // 只看看没改的用户不上报，否则「用过调色台」的量会被逛一圈的人稀释。
             // 不记具体色值——那是用户的个人偏好，聚合后也说明不了什么。
-            trackEvent(
-                "settings_custom_theme",
-                mapOf(
-                    "style" to finalStyle.storageValue,
-                    "contrast" to finalContrast.storageValue,
-                ),
-            )
+            track(AppEvent.SettingChanged(SettingKey.CUSTOM_THEME_STYLE, finalStyle.storageValue))
+            track(AppEvent.SettingChanged(SettingKey.CUSTOM_THEME_CONTRAST, finalContrast.storageValue))
         }
     }
 

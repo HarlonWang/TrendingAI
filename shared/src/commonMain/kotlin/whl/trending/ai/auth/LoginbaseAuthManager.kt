@@ -8,13 +8,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import wang.harlon.loginbase.AuthClient
+import wang.harlon.loginbase.AuthState as LoginbaseState
 import wang.harlon.loginbase.RefreshOutcome
 import wang.harlon.loginbase.TokenStore
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.remote.ApiException
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.setAnalyticsUser
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.globalFavoriteRepository
-import wang.harlon.loginbase.AuthState as LoginbaseState
 
 /** loginbase 服务端挂载点（`/auth` 前缀，与 api.trendingai.cn 同域） */
 private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
@@ -67,7 +69,8 @@ class LoginbaseAuthManager(
         scope.launch {
             client.signOut() // 尽力而为：服务端失败也清本地
             clearLocalUserState()
-            trackEvent("sign_out")
+            setAnalyticsUser(null)
+            track(AppEvent.SignedOut)
         }
     }
 

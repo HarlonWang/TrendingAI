@@ -2,11 +2,15 @@ package whl.trending.ai.core
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import wang.harlon.eventbase.Eventbase
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.auth.launchGithubLink
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.AuthAction
+import whl.trending.ai.core.analytics.AuthOutcome
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.trackEvent
 
 /**
  * 关联 GitHub 身份的入口。
@@ -58,7 +62,7 @@ object AccountLink {
      */
     fun openLinkGithubPage(source: String) {
         val manager = globalAuthManager as? LoginbaseAuthManager ?: return failToLaunch("not_initialized")
-        trackEvent("account_link_start", mapOf("source" to source))
+        track(AppEvent.AuthStarted(AuthAction.LINK, method = "github", source = source), Eventbase.startFlow())
         pending = true
         if (!launchGithubLink(manager.client)) {
             pending = false
@@ -76,7 +80,10 @@ object AccountLink {
     val launchFailed: SharedFlow<Unit> = _launchFailed
 
     private fun failToLaunch(reason: String) {
-        trackEvent("account_link_error", mapOf("reason" to reason))
+        track(
+            AppEvent.AuthFinished(AuthAction.LINK, AuthOutcome.ERROR, method = "github", reason = reason),
+            Eventbase.currentFlow(),
+        )
         _launchFailed.tryEmit(Unit)
     }
 
@@ -94,7 +101,10 @@ object AccountLink {
     /** 确认身份已带上 GitHub 后调用：通知界面重载。 */
     fun markLinked() {
         pending = false
-        trackEvent("account_link_success")
+        track(
+            AppEvent.AuthFinished(AuthAction.LINK, AuthOutcome.SUCCESS, method = "github"),
+            Eventbase.currentFlow(),
+        )
         _linked.tryEmit(Unit)
     }
 }

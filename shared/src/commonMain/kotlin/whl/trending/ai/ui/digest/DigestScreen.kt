@@ -56,7 +56,10 @@ import trendingai.shared.generated.resources.digest_read_original
 import trendingai.shared.generated.resources.digest_unavailable_desc
 import trendingai.shared.generated.resources.digest_unavailable_title
 import trendingai.shared.generated.resources.retry
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.repository.globalFavoriteRepository
@@ -86,7 +89,7 @@ fun DigestScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        trackEvent("digest_open", mapOf("source" to page.source))
+        track(AppEvent.ScreenViewed(Screen.DIGEST, from = page.source))
     }
 
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
@@ -201,7 +204,7 @@ private fun DigestHeader(page: DigestPage, onOpenUrl: (url: String) -> Unit) {
     ) {
         if (!page.isSelfPost) {
             FilledTonalButton(onClick = {
-                trackEvent("digest_read_original_click", mapOf("source" to page.source))
+                track(AppEvent.ContentAction(ContentActionKind.READ_ORIGINAL, source = page.source, contentId = page.url))
                 onOpenUrl(page.url)
             }) {
                 Icon(
@@ -214,7 +217,7 @@ private fun DigestHeader(page: DigestPage, onOpenUrl: (url: String) -> Unit) {
             }
         }
         FilledTonalButton(onClick = {
-            trackEvent("digest_hn_comments_click", mapOf("source" to page.source))
+            track(AppEvent.ContentAction(ContentActionKind.HN_COMMENTS, source = page.source, contentId = page.url))
             onOpenUrl(page.hnUrl)
         }) {
             Icon(

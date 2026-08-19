@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,25 +58,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.InfoDialog
-import whl.trending.ai.ui.common.SourceMetaFooter
-import whl.trending.ai.ui.common.snapshotStampText
-import whl.trending.ai.ui.common.updateStampText
-import whl.trending.ai.ui.common.withBatchSuffix
-import whl.trending.ai.ui.common.TrendingBottomSheet
-import whl.trending.ai.ui.common.LocalContentBottomPadding
-import whl.trending.ai.ui.common.LocalContentTopPadding
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import kotlin.time.Clock
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.action_help
@@ -111,18 +104,27 @@ import trendingai.shared.generated.resources.stars_total
 import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.ListFilter
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.shareText
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.core.platform.trackItemClick
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.common.InfoDialog
 import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.aiShareText
-import kotlin.time.Clock
+import whl.trending.ai.ui.common.snapshotStampText
+import whl.trending.ai.ui.common.updateStampText
+import whl.trending.ai.ui.common.withBatchSuffix
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -180,13 +182,9 @@ fun TrendingScreen(
             selectedLanguage = uiState.selectedLanguage,
             onDismiss = { viewModel.setFilterSheetVisible(false) },
             onConfirm = { period, language ->
-                trackEvent(
-                    "filter_confirm",
-                    mapOf(
-                        "period" to period,
-                        "language" to language
-                    )
-                )
+                // 一次确认改了两个维度就发两条：拼进同一个 value 会让按维度分组做不了
+                track(AppEvent.ListFiltered(ListFilter.PERIOD, period))
+                track(AppEvent.ListFiltered(ListFilter.LANGUAGE, language))
                 viewModel.updateFilter(period, language)
                 viewModel.setFilterSheetVisible(false)
             }
@@ -199,13 +197,8 @@ fun TrendingScreen(
             selectedBatch = uiState.selectedBatch,
             onDismiss = { viewModel.setHistorySheetVisible(false) },
             onConfirm = { date, batch ->
-                trackEvent(
-                    "history_confirm",
-                    mapOf(
-                        "date" to (date ?: ""),
-                        "batch" to (batch ?: "")
-                    )
-                )
+                date?.let { track(AppEvent.ListFiltered(ListFilter.HISTORY_DATE, it)) }
+                batch?.let { track(AppEvent.ListFiltered(ListFilter.HISTORY_BATCH, it)) }
                 viewModel.updateHistoryFilter(date, batch)
                 viewModel.setHistorySheetVisible(false)
             }
@@ -338,10 +331,13 @@ private fun RepoList(
                             }
                         },
                         onClick = {
-                            trackItemClick(
-                                source = "github",
-                                rank = index + 1,
-                                title = "${repo.author}/${repo.repoName}"
+                            track(
+                                AppEvent.ContentOpened(
+                                    source = "github",
+                                    contentId = "${repo.author}/${repo.repoName}",
+                                    rank = index + 1,
+                                    title = "${repo.author}/${repo.repoName}",
+                                )
                             )
                             onNavigateToDetail(repo.author, repo.repoName)
                         }
@@ -441,12 +437,13 @@ private fun RepoItem(index: Int, repo: TrendingRepo, since: String, isFavorite: 
                     onToggle = onToggleFavorite,
                     onShare = {
                         shareText(shareContent)
-                        trackEvent(
-                            "share_to_ai",
-                            mapOf(
-                                "source" to "github",
-                                "has_summary" to !shareSummary.isNullOrBlank(),
-                                "from" to "list"
+                        track(
+                            AppEvent.ContentAction(
+                                ContentActionKind.SHARE_TO_AI,
+                                source = "github",
+                                contentId = "${repo.author}/${repo.repoName}",
+                                from = "list",
+                                hasSummary = !shareSummary.isNullOrBlank(),
                             )
                         )
                     },

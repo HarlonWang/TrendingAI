@@ -8,8 +8,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.CheckoutStepKind
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 
 /**
@@ -51,7 +53,7 @@ object ProCheckout {
      * 内置 WebView 跑不通；且外跳才能保证付完回来必然触发 ON_RESUME。
      */
     fun openCheckout(url: String, plan: String) {
-        trackEvent("checkout_opened", mapOf("plan" to plan))
+        track(AppEvent.CheckoutStep(CheckoutStepKind.OPENED, plan = plan))
         globalSettingsManager.setCheckoutOpenedAt(Clock.System.now().toEpochMilliseconds())
         openUrl(url)
     }

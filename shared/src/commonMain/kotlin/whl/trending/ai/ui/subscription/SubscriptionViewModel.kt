@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import whl.trending.ai.core.ProCheckout
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.CheckoutStepKind
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.model.ChatModelOption
 import whl.trending.ai.data.model.PricesResponse
 import whl.trending.ai.data.repository.BillingRepository
@@ -74,7 +76,7 @@ class SubscriptionViewModel(
 
     fun selectPlan(plan: String) {
         if (_uiState.value.selectedPlan == plan) return
-        trackEvent("plan_selected", mapOf("plan" to plan))
+        track(AppEvent.CheckoutStep(CheckoutStepKind.PLAN_SELECTED, plan = plan))
         _uiState.update { it.copy(selectedPlan = plan) }
     }
 

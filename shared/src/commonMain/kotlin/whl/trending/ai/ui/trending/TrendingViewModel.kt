@@ -1,15 +1,5 @@
 package whl.trending.ai.ui.trending
 
-import whl.trending.ai.auth.RepoStarService
-import whl.trending.ai.data.model.TrendingRepo
-import whl.trending.ai.data.model.TrendingResponse
-import whl.trending.ai.data.repository.TrendingRepository
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.local.LastDataCache
-import whl.trending.ai.data.local.SettingsManager
-import whl.trending.ai.data.local.globalLastDataCache
-import whl.trending.ai.data.local.globalSettingsManager
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -23,6 +13,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import whl.trending.ai.auth.RepoStarService
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.ListFilter
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.data.local.LastDataCache
+import whl.trending.ai.data.local.SettingsManager
+import whl.trending.ai.data.local.globalLastDataCache
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.TrendingRepo
+import whl.trending.ai.data.model.TrendingResponse
+import whl.trending.ai.data.repository.TrendingRepository
 
 data class TrendingUiState(
     val repos: List<TrendingRepo> = emptyList(),
@@ -163,9 +165,13 @@ class TrendingViewModel(
             val result = starService.star(repo.author, repo.repoName)
             _starEvents.tryEmit(result)
             if (result == RepoStarService.Result.STARRED) {
-                trackEvent(
-                    "repo_star",
-                    mapOf("source" to "github", "from" to "list")
+                track(
+                    AppEvent.ContentAction(
+                        ContentActionKind.STAR,
+                        source = "github",
+                        contentId = "${repo.author}/${repo.repoName}",
+                        from = "list",
+                    )
                 )
             }
         }
@@ -203,7 +209,7 @@ class TrendingViewModel(
             it.copy(selectedPeriod = effPeriod, selectedLanguage = effLang, newOnly = turnOn)
         }
         settingsManager.setTrendingNewOnly(turnOn)
-        trackEvent("trending_new_only", mapOf("on" to turnOn))
+        track(AppEvent.ListFiltered(ListFilter.NEW_ONLY, turnOn.toString()))
         if (needFetch) fetchData()
     }
 

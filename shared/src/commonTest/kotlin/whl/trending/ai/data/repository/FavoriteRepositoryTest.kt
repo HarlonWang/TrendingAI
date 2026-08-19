@@ -167,7 +167,7 @@ class FavoriteRepositoryTest {
         assertEquals(listOf("a/b"), settings.currentFavorites().map { it.externalId })
     }
 
-    // 注：add()/remove() 的手势路径会触发 favorite_toggle 埋点（Aptabase），
+    // 注：add()/remove() 的手势路径会触发 content_action 埋点（eventbase），
     // 在纯 JVM host-test 中未初始化会 NPE，故不在此单测；其本地写入 + 入队逻辑
     // 由上面的「在途 pending 保留」「flush 增量」用例间接覆盖（构造同一 PendingFavoriteOp 形态）。
 

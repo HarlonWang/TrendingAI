@@ -112,7 +112,7 @@ android {
     }
 
     // 渠道埋点：每个 flavor 注入 BuildConfig.CHANNEL，Application 启动时写入 ChannelHolder，
-    // 供 shared 的埋点（trackEvent）与请求 UA（getUserAgent）统一打标。
+    // 供 shared 的埋点配置（analyticsConfig）与请求 UA（getUserAgent）统一打标。
     buildFeatures {
         buildConfig = true
     }
@@ -192,7 +192,6 @@ dependencies {
     implementation(project(":androidLibrary:chat"))
     // 每日 Picks 本地通知：纯 AlarmManager 方案，不依赖 GMS/FCM，四渠道（含 F-Droid）通用
     implementation(project(":androidLibrary:notifier"))
-    implementation(libs.aptabase)
     implementation(libs.androidx.lifecycle.process)
     // 社交登录浏览器环节：只由本模块（持有 Activity 的那层）依赖，经
     // globalOAuthLauncher 注入给 shared——直接让 shared 依赖会把它的 manifest

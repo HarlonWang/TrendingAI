@@ -54,18 +54,32 @@ val localProperties = java.util.Properties().apply {
     val file = rootDir.resolve("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
-val loginbaseKtDir: String? = localProperties.getProperty("loginbase-kt.dir")
-if (!loginbaseKtDir.isNullOrBlank()) {
-    val dir = File(loginbaseKtDir).takeIf { it.isAbsolute } ?: rootDir.resolve(loginbaseKtDir)
-    require(dir.exists()) { "local.properties 配置的 loginbase-kt.dir 不存在: $dir" }
+fun localSourceDir(key: String): File? {
+    val configured = localProperties.getProperty(key)
+    if (configured.isNullOrBlank()) return null
+    val dir = File(configured).takeIf { it.isAbsolute } ?: rootDir.resolve(configured)
+    require(dir.exists()) { "local.properties 配置的 $key 不存在: $dir" }
+    // 让「我这次吃的是本地源码」这件事每次构建都可见，而不是要去翻 local.properties 才知道
+    logger.lifecycle("$key: 本地源码 $dir（CI 用 libs.versions.toml 的 Maven 版本；改库不发版，CI 不会跟着变）")
+    return dir
+}
+
+localSourceDir("loginbase-kt.dir")?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {
             substitute(module("wang.harlon:loginbase-kt")).using(project(":core"))
             substitute(module("wang.harlon:loginbase-kt-browser")).using(project(":browser"))
         }
     }
-    // 让「我这次吃的是本地源码」这件事每次构建都可见，而不是要去翻 local.properties 才知道
-    logger.lifecycle(
-        "loginbase-kt: 本地源码 $dir（CI 用 libs.versions.toml 的 Maven 版本；改库不发版，CI 不会跟着变）"
-    )
+}
+
+// eventbase-kt（自建埋点的 KMP 客户端）：同上双轨。⚠️ 与 loginbase-kt 不同的是，它
+// **尚未发布到 Maven Central**——在发版之前，不配 local.properties 的构建（含 CI 打
+// tag 发版）会解析不到坐标而直接失败。打 tag 前必须先发 0.1.0 并核对下面的版本号。
+localSourceDir("eventbase-kt.dir")?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("wang.harlon:eventbase-kt")).using(project(":core"))
+        }
+    }
 }

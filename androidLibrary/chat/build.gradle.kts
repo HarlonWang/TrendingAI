@@ -40,6 +40,9 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinxJson)
     implementation(libs.kotlinx.serialization.json)
 
+    // Demo Activity 的 manifest 主题是 Theme.AppCompat.DayNight.NoActionBar。此前靠
+    // Aptabase 的传递依赖白拿到 appcompat，它随自建埋点下线后要自己声明
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)

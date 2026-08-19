@@ -1,10 +1,5 @@
 package whl.trending.ai.ui.detail
 
-import whl.trending.ai.chat.ChatContext
-import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.platform.shareText
-import whl.trending.ai.core.platform.trackEvent
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +33,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,6 +55,13 @@ import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.unstar_success
 import trendingai.shared.generated.resources.view_on_github
 import whl.trending.ai.auth.RepoStarService
+import whl.trending.ai.chat.ChatContext
+import whl.trending.ai.chat.globalChatScreen
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.common.aiShareText
@@ -175,12 +177,13 @@ fun ReadmeScreen(
                     val shareContent = aiShareText("$owner/$repo", summary, repoUrl)
                     IconButton(onClick = {
                         shareText(shareContent)
-                        trackEvent(
-                            "share_to_ai",
-                            mapOf(
-                                "source" to "github",
-                                "has_summary" to !summary.isNullOrBlank(),
-                                "from" to "detail"
+                        track(
+                            AppEvent.ContentAction(
+                                ContentActionKind.SHARE_TO_AI,
+                                source = "github",
+                                contentId = "$owner/$repo",
+                                from = "detail",
+                                hasSummary = !summary.isNullOrBlank(),
                             )
                         )
                     }) {
@@ -211,7 +214,7 @@ fun ReadmeScreen(
             if (globalChatScreen != null && detailSummaryAvailable) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        trackEvent("chat_entry_click", mapOf("from" to "readme_detail_summary"))
+                        track(AppEvent.ScreenViewed(Screen.CHAT, from = "readme_detail_summary"))
                         onNavigateToChat(buildDetailSummaryContext())
                     },
                     icon = {

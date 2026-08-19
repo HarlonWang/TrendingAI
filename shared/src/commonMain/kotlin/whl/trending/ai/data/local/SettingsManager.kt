@@ -9,15 +9,17 @@ import com.russhwolf.settings.coroutines.getLongFlow
 import com.russhwolf.settings.coroutines.getLongOrNullFlow
 import com.russhwolf.settings.coroutines.getStringFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getSystemLanguage
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
@@ -164,7 +166,8 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     /**
      * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
-     * 用于跨天/跨会话的留存分析，弥补 Aptabase 每日轮换 user_id 无法追踪留存的缺陷。
+     * 用于跨天/跨会话的留存分析；同时是埋点的 install_id 与 chat 配额的 X-Install-Id，
+     * 三处必须同一个值，否则客户端事件与服务端补发的事件串不成漏斗。
      *
      * 用 lazy 缓存：每进程只生成一次，既消除 check-then-write 的并发竞态，
      * 也避免每条事件都读一次 settings。
@@ -409,14 +412,14 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
         // 当前所有调用点均为用户手势，集中在此埋点即可覆盖各页面入口；
         // 若未来引入同步/导入等非手势写入，需绕开本方法或拆分埋点
-        trackEvent("favorite_toggle", mapOf("on" to true, "source" to item.source))
+        track(AppEvent.ContentAction(ContentActionKind.FAVORITE, source = item.source, contentId = item.url))
     }
 
     fun removeFavorite(url: String) {
         val current = getCurrentFavorites()
         val updated = current.filter { it.url != url }
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
-        trackEvent("favorite_toggle", mapOf("on" to false))
+        track(AppEvent.ContentAction(ContentActionKind.UNFAVORITE, contentId = url))
     }
 
     /** 当前收藏快照（同步引擎读本地态用）。 */

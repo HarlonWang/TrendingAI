@@ -98,7 +98,7 @@ class ChatViewModelPersistenceTest {
 
     /** 构造并执行入口进入（Screen 的 enterEntry 时序在测试里显式驱动） */
     private fun vm(engine: ChatEngine, context: ChatContext? = null) =
-        ChatViewModel(engine, context, store = store, loadModels = { whl.trending.ai.data.model.ChatModelsResponse() }, track = { _, _ -> }, selectedModelId = { "gpt-5.5" })
+        ChatViewModel(engine, context, store = store, loadModels = { whl.trending.ai.data.model.ChatModelsResponse() }, track = {}, selectedModelId = { "gpt-5.5" })
             .also { it.enterEntry(context) }
 
     @Test

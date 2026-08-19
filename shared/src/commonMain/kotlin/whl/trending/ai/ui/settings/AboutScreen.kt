@@ -1,16 +1,5 @@
 package whl.trending.ai.ui.settings
 
-import whl.trending.ai.core.Constants
-import whl.trending.ai.core.ProSponsor
-import whl.trending.ai.core.platform.getAppVersion
-import whl.trending.ai.core.platform.isIosPlatform
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.ui.common.SettingsGroup
-import whl.trending.ai.ui.common.TrendingScaffold
-import whl.trending.ai.ui.common.TrendingTopAppBar
-import whl.trending.ai.ui.home.githubLogoPainter
-import whl.trending.ai.update.globalUpdateChecker
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.about
+import trendingai.shared.generated.resources.account_link_sponsor_note
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.changelog
@@ -59,12 +49,24 @@ import trendingai.shared.generated.resources.check_update_failed
 import trendingai.shared.generated.resources.check_updates
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.donate
-import trendingai.shared.generated.resources.account_link_sponsor_note
 import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
 import trendingai.shared.generated.resources.official_website
 import trendingai.shared.generated.resources.privacy_policy
 import trendingai.shared.generated.resources.version_up_to_date
+import whl.trending.ai.core.Constants
+import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.UpsellTarget
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.getAppVersion
+import whl.trending.ai.core.platform.isIosPlatform
+import whl.trending.ai.ui.common.SettingsGroup
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.ai.ui.home.githubLogoPainter
+import whl.trending.ai.update.globalUpdateChecker
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -145,7 +147,7 @@ fun AboutScreen(
                             }
                         },
                         onClick = {
-                            trackEvent("settings_check_update")
+                            track(AppEvent.ScreenViewed(Screen.CHECK_UPDATE, from = "about"))
                             if (isIos) {
                                 uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
                             } else {
@@ -158,7 +160,7 @@ fun AboutScreen(
                     icon = Icons.Default.History,
                     title = { Text(stringResource(Res.string.changelog)) },
                     onClick = {
-                        trackEvent("settings_changelog")
+                        track(AppEvent.ScreenViewed(Screen.CHANGELOG, from = "about"))
                         uriHandler.openUri(Constants.CHANGELOG_URL)
                     },
                 )
@@ -171,7 +173,7 @@ fun AboutScreen(
                     icon = Icons.Default.VolunteerActivism,
                     title = { Text(stringResource(Res.string.donate)) },
                     onClick = {
-                        trackEvent("settings_donate")
+                        track(AppEvent.UpsellClicked(source = "about", target = UpsellTarget.SPONSOR))
                         showDonateDialog = true
                     },
                 )
@@ -199,10 +201,7 @@ private fun DonateDialog(onDismiss: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            trackEvent("settings_donate_github")
-                            ProSponsor.openSponsorPage(ProSponsor.SOURCE_SETTINGS_DONATE)
-                        }
+                        .clickable { ProSponsor.openSponsorPage(ProSponsor.SOURCE_SETTINGS_DONATE) }
                         .padding(vertical = 12.dp)
                 ) {
                     Icon(

@@ -6,8 +6,8 @@ import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -22,10 +22,13 @@ import whl.trending.ai.core.App
 import whl.trending.ai.core.ProCheckout
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.ReconcileAction
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.CheckoutStepKind
+import whl.trending.ai.core.analytics.NotificationKind
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.ui.home.HomeTabRequest
 import whl.trending.chat.ui.ChatScreen
@@ -115,7 +118,7 @@ class MainActivity : AppCompatActivity() {
         if (intent?.getStringExtra(EXTRA_OPEN_TAB) == TAB_PICKS) {
             intent.removeExtra(EXTRA_OPEN_TAB)
             if (consumeDailyPicksNotificationOpen(applicationContext, intent)) {
-                trackEvent("daily_picks_notification_open")
+                track(AppEvent.NotificationOpened(NotificationKind.DAILY_PICKS))
             }
             HomeTabRequest.request(HomeTab.Picks)
         }
@@ -165,7 +168,7 @@ class MainActivity : AppCompatActivity() {
                 // attempt 区分「秒到」与「等满 26 秒」，是判断 webhook 时延是否需要调窗口的依据
                 if (attempt != null) {
                     ProCheckout.markActivated()
-                    trackEvent("checkout_reconciled", mapOf("attempt" to attempt))
+                    track(AppEvent.CheckoutStep(CheckoutStepKind.RECONCILED, attempt = attempt))
                 }
             }
         }
