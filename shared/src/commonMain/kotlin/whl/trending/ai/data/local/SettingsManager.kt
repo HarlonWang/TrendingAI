@@ -142,7 +142,9 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FAVORITES_KEY = "prefs_favorites"
     private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
     private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
-    private val ACCOUNT_LINK_PENDING_KEY = "prefs_account_link_pending"
+    // 存的是发起绑定的 source（非空即「绑定流程进行中」）。旧的 prefs_account_link_pending
+    // 是 Boolean，类型不兼容，故换 key 而不是复用
+    private val ACCOUNT_LINK_SOURCE_KEY = "prefs_account_link_source"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
     private val USER_AVATAR_KEY = "prefs_user_avatar_url"
@@ -464,10 +466,11 @@ class SettingsManager(private val settings: ObservableSettings) {
      * 系统回收；回跳时是冷启动，内存标记早没了，绑定失败的 `?error=` 会被当成登录失败
      * 分派错地方。落盘后跨进程存活。
      */
-    fun accountLinkPending(): Boolean = settings.getBoolean(ACCOUNT_LINK_PENDING_KEY, false)
+    fun accountLinkSource(): String? = settings.getStringOrNull(ACCOUNT_LINK_SOURCE_KEY)
 
-    fun setAccountLinkPending(value: Boolean) {
-        settings.putBoolean(ACCOUNT_LINK_PENDING_KEY, value)
+    fun setAccountLinkSource(value: String?) {
+        if (value == null) settings.remove(ACCOUNT_LINK_SOURCE_KEY)
+        else settings.putString(ACCOUNT_LINK_SOURCE_KEY, value)
     }
 
     /**

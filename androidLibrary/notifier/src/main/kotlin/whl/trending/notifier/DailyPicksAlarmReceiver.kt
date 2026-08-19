@@ -120,9 +120,23 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
             return
         }
 
-        postNotification(context, date, firstTitle = items.first().title, total = items.size, lang = lang)
-        DailyPicksPrefs.setLastNotifiedDate(context, date)
+        val posted = postNotification(
+            context, date, firstTitle = items.first().title, total = items.size, lang = lang
+        )
         DailyPicksAlarmScheduler.scheduleNextDay(context)
+        if (!posted) {
+            // 没弹出去就不能记 shown（那是打开率的分母），也不能写 lastNotifiedDate——
+            // 写了当天就再也不会重试，用户白白少一条通知
+            trackFlushed(
+                AppEvent.NotificationDelivery(
+                    NotificationStep.SKIPPED,
+                    NotificationKind.DAILY_PICKS,
+                    reason = "post_failed",
+                )
+            )
+            return
+        }
+        DailyPicksPrefs.setLastNotifiedDate(context, date)
         trackFlushed(
             AppEvent.NotificationDelivery(
                 NotificationStep.SHOWN,
@@ -144,13 +158,14 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
         Eventbase.flush()
     }
 
+    /** 返回 false 表示没弹出去（拿不到 launch intent、或权限在守卫之后被收回）。 */
     private fun postNotification(
         context: Context,
         date: String,
         firstTitle: String,
         total: Int,
         lang: String,
-    ) {
+    ): Boolean {
         // 通知文案跟随 app 内容语言（与摘要/订阅同口径），而非仅系统语言：
         // API 33 以下 AppCompat 的应用内语言不作用于 receiver 的 context，需手动定位
         val res = localizedContext(context, lang)
@@ -171,7 +186,7 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
                 putExtra(EXTRA_OPEN_TAB, TAB_PICKS)
                 putExtra(EXTRA_NOTIFIED_DATE, date)
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            } ?: return
+            } ?: return false
         val pendingIntent = PendingIntent.getActivity(
             context, 0, launchIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -190,11 +205,13 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-        try {
+        return try {
             manager.notify(NOTIFICATION_ID, notification)
+            true
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS 在 areNotificationsEnabled 检查后被收回（竞态窗口极小）：
             // 静默放弃本次通知，符合"宁缺勿错"策略；lint 的跨方法流分析看不到上游守卫
+            false
         }
     }
 

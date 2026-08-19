@@ -294,6 +294,17 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                         if (!launchGithubSignIn(client)) {
                             busy = false
                             error = genericError
+                            // 浏览器没起来就不会有回跳，终态只能在这里补，否则 started 落单
+                            track(
+                                AppEvent.AuthFinished(
+                                    AuthAction.SIGN_IN,
+                                    AuthOutcome.ERROR,
+                                    method = "github",
+                                    source = source,
+                                    reason = "launch_failed",
+                                ),
+                                Eventbase.currentFlow(),
+                            )
                         }
                     },
                     enabled = !busy,

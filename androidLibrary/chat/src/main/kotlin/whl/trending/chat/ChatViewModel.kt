@@ -509,6 +509,8 @@ class ChatViewModel(
     private fun retryResearch(message: ChatMessage) {
         val threadId = _currentThreadId.value
         val runId = message.researchRunId
+        // 两条路都会走到一个终态 ai_completed（恢复轮询也一样），不补就落单
+        track(AppEvent.AiRequested(AiKind.RESEARCH, from = "retry"))
         if (runId != null) {
             updateThreadMessages(threadId) { list ->
                 list.map { if (it.id == message.id) it.copy(error = null, searching = true) else it }

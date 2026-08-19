@@ -174,15 +174,17 @@ class SettingsManagerTest {
     }
 
     @Test
-    fun accountLinkPending_persists_across_process_restart() = runTest {
-        assertEquals(false, manager.accountLinkPending())
+    fun accountLinkSource_persists_across_process_restart() = runTest {
+        assertNull(manager.accountLinkSource())
 
-        manager.setAccountLinkPending(true)
+        manager.setAccountLinkSource("profile")
 
         // 绑定要跳出去开系统浏览器，授权期间进程随时可能被系统回收，回跳时是冷启动。
         // 标记若只在内存里，那时已经没了——绑定失败的 ?error= 会被误判成登录失败，
-        // 提示分派到错误的地方（登录面板而非账户页）
+        // 提示分派到错误的地方（登录面板而非账户页）；source 同时是终态埋点的入口维度
         val rebuilt = SettingsManager(settings)
-        assertEquals(true, rebuilt.accountLinkPending())
+        assertEquals("profile", rebuilt.accountLinkSource())
+
+        assertNull(rebuilt.also { it.setAccountLinkSource(null) }.accountLinkSource())
     }
 }

@@ -81,7 +81,8 @@ fun OAuthOutcomeHost() {
                 }
 
                 is OAuthOutcome.Linked -> {
-                    AccountLink.consumePending() // 本流程收尾，标记别留给下一次登录失败
+                    // 本流程收尾，标记别留给下一次登录失败；source 留着给终态事件
+                    val linkSource = AccountLink.consumePendingSource()
                     // markLinked 带埋点和界面通知，必须留在重试块**外**：authorized 撞 401
                     // 会把整个 block 重跑一遍，放块内就会重复上报 auth_finished
                     var synced = false
@@ -91,55 +92,61 @@ fun OAuthOutcomeHost() {
                     }
                     if (synced) {
                         // 身份变了但登录态没变，authState 不会发射，只能靠 markLinked 通知界面
-                        AccountLink.markLinked()
+                        AccountLink.markLinked(linkSource)
                         globalAuthManager.authorized { token -> repo.refreshPro(token) }
                     }
                 }
 
                 // 协议里登录失败与绑定失败都回跳 `?error=`、形状相同，
                 // 靠这个落盘标记区分是哪条流程发起的
-                is OAuthOutcome.Failed -> if (AccountLink.consumePending()) {
-                    track(
-                        AppEvent.AuthFinished(
-                            AuthAction.LINK,
-                            AuthOutcome.ERROR,
-                            method = "github",
-                            reason = outcome.reason,
-                        ),
-                        Eventbase.currentFlow(),
-                    )
-                    errorText = when (outcome.reason) {
-                        // 后端 onLinked 的两种冲突（见 github-ai-trending-api 的 app-users.js）：
-                        // 一律拒绝、绝不改绑——改绑会让 Pro 权益随 GitHub ID 漂移到别人账上
-                        "github_in_use" -> getString(Res.string.account_link_github_in_use)
-                        "already_linked" -> getString(Res.string.account_link_already_linked)
-                        else -> getString(Res.string.account_link_failed)
+                is OAuthOutcome.Failed -> {
+                    // 一次性，只取一次；非空即这次回跳属于绑定流程
+                    val linkSource = AccountLink.consumePendingSource()
+                    if (linkSource != null) {
+                        track(
+                            AppEvent.AuthFinished(
+                                AuthAction.LINK,
+                                AuthOutcome.ERROR,
+                                method = "github",
+                                source = linkSource,
+                                reason = outcome.reason,
+                            ),
+                            Eventbase.currentFlow(),
+                        )
+                        errorText = when (outcome.reason) {
+                            // 后端 onLinked 的两种冲突（见 github-ai-trending-api 的 app-users.js）：
+                            // 一律拒绝、绝不改绑——改绑会让 Pro 权益随 GitHub ID 漂移到别人账上
+                            "github_in_use" -> getString(Res.string.account_link_github_in_use)
+                            "already_linked" -> getString(Res.string.account_link_already_linked)
+                            else -> getString(Res.string.account_link_failed)
+                        }
+                    } else {
+                        track(
+                            AppEvent.AuthFinished(
+                                AuthAction.SIGN_IN,
+                                AuthOutcome.ERROR,
+                                method = "github",
+                                source = LoginSheetBus.request.value ?: "cold_start",
+                            ),
+                            Eventbase.currentFlow(),
+                        )
+                        LoginSheetBus.reportGithubResult(GithubAuthResult.FAILED)
                     }
-                } else {
-                    track(
-                        AppEvent.AuthFinished(
-                            AuthAction.SIGN_IN,
-                            AuthOutcome.ERROR,
-                            method = "github",
-                            source = LoginSheetBus.request.value ?: "cold_start",
-                        ),
-                        Eventbase.currentFlow(),
-                    )
-                    LoginSheetBus.reportGithubResult(GithubAuthResult.FAILED)
                 }
 
                 OAuthOutcome.Cancelled -> {
                     // 用户放弃：清掉落盘的绑定标记，防它把下一次登录失败错认成绑定失败。
                     // 返回值顺带告诉我们这次取消属于哪条流程，别浪费
-                    val wasLink = AccountLink.consumePending()
+                    val linkSource = AccountLink.consumePendingSource()
                     // 取消必须有终态事件：不报的话漏斗里只剩一批悬空的 auth_started，
                     // 「用户主动放弃」和「流程中途断了」就再也分不开——而后者正是需要排查的那类
                     track(
                         AppEvent.AuthFinished(
-                            if (wasLink) AuthAction.LINK else AuthAction.SIGN_IN,
+                            if (linkSource != null) AuthAction.LINK else AuthAction.SIGN_IN,
                             AuthOutcome.CANCELED,
                             method = "github",
-                            source = LoginSheetBus.request.value ?: "cold_start",
+                            // 绑定用发起时落盘的 source；登录取当前请求，冷启动时面板已不在
+                            source = linkSource ?: LoginSheetBus.request.value ?: "cold_start",
                         ),
                         Eventbase.currentFlow(),
                     )

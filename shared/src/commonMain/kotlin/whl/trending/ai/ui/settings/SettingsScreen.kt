@@ -397,17 +397,19 @@ fun SettingsScreen(
                             trailing = {
                                 Switch(
                                     checked = dailyPicksNotificationEnabled,
+                                    // 埋点记落定后的状态而非用户请求的状态：权限被拒时
+                                    // 持久化的是 false，记 true 会让「开了通知的人数」虚高
                                     onCheckedChange = { enabled ->
-                                        track(
-                                            AppEvent.SettingChanged(
-                                                SettingKey.DAILY_PICKS_NOTIFICATION,
-                                                enabled.toString(),
-                                            )
-                                        )
                                         if (enabled) {
                                             settingsScope.launch {
                                                 val granted = globalDailyPicksNotifier.enable()
                                                 globalSettingsManager.setDailyPicksNotificationEnabled(granted)
+                                                track(
+                                                    AppEvent.SettingChanged(
+                                                        SettingKey.DAILY_PICKS_NOTIFICATION,
+                                                        granted.toString(),
+                                                    )
+                                                )
                                                 if (!granted) {
                                                     val result = snackbarHostState.showSnackbar(
                                                         message = permissionDeniedMsg,
@@ -421,6 +423,12 @@ fun SettingsScreen(
                                         } else {
                                             globalDailyPicksNotifier.disable()
                                             globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                            track(
+                                                AppEvent.SettingChanged(
+                                                    SettingKey.DAILY_PICKS_NOTIFICATION,
+                                                    "false",
+                                                )
+                                            )
                                         }
                                     }
                                 )

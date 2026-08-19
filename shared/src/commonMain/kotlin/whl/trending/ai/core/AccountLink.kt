@@ -39,7 +39,8 @@ object AccountLink {
      *
      * 用途：协议里登录失败与绑定失败都回跳 `?error=`，两者形状相同（`internal` 两边都会
      * 出现），仅凭回跳 URL 分不出来；靠这个标记把失败事件分派给正确的处理方
-     * （绑定失败归账户页提示，登录失败归登录面板）。
+     * （绑定失败归账户页提示，登录失败归登录面板）。存 source 而非裸布尔，顺带让终态
+     * 埋点带得上发起入口。
      *
      * **落盘而非内存变量**：绑定要跳出去开系统浏览器，授权期间进程随时可能被系统回收，
      * 回跳时是冷启动。内存标记那时已经没了，绑定失败会被误判成登录失败、提示分派到错误
@@ -48,9 +49,9 @@ object AccountLink {
      * 更彻底的解法在服务端——link 分支的错误回跳自带 `mode=link`，客户端就完全不需要这个
      * 标记；已记入 loginbase 的协议待办，等那边落地后这里可以删掉。
      */
-    private var pending: Boolean
-        get() = globalSettingsManager.accountLinkPending()
-        set(value) = globalSettingsManager.setAccountLinkPending(value)
+    private var pendingSource: String?
+        get() = globalSettingsManager.accountLinkSource()
+        set(value) = globalSettingsManager.setAccountLinkSource(value)
 
     /**
      * 发起绑定。浏览器环节归 loginbase-kt-browser：授权 URL 的换取（带 Bearer 的
@@ -61,12 +62,13 @@ object AccountLink {
      * 走 [launchFailed]，与授权阶段的失败汇到同一个宿主、同一个提示，调用方不必各自兜。
      */
     fun openLinkGithubPage(source: String) {
-        val manager = globalAuthManager as? LoginbaseAuthManager ?: return failToLaunch("not_initialized")
+        val manager = globalAuthManager as? LoginbaseAuthManager
+            ?: return failToLaunch("not_initialized", source)
         track(AppEvent.AuthStarted(AuthAction.LINK, method = "github", source = source), Eventbase.startFlow())
-        pending = true
+        pendingSource = source
         if (!launchGithubLink(manager.client)) {
-            pending = false
-            failToLaunch("no_host_activity")
+            pendingSource = null
+            failToLaunch("no_host_activity", source)
         }
     }
 
@@ -79,16 +81,26 @@ object AccountLink {
     private val _launchFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val launchFailed: SharedFlow<Unit> = _launchFailed
 
-    private fun failToLaunch(reason: String) {
+    private fun failToLaunch(reason: String, source: String?) {
         track(
-            AppEvent.AuthFinished(AuthAction.LINK, AuthOutcome.ERROR, method = "github", reason = reason),
+            AppEvent.AuthFinished(
+                AuthAction.LINK,
+                AuthOutcome.ERROR,
+                method = "github",
+                source = source,
+                reason = reason,
+            ),
             Eventbase.currentFlow(),
         )
         _launchFailed.tryEmit(Unit)
     }
 
-    /** 取走「本次失败是否属于绑定流程」的标记（一次性） */
-    fun consumePending(): Boolean = pending.also { pending = false }
+    /**
+     * 取走本次绑定流程的发起 source（一次性）。返回非 null 即「这次回跳属于绑定流程」，
+     * 同时把 source 交给终态事件——漏斗按入口分组要的就是它，而回跳时（可能已冷启动）
+     * 只有落盘的这一份还在。
+     */
+    fun consumePendingSource(): String? = pendingSource.also { pendingSource = null }
 
     /**
      * 关联成功信号。刷新身份的是 [whl.trending.ai.ui.common.OAuthOutcomeHost]，而账户页的
@@ -98,11 +110,11 @@ object AccountLink {
     private val _linked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val linked: SharedFlow<Unit> = _linked
 
-    /** 确认身份已带上 GitHub 后调用：通知界面重载。 */
-    fun markLinked() {
-        pending = false
+    /** 确认身份已带上 GitHub 后调用：通知界面重载。[source] 由调用方从 [consumePendingSource] 取。 */
+    fun markLinked(source: String?) {
+        pendingSource = null
         track(
-            AppEvent.AuthFinished(AuthAction.LINK, AuthOutcome.SUCCESS, method = "github"),
+            AppEvent.AuthFinished(AuthAction.LINK, AuthOutcome.SUCCESS, method = "github", source = source),
             Eventbase.currentFlow(),
         )
         _linked.tryEmit(Unit)

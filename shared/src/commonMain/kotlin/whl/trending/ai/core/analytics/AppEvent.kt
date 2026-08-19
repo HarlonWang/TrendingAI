@@ -59,7 +59,7 @@ sealed class AppEvent(
         "content_opened",
         mapOf(
             "source" to source, "content_id" to contentId, "rank" to rank,
-            "title" to title.take(60), "section" to section,
+            "title" to title.truncateCodePoints(60), "section" to section,
         ),
     )
 
@@ -170,6 +170,15 @@ sealed class AppEvent(
 
     data class FeedbackSent(val kind: FeedbackKind, val value: String) :
         AppEvent("feedback_sent", mapOf("kind" to kind, "value" to value))
+}
+
+/**
+ * 按 UTF-16 码元硬切会把代理对劈成半个字符（emoji 标题很常见），落库就是个坏串。
+ * 边界正好落在代理对中间时退一格。
+ */
+private fun String.truncateCodePoints(max: Int): String {
+    if (length <= max) return this
+    return substring(0, if (this[max - 1].isHighSurrogate()) max - 1 else max)
 }
 
 /** 新增页面只多一个常量，不新增事件。 */
