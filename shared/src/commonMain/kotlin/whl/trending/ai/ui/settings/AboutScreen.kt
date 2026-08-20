@@ -58,7 +58,6 @@ import whl.trending.ai.core.Constants
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.Screen
-import whl.trending.ai.core.analytics.UpsellTarget
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.isIosPlatform
@@ -173,7 +172,9 @@ fun AboutScreen(
                     icon = Icons.Default.VolunteerActivism,
                     title = { Text(stringResource(Res.string.donate)) },
                     onClick = {
-                        track(AppEvent.UpsellClicked(source = "about", target = UpsellTarget.SPONSOR))
+                        // 打开弹窗只是到达，不是 upsell 点击——赞助页的点击统一由
+                        // ProSponsor.openSponsorPage 报一条，两处都报会让转化率分母翻倍
+                        track(AppEvent.ScreenViewed(Screen.DONATE, from = "about"))
                         showDonateDialog = true
                     },
                 )

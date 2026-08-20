@@ -204,7 +204,7 @@ private fun DigestHeader(page: DigestPage, onOpenUrl: (url: String) -> Unit) {
     ) {
         if (!page.isSelfPost) {
             FilledTonalButton(onClick = {
-                track(AppEvent.ContentAction(ContentActionKind.READ_ORIGINAL, source = page.source, contentId = page.url))
+                track(AppEvent.ContentAction(ContentActionKind.READ_ORIGINAL, source = page.source, contentId = page.externalId))
                 onOpenUrl(page.url)
             }) {
                 Icon(
@@ -217,7 +217,7 @@ private fun DigestHeader(page: DigestPage, onOpenUrl: (url: String) -> Unit) {
             }
         }
         FilledTonalButton(onClick = {
-            track(AppEvent.ContentAction(ContentActionKind.HN_COMMENTS, source = page.source, contentId = page.url))
+            track(AppEvent.ContentAction(ContentActionKind.HN_COMMENTS, source = page.source, contentId = page.externalId))
             onOpenUrl(page.hnUrl)
         }) {
             Icon(

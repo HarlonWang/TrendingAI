@@ -190,6 +190,7 @@ enum class Screen {
     CHECK_UPDATE,
     DATA_SOURCES,
     DIGEST,
+    DONATE,
     DIGEST_UNAVAILABLE,
     FAVORITES,
     FEEDBACK,

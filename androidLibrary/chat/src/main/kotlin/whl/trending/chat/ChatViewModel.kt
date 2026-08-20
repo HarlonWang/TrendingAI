@@ -439,12 +439,17 @@ class ChatViewModel(
                     )
                 },
                 onFailure = { e ->
-                    val error = (e as? ChatException)?.error
-                        ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-                    trackFailure(kind, error, System.currentTimeMillis() - startedAt)
-                    updateThreadMessages(threadId) { list ->
-                        // 已渲染部分丢弃，整条重试（中途断流语义）
-                        list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }
+                    // 取消不是失败。runCatching 连 CancellationException 一起吞，不排除的话
+                    // 「流还在跑时退出聊天页」与「删除会话」每次都会记一条 reason=unknown 的
+                    // 假失败终态，而它与真失败在数据里完全同形、事后分不开
+                    if (e !is CancellationException) {
+                        val error = (e as? ChatException)?.error
+                            ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                        trackFailure(kind, error, System.currentTimeMillis() - startedAt)
+                        updateThreadMessages(threadId) { list ->
+                            // 已渲染部分丢弃，整条重试（中途断流语义）
+                            list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }
+                        }
                     }
                 },
             )

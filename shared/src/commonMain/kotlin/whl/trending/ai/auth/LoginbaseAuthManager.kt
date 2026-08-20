@@ -48,6 +48,10 @@ class LoginbaseAuthManager(
         scope.launch {
             client.restore()
             client.authState.collect { state ->
+                // 会话被清就解除埋点的账号关联。挂在这里而不是只挂 signOut()——被动失效
+                // （token 撤销、刷新拿到 SessionEnded）不走那条路，而 user_id 是落盘的，
+                // 不清就会一直带在之后的匿名事件上。Unknown 是 restore 前的未知态，不算登出
+                if (state is LoginbaseState.SignedOut) setAnalyticsUser(null)
                 _authState.value = when (state) {
                     // Unknown 只在 restore 之前出现，对 App 而言等同未登录
                     LoginbaseState.Unknown, is LoginbaseState.SignedOut -> AuthState.LoggedOut

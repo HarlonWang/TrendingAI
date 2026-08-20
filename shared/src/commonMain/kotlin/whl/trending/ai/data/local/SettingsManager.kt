@@ -414,14 +414,29 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
         // 当前所有调用点均为用户手势，集中在此埋点即可覆盖各页面入口；
         // 若未来引入同步/导入等非手势写入，需绕开本方法或拆分埋点
-        track(AppEvent.ContentAction(ContentActionKind.FAVORITE, source = item.source, contentId = item.url))
+        track(
+            AppEvent.ContentAction(
+                ContentActionKind.FAVORITE,
+                source = item.source,
+                // 与 content_opened 同一个键（github=owner/repo、hn=story id、ph=node id），
+                // 传 url 会让「看了又收藏」这条漏斗两头对不上
+                contentId = item.resolvedExternalId,
+            )
+        )
     }
 
     fun removeFavorite(url: String) {
         val current = getCurrentFavorites()
+        val removed = current.firstOrNull { it.url == url }
         val updated = current.filter { it.url != url }
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
-        track(AppEvent.ContentAction(ContentActionKind.UNFAVORITE, contentId = url))
+        track(
+            AppEvent.ContentAction(
+                ContentActionKind.UNFAVORITE,
+                source = removed?.source,
+                contentId = removed?.resolvedExternalId,
+            )
+        )
     }
 
     /** 当前收藏快照（同步引擎读本地态用）。 */
