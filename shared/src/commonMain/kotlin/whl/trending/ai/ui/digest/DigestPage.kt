@@ -1,5 +1,7 @@
 package whl.trending.ai.ui.digest
 
+import whl.trending.ai.core.Route
+import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.data.model.PickItem
@@ -25,7 +27,10 @@ data class DigestPage(
     val author: String? = null,
     val description: String? = null,
     val summary: String? = null,
-) {
+) : Route {
+    /** 兼任路由 key（见 [Route]），故自带页面身份 */
+    override val screen = Screen.DIGEST
+
     /** 自建帖（Ask HN / 纯讨论）：原文即讨论页，出路只显示一个按钮 */
     val isSelfPost: Boolean
         get() = url.isBlank() || url == hnUrl || url.contains("news.ycombinator.com")

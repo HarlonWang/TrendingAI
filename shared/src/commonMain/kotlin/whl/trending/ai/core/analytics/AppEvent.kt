@@ -38,8 +38,13 @@ sealed class AppEvent(
         ),
     )
 
-    /** [from] 是入口而非目的地：同一页面从哪儿进来的分布，靠它而不是靠新事件名区分。 */
-    data class ScreenViewed(val screen: Screen, val from: String? = null) :
+    /**
+     * **不要手写调用**——由导航层自动产生，两个源见 [whl.trending.ai.core.analytics.trackScreenViews]
+     * 与首页 tab。唯一的例外是 [Screen.LOGIN]（浮层不进 backStack，见 LoginSheetHost）。
+     *
+     * [from] 是上一个页面，自动填，值域与 [screen] 相同。
+     */
+    data class ScreenViewed(val screen: Screen, val from: Screen? = null) :
         AppEvent("screen_viewed", mapOf("screen" to screen, "from" to from))
 
     data class TabSwitched(val tab: String, val method: TabSwitchMethod = TabSwitchMethod.TAP) :
@@ -155,6 +160,13 @@ sealed class AppEvent(
     data class SettingChanged(val key: SettingKey, val value: String) :
         AppEvent("setting_changed", mapOf("key" to key, "value" to value))
 
+    /**
+     * 设置项被点开、但落点不是页面（外链 / 静默动作 / 弹窗），因此不该记成 [ScreenViewed]。
+     * 与 [SettingChanged] 共用 [SettingKey]：同一个 key 的「点开 → 改值」就是转化率。
+     */
+    data class SettingsItemClicked(val key: SettingKey) :
+        AppEvent("settings_item_clicked", mapOf("key" to key))
+
     /** [endpoint] 是逻辑名而非 URL：带上路径参数会把基数打爆。 */
     data class ApiFailed(val endpoint: String, val status: Int) :
         AppEvent("api_failed", mapOf("endpoint" to endpoint, "status" to status))
@@ -170,6 +182,13 @@ sealed class AppEvent(
 
     data class FeedbackSent(val kind: FeedbackKind, val value: String) :
         AppEvent("feedback_sent", mapOf("kind" to kind, "value" to value))
+
+    /**
+     * 解读页打开了但后端没有内容。是**状态**不是页面，所以不占 [Screen] 值——
+     * 混进 screen_viewed 会稀释页面浏览量口径。分母是 ScreenViewed(Screen.DIGEST)。
+     */
+    data class DigestUnavailable(val source: String) :
+        AppEvent("digest_unavailable", mapOf("source" to source))
 }
 
 /**
@@ -181,24 +200,36 @@ private fun String.truncateCodePoints(max: Int): String {
     return substring(0, if (this[max - 1].isHighSurrogate()) max - 1 else max)
 }
 
-/** 新增页面只多一个常量，不新增事件。 */
+/**
+ * 页面身份。**只放真页面**——外链、静默动作、说明弹窗都不是页面，
+ * 它们进 [AppEvent.SettingsItemClicked] 或各自的业务事件。
+ *
+ * 新增页面时不需要写任何埋点代码：在 `App.kt` 的路由声明里实现 `Route` 并填 `screen`，
+ * 漏填是编译错误。这里只多一个常量。
+ */
 enum class Screen {
     ABOUT,
     APPEARANCE,
-    CHANGELOG,
     CHAT,
-    CHECK_UPDATE,
+    COLOR_LAB,
     DATA_SOURCES,
     DIGEST,
-    DONATE,
-    DIGEST_UNAVAILABLE,
     FAVORITES,
     FEEDBACK,
+    GITHUB_PROFILE,
+    HOME,
+    /** 邮箱登录浮层。不在 backStack 里，是唯一手写上报的页面（L2 登录漏斗的分母）。 */
+    LOGIN,
+    ME,
     PAYWALL,
+    PICKS,
+    PROFILE_FOLLOWERS,
+    PROFILE_FOLLOWING,
+    PROFILE_REPOS,
     README,
     SETTINGS,
     SUBSCRIBE,
-    SUMMARY_LANGUAGE,
+    WEB_PAGE,
 }
 
 enum class NotificationKind { DAILY_PICKS }
@@ -237,6 +268,8 @@ enum class FeedbackKind { SUMMARY_LANGUAGE }
 enum class SettingKey {
     APP_ICON,
     APP_LANGUAGE,
+    CHANGELOG,
+    CHECK_UPDATE,
     CUSTOM_THEME_CONTRAST,
     CUSTOM_THEME_STYLE,
     DAILY_PICKS_NOTIFICATION,

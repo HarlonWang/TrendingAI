@@ -59,7 +59,6 @@ import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
-import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.ui.common.TrendingScaffold
@@ -207,16 +206,13 @@ fun ReadmeScreen(
             // 但展开者有 41% 点了解读），故把它提到一级；「AI 对话」与首页 FAB 重复、
             // 「深度调研」在解读卡尾部已有更靠后的热入口，两者一并下掉，别再加回来。
             //
-            // 三条约束：
-            // - 埋点 from 值不可改动，改版前后的转化率要可比（基线 7.5%）
+            // 两条约束：
             // - 常驻展开态：WebView 滚动不进 nestedScroll 链，收不到收起信号
             // - README < 1500 字时整颗 FAB 不渲染（与 chat 内 chip 同规则），此时本页无 AI 入口
             if (globalChatScreen != null && detailSummaryAvailable) {
                 ExtendedFloatingActionButton(
-                    onClick = {
-                        track(AppEvent.ScreenViewed(Screen.CHAT, from = "readme_detail_summary"))
-                        onNavigateToChat(buildDetailSummaryContext())
-                    },
+                    // Chat 是路由，screen_viewed(from=readme) 由路由源自动产生，这里不埋点
+                    onClick = { onNavigateToChat(buildDetailSummaryContext()) },
                     icon = {
                         // 摊开的书：与首页 chat FAB 的 AutoAwesome(✨) 区分开——✨ 是开放式对话，
                         // 这里通往的是一篇可读完的解读。也不与 DigestScreen 的 Description（读原文）撞形。

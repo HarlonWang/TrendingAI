@@ -50,9 +50,7 @@ import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.chat.globalChatScreen
-import whl.trending.ai.core.analytics.AppEvent
-import whl.trending.ai.core.analytics.Screen
-import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.analytics.trackScreenView
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
@@ -126,9 +124,10 @@ fun HomeScreen(
         }
     }
 
-    val openSettings = { entry: String ->
-        homeViewModel.onSettingsOpened(entry)
-        onNavigateToSettings()
+    // 页面浏览埋点的 tab 源（路由源在 App.kt）。Home 路由是容器不自报，三个 tab 才是页面。
+    // key 是 tab，故切 tab 报一条；从二级页返回时本 entry 重新组合、这里重跑，返回也计一次浏览。
+    LaunchedEffect(selectedTab) {
+        selectedTab.screen?.let(::trackScreenView)
     }
 
     TrendingScaffold(
@@ -271,7 +270,7 @@ fun HomeScreen(
                 when (selectedTab) {
                     HomeTab.Home -> when (selectedSource) {
                         TrendingSource.GitHub -> TrendingTopBar(
-                            onSettingsClick = { openSettings("topbar") },
+                            onSettingsClick = onNavigateToSettings,
                         )
                         TrendingSource.HackerNews -> {
                             val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -285,7 +284,7 @@ fun HomeScreen(
                                         tint = Color.Unspecified
                                     )
                                 },
-                                onSettingsClick = { openSettings("topbar") },
+                                onSettingsClick = onNavigateToSettings,
                             )
                         }
                         TrendingSource.ProductHunt -> {
@@ -303,12 +302,12 @@ fun HomeScreen(
                                         tint = Color.Unspecified
                                     )
                                 },
-                                onSettingsClick = { openSettings("topbar") },
+                                onSettingsClick = onNavigateToSettings,
                             )
                         }
                     }
                     HomeTab.Picks -> PicksTopBar(
-                        onSettingsClick = { openSettings("topbar") },
+                        onSettingsClick = onNavigateToSettings,
                     )
                     HomeTab.Me -> TrendingTopAppBar(
                         title = {
@@ -317,7 +316,7 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.titleMedium,
                             )
                         },
-                        actions = { SettingsAction(onClick = { openSettings("topbar") }) },
+                        actions = { SettingsAction(onClick = onNavigateToSettings) },
                     )
                     // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
                     HomeTab.Chat -> Unit
@@ -346,15 +345,8 @@ fun HomeScreen(
             HomeFloatingBar(
                 items = barItems,
                 // 聊天未接入的平台（iOS）传 null，底栏不渲染 FAB、退化成纯胶囊
-                onOpenChat = if (globalChatScreen != null) {
-                    {
-                        // 与 README 页的入口共用 chat_entry_click，把分散多处的进入路径收进
-                        // 同一事件的 from 维度；home_fab 是 1.1 起的新值（此前 Chat 在胶囊里
-                        // 当伪 tab，记的是 home_tab + tab_switch，前后可对比入口点击量）
-                        track(AppEvent.ScreenViewed(Screen.CHAT, from = "home_fab"))
-                        onNavigateToChat()
-                    }
-                } else null,
+                // Chat 是路由，screen_viewed 由路由源自动产生（from 自动是当前 tab），这里不埋点
+                onOpenChat = if (globalChatScreen != null) onNavigateToChat else null,
                 // 定高与内容底部留白同源（contentBottomPadding 也按它算），两者不能各算各的。
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier

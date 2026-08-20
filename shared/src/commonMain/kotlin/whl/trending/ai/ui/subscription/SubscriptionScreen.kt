@@ -74,8 +74,6 @@ import trendingai.shared.generated.resources.subscription_title
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProCheckout
-import whl.trending.ai.core.analytics.Screen
-import whl.trending.ai.core.analytics.TrackScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
@@ -117,9 +115,6 @@ fun SubscriptionScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { snackbarHostState.showSnackbar(checkoutFailed) }
     }
-
-    // 曝光埋点：进页即记，与 checkout_opened 一起构成转化漏斗的两端
-    TrackScreen(Screen.PAYWALL, from = ProCheckout.SOURCE_ACCOUNT)
 
     TrendingScaffold(
         topBar = {

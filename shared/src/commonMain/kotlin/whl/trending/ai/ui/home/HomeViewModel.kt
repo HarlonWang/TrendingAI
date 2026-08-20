@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ListFilter
-import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
@@ -74,14 +73,6 @@ class HomeViewModel(
         track(AppEvent.ListFiltered(ListFilter.SOURCE, source.name.lowercase()))
         _selectedSource.value = source
         settingsManager.setTrendingSource(source.name)
-    }
-
-    /**
-     * 首页进设置页统一记一条事件，entry 区分来源。1.1 起只剩 topbar（顶栏常驻齿轮）——
-     * 底栏「⋯」菜单随 Chat FAB 上位而删除，历史数据里的 entry=more 即那条已死路径。
-     */
-    fun onSettingsOpened(entry: String) {
-        track(AppEvent.ScreenViewed(Screen.SETTINGS, from = entry))
     }
 
     private fun moveTo(tab: HomeTab) {
