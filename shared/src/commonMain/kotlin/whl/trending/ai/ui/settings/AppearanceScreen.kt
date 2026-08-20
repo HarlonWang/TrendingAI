@@ -1,23 +1,10 @@
 package whl.trending.ai.ui.settings
 
-import whl.trending.ai.data.local.AppIconPreset
-import whl.trending.ai.data.local.ThemeMode
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.core.platform.applyAppIcon
-import whl.trending.ai.core.platform.supportsAlternateAppIcons
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.ui.theme.Hsv
-import whl.trending.ai.ui.theme.MorphPolygonShape
-import whl.trending.ai.ui.theme.PRESET_PALETTE
-import whl.trending.ai.ui.theme.ThemeSeed
-import whl.trending.ai.ui.theme.SwatchShapes
-import whl.trending.ai.ui.theme.hsvToArgb
-import whl.trending.ai.ui.theme.rememberMorph
-import whl.trending.ai.ui.common.TrendingScaffold
-import whl.trending.ai.ui.common.TrendingTopAppBar
-
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -66,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -75,7 +60,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.ColorFilter
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -83,19 +67,36 @@ import trendingai.shared.generated.resources.app_icon
 import trendingai.shared.generated.resources.app_icon_cream
 import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
+import trendingai.shared.generated.resources.dark_mode
 import trendingai.shared.generated.resources.ic_app_glyph
+import trendingai.shared.generated.resources.theme_amoled
+import trendingai.shared.generated.resources.theme_color
 import trendingai.shared.generated.resources.theme_color_berry
+import trendingai.shared.generated.resources.theme_color_custom
 import trendingai.shared.generated.resources.theme_color_default
 import trendingai.shared.generated.resources.theme_color_graphite
 import trendingai.shared.generated.resources.theme_color_pine
 import trendingai.shared.generated.resources.theme_color_steel
-import trendingai.shared.generated.resources.dark_mode
-import trendingai.shared.generated.resources.theme_color
-import trendingai.shared.generated.resources.theme_amoled
-import trendingai.shared.generated.resources.theme_color_custom
 import trendingai.shared.generated.resources.theme_dark
 import trendingai.shared.generated.resources.theme_follow_system
 import trendingai.shared.generated.resources.theme_light
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.SettingKey
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.applyAppIcon
+import whl.trending.ai.core.platform.supportsAlternateAppIcons
+import whl.trending.ai.data.local.AppIconPreset
+import whl.trending.ai.data.local.ThemeMode
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.ai.ui.theme.Hsv
+import whl.trending.ai.ui.theme.MorphPolygonShape
+import whl.trending.ai.ui.theme.PRESET_PALETTE
+import whl.trending.ai.ui.theme.SwatchShapes
+import whl.trending.ai.ui.theme.ThemeSeed
+import whl.trending.ai.ui.theme.hsvToArgb
+import whl.trending.ai.ui.theme.rememberMorph
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -155,7 +156,7 @@ fun AppearanceScreen(
             ThemeModeGrid(
                 selected = themeMode,
                 onSelect = { mode ->
-                    trackEvent("settings_theme_change", mapOf("theme" to mode.name.lowercase()))
+                    track(AppEvent.SettingChanged(SettingKey.THEME, mode.name.lowercase()))
                     globalSettingsManager.setThemeMode(mode)
                 },
             )
@@ -188,11 +189,11 @@ fun AppearanceScreen(
                     isCustomSelected = isCustom,
                     customSeed = customSeed,
                     onSelect = { seed ->
-                        trackEvent("settings_seed_color", mapOf("seed" to seed.id))
+                        track(AppEvent.SettingChanged(SettingKey.SEED_COLOR, seed.id))
                         globalSettingsManager.setSeedColor(seed.argb)
                     },
                     onOpenColorLab = {
-                        trackEvent("settings_seed_color", mapOf("seed" to "custom"))
+                        track(AppEvent.SettingChanged(SettingKey.SEED_COLOR, "custom"))
                         // 已调过色就先把它应用上，再进调色台——点击只有一种结果，
                         // 不做「选中态下再点才是编辑」那种要靠猜的二段交互
                         globalSettingsManager.selectCustomTheme()
@@ -232,7 +233,7 @@ fun AppearanceScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
                         selected = appIcon,
                         onSelect = { preset ->
-                            trackEvent("settings_app_icon", mapOf("icon" to preset.id))
+                            track(AppEvent.SettingChanged(SettingKey.APP_ICON, preset.id))
                             globalSettingsManager.setAppIcon(preset)
                             applyAppIcon(preset)
                         },

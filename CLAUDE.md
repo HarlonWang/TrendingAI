@@ -6,15 +6,21 @@
 
 修法：Run → Edit Configurations → androidApp → Launch Options 改为 **Specified Activity** → `whl.trending.ai.MainActivity`（本体 `exported="true"`，显式启动不需要 LAUNCHER filter），一次配置后与图标状态永不打架。**不要**用 adb 强行 enable `MainActivityDefault`——app 内持久化的图标选择不会跟着变，状态不一致还可能桌面双图标。adb 脚本侧无此问题（`monkey -c LAUNCHER` 解析的是当前启用的入口）。
 
-## 埋点数据分析（Aptabase → eventbase 迁移中）
+## 埋点（自建 eventbase，2026-08-19 起）
 
-**埋点体系正在自建替换**（eventbase，仓库 `~/eventbase` / `~/eventbase-kt`，设计已定稿、实现未开始）。两条纪律：
+上报走 `wang.harlon:eventbase-kt`（仓库 `~/eventbase-kt`，服务端 `~/eventbase`），Aptabase 已下线。
+调用面是 `shared/.../core/analytics/AppEvent.kt` 的 sealed class + `track(event)`，**没有裸字符串入口**。
 
-- **新增或修改埋点事件前**，先读 `~/eventbase/docs/telemetry-design.md` 的事件词汇——那是唯一权威，**禁止在调用点就地发明事件名**；迁移期新增事件按新词汇写，避免又造一批要重构的历史。
-- 本文下面这节与 `docs/analytics-notes.md` 只负责**本 App 的历史断点与坑**；口径、指标定义、数据模型的权威在 eventbase 仓。
+- **新增或修改事件前**，先改 `~/eventbase/docs/telemetry-design.md` §12.9 的事件词汇表——那是唯一权威，
+  **禁止在调用点就地发明事件名**；`AppEvent` 只是它的 Kotlin 投影，两边必须同步改。
+- 页面浏览一律 `AppEvent.ScreenViewed` / `TrackScreen`，新增页面只多一个 `Screen` 枚举常量，不新增事件。
+- `app_opened` / `app_backgrounded` 与会话时长由库自己算（挂 ProcessLifecycleOwner），App 侧不要碰。
+- **eventbase-kt 尚未发布 Maven Central**：本机经 `local.properties` 的 `eventbase-kt.dir` 走 composite build，
+  **打 tag 发版前必须先发布并核对 `libs.versions.toml` 的版本号**，否则 CI 解析不到坐标。
+- `docs/analytics-notes.md` 只负责**本 App 的历史断点与坑**（含这次词汇换代那节）；口径、指标定义、数据模型的权威在 eventbase 仓。
 
 
-分析埋点导出 CSV 或看板数据前，**必读 `docs/analytics-notes.md`**——各版本埋点断点（同名不同义、事件改名、词汇换代）、留存基线、口径坑都记在那里，跨版本看曲线不按它切段必然误读。最容易忘的三条：跨天/留存一律用 `install_id`（`user_id` 每日轮换，不能跨天）；chat 用量必须按设备去重（单设备重度用户占总量可达 70%+）；分渠道看留存（Play 渠道量虚，混渠道总留存会被构成效应带偏）。
+分析埋点导出 CSV 或看板数据前，**必读 `docs/analytics-notes.md`**——各版本埋点断点（同名不同义、事件改名、词汇换代）、留存基线、口径坑都记在那里，跨版本看曲线不按它切段必然误读。最容易忘的三条：跨天/留存一律用 `install_id`（Aptabase 时代是因为 `user_id` 每日轮换，eventbase 时代是因为它才是安装口径，`user_id` 只有登录用户才有）；chat 用量必须按设备去重（单设备重度用户占总量可达 70%+）；分渠道看留存（Play 渠道量虚，混渠道总留存会被构成效应带偏）。
 
 ## UI 规范
 

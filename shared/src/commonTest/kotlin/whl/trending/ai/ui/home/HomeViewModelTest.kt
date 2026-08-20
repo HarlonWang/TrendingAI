@@ -12,6 +12,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ListFilter
 import whl.trending.ai.data.local.SettingsManager
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -22,7 +24,7 @@ import kotlin.test.assertNull
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
 
-    private val events = mutableListOf<Pair<String, Map<String, Any>>>()
+    private val events = mutableListOf<AppEvent>()
     private val vms = mutableListOf<HomeViewModel>()
 
     private fun settings(): SettingsManager = SettingsManager(MapSettings() as ObservableSettings)
@@ -34,10 +36,10 @@ class HomeViewModelTest {
     ): HomeViewModel = HomeViewModel(
         savedStateHandle = handle,
         settingsManager = settings,
-        track = { name, props -> events += name to props },
+        track = { events += it },
     ).also { vms += it }
 
-    private fun eventsNamed(name: String) = events.filter { it.first == name }
+    private fun eventsNamed(name: String) = events.filter { it.name == name }
 
     @BeforeTest
     fun setUp() {
@@ -94,19 +96,19 @@ class HomeViewModelTest {
         vm.selectTab(HomeTab.Me)
         assertEquals(HomeTab.Me, vm.selectedTab.value)
         assertEquals("Me", handle.get<String>("home_selected_tab"))
-        assertEquals(listOf(mapOf("tab" to "me")), eventsNamed("tab_switch").map { it.second })
+        assertEquals(listOf(AppEvent.TabSwitched("me")), eventsNamed("tab_switched"))
 
         vm.selectTab(HomeTab.Me)
-        assertEquals(1, eventsNamed("tab_switch").size)
+        assertEquals(1, eventsNamed("tab_switched").size)
     }
 
     @Test
-    fun `backToHome 从任意 tab 回 Home 且不记 tab_switch`() = runTest {
+    fun `backToHome 从任意 tab 回 Home 且不记 tab_switched`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val vm = vm(settings = settings().apply { setDefaultHomeTab("Picks") })
         vm.backToHome()
         assertEquals(HomeTab.Home, vm.selectedTab.value)
-        assertEquals(0, eventsNamed("tab_switch").size)
+        assertEquals(0, eventsNamed("tab_switched").size)
     }
 
     @Test
@@ -119,22 +121,25 @@ class HomeViewModelTest {
         vm.selectSource(TrendingSource.ProductHunt)
         assertEquals(TrendingSource.ProductHunt, vm.selectedSource.value)
         assertEquals("ProductHunt", settings.currentTrendingSource())
-        assertEquals(listOf(mapOf("source" to "producthunt")), eventsNamed("trending_source_switch").map { it.second })
+        assertEquals(
+            listOf(AppEvent.ListFiltered(ListFilter.SOURCE, "producthunt")),
+            eventsNamed("list_filtered"),
+        )
 
         // 重复选当前源：不回写不记事件
         vm.selectSource(TrendingSource.ProductHunt)
-        assertEquals(1, eventsNamed("trending_source_switch").size)
+        assertEquals(1, eventsNamed("list_filtered").size)
     }
 
     @Test
-    fun `VM 上线前发出的深链请求会被消费且不记 tab_switch`() = runTest {
+    fun `VM 上线前发出的深链请求会被消费且不记 tab_switched`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         HomeTabRequest.request(HomeTab.Picks)
         val vm = vm()
         advanceUntilIdle()
         assertEquals(HomeTab.Picks, vm.selectedTab.value)
         assertNull(HomeTabRequest.pending.value)
-        assertEquals(0, eventsNamed("tab_switch").size)
+        assertEquals(0, eventsNamed("tab_switched").size)
     }
 
     @Test

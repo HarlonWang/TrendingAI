@@ -45,6 +45,9 @@ data class ChatError(
          *  登录成功后与 quota_device 同样享受 retry 放行例外 */
         const val CODE_LOGIN_REQUIRED = "login_required"
 
+        /** 流在 done 事件之前断了（见 engine/ChatApi）：埋点据此把「中断」与「真错误」分开 */
+        const val CODE_STREAM_INTERRUPTED = "stream_interrupted"
+
         /** 上游按访客所在地区拒绝（服务端 openai.js）。虽是 502、category 归 SERVER，
          *  但**重试必然同样被拒**——UI 据此换文案并隐藏重试按钮，不让用户空转。 */
         const val CODE_REGION_BLOCKED = "upstream_region_blocked"

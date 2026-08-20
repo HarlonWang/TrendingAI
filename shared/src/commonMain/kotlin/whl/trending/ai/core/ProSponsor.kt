@@ -5,8 +5,10 @@ import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.UpsellTarget
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ProRefreshResponse
 
@@ -27,7 +29,7 @@ object ProSponsor {
     private val RECONCILE_WINDOW = 30.minutes
 
     /**
-     * upsell 点击（pro_upsell_clicked）的 source 词汇，集中在此避免各入口自造事件名
+     * upsell 点击（upsell_clicked）的 source 词汇，集中在此避免各入口自造事件名
      * 导致漏斗无法统一查询。新增赞助入口时在这里登记。
      *
      * 2026-07-26 起 chat 侧不再做 Pro 引导（配额触顶卡与模型锁定弹窗都降为纯提示），
@@ -41,11 +43,11 @@ object ProSponsor {
     // 语言支持请求后的赞助引导、关于页的捐赠。
 
     /**
-     * 打开赞助页统一入口。[upsellSource] 非空时上报统一的 pro_upsell_clicked——各入口
+     * 打开赞助页统一入口。[upsellSource] 非空时上报统一的 upsell_clicked——各入口
      * 不再自报点击事件，clicked→refreshPro 漏斗才能按同一词汇横向对比。
      */
     fun openSponsorPage(upsellSource: String? = null) {
-        upsellSource?.let { trackEvent("pro_upsell_clicked", mapOf("source" to it)) }
+        upsellSource?.let { track(AppEvent.UpsellClicked(source = it, target = UpsellTarget.SPONSOR)) }
         globalSettingsManager.setSponsorPageOpenedAt(Clock.System.now().toEpochMilliseconds())
         openUrl(Constants.GITHUB_SPONSORS_URL)
     }

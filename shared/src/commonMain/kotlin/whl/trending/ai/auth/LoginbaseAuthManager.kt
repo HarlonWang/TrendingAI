@@ -8,13 +8,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import wang.harlon.loginbase.AuthClient
+import wang.harlon.loginbase.AuthState as LoginbaseState
 import wang.harlon.loginbase.RefreshOutcome
 import wang.harlon.loginbase.TokenStore
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.remote.ApiException
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.setAnalyticsUser
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.globalFavoriteRepository
-import wang.harlon.loginbase.AuthState as LoginbaseState
 
 /** loginbase 服务端挂载点（`/auth` 前缀，与 api.trendingai.cn 同域） */
 private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
@@ -46,6 +48,10 @@ class LoginbaseAuthManager(
         scope.launch {
             client.restore()
             client.authState.collect { state ->
+                // 会话被清就解除埋点的账号关联。挂在这里而不是只挂 signOut()——被动失效
+                // （token 撤销、刷新拿到 SessionEnded）不走那条路，而 user_id 是落盘的，
+                // 不清就会一直带在之后的匿名事件上。Unknown 是 restore 前的未知态，不算登出
+                if (state is LoginbaseState.SignedOut) setAnalyticsUser(null)
                 _authState.value = when (state) {
                     // Unknown 只在 restore 之前出现，对 App 而言等同未登录
                     LoginbaseState.Unknown, is LoginbaseState.SignedOut -> AuthState.LoggedOut
@@ -67,7 +73,8 @@ class LoginbaseAuthManager(
         scope.launch {
             client.signOut() // 尽力而为：服务端失败也清本地
             clearLocalUserState()
-            trackEvent("sign_out")
+            setAnalyticsUser(null)
+            track(AppEvent.SignedOut)
         }
     }
 

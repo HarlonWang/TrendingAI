@@ -1,13 +1,5 @@
 package whl.trending.ai.ui.subscribe
 
-import whl.trending.ai.core.isValidEmail
-import whl.trending.ai.core.platform.isIosPlatform
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.data.local.SettingsManager
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.model.SubscribeStatus
-import whl.trending.ai.data.repository.TrendingRepository
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.channels.Channel
@@ -17,6 +9,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import whl.trending.ai.core.analytics.ActionOutcome
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.NewsletterActionKind
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.isValidEmail
+import whl.trending.ai.core.platform.isIosPlatform
+import whl.trending.ai.data.local.SettingsManager
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.SubscribeStatus
+import whl.trending.ai.data.repository.TrendingRepository
 
 sealed interface SubscribeEvent {
     data class Success(val status: SubscribeStatus) : SubscribeEvent
@@ -67,13 +69,20 @@ class SubscribeViewModel(
             result.fold(
                 onSuccess = { resp ->
                     val status = SubscribeStatus.from(resp.status)
-                    trackEvent("subscribe_submit", mapOf("result" to "success", "lang" to lang, "status" to status.name.lowercase()))
+                    track(
+                        AppEvent.NewsletterAction(
+                            NewsletterActionKind.SUBMIT,
+                            result = ActionOutcome.OK,
+                            lang = lang,
+                            status = status.name.lowercase(),
+                        )
+                    )
                     settings.setSubscribedEmail(email)
                     _uiState.update { it.copy(isSubmitting = false, subscribedEmail = email) }
                     _events.send(SubscribeEvent.Success(status))
                 },
                 onFailure = {
-                    trackEvent("subscribe_submit", mapOf("result" to "error", "lang" to lang))
+                    track(AppEvent.NewsletterAction(NewsletterActionKind.SUBMIT, result = ActionOutcome.ERROR, lang = lang))
                     _uiState.update { it.copy(isSubmitting = false) }
                     _events.send(SubscribeEvent.Error)
                 }
@@ -92,13 +101,13 @@ class SubscribeViewModel(
             result.fold(
                 onSuccess = { resp ->
                     val status = SubscribeStatus.from(resp.status)
-                    trackEvent("subscribe_cancel", mapOf("result" to "success"))
+                    track(AppEvent.NewsletterAction(NewsletterActionKind.CANCEL, result = ActionOutcome.OK))
                     settings.setSubscribedEmail(null)
                     _uiState.update { it.copy(isSubmitting = false, subscribedEmail = null) }
                     _events.send(SubscribeEvent.Success(status))
                 },
                 onFailure = {
-                    trackEvent("subscribe_cancel", mapOf("result" to "error"))
+                    track(AppEvent.NewsletterAction(NewsletterActionKind.CANCEL, result = ActionOutcome.ERROR))
                     _uiState.update { it.copy(isSubmitting = false) }
                     _events.send(SubscribeEvent.Error)
                 }

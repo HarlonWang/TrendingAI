@@ -7,7 +7,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ListFilter
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 
@@ -19,13 +22,13 @@ import whl.trending.ai.data.local.globalSettingsManager
  * - 选中子源：每次切换都回写设置，冷启动回到上次看的那个源（「记忆」而非「偏好」，
  *   见 handover 文档的产品决策）。
  * - 深链（通知点击等）经 [HomeTabRequest] 进来，在这里消费；深链切换与 back 降级
- *   （[backToHome]）都不记 tab_switch——那个事件只统计底栏点击。
+ *   （[backToHome]）都不记 tab_switched——那个事件只统计底栏点击。
  */
 class HomeViewModel(
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
     private val settingsManager: SettingsManager = globalSettingsManager,
-    /** 事件上报出口，默认 [trackEvent]；注入是为了测试可断言「哪些路径记、哪些不记」 */
-    private val track: (name: String, props: Map<String, Any>) -> Unit = ::trackEvent,
+    /** 事件上报出口，默认 [track]；注入是为了测试可断言「哪些路径记、哪些不记」 */
+    private val track: (AppEvent) -> Unit = ::track,
 ) : ViewModel() {
 
     private val _selectedTab = MutableStateFlow(
@@ -54,10 +57,10 @@ class HomeViewModel(
         }
     }
 
-    /** 底栏点击：切换并记 tab_switch；重复点当前 tab 无操作。 */
+    /** 底栏点击：切换并记 tab_switched；重复点当前 tab 无操作。 */
     fun selectTab(tab: HomeTab) {
         if (tab == _selectedTab.value) return
-        track("tab_switch", mapOf("tab" to tab.name.lowercase()))
+        track(AppEvent.TabSwitched(tab.name.lowercase()))
         moveTo(tab)
     }
 
@@ -68,7 +71,7 @@ class HomeViewModel(
 
     fun selectSource(source: TrendingSource) {
         if (source == _selectedSource.value) return
-        track("trending_source_switch", mapOf("source" to source.name.lowercase()))
+        track(AppEvent.ListFiltered(ListFilter.SOURCE, source.name.lowercase()))
         _selectedSource.value = source
         settingsManager.setTrendingSource(source.name)
     }
@@ -78,7 +81,7 @@ class HomeViewModel(
      * 底栏「⋯」菜单随 Chat FAB 上位而删除，历史数据里的 entry=more 即那条已死路径。
      */
     fun onSettingsOpened(entry: String) {
-        track("home_open_settings", mapOf("entry" to entry))
+        track(AppEvent.ScreenViewed(Screen.SETTINGS, from = entry))
     }
 
     private fun moveTo(tab: HomeTab) {

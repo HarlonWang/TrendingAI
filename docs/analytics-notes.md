@@ -371,3 +371,51 @@ Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量）�
 0.22.0 一节写的「`account_link_success` 是下界，因为依赖用户在 30 分钟对账窗口内切回 App」——那套 30 分钟窗口补偿已整体删除，改由常驻宿主在 OAuth 回跳时直接触发。**那条结论对新版本不再成立**，转化率可以当真值看。
 
 唯一残留的低估来源变成了「回跳没能送达 App」（外部浏览器/系统层中断），与旧机制无关。
+
+
+## 🚨 词汇整体换代：Aptabase → eventbase（2026-08-19 实现，尚未发版）
+
+本文之前所有小节记的都是**旧词汇**下的断点。这一次不是改名或加属性，是**整套词汇推倒重来**：
+约 70 个事件名收拢为 20 个（词汇表在 `~/eventbase/docs/telemetry-design.md` §12.9，那是唯一权威），
+上报后端也从 Aptabase 换成自建的 eventbase。两侧数据**互不相通、不做任何兼容**——
+
+- **旧事件名在新版本上一条也不会再出现**，看板按旧名画的曲线会在发版当天断到 0；
+- 新数据不在 Aptabase 里，查新口径要走 eventbase 的取数端点（`/t/q`）；
+- 跨这条线的对比只能在指标层做（如"日活 install 数"），事件层没有可比性。
+
+### 口径变化里最容易读错的几条
+
+| 旧 | 新 | 读数时注意 |
+|---|---|---|
+| `app_started` / `app_session` | `app_opened` / `app_backgrounded` | 会话口径**移进了 eventbase-kt 库**，挂 ProcessLifecycleOwner。1.2.0 那次后台唤醒把日活推高 55% 的污染在库层就不成立了，新数据不需要再按那节的方法修正 |
+| `item_click` | `content_opened` | 新增 `content_id`；`title` 截断从 100 改为 **60** 字符 |
+| 21 个 `settings_*` | `setting_changed(key, value)` + `screen_viewed(screen)` | 「改了某个设置」与「进了某个页面」在旧词汇里混在同一批事件名里，现在分成两个事件。做设置项使用率要查 `setting_changed`，做页面到达率查 `screen_viewed` |
+| `sign_in_start` ×2（sheet + github） | `auth_started` 仍是每次登录两条 | 上一节那条「算转化率必须先按 method 分组」**继续成立** |
+| `chat_send` / `research_start` / `detail_summary_generate` | `ai_requested(kind)` | 三类 AI 请求合成一个事件，按 `kind` 拆 |
+| `research_done` / `research_fail` / `detail_summary_cache_hit` | `ai_completed(kind, outcome, reason)` | **新增了 chat 与 detail_summary 的成功/失败终态**（旧版本只有 research 有终态），所以 `ai_completed` 的量会明显高于旧的三个事件之和，不是异常 |
+| `daily_picks_notification_shown` / `_skipped` / `daily_picks_alarm_relinked` | `notification_delivery(step)` | 三合一，`step` 区分 |
+
+### 就地下线的事件（新版本查不到，且没有替代）
+
+- `chat_image_add`：加图张数已在 `ai_requested.image_count` 里，但**相册/拍照之分就此丢失**；
+- 三个 `*_login_click`（配额卡、解读卡、加图弹窗的登录 CTA）：点了之后必然弹面板并打 `auth_started`，`source` 已区分入口，CTA 那一跳不再单记；
+- `settings_donate_github`、`settings_summary_language_sponsor` 的点击语义：赞助页的打开统一由 `ProSponsor.openSponsorPage` 报 `upsell_clicked`，入口不再各报一条（语言支持请求的**内容**改由 `feedback_sent(kind=summary_language, value=<语言>)` 承载）；
+- `favorite_list_view` 的 `count`：并入 `screen_viewed` 后不带收藏数了。
+
+### 已知跟进项（本地 review 提出，判定为低频/边缘，未在换代时一并修）
+
+按撞上的概率排序，都不影响主口径，但改埋点时别忘了它们存在：
+
+1. **通知 receiver 的 `Eventbase.flush()` 耗时无上限**。旧实现是 `delay(2_000)`，有确定上界；`flush()` 会循环发到队列清空，单请求超时 20 秒。正常情况队列只有几条、一发就完，但队列积压时可能超过 `goAsync()` 的时限被系统掐掉。真撞上的表现是通知那批事件延到下次启动才上报，不会丢。
+2. **登录面板上旋转屏幕会多出一条 `auth_started`**。`MainActivity` 没声明 `configChanges`，旋转重建 composition，`LaunchedEffect(pendingSource)` 重跑并 `startFlow()` 覆盖掉原来的 flow_id。算登录转化率时分母会略微虚高。
+3. **research 重试可能留下落单的 `ai_requested`**。`retryResearch` 在入口无条件上报，而 `launchResearchPolling` 遇到同一条消息的轮询仍 active 会直接 return。要撞上得在协程结束的瞬间点重试——所有设 error 的路径都会先 `finishResearch()` 摘掉 job，窗口极窄。
+4. **`AccountLink` 的 `not_initialized` 分支拿到的是残留 flow_id**。该分支在 `startFlow()` 之前 return，`currentFlow()` 取到的是上一次登录/绑定留下的。生产上几乎不可达（`globalAuthManager` 初始化后恒为 `LoginbaseAuthManager`）。
+5. **「管理订阅」被协程取消时不补 `subscription_action`**。事件记在 `try` 块内 `openUrl` 之后，取消时 `finally` 只复位点击态。
+
+**连带的一个隐患**（不属于上面任何一条）：App 内**从未调用 `Eventbase.endFlow()`**，flow_id 会一直残留到下次被覆盖。当前所有 `auth_started` 要么自己 `startFlow()`、要么有意复用同一条，所以正常路径是对的；但将来谁给一个非 auth 事件传 `currentFlow()`，它会静默挂到几个月前那次登录的 flow 上。
+
+### 新增能力
+
+- **`flow_id` 串联**：登录与绑定的 `auth_started` → `auth_finished` 用落盘的 flow 串起来，GitHub 授权跳浏览器期间进程被杀也接得回同一条漏斗。上一节说的「回跳没能送达 App 造成的低估」现在能从"有 started 无 finished 且 flow 一致"这一形态里量出来。
+- **`user_id`**：登录后事件带 identity id（`syncMe` 成功时关联），服务端据此建 install↔identity 映射。
+- **离线队列**：事件落盘、批量上报、7 天自清。通知 receiver 那条「留 2 秒上传窗口」的补丁随之删除——改成显式 flush，队列已落盘不再需要拿时间换送达率。

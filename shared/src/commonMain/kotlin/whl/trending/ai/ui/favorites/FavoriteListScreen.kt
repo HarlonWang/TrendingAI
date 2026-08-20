@@ -1,18 +1,5 @@
 package whl.trending.ai.ui.favorites
 
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.repository.globalFavoriteRepository
-import whl.trending.ai.data.model.FavoriteItem
-import whl.trending.ai.ui.common.AiSummaryBox
-import whl.trending.ai.ui.common.TrendingScaffold
-import whl.trending.ai.ui.common.TrendingTopAppBar
-import whl.trending.ai.ui.picks.SourceTag
-import whl.trending.ai.ui.digest.DigestPage
-import whl.trending.ai.ui.digest.toDigestPage
-import whl.trending.ai.core.platform.trackEvent
-import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.flow.first
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,8 +16,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -63,6 +50,17 @@ import trendingai.shared.generated.resources.favorites_delete_confirm
 import trendingai.shared.generated.resources.favorites_empty
 import trendingai.shared.generated.resources.favorites_empty_hint
 import trendingai.shared.generated.resources.favorites_removed
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.TrackScreen
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
+import whl.trending.ai.data.repository.globalFavoriteRepository
+import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.common.TrendingScaffold
+import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.digest.toDigestPage
+import whl.trending.ai.ui.picks.SourceTag
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,10 +72,7 @@ fun FavoriteListScreen(
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
 
-    LaunchedEffect(Unit) {
-        val items = globalSettingsManager.favorites.first()
-        trackEvent("favorite_list_view", mapOf("count" to items.size))
-    }
+    TrackScreen(Screen.FAVORITES)
 
     TrendingScaffold(
         topBar = {

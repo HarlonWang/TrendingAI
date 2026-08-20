@@ -1,5 +1,6 @@
 package whl.trending.chat.engine
 
+import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -7,27 +8,26 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
-import io.ktor.client.request.request
-import io.ktor.http.HttpMethod
 import io.ktor.client.request.preparePost
+import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
-import android.util.Log
 import io.ktor.http.ContentType
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readUTF8Line
+import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import java.io.File
-import java.util.Locale
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.chat.ChatContext
@@ -38,8 +38,8 @@ import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.Role
+import whl.trending.chat.model.SearchEvent
 
 private const val TAG = "ChatApi"
 
@@ -291,7 +291,7 @@ class ChatApi(
                 val finished = done ?: throw ChatException(
                     ChatError(
                         ChatErrorCategory.SERVER,
-                        code = "stream_interrupted",
+                        code = ChatError.CODE_STREAM_INTERRUPTED,
                         detail = "stream ended before done event",
                     ),
                 )

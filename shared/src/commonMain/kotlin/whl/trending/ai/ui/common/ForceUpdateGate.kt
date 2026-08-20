@@ -30,9 +30,11 @@ import trendingai.shared.generated.resources.force_update_button
 import trendingai.shared.generated.resources.force_update_message
 import trendingai.shared.generated.resources.force_update_title
 import whl.trending.ai.core.Constants
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ForceUpdateStep
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.TrendingApi
 import whl.trending.ai.update.isVersionBlocked
@@ -62,10 +64,7 @@ fun ForceUpdateGate(content: @Composable () -> Unit) {
 
     if (isVersionBlocked(current, minVersion)) {
         LaunchedEffect(minVersion) {
-            trackEvent(
-                "force_update_shown",
-                mapOf("current_version" to current, "min_version" to minVersion.orEmpty()),
-            )
+            track(AppEvent.ForceUpdate(ForceUpdateStep.SHOWN, current, minVersion.orEmpty()))
         }
         ForceUpdateScreen(currentVersion = current)
     } else {
@@ -102,7 +101,7 @@ private fun ForceUpdateScreen(currentVersion: String) {
             )
             Spacer(Modifier.height(32.dp))
             Button(onClick = {
-                trackEvent("force_update_click")
+                track(AppEvent.ForceUpdate(ForceUpdateStep.CLICKED))
                 openUrl(Constants.OFFICIAL_WEBSITE_URL)
             }) {
                 Text(stringResource(Res.string.force_update_button))

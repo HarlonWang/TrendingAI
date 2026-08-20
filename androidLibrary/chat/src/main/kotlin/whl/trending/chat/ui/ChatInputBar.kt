@@ -23,12 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.TravelExplore
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -68,7 +68,6 @@ import java.io.File
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.R
@@ -124,14 +123,13 @@ fun ChatInputBar(
     val failedText = stringResource(R.string.chat_image_processing_failed)
     val remaining = ChatViewModel.MAX_IMAGES_PER_MESSAGE - pendingImages.size - processingCount
 
-    fun ingest(uri: Uri, source: String, deleteAfter: File? = null) {
+    fun ingest(uri: Uri, deleteAfter: File? = null) {
         processingCount++
         scope.launch {
             val path = ChatImages.ingest(context, uri)
             deleteAfter?.delete()
             processingCount--
             if (path != null) {
-                trackEvent("chat_image_add", mapOf("source" to source))
                 onAddImage(path)
             } else {
                 Toast.makeText(context, failedText, Toast.LENGTH_SHORT).show()
@@ -143,7 +141,7 @@ fun ChatInputBar(
         ActivityResultContracts.PickMultipleVisualMedia(ChatViewModel.MAX_IMAGES_PER_MESSAGE),
     ) { uris ->
         // 选择器允许选满上限，剩余名额不足时截断
-        uris.take(remaining.coerceAtLeast(0)).forEach { ingest(it, source = "album") }
+        uris.take(remaining.coerceAtLeast(0)).forEach { ingest(it) }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -153,7 +151,7 @@ fun ChatInputBar(
         captureTarget = null
         if (target != null) {
             if (success) {
-                ingest(Uri.fromFile(target.second), source = "camera", deleteAfter = target.second)
+                ingest(Uri.fromFile(target.second), deleteAfter = target.second)
             } else {
                 target.second.delete()
             }
@@ -168,7 +166,6 @@ fun ChatInputBar(
             confirmButton = {
                 TextButton(onClick = {
                     showLoginDialog = false
-                    trackEvent("chat_image_login_click")
                     globalAuthManager.signIn("chat_image_dialog")
                 }) {
                     Text(stringResource(R.string.chat_image_login_confirm))

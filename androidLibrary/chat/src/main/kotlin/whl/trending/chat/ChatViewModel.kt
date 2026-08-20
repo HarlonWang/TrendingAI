@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,10 +13,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import whl.trending.ai.chat.ChatContext
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AiKind
+import whl.trending.ai.core.analytics.AiOutcome
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.resolveDisplayedChatModel
@@ -52,7 +55,7 @@ class ChatViewModel(
     initialMessages: List<ChatMessage> = emptyList(),
     private val store: ChatStore? = null,
     private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
-    private val track: (String, Map<String, String>) -> Unit = { name, props -> trackEvent(name, props) },
+    private val track: (AppEvent) -> Unit = ::track,
     private val selectedModelId: () -> String? = {
         // 留痕记「实际生效」而非「手选值」：未手选时手选值是空哨兵，实际用的是目录里的免费默认项
         runCatching {
@@ -230,7 +233,7 @@ class ChatViewModel(
     fun sendDetailSummary(promptText: String) {
         val context = activeContext
         if (_uiState.value.isSending || context?.externalId == null) return
-        track("detail_summary_generate", mapOf("from" to "chat"))
+        track(AppEvent.AiRequested(AiKind.DETAIL_SUMMARY, from = "chat"))
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             val threadId = ensureThreadForSend(promptText)
@@ -270,11 +273,13 @@ class ChatViewModel(
         }
         val threadId = _currentThreadId.value
         updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
-        // 重试 CHAT 会重打 /api/chat，后端 chat_logs 随之再记一行，埋点跟着报才对得上账；
-        // DETAIL_SUMMARY 走独立端点、不入该表，故不报。
+        // 重试必然重打一次请求，两种 kind 都要补 ai_requested——不补则 launchRequest 的
+        // ai_completed 落单，成对关系一破，「请求数」这个分母就再也不准
         if (message.kind == MessageKind.CHAT) {
             val resent = messagesByThread[threadId]?.lastOrNull { it.role == Role.USER }
             trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
+        } else {
+            track(AppEvent.AiRequested(AiKind.DETAIL_SUMMARY, from = "retry"))
         }
         _uiState.update { it.copy(isSending = true) }
         launchRequest(threadId, message.kind, activeContext)
@@ -283,18 +288,18 @@ class ChatViewModel(
     /**
      * chat 管线的发送埋点。落点与后端 `chat_logs` 的写入时机对齐——那边记在配额检查之前，
      * 被限流 / 上游报错的请求同样留痕，所以这里也在发出前记，两侧行数可直接对账，
-     * 残差只剩上报丢失一项。detail / research 各有独立事件与端点，不并入本事件。
+     * 残差只剩上报丢失一项。对账时按 `kind=chat` 过滤：detail / research 走独立端点、不入该表。
      *
      * [from]：`input`（输入框）/ `quick_reply`（预设气泡）/ `retry`（重试）。
      */
     private fun trackChatSend(from: String, imageCount: Int) {
         track(
-            "chat_send",
-            mapOf(
-                "from" to from,
-                "image_count" to imageCount.toString(),
+            AppEvent.AiRequested(
+                AiKind.CHAT,
+                from = from,
+                imageCount = imageCount,
                 // 与后端 hasContext（context && context.title）等价：ChatContext.title 非空
-                "has_context" to (activeContext != null).toString(),
+                hasContext = activeContext != null,
             ),
         )
     }
@@ -378,6 +383,8 @@ class ChatViewModel(
      * 成功以全文定稿并终局落库，失败清空已渲染部分（整条重试）并挂上分类错误（不落库）。
      */
     private fun launchRequest(threadId: Long?, kind: MessageKind, context: ChatContext?) {
+        val startedAt = System.currentTimeMillis()
+        var cacheHit = false
         val placeholderId = nextId()
         updateThreadMessages(threadId) { it + ChatMessage(placeholderId, Role.ASSISTANT, "", kind = kind) }
         val job = viewModelScope.launch {
@@ -403,7 +410,7 @@ class ChatViewModel(
                         val detail = engine.sendDetailSummary(requireNotNull(context)) { delta ->
                             appendDelta(threadId, placeholderId, delta)
                         }
-                        if (detail.cached) track("detail_summary_cache_hit", mapOf("from" to "chat"))
+                        cacheHit = detail.cached
                         detail.content
                     }
                     MessageKind.DEEP_RESEARCH -> error("research 走 launchResearch，不进流式管线")
@@ -423,14 +430,26 @@ class ChatViewModel(
                     if (store != null && threadId != null) {
                         store.persistAssistantMessage(threadId, full, kind, selectedModelId(), sources)
                     }
+                    track(
+                        AppEvent.AiCompleted(
+                            kind.toAiKind(),
+                            if (cacheHit) AiOutcome.CACHE_HIT else AiOutcome.OK,
+                            durationMs = System.currentTimeMillis() - startedAt,
+                        )
+                    )
                 },
                 onFailure = { e ->
-                    val error = (e as? ChatException)?.error
-                        ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-                    trackFailure(kind, error)
-                    updateThreadMessages(threadId) { list ->
-                        // 已渲染部分丢弃，整条重试（中途断流语义）
-                        list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }
+                    // 取消不是失败。runCatching 连 CancellationException 一起吞，不排除的话
+                    // 「流还在跑时退出聊天页」与「删除会话」每次都会记一条 reason=unknown 的
+                    // 假失败终态，而它与真失败在数据里完全同形、事后分不开
+                    if (e !is CancellationException) {
+                        val error = (e as? ChatException)?.error
+                            ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                        trackFailure(kind, error, System.currentTimeMillis() - startedAt)
+                        updateThreadMessages(threadId) { list ->
+                            // 已渲染部分丢弃，整条重试（中途断流语义）
+                            list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }
+                        }
                     }
                 },
             )
@@ -451,7 +470,7 @@ class ChatViewModel(
     }
 
     private fun sendResearch(topic: String, from: String = "chat") {
-        track("research_start", mapOf("from" to from))
+        track(AppEvent.AiRequested(AiKind.RESEARCH, from = from))
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             val threadId = ensureThreadForSend(topic)
@@ -495,6 +514,8 @@ class ChatViewModel(
     private fun retryResearch(message: ChatMessage) {
         val threadId = _currentThreadId.value
         val runId = message.researchRunId
+        // 两条路都会走到一个终态 ai_completed（恢复轮询也一样），不补就落单
+        track(AppEvent.AiRequested(AiKind.RESEARCH, from = "retry"))
         if (runId != null) {
             updateThreadMessages(threadId) { list ->
                 list.map { if (it.id == message.id) it.copy(error = null, searching = true) else it }
@@ -545,7 +566,7 @@ class ChatViewModel(
                             // 永远满足恢复哨兵的空占位——每次开会话闪一次、清不掉
                             store?.deleteMessage(researchRowId(messageId))
                             val error = ChatError(ChatErrorCategory.SERVER, detail = "empty report")
-                            track("research_fail", mapOf("reason" to "empty_report"))
+                            track(AppEvent.AiCompleted(AiKind.RESEARCH, AiOutcome.ERROR, reason = "empty_report"))
                             updateThreadMessages(threadId) { list ->
                                 list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
                             }
@@ -556,7 +577,7 @@ class ChatViewModel(
                             updateThreadMessages(threadId) { list ->
                                 list.map { if (it.id == messageId) it.copy(content = report, searching = false, model = run.model) else it }
                             }
-                            track("research_done", emptyMap())
+                            track(AppEvent.AiCompleted(AiKind.RESEARCH, AiOutcome.OK))
                         }
                         finishResearch(threadId, messageId)
                         return@launch
@@ -564,7 +585,7 @@ class ChatViewModel(
                     "failed" -> {
                         store?.deleteMessage(researchRowId(messageId))
                         val error = ChatError(ChatErrorCategory.SERVER, detail = run.error ?: "research failed")
-                        track("research_fail", mapOf("reason" to (run.error ?: "unknown")))
+                        track(AppEvent.AiCompleted(AiKind.RESEARCH, AiOutcome.ERROR, reason = run.error ?: "unknown"))
                         updateThreadMessages(threadId) { list ->
                             list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
                         }
@@ -635,22 +656,35 @@ class ChatViewModel(
         }
     }
 
-    private fun trackFailure(kind: MessageKind, error: ChatError) {
-        // research 失败漏斗：提交失败 / 轮询永久错误 / 轮询耗尽都计数（status=failed 在轮询处单独上报）
-        if (kind == MessageKind.DEEP_RESEARCH) {
-            track("research_fail", mapOf("reason" to (error.code ?: error.category.name.lowercase())))
-        }
-        when {
-            // 付费意愿漏斗第一级：个人配额触顶（在 VM 记一次，避免 UI 重组重复上报）
-            error.code == ChatError.CODE_QUOTA_DEVICE -> {
-                val event = if (kind == MessageKind.DETAIL_SUMMARY) "detail_summary_quota_hit" else "chat_quota_hit"
-                track(event, mapOf("tier" to (error.tier ?: ChatError.TIER_ANONYMOUS)))
-            }
-            // 登录转化关键信号：匿名点了未缓存条目的解读
-            error.code == ChatError.CODE_LOGIN_REQUIRED && kind == MessageKind.DETAIL_SUMMARY -> {
-                track("detail_summary_login_required", mapOf("from" to "chat"))
-            }
-        }
+    /**
+     * 每次失败恰好一条 ai_completed，与 ai_requested 成对。配额触顶（付费意愿漏斗第一级）
+     * 与匿名解读登录闸（登录转化信号）都靠 `reason` 区分，不再各开一个事件。
+     * 在 VM 记而不是 UI 记：重组会重复上报。
+     */
+    private fun trackFailure(kind: MessageKind, error: ChatError, durationMs: Long? = null) {
+        track(
+            AppEvent.AiCompleted(
+                kind = kind.toAiKind(),
+                outcome = if (error.code == ChatError.CODE_STREAM_INTERRUPTED) {
+                    AiOutcome.INTERRUPTED
+                } else {
+                    AiOutcome.ERROR
+                },
+                durationMs = durationMs,
+                reason = error.code ?: error.category.name.lowercase(),
+                tier = if (error.code == ChatError.CODE_QUOTA_DEVICE) {
+                    error.tier ?: ChatError.TIER_ANONYMOUS
+                } else {
+                    null
+                },
+            )
+        )
+    }
+
+    private fun MessageKind.toAiKind(): AiKind = when (this) {
+        MessageKind.CHAT -> AiKind.CHAT
+        MessageKind.DETAIL_SUMMARY -> AiKind.DETAIL_SUMMARY
+        MessageKind.DEEP_RESEARCH -> AiKind.RESEARCH
     }
 
     companion object {

@@ -11,10 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -25,8 +25,11 @@ import trendingai.shared.generated.resources.subscription_period_end
 import trendingai.shared.generated.resources.subscription_portal_failed
 import trendingai.shared.generated.resources.subscription_title
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.analytics.ActionOutcome
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.SubscriptionActionKind
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.PaddleSubscription
 import whl.trending.ai.data.repository.BillingRepository
 import whl.trending.ai.ui.common.InfoDialog
@@ -89,7 +92,6 @@ fun ManageSubscriptionItem(
             enabled = !opening,
             onClick = {
                 opening = true
-                trackEvent("manage_subscription_click")
                 scope.launch {
                     // finally 而不是顺序赋值：请求被取消时（协程抛 CancellationException）
                     // 也要放开点击态。当前 opening 与 scope 同属一个 composition、一起销毁，
@@ -100,6 +102,13 @@ fun ManageSubscriptionItem(
                         // 优先落在取消页：点进「管理订阅」的人多数是来退订的，少一跳
                         val url = portal?.cancel ?: portal?.overview
                         if (url != null) openUrl(url) else failed = true
+                        // 记在结果已知处而不是点击处：点了打不开的那部分人正是要盯的
+                        track(
+                            AppEvent.SubscriptionAction(
+                                SubscriptionActionKind.MANAGE,
+                                if (url != null) ActionOutcome.OK else ActionOutcome.ERROR,
+                            )
+                        )
                     } finally {
                         opening = false
                     }

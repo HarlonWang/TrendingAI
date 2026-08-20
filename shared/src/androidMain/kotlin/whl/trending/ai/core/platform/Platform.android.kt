@@ -146,10 +146,6 @@ actual fun getSystemLanguageDisplayName(): String {
 actual fun getSystemLocaleTag(): String =
     android.content.res.Resources.getSystem().configuration.locales[0].toLanguageTag()
 
-internal actual fun platformTrackEvent(name: String, props: Map<String, Any>) {
-    com.aptabase.Aptabase.instance.trackEvent(name, props)
-}
-
 actual fun getUserAgent(): String {
     val appVersion = getAppVersion()
     val osVersion = Build.VERSION.RELEASE

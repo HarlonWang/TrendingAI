@@ -7,7 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.TrendingApi
@@ -61,7 +63,7 @@ class DigestViewModel(
                 _uiState.value = if (response.success && !response.markdown.isNullOrBlank()) {
                     DigestUiState.Ready(response.markdown, response.createdAt)
                 } else {
-                    trackEvent("digest_unavailable_shown", mapOf("source" to page.source))
+                    track(AppEvent.ScreenViewed(Screen.DIGEST_UNAVAILABLE, from = page.source))
                     DigestUiState.Unavailable
                 }
             } catch (e: Exception) {

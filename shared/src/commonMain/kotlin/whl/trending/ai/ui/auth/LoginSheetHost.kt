@@ -1,21 +1,23 @@
 package whl.trending.ai.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,28 +44,30 @@ import trendingai.shared.generated.resources.login_code_sent_to
 import trendingai.shared.generated.resources.login_code_title
 import trendingai.shared.generated.resources.login_continue
 import trendingai.shared.generated.resources.login_continue_github
-import trendingai.shared.generated.resources.login_oauth_failed
-import trendingai.shared.generated.resources.login_or
 import trendingai.shared.generated.resources.login_email_hint
 import trendingai.shared.generated.resources.login_email_invalid
 import trendingai.shared.generated.resources.login_generic_error
+import trendingai.shared.generated.resources.login_oauth_failed
+import trendingai.shared.generated.resources.login_or
 import trendingai.shared.generated.resources.login_resend
 import trendingai.shared.generated.resources.login_resend_in
 import trendingai.shared.generated.resources.login_title
 import trendingai.shared.generated.resources.login_too_many_attempts
 import trendingai.shared.generated.resources.login_too_many_requests
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.size
-import wang.harlon.loginbase.LoginbaseException
+import wang.harlon.eventbase.Eventbase
 import wang.harlon.loginbase.AuthError
+import wang.harlon.loginbase.LoginbaseException
 import whl.trending.ai.auth.GithubAuthResult
 import whl.trending.ai.auth.LoginSheetBus
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.auth.launchGithubSignIn
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.ui.home.githubLogoPainter
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.AuthAction
+import whl.trending.ai.core.analytics.AuthOutcome
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.ui.common.TrendingBottomSheet
+import whl.trending.ai.ui.home.githubLogoPainter
 
 /**
  * App 内登录面板宿主。挂在 App 根部（与 SignInHintHost 平级），收 [LoginSheetBus]
@@ -77,8 +81,13 @@ fun LoginSheetHost() {
     val source by LoginSheetBus.request.collectAsState()
     val pendingSource = source ?: return
 
+    // 开一条 flow 串起本次登录：GitHub 那条要跳浏览器、进程可能已被杀，
+    // 回跳后的终态事件靠落盘的 flow_id 才接得回同一个漏斗
     LaunchedEffect(pendingSource) {
-        trackEvent("sign_in_start", mapOf("source" to pendingSource, "method" to "sheet"))
+        track(
+            AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "sheet", source = pendingSource),
+            Eventbase.startFlow(),
+        )
     }
 
     LoginSheet(
@@ -175,15 +184,29 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         scope.launch {
             runCatching { client.verifyCode(email.trim(), code) }
                 .onSuccess {
-                    trackEvent(
-                        "sign_in_success",
-                        mapOf("source" to source, "method" to "email", "is_new" to (it.isNewUser == true)),
+                    track(
+                        AppEvent.AuthFinished(
+                            AuthAction.SIGN_IN,
+                            AuthOutcome.SUCCESS,
+                            method = "email",
+                            source = source,
+                            isNew = it.isNewUser == true,
+                        ),
+                        Eventbase.currentFlow(),
                     )
                     onDismiss()
                 }
                 .onFailure {
                     error = describe(it)
-                    trackEvent("sign_in_error", mapOf("source" to source, "method" to "email"))
+                    track(
+                        AppEvent.AuthFinished(
+                            AuthAction.SIGN_IN,
+                            AuthOutcome.ERROR,
+                            method = "email",
+                            source = source,
+                        ),
+                        Eventbase.currentFlow(),
+                    )
                 }
             busy = false
         }
@@ -262,12 +285,26 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                     onClick = {
                         error = null
                         busy = true
-                        trackEvent("sign_in_start", mapOf("source" to source, "method" to "github"))
+                        track(
+                            AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "github", source = source),
+                            Eventbase.currentFlow(),
+                        )
                         // 浏览器环节归 loginbase-kt-browser（Auth Tab/CCT/系统浏览器
                         // 按可用性回退），结果从上方的 oauthResults 收
                         if (!launchGithubSignIn(client)) {
                             busy = false
                             error = genericError
+                            // 浏览器没起来就不会有回跳，终态只能在这里补，否则 started 落单
+                            track(
+                                AppEvent.AuthFinished(
+                                    AuthAction.SIGN_IN,
+                                    AuthOutcome.ERROR,
+                                    method = "github",
+                                    source = source,
+                                    reason = "launch_failed",
+                                ),
+                                Eventbase.currentFlow(),
+                            )
                         }
                     },
                     enabled = !busy,

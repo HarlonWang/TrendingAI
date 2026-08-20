@@ -20,8 +20,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwipeVertical
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
@@ -51,36 +51,37 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.app_language_desc
 import trendingai.shared.generated.resources.about
+import trendingai.shared.generated.resources.app_language_desc
 import trendingai.shared.generated.resources.appearance
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
+import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.close
+import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.data_sources_desc
 import trendingai.shared.generated.resources.data_sources_title
-import trendingai.shared.generated.resources.chat_title
-import trendingai.shared.generated.resources.daily_picks_notification
 import trendingai.shared.generated.resources.default_home_tab
 import trendingai.shared.generated.resources.default_home_tab_desc
-import trendingai.shared.generated.resources.immersive_browsing
-import trendingai.shared.generated.resources.immersive_browsing_desc
 import trendingai.shared.generated.resources.feedback
 import trendingai.shared.generated.resources.feedback_email_invalid
 import trendingai.shared.generated.resources.feedback_email_placeholder
 import trendingai.shared.generated.resources.feedback_error
 import trendingai.shared.generated.resources.feedback_rate_limit
+import trendingai.shared.generated.resources.home_title
+import trendingai.shared.generated.resources.immersive_browsing
+import trendingai.shared.generated.resources.immersive_browsing_desc
 import trendingai.shared.generated.resources.language_option_chinese
 import trendingai.shared.generated.resources.language_option_english
 import trendingai.shared.generated.resources.language_option_follow_system
 import trendingai.shared.generated.resources.language_settings
+import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.notification_permission_denied
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.settings
 import trendingai.shared.generated.resources.settings_group_general
 import trendingai.shared.generated.resources.subscribe_title
@@ -94,16 +95,19 @@ import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
 import trendingai.shared.generated.resources.summary_language_sponsor
-import trendingai.shared.generated.resources.home_title
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.FeedbackKind
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.SettingKey
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.openAppSettings
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SummaryLanguage
 import whl.trending.ai.data.local.globalSettingsManager
@@ -197,7 +201,7 @@ fun SettingsScreen(
                     }
                     TextButton(onClick = {
                         showSummaryLanguageDialog = false
-                        trackEvent("settings_summary_language_feedback")
+                        track(AppEvent.ScreenViewed(Screen.FEEDBACK, from = "summary_language"))
                         onNavigateToFeedback()
                     }) {
                         Text(stringResource(Res.string.summary_language_feedback))
@@ -241,7 +245,7 @@ fun SettingsScreen(
                             )
                         },
                         onClick = {
-                            trackEvent("settings_appearance")
+                            track(AppEvent.ScreenViewed(Screen.APPEARANCE, from = "settings"))
                             onNavigateToAppearance()
                         },
                     )
@@ -271,7 +275,7 @@ fun SettingsScreen(
                                                 text = { Text(languageOptionText(language)) },
                                                 onClick = {
                                                     appLanguageMenuExpanded = false
-                                                    trackEvent("settings_language_change", mapOf("language" to language.name.lowercase()))
+                                                    track(AppEvent.SettingChanged(SettingKey.APP_LANGUAGE, language.name.lowercase()))
                                                     globalSettingsManager.setLanguage(language)
                                                 }
                                             )
@@ -306,7 +310,7 @@ fun SettingsScreen(
                                             text = { Text(languageOptionText(language)) },
                                             onClick = {
                                                 summaryLanguageMenuExpanded = false
-                                                trackEvent("settings_summary_language_change", mapOf("language" to language.name.lowercase()))
+                                                track(AppEvent.SettingChanged(SettingKey.SUMMARY_LANGUAGE, language.name.lowercase()))
                                                 globalSettingsManager.setSummaryLanguage(language)
                                             }
                                         )
@@ -315,7 +319,7 @@ fun SettingsScreen(
                             }
                         },
                         onClick = {
-                            trackEvent("settings_summary_language", mapOf("summary_language" to summaryLanguage.name.lowercase()))
+                            track(AppEvent.ScreenViewed(Screen.SUMMARY_LANGUAGE, from = "settings"))
                             showSummaryLanguageDialog = true
                         },
                     )
@@ -339,7 +343,7 @@ fun SettingsScreen(
                                             text = { Text(homeTabOptionText(tab)) },
                                             onClick = {
                                                 homeTabMenuExpanded = false
-                                                trackEvent("settings_default_home_tab_change", mapOf("tab" to tab.name.lowercase()))
+                                                track(AppEvent.SettingChanged(SettingKey.DEFAULT_HOME_TAB, tab.name.lowercase()))
                                                 globalSettingsManager.setDefaultHomeTab(tab.name)
                                             }
                                         )
@@ -358,14 +362,14 @@ fun SettingsScreen(
                             Switch(
                                 checked = immersiveBrowsing,
                                 onCheckedChange = { enabled ->
-                                    trackEvent("settings_immersive_toggle", mapOf("enabled" to enabled.toString()))
+                                    track(AppEvent.SettingChanged(SettingKey.IMMERSIVE_BROWSING, enabled.toString()))
                                     globalSettingsManager.setImmersiveBrowsing(enabled)
                                 },
                             )
                         },
                         onClick = {
                             val enabled = !immersiveBrowsing
-                            trackEvent("settings_immersive_toggle", mapOf("enabled" to enabled.toString()))
+                            track(AppEvent.SettingChanged(SettingKey.IMMERSIVE_BROWSING, enabled.toString()))
                             globalSettingsManager.setImmersiveBrowsing(enabled)
                         },
                     )
@@ -382,7 +386,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Email,
                         title = { Text(stringResource(Res.string.subscribe_title)) },
                         onClick = {
-                            trackEvent("settings_subscribe")
+                            track(AppEvent.ScreenViewed(Screen.SUBSCRIBE, from = "settings"))
                             onNavigateToSubscribe()
                         },
                     )
@@ -393,15 +397,19 @@ fun SettingsScreen(
                             trailing = {
                                 Switch(
                                     checked = dailyPicksNotificationEnabled,
+                                    // 埋点记落定后的状态而非用户请求的状态：权限被拒时
+                                    // 持久化的是 false，记 true 会让「开了通知的人数」虚高
                                     onCheckedChange = { enabled ->
-                                        trackEvent(
-                                            "settings_daily_picks_notification",
-                                            mapOf("enabled" to enabled.toString())
-                                        )
                                         if (enabled) {
                                             settingsScope.launch {
                                                 val granted = globalDailyPicksNotifier.enable()
                                                 globalSettingsManager.setDailyPicksNotificationEnabled(granted)
+                                                track(
+                                                    AppEvent.SettingChanged(
+                                                        SettingKey.DAILY_PICKS_NOTIFICATION,
+                                                        granted.toString(),
+                                                    )
+                                                )
                                                 if (!granted) {
                                                     val result = snackbarHostState.showSnackbar(
                                                         message = permissionDeniedMsg,
@@ -415,6 +423,12 @@ fun SettingsScreen(
                                         } else {
                                             globalDailyPicksNotifier.disable()
                                             globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                            track(
+                                                AppEvent.SettingChanged(
+                                                    SettingKey.DAILY_PICKS_NOTIFICATION,
+                                                    "false",
+                                                )
+                                            )
                                         }
                                     }
                                 )
@@ -439,14 +453,14 @@ fun SettingsScreen(
                             Switch(
                                 checked = openLinksInCustomTab,
                                 onCheckedChange = { enabled ->
-                                    trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
+                                    track(AppEvent.SettingChanged(SettingKey.OPEN_LINKS_IN_BROWSER, enabled.toString()))
                                     globalSettingsManager.setOpenLinksInCustomTab(enabled)
                                 }
                             )
                         },
                         onClick = {
                             val enabled = !openLinksInCustomTab
-                            trackEvent("settings_open_links_in_browser", mapOf("enabled" to enabled.toString()))
+                            track(AppEvent.SettingChanged(SettingKey.OPEN_LINKS_IN_BROWSER, enabled.toString()))
                             globalSettingsManager.setOpenLinksInCustomTab(enabled)
                         },
                     )
@@ -457,7 +471,7 @@ fun SettingsScreen(
                         title = { Text(stringResource(Res.string.data_sources_title)) },
                         description = { Text(stringResource(Res.string.data_sources_desc)) },
                         onClick = {
-                            trackEvent("settings_data_sources")
+                            track(AppEvent.ScreenViewed(Screen.DATA_SOURCES, from = "settings"))
                             onNavigateToDataSources()
                         },
                     )
@@ -465,7 +479,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Feedback,
                         title = { Text(stringResource(Res.string.feedback)) },
                         onClick = {
-                            trackEvent("settings_feedback")
+                            track(AppEvent.ScreenViewed(Screen.FEEDBACK, from = "settings"))
                             onNavigateToFeedback()
                         },
                     )
@@ -474,7 +488,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Info,
                         title = { Text(stringResource(Res.string.about)) },
                         onClick = {
-                            trackEvent("settings_about")
+                            track(AppEvent.ScreenViewed(Screen.ABOUT, from = "settings"))
                             onNavigateToAbout()
                         },
                     )
@@ -604,7 +618,7 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                             onSuccess = {
                                 langSubmitting = false
                                 onDismiss()
-                                trackEvent("settings_summary_language_sponsor", mapOf("language" to lang))
+                                track(AppEvent.FeedbackSent(FeedbackKind.SUMMARY_LANGUAGE, lang))
                                 ProSponsor.openSponsorPage(ProSponsor.SOURCE_SETTINGS_LANGUAGE)
                             },
                             onFailure = { e ->

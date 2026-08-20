@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,10 +23,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -36,9 +37,9 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -47,16 +48,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.LocalContentBottomPadding
-import whl.trending.ai.ui.common.LocalContentTopPadding
-import whl.trending.ai.ui.common.SourceMetaFooter
-import whl.trending.ai.ui.common.generatedStampText
+import kotlin.time.Clock
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.picks_label_action
 import trendingai.shared.generated.resources.picks_label_alternatives
 import trendingai.shared.generated.resources.picks_label_terms
-import trendingai.shared.generated.resources.close
 import trendingai.shared.generated.resources.picks_newsletter_desc
 import trendingai.shared.generated.resources.picks_newsletter_title
 import trendingai.shared.generated.resources.picks_no_data
@@ -64,19 +62,23 @@ import trendingai.shared.generated.resources.picks_section_debut
 import trendingai.shared.generated.resources.picks_section_deep_dive
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.DateTimeUtils
-import whl.trending.ai.core.platform.trackItemClick
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.repository.globalFavoriteRepository
-import whl.trending.ai.data.model.FavoriteItem
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.NewsletterActionKind
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.shareText
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PickItem
+import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.aiShareText
+import whl.trending.ai.ui.common.generatedStampText
 import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.digest.toDigestPage
-import whl.trending.ai.ui.common.aiShareText
-import androidx.compose.runtime.remember
-import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -162,11 +164,11 @@ fun PicksScreen(
                         favoriteUrls = favoriteUrls,
                         showNewsletterBanner = subscribedEmail == null && !bannerDismissed,
                         onSubscribeClick = {
-                            trackEvent("picks_newsletter_banner")
+                            track(AppEvent.NewsletterAction(NewsletterActionKind.BANNER_CLICKED))
                             onNavigateToSubscribe()
                         },
                         onDismissBanner = {
-                            trackEvent("picks_newsletter_banner_dismiss")
+                            track(AppEvent.NewsletterAction(NewsletterActionKind.BANNER_DISMISSED))
                             globalSettingsManager.setPicksNewsletterBannerDismissed(true)
                         },
                         onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl, onOpenDigest) },
@@ -184,11 +186,14 @@ private fun handleItemClick(
     onOpenUrl: (url: String) -> Unit,
     onOpenDigest: (DigestPage) -> Unit
 ) {
-    trackItemClick(
-        source = item.source,
-        rank = item.rank,
-        title = item.title,
-        section = section
+    track(
+        AppEvent.ContentOpened(
+            source = item.source,
+            contentId = item.externalId,
+            rank = item.rank,
+            title = item.title,
+            section = section,
+        )
     )
     if (item.source == "github") {
         val parts = item.url.removePrefix("https://github.com/").split("/")
@@ -424,12 +429,13 @@ private fun DeepDiveCard(item: PickItem, isFavorite: Boolean, onToggleFavorite: 
                     onToggle = onToggleFavorite,
                     onShare = {
                         shareText(shareContent)
-                        trackEvent(
-                            "share_to_ai",
-                            mapOf(
-                                "source" to item.source,
-                                "has_summary" to !item.summary.isNullOrBlank(),
-                                "from" to "list"
+                        track(
+                            AppEvent.ContentAction(
+                                ContentActionKind.SHARE_TO_AI,
+                                source = item.source,
+                                contentId = item.externalId,
+                                from = "list",
+                                hasSummary = !item.summary.isNullOrBlank(),
                             )
                         )
                     }
@@ -510,12 +516,13 @@ private fun DebutCard(
                     onToggle = onToggleFavorite,
                     onShare = {
                         shareText(shareContent)
-                        trackEvent(
-                            "share_to_ai",
-                            mapOf(
-                                "source" to item.source,
-                                "has_summary" to (item.analysis != null || !item.summary.isNullOrBlank()),
-                                "from" to "debut"
+                        track(
+                            AppEvent.ContentAction(
+                                ContentActionKind.SHARE_TO_AI,
+                                source = item.source,
+                                contentId = item.externalId,
+                                from = "debut",
+                                hasSummary = item.analysis != null || !item.summary.isNullOrBlank(),
                             )
                         )
                     }

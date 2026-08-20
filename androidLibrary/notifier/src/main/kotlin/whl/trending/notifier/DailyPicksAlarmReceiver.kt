@@ -13,10 +13,13 @@ import androidx.core.app.NotificationManagerCompat
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
-import whl.trending.ai.core.platform.trackEvent
+import wang.harlon.eventbase.Eventbase
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.NotificationKind
+import whl.trending.ai.core.analytics.NotificationStep
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.TrendingRepository
 
@@ -42,7 +45,7 @@ fun consumeDailyPicksNotificationOpen(context: Context, intent: Intent): Boolean
  * 自续期链：除「开关已关」和重试外，每个终局都必须重排下一天，漏排即断链。
  * 断链后**唯一**的恢复路径是 [DailyPicksAlarmScheduler.reconcile] 的冷启动对账
  * （系统广播重排已移除，理由见模块 manifest），要等用户下次打开 app 才生效——
- * 这段真空期的频率与时长由 `daily_picks_alarm_relinked` 埋点量化。
+ * 这段真空期的频率与时长由 `notification_delivery(step=relinked)` 埋点量化。
  */
 class DailyPicksAlarmReceiver : BroadcastReceiver() {
 
@@ -92,7 +95,13 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
                 DailyPicksAlarmScheduler.scheduleRetry(context, targetAt, attempt + 1)
             } else {
                 DailyPicksAlarmScheduler.scheduleNextDay(context)
-                trackFlushed("daily_picks_notification_skipped", mapOf("reason" to "gave_up"))
+                trackFlushed(
+                    AppEvent.NotificationDelivery(
+                        NotificationStep.SKIPPED,
+                        NotificationKind.DAILY_PICKS,
+                        reason = "gave_up",
+                    )
+                )
             }
             return
         }
@@ -102,43 +111,61 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
             // 上报 skipped 让「开关开着却收不到」在埋点侧可见（此前是静默的）
             DailyPicksAlarmScheduler.scheduleNextDay(context)
             trackFlushed(
-                "daily_picks_notification_skipped",
-                mapOf("reason" to "permission_revoked"),
+                AppEvent.NotificationDelivery(
+                    NotificationStep.SKIPPED,
+                    NotificationKind.DAILY_PICKS,
+                    reason = "permission_revoked",
+                )
             )
             return
         }
 
-        postNotification(context, date, firstTitle = items.first().title, total = items.size, lang = lang)
-        DailyPicksPrefs.setLastNotifiedDate(context, date)
+        val posted = postNotification(
+            context, date, firstTitle = items.first().title, total = items.size, lang = lang
+        )
         DailyPicksAlarmScheduler.scheduleNextDay(context)
+        if (!posted) {
+            // 没弹出去就不能记 shown（那是打开率的分母），也不能写 lastNotifiedDate——
+            // 写了当天就再也不会重试，用户白白少一条通知
+            trackFlushed(
+                AppEvent.NotificationDelivery(
+                    NotificationStep.SKIPPED,
+                    NotificationKind.DAILY_PICKS,
+                    reason = "post_failed",
+                )
+            )
+            return
+        }
+        DailyPicksPrefs.setLastNotifiedDate(context, date)
         trackFlushed(
-            "daily_picks_notification_shown",
-            mapOf(
-                "date" to date,
-                "trigger" to trigger,
-                "attempt" to attempt,
-                "delay_min" to ((System.currentTimeMillis() - targetAt) / 60_000).toInt(),
-            ),
+            AppEvent.NotificationDelivery(
+                NotificationStep.SHOWN,
+                NotificationKind.DAILY_PICKS,
+                date = date,
+                trigger = trigger,
+                attempt = attempt,
+                delayMin = ((System.currentTimeMillis() - targetAt) / 60_000).toInt(),
+            )
         )
     }
 
     /**
-     * 上报后留一段上传窗口再放行 goAsync：Aptabase 0.0.8 无本地队列，每条事件即时在
-     * 线程池发 HTTP，进程死在 POST 完成前事件就丢——8 月实测 43% 的 open 找不到配对
-     * 的 shown，全是这么丢的。
+     * 显式 flush 而不是留一段上传窗口：无界面进程收不到 onStop，事件否则要躺到下次启动。
+     * 队列已落盘，flush 失败也不丢——这里等的是「尽早送出去」，不是「别丢」。
      */
-    private suspend fun trackFlushed(name: String, props: Map<String, Any>) {
-        trackEvent(name, props)
-        delay(EVENT_UPLOAD_GRACE_MS)
+    private suspend fun trackFlushed(event: AppEvent) {
+        track(event)
+        Eventbase.flush()
     }
 
+    /** 返回 false 表示没弹出去（拿不到 launch intent、或权限在守卫之后被收回）。 */
     private fun postNotification(
         context: Context,
         date: String,
         firstTitle: String,
         total: Int,
         lang: String,
-    ) {
+    ): Boolean {
         // 通知文案跟随 app 内容语言（与摘要/订阅同口径），而非仅系统语言：
         // API 33 以下 AppCompat 的应用内语言不作用于 receiver 的 context，需手动定位
         val res = localizedContext(context, lang)
@@ -159,7 +186,7 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
                 putExtra(EXTRA_OPEN_TAB, TAB_PICKS)
                 putExtra(EXTRA_NOTIFIED_DATE, date)
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            } ?: return
+            } ?: return false
         val pendingIntent = PendingIntent.getActivity(
             context, 0, launchIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -178,11 +205,13 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-        try {
+        return try {
             manager.notify(NOTIFICATION_ID, notification)
+            true
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS 在 areNotificationsEnabled 检查后被收回（竞态窗口极小）：
             // 静默放弃本次通知，符合"宁缺勿错"策略；lint 的跨方法流分析看不到上游守卫
+            false
         }
     }
 
@@ -196,7 +225,6 @@ class DailyPicksAlarmReceiver : BroadcastReceiver() {
     companion object {
         // goAsync 的后台时限约 10 秒：拉取 + 上传窗口 + 开销必须收在其内
         private const val FETCH_TIMEOUT_MS = 6_000L
-        private const val EVENT_UPLOAD_GRACE_MS = 2_000L
         private const val CHANNEL_ID = "daily_picks"
         private const val NOTIFICATION_ID = 0x9101
     }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,9 +20,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -48,18 +49,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.LocalContentBottomPadding
-import whl.trending.ai.ui.common.LocalContentTopPadding
-import whl.trending.ai.ui.common.SettingsGroup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -77,27 +76,27 @@ import trendingai.shared.generated.resources.account_upgrade_cta
 import trendingai.shared.generated.resources.account_upgrade_hint
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.favorites
+import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_load_failed
 import trendingai.shared.generated.resources.profile_quota_error
 import trendingai.shared.generated.resources.profile_quota_exhausted
-import trendingai.shared.generated.resources.profile_quota_used
 import trendingai.shared.generated.resources.profile_quota_reset_hours
 import trendingai.shared.generated.resources.profile_quota_reset_soon
-import trendingai.shared.generated.resources.profile_followers
+import trendingai.shared.generated.resources.profile_quota_used
 import trendingai.shared.generated.resources.profile_repos
 import trendingai.shared.generated.resources.profile_retry
 import trendingai.shared.generated.resources.sign_in
 import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
-import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.minutes
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.core.AccountLink
-import whl.trending.ai.ui.subscription.ManageSubscriptionItem
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.QuotaResponse
+import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SettingsGroup
+import whl.trending.ai.ui.subscription.ManageSubscriptionItem
 
 /**
  * 个人中心：只讲「你是谁、你还剩多少额度、你收藏了什么」。
@@ -251,7 +250,6 @@ fun ProfileScreen(
                         icon = Icons.Default.Favorite,
                         title = { Text(stringResource(Res.string.favorites)) },
                         onClick = {
-                            trackEvent("settings_favorites")
                             onNavigateToFavorites()
                         },
                     )

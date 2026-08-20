@@ -7,7 +7,10 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.content.edit
 import java.util.Calendar
-import whl.trending.ai.core.platform.trackEvent
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.NotificationKind
+import whl.trending.ai.core.analytics.NotificationStep
+import whl.trending.ai.core.analytics.track
 
 /**
  * 每日 Picks 通知的闹钟调度器。触发时机走 AlarmManager 而非 WorkManager（JobScheduler）：
@@ -108,13 +111,14 @@ object DailyPicksAlarmScheduler {
             piMissing -> "pi_missing"
             else -> "stale"
         }
-        trackEvent(
-            "daily_picks_alarm_relinked",
-            // no_record 没有可比的基准时刻，索性不带 overdue_min，免得一堆 0 把分布压歪
-            buildMap {
-                put("reason", reason)
-                if (nextAt != 0L) put("overdue_min", ((now - nextAt) / 60_000L).toInt())
-            },
+        track(
+            AppEvent.NotificationDelivery(
+                NotificationStep.RELINKED,
+                NotificationKind.DAILY_PICKS,
+                reason = reason,
+                // no_record 没有可比的基准时刻，索性不带 overdue_min，免得一堆 0 把分布压歪
+                overdueMin = if (nextAt != 0L) ((now - nextAt) / 60_000L).toInt() else null,
+            )
         )
     }
 

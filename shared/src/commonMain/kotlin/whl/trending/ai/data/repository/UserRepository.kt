@@ -1,9 +1,11 @@
 package whl.trending.ai.data.repository
 
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.setAnalyticsUser
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.MeUser
-import whl.trending.ai.core.platform.trackEvent
 import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.QuotaResponse
 import whl.trending.ai.data.remote.ApiException
@@ -38,6 +40,8 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
             globalSettingsManager.setGithubIdentity(me.user.githubLogin, me.user.githubUserId)
             globalSettingsManager.setUserEmail(me.user.email)
             globalSettingsManager.setIsPro(me.pro)
+            // 埋点关联账号：此后事件带 user_id，服务端据此建 install↔identity 映射
+            setAnalyticsUser(me.user.userId)
             me.user
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -63,7 +67,7 @@ open class UserRepository(private val api: TrendingApi = TrendingApi()) {
             // 这条路径只在赞助对账窗口内跑（用户刚从 Sponsors 页回来），量极小而诊断价值极高：
             // 失败意味着「钱付了，app 却说不清状态」——正是 P0-4 那类问题复发的信号，
             // 静默吞掉就等于把它藏起来。只报状态码：token 与响应体都可能含敏感信息。
-            trackEvent("pro_refresh_failed", mapOf("status" to ((e as? ApiException)?.statusCode ?: -1)))
+            track(AppEvent.ApiFailed("pro/refresh", (e as? ApiException)?.statusCode ?: -1))
             null
         }
     }

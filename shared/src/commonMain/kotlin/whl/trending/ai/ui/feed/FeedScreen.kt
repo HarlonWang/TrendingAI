@@ -1,12 +1,17 @@
 package whl.trending.ai.ui.feed
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +20,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -29,46 +35,41 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import whl.trending.ai.ui.common.LocalContentBottomPadding
-import whl.trending.ai.ui.common.LocalContentTopPadding
-import whl.trending.ai.ui.common.SourceMetaFooter
-import whl.trending.ai.ui.common.updateStampText
-import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.stringResource
-import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.no_data
-import trendingai.shared.generated.resources.retry
-import whl.trending.ai.core.platform.trackItemClick
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.repository.globalFavoriteRepository
-import whl.trending.ai.data.model.FavoriteItem
-import whl.trending.ai.data.model.FeedItem
-import whl.trending.ai.core.platform.shareText
-import whl.trending.ai.core.platform.trackEvent
-import whl.trending.ai.ui.common.AiSummaryBox
-import whl.trending.ai.ui.common.ItemActionMenu
-import whl.trending.ai.ui.common.aiShareText
-import whl.trending.ai.ui.digest.DigestPage
-import whl.trending.ai.ui.digest.toDigestPage
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import kotlin.time.Clock
+import org.jetbrains.compose.resources.stringResource
+import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.no_data
+import trendingai.shared.generated.resources.retry
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.ContentActionKind
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.shareText
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.data.model.FavoriteItem
+import whl.trending.ai.data.model.FeedItem
+import whl.trending.ai.data.repository.globalFavoriteRepository
+import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.common.ItemActionMenu
+import whl.trending.ai.ui.common.LocalContentBottomPadding
+import whl.trending.ai.ui.common.LocalContentTopPadding
+import whl.trending.ai.ui.common.SourceMetaFooter
+import whl.trending.ai.ui.common.aiShareText
+import whl.trending.ai.ui.common.updateStampText
+import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.digest.toDigestPage
 
 /** 左侧标识位尺寸，序号圆圈和产品 logo 共用；请求像素按 3x 屏取整，避免高密度屏上发虚。 */
 private val LEADING_SIZE = 28.dp
@@ -222,10 +223,13 @@ private fun FeedItemCard(
 ) {
     val gallery = item.galleryImageUrls(HERO_REQUEST_PX)
     val clickModifier = Modifier.clickable {
-        trackItemClick(
-            source = item.source,
-            rank = index + 1,
-            title = item.title
+        track(
+            AppEvent.ContentOpened(
+                source = item.source,
+                contentId = item.externalId,
+                rank = index + 1,
+                title = item.title,
+            )
         )
         // HN 条目整卡点击进解读页（预生成、零等待），外链降级为解读页首屏出路按钮
         if (item.source == "hackernews") {
@@ -306,12 +310,13 @@ private fun FeedItemBody(
             onToggle = onToggleFavorite,
             onShare = {
                 shareText(shareContent)
-                trackEvent(
-                    "share_to_ai",
-                    mapOf(
-                        "source" to item.source,
-                        "has_summary" to !item.summary.isNullOrBlank(),
-                        "from" to "list"
+                track(
+                    AppEvent.ContentAction(
+                        ContentActionKind.SHARE_TO_AI,
+                        source = item.source,
+                        contentId = item.externalId,
+                        from = "list",
+                        hasSummary = !item.summary.isNullOrBlank(),
                     )
                 )
             }
