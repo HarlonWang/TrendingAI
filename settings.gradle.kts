@@ -73,9 +73,7 @@ localSourceDir("loginbase-kt.dir")?.let { dir ->
     }
 }
 
-// eventbase-kt（自建埋点的 KMP 客户端）：同上双轨。⚠️ 与 loginbase-kt 不同的是，它
-// **尚未发布到 Maven Central**——在发版之前，不配 local.properties 的构建（含 CI 打
-// tag 发版）会解析不到坐标而直接失败。打 tag 前必须先发 0.1.0 并核对下面的版本号。
+// eventbase-kt（自建埋点的 KMP 客户端）：同上双轨，同一条纪律。0.1.0 起已发布 Maven Central。
 localSourceDir("eventbase-kt.dir")?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {

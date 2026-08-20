@@ -15,8 +15,9 @@
   **禁止在调用点就地发明事件名**；`AppEvent` 只是它的 Kotlin 投影，两边必须同步改。
 - 页面浏览一律 `AppEvent.ScreenViewed` / `TrackScreen`，新增页面只多一个 `Screen` 枚举常量，不新增事件。
 - `app_opened` / `app_backgrounded` 与会话时长由库自己算（挂 ProcessLifecycleOwner），App 侧不要碰。
-- **eventbase-kt 尚未发布 Maven Central**：本机经 `local.properties` 的 `eventbase-kt.dir` 走 composite build，
-  **打 tag 发版前必须先发布并核对 `libs.versions.toml` 的版本号**，否则 CI 解析不到坐标。
+- **eventbase-kt 与 loginbase-kt 同一套双轨**：本机可经 `local.properties` 的 `eventbase-kt.dir` 走
+  composite build，CI 与 F-Droid 源码构建一律走 `libs.versions.toml` 的 Maven 坐标。
+  **改了库就发版并 bump 那里**——两条路构建的不是同一份代码，分岔不会有任何报错。
 - `docs/analytics-notes.md` 只负责**本 App 的历史断点与坑**（含这次词汇换代那节）；口径、指标定义、数据模型的权威在 eventbase 仓。
 
 
