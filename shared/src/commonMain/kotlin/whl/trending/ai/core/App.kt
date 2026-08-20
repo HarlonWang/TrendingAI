@@ -1,5 +1,7 @@
 package whl.trending.ai.core
 
+import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.TrackRouteScreenViews
 import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
@@ -58,23 +60,30 @@ import whl.trending.ai.ui.common.CheckoutResultHost
 import whl.trending.ai.ui.common.SponsorLinkHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
-data object Home
-data object Appearance
-data object ColorLab
-data object Settings
-data object About
-data object DataSources
-data object Feedback
-data object Subscribe
-data object ProSubscription
-data class RepoDetail(val owner: String, val repo: String)
-data class WebPage(val url: String, val title: String)
-data object Favorites
-data object GithubProfile
-data object ProfileFollowers
-data object ProfileFollowing
-data object ProfileRepos
-data class Chat(val context: ChatContext?)
+// 路由即页面身份：实现 [Route] 才能进 backStack，`screen` 是必填的——
+// 新增页面在这里填一个枚举值，其余埋点代码一行都不用写（见 core/analytics/ScreenTracking.kt）。
+// Home 是容器不是页面，故为 null，由 HomeScreen 按选中的 tab 自报。
+data object Home : Route { override val screen: Screen? = null }
+data object Appearance : Route { override val screen = Screen.APPEARANCE }
+data object ColorLab : Route { override val screen = Screen.COLOR_LAB }
+data object Settings : Route { override val screen = Screen.SETTINGS }
+data object About : Route { override val screen = Screen.ABOUT }
+data object DataSources : Route { override val screen = Screen.DATA_SOURCES }
+data object Feedback : Route { override val screen = Screen.FEEDBACK }
+data object Subscribe : Route { override val screen = Screen.SUBSCRIBE }
+data object ProSubscription : Route { override val screen = Screen.PAYWALL }
+data class RepoDetail(val owner: String, val repo: String) : Route {
+    override val screen = Screen.README
+}
+data class WebPage(val url: String, val title: String) : Route {
+    override val screen = Screen.WEB_PAGE
+}
+data object Favorites : Route { override val screen = Screen.FAVORITES }
+data object GithubProfile : Route { override val screen = Screen.GITHUB_PROFILE }
+data object ProfileFollowers : Route { override val screen = Screen.PROFILE_FOLLOWERS }
+data object ProfileFollowing : Route { override val screen = Screen.PROFILE_FOLLOWING }
+data object ProfileRepos : Route { override val screen = Screen.PROFILE_REPOS }
+data class Chat(val context: ChatContext?) : Route { override val screen = Screen.CHAT }
 
 /**
  * 安全出栈：栈底（Home）永不弹出。
@@ -82,14 +91,14 @@ data class Chat(val context: ChatContext?)
  * 无保护时会把栈弹空，下一帧重组 NavDisplay 抛
  * "IllegalArgumentException: NavDisplay backstack cannot be empty"。
  */
-internal fun MutableList<Any>.safePop() {
+internal fun MutableList<Route>.safePop() {
     if (size > 1) removeAt(lastIndex)
 }
 
 @Composable
 @Preview
 fun App() {
-    val backStack = remember { mutableStateListOf<Any>(Home) }
+    val backStack = remember { mutableStateListOf<Route>(Home) }
 
     // 收藏云同步 + 身份/Pro 态同步（syncMe）触发：放在 App 根部而非 HomeScreen——登录常发生在
     // 账户页（Home 已被覆盖、其 LaunchedEffect 已随 NavEntry 销毁），只挂 HomeScreen 会导致
@@ -136,6 +145,8 @@ fun App() {
                     SponsorLinkHost()
                     CheckoutResultHost()
                     OAuthOutcomeHost()
+                    // 页面浏览埋点的路由源，全 app 就这一处；tab 源在 HomeScreen
+                    TrackRouteScreenViews(backStack)
                     NavDisplay(
                         backStack = backStack,
                         onBack = { backStack.safePop() },

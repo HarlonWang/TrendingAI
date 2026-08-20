@@ -100,7 +100,6 @@ import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.FeedbackKind
-import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.isValidEmail
@@ -201,7 +200,6 @@ fun SettingsScreen(
                     }
                     TextButton(onClick = {
                         showSummaryLanguageDialog = false
-                        track(AppEvent.ScreenViewed(Screen.FEEDBACK, from = "summary_language"))
                         onNavigateToFeedback()
                     }) {
                         Text(stringResource(Res.string.summary_language_feedback))
@@ -244,10 +242,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },
-                        onClick = {
-                            track(AppEvent.ScreenViewed(Screen.APPEARANCE, from = "settings"))
-                            onNavigateToAppearance()
-                        },
+                        onClick = onNavigateToAppearance,
                     )
                     // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
                     settingsItem(
@@ -319,7 +314,7 @@ fun SettingsScreen(
                             }
                         },
                         onClick = {
-                            track(AppEvent.ScreenViewed(Screen.SUMMARY_LANGUAGE, from = "settings"))
+                            track(AppEvent.SettingsItemClicked(SettingKey.SUMMARY_LANGUAGE))
                             showSummaryLanguageDialog = true
                         },
                     )
@@ -385,10 +380,7 @@ fun SettingsScreen(
                     settingsItem(
                         icon = Icons.Default.Email,
                         title = { Text(stringResource(Res.string.subscribe_title)) },
-                        onClick = {
-                            track(AppEvent.ScreenViewed(Screen.SUBSCRIBE, from = "settings"))
-                            onNavigateToSubscribe()
-                        },
+                        onClick = onNavigateToSubscribe,
                     )
                     if (globalDailyPicksNotifier.isSupported) {
                         settingsItem(
@@ -470,27 +462,18 @@ fun SettingsScreen(
                         icon = Icons.Default.Schedule,
                         title = { Text(stringResource(Res.string.data_sources_title)) },
                         description = { Text(stringResource(Res.string.data_sources_desc)) },
-                        onClick = {
-                            track(AppEvent.ScreenViewed(Screen.DATA_SOURCES, from = "settings"))
-                            onNavigateToDataSources()
-                        },
+                        onClick = onNavigateToDataSources,
                     )
                     settingsItem(
                         icon = Icons.Default.Feedback,
                         title = { Text(stringResource(Res.string.feedback)) },
-                        onClick = {
-                            track(AppEvent.ScreenViewed(Screen.FEEDBACK, from = "settings"))
-                            onNavigateToFeedback()
-                        },
+                        onClick = onNavigateToFeedback,
                     )
                     // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
                     settingsItem(
                         icon = Icons.Default.Info,
                         title = { Text(stringResource(Res.string.about)) },
-                        onClick = {
-                            track(AppEvent.ScreenViewed(Screen.ABOUT, from = "settings"))
-                            onNavigateToAbout()
-                        },
+                        onClick = onNavigateToAbout,
                     )
                 }
             }

@@ -50,8 +50,6 @@ import trendingai.shared.generated.resources.favorites_delete_confirm
 import trendingai.shared.generated.resources.favorites_empty
 import trendingai.shared.generated.resources.favorites_empty_hint
 import trendingai.shared.generated.resources.favorites_removed
-import whl.trending.ai.core.analytics.Screen
-import whl.trending.ai.core.analytics.TrackScreen
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.repository.globalFavoriteRepository
@@ -71,8 +69,6 @@ fun FavoriteListScreen(
     onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
-
-    TrackScreen(Screen.FAVORITES)
 
     TrendingScaffold(
         topBar = {

@@ -57,7 +57,7 @@ import trendingai.shared.generated.resources.version_up_to_date
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.analytics.AppEvent
-import whl.trending.ai.core.analytics.Screen
+import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.isIosPlatform
@@ -146,7 +146,7 @@ fun AboutScreen(
                             }
                         },
                         onClick = {
-                            track(AppEvent.ScreenViewed(Screen.CHECK_UPDATE, from = "about"))
+                            track(AppEvent.SettingsItemClicked(SettingKey.CHECK_UPDATE))
                             if (isIos) {
                                 uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
                             } else {
@@ -159,7 +159,7 @@ fun AboutScreen(
                     icon = Icons.Default.History,
                     title = { Text(stringResource(Res.string.changelog)) },
                     onClick = {
-                        track(AppEvent.ScreenViewed(Screen.CHANGELOG, from = "about"))
+                        track(AppEvent.SettingsItemClicked(SettingKey.CHANGELOG))
                         uriHandler.openUri(Constants.CHANGELOG_URL)
                     },
                 )
@@ -171,12 +171,9 @@ fun AboutScreen(
                 settingsItem(
                     icon = Icons.Default.VolunteerActivism,
                     title = { Text(stringResource(Res.string.donate)) },
-                    onClick = {
-                        // 打开弹窗只是到达，不是 upsell 点击——赞助页的点击统一由
-                        // ProSponsor.openSponsorPage 报一条，两处都报会让转化率分母翻倍
-                        track(AppEvent.ScreenViewed(Screen.DONATE, from = "about"))
-                        showDonateDialog = true
-                    },
+                    // 打开弹窗不埋点：赞助点击统一由 ProSponsor.openSponsorPage 报
+                    // upsell_clicked(target=sponsor)，这里再报一条会让转化率分母翻倍
+                    onClick = { showDonateDialog = true },
                 )
                 settingsItem(
                     icon = Icons.Default.PrivacyTip,

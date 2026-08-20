@@ -13,7 +13,11 @@
 
 - **新增或修改事件前**，先改 `~/eventbase/docs/telemetry-design.md` §12.9 的事件词汇表——那是唯一权威，
   **禁止在调用点就地发明事件名**；`AppEvent` 只是它的 Kotlin 投影，两边必须同步改。
-- 页面浏览一律 `AppEvent.ScreenViewed` / `TrackScreen`，新增页面只多一个 `Screen` 枚举常量，不新增事件。
+- **页面浏览不要手写埋点**：`screen_viewed` 由导航层自动产生（`core/analytics/ScreenTracking.kt`），
+  两个源分别是 `App.kt` 的 backStack 栈顶变化和 `HomeScreen` 的 tab 变化。
+  新增页面只做一件事：路由声明实现 `core/Route.kt` 的 `Route` 并填 `screen`——漏填是编译错误。
+  唯一手写的例外是登录浮层（不进 backStack，见 `LoginSheetHost`）。
+  **外链、静默动作、说明弹窗不是页面**，别往 `Screen` 里加，它们进 `SettingsItemClicked` 或各自的业务事件。
 - `app_opened` / `app_backgrounded` 与会话时长由库自己算（挂 ProcessLifecycleOwner），App 侧不要碰。
 - **eventbase-kt 与 loginbase-kt 同一套双轨**：本机可经 `local.properties` 的 `eventbase-kt.dir` 走
   composite build，CI 与 F-Droid 源码构建一律走 `libs.versions.toml` 的 Maven 坐标。

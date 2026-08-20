@@ -65,7 +65,9 @@ import whl.trending.ai.auth.launchGithubSignIn
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.AuthAction
 import whl.trending.ai.core.analytics.AuthOutcome
+import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.analytics.trackOverlayScreenView
 import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.home.githubLogoPainter
 
@@ -110,6 +112,11 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     }
     val client = manager.client
     val scope = rememberCoroutineScope()
+
+    // 登录漏斗的分母（telemetry-design L2 核心第 7 条）：打开登录界面就走 vs 输了邮箱卡在
+    // 验证码，是两种流失、两种改法。全 app 唯一手写的 screen_viewed——浮层不进 backStack，
+    // 路由源看不见它；用 overlay 变体上报，从而不打断 from 链（浮层不改变「在哪一页」）。
+    LaunchedEffect(Unit) { trackOverlayScreenView(Screen.LOGIN) }
 
     var step by remember { mutableStateOf(Step.EMAIL) }
     var email by remember { mutableStateOf("") }

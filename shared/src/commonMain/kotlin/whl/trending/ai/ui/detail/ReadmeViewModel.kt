@@ -13,9 +13,6 @@ import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.analytics.AppEvent
-import whl.trending.ai.core.analytics.Screen
-import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.repository.TrendingRepository
 
 data class ReadmeUiState(
@@ -46,9 +43,6 @@ class ReadmeViewModel(
     val starEvents: SharedFlow<RepoStarService.Result> = _starEvents.asSharedFlow()
 
     init {
-        // chat 入口漏斗的分母（见 docs/analytics-notes.md）：记在 VM init 而非 Composable，
-        // 一次进入恰好一条——VM 随页面实例创建、配置变更（旋转）复用，天然不重复计数
-        track(AppEvent.ScreenViewed(Screen.README))
         fetchReadme()
         refreshStarState()
     }

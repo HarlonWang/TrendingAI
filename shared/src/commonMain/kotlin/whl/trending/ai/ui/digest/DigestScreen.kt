@@ -32,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -58,7 +57,6 @@ import trendingai.shared.generated.resources.digest_unavailable_title
 import trendingai.shared.generated.resources.retry
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
-import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
@@ -87,10 +85,6 @@ fun DigestScreen(
     },
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(Unit) {
-        track(AppEvent.ScreenViewed(Screen.DIGEST, from = page.source))
-    }
 
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
     val isFavorite = remember(favorites) { favorites.any { it.url == page.url } }

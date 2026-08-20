@@ -12,6 +12,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.home_title
 import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.picks_title
+import whl.trending.ai.core.analytics.Screen
 
 /**
  * 底栏一级 tab。
@@ -21,6 +22,18 @@ import trendingai.shared.generated.resources.picks_title
  */
 enum class HomeTab {
     Home, Picks, Chat, Me;
+
+    /**
+     * 本 tab 在埋点里的页面身份。首页三个 tab 才是页面——[Chat] 是入口，
+     * 它推出去的全屏聊天页作为路由自己会报（`Screen.CHAT`），这里给 null 免得报两条。
+     */
+    val screen: Screen?
+        get() = when (this) {
+            Home -> Screen.HOME
+            Picks -> Screen.PICKS
+            Me -> Screen.ME
+            Chat -> null
+        }
 
     companion object {
         /**

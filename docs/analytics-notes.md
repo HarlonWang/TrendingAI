@@ -395,6 +395,33 @@ Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量）�
 | `research_done` / `research_fail` / `detail_summary_cache_hit` | `ai_completed(kind, outcome, reason)` | **新增了 chat 与 detail_summary 的成功/失败终态**（旧版本只有 research 有终态），所以 `ai_completed` 的量会明显高于旧的三个事件之和，不是异常 |
 | `daily_picks_notification_shown` / `_skipped` / `daily_picks_alarm_relinked` | `notification_delivery(step)` | 三合一，`step` 区分 |
 
+### 页面浏览改为导航层自动产生（2026-08-20 实现，与本次换代同批发版）
+
+换代时 `screen_viewed` 是 **18 个手写调用点**，多数写在**点击回调**里（记的是点击意图，导航被拦截也会计数）。
+发版前改成由导航层自动产生：路由栈顶变化 + 首页 tab 变化两个源，页面自己不写埋点。
+词汇尚无生产数据，**不构成断点**，但下面三条影响读数解释：
+
+- **`from` 与 Aptabase 时代的入口值不可接续。** 旧 `chat_entry_click` 的 `from=home_fab` /
+  `readme_detail_summary` 这类**控件级**值不再存在，新值是**上一个页面**（`home` / `picks` / `me` / `readme`）。
+  上文「1.1.0 起把 `home_tab` 改成 `home_fab` 是为了对比改版前后」那条约束随词汇换代一并作废——
+  两套后端本就互不相通。各页只有一个 chat 入口，页面级粒度没有实际损失。
+- **浏览量含返回。** 返回上一页会产生一条 `screen_viewed`（与 GA / Firebase 的 `screen_view` 一致）。
+  旧词汇的 `readme_view` / `paywall_view` / `favorite_list_view` 只记前进，**两者的绝对量不可比**。
+- **首页三个 tab 首次进入页面口径。** `screen=home` / `picks` / `me` 与二级页在同一张表里，
+  可以直接排页面浏览量榜。`tab_switched` 保留且不变——它带 `method` 维度，与 `screen_viewed` 不重复，
+  但**两者不要相加**（同一次切 tab 会各报一条）。
+
+同时从 `screen` 值域里摘掉了五个「不是页面」的值（换代时误当页面记的）：
+
+| 摘掉的 screen 值 | 去处 |
+|---|---|
+| `changelog` / `check_update` / `summary_language` | 新事件 `settings_item_clicked(key)`，与 `setting_changed` 共用 key 词汇 |
+| `donate` | 删除。赞助点击本就由 `upsell_clicked(target=sponsor)` 记，两处都报会让转化率分母翻倍 |
+| `digest_unavailable` | 新事件 `digest_unavailable(source)`。它是 Digest 页的加载失败**状态**，分母是 `screen_viewed(screen=digest)` |
+
+另外补上了 `screen=login`（登录浮层曝光，L2 核心指标第 7 条登录漏斗的分母，换代时漏了）。
+事件总数 20 → 22。
+
 ### 就地下线的事件（新版本查不到，且没有替代）
 
 - `chat_image_add`：加图张数已在 `ai_requested.image_count` 里，但**相册/拍照之分就此丢失**；
