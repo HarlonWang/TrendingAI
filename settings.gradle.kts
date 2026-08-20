@@ -77,7 +77,7 @@ localSourceDir("loginbase-kt.dir")?.let { dir ->
 localSourceDir("eventbase-kt.dir")?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {
-            substitute(module("wang.harlon:eventbase-kt")).using(project(":core"))
+            substitute(module("wang.harlon:eventbase-kt")).using(project(":library"))
         }
     }
 }
