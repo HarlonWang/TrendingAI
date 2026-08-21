@@ -113,18 +113,13 @@ fun HiringScreen(
     TrendingScaffold(
         topBar = {
             TrendingTopAppBar(
+                // 标题恒为页面名，期次挪到右侧：两者是「这是什么页」和「看的是哪一期」两件事，
+                // 曾经共用标题位、数据一到就把页面名顶掉，加载完那一下页面名就消失了
                 title = {
-                    if (ready != null && ready.months.size > 1) {
-                        MonthSwitcher(ready) { month ->
-                            track(AppEvent.ListFiltered(ListFilter.MONTH, month))
-                            viewModel.switchMonth(month)
-                        }
-                    } else {
-                        Text(
-                            text = ready?.month ?: stringResource(Res.string.hiring_title),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
+                    Text(
+                        text = stringResource(Res.string.hiring_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -132,6 +127,25 @@ fun HiringScreen(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(Res.string.back),
                         )
+                    }
+                },
+                actions = {
+                    // 月份只在数据到位后出现：没数据时不知道是哪一期，留空好过占位
+                    if (ready != null) {
+                        if (ready.months.size > 1) {
+                            MonthSwitcher(ready) { month ->
+                                track(AppEvent.ListFiltered(ListFilter.MONTH, month))
+                                viewModel.switchMonth(month)
+                            }
+                        } else {
+                            // 只有一期，没得切，就别做成按钮样子
+                            Text(
+                                text = ready.month,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
                     }
                 },
             )
@@ -358,12 +372,13 @@ private fun Fact(text: String) {
     })
 }
 
+/** 期次切换器，挂在顶栏右侧的 actions 上——标题位固定给页面名，见 [HiringScreen] */
 @Composable
 private fun MonthSwitcher(s: HiringUiState.Ready, onPick: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         TextButton(onClick = { expanded = true }) {
-            Text(s.month, style = MaterialTheme.typography.titleMedium)
+            Text(s.month, style = MaterialTheme.typography.labelLarge)
             Icon(Icons.Default.ArrowDropDown, null)
         }
         TrendingDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
