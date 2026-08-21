@@ -31,8 +31,7 @@
     <string name="chat_quota_unlocked">已解锁更多额度，重新发送即可继续。</string>
     <string name="chat_quota_auth_degraded">登录状态未生效，本次请求被按未登录处理——请检查网络后重试，必要时退出后重新登录。</string>
     <string name="chat_error_auth_invalid">登录状态已过期，请退出后重新登录再继续。</string>
-    <string name="chat_beta_badge">Beta</string>
-    <string name="chat_quota_notice">实验性功能，每日有限免费额度，用尽次日恢复。</string>
+    <string name="chat_quota_notice">每日有限免费额度，用尽次日恢复。</string>
     <string name="chat_attach">添加图片</string>
     <string name="chat_attach_camera">拍照</string>
     <string name="chat_attach_album">从相册选择</string>

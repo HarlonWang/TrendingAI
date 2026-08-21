@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -76,6 +78,7 @@ import whl.trending.ai.core.analytics.ListFilter
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.Hiring
 import whl.trending.ai.data.model.HiringPost
+import whl.trending.ai.ui.common.BetaBadge
 import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
@@ -116,10 +119,14 @@ fun HiringScreen(
                 // 标题恒为页面名，期次挪到右侧：两者是「这是什么页」和「看的是哪一期」两件事，
                 // 曾经共用标题位、数据一到就把页面名顶掉，加载完那一下页面名就消失了
                 title = {
-                    Text(
-                        text = stringResource(Res.string.hiring_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(Res.string.hiring_title),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        BetaBadge()
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -34,8 +34,7 @@
     <string name="chat_quota_unlocked">More quota unlocked — resend to continue.</string>
     <string name="chat_quota_auth_degraded">Signed in, but this request was treated as signed out — check your network and retry, or sign out and sign in again.</string>
     <string name="chat_error_auth_invalid">Your session has expired — sign out and sign in again to continue.</string>
-    <string name="chat_beta_badge">Beta</string>
-    <string name="chat_quota_notice">Experimental feature. Limited free chats each day, resetting tomorrow.</string>
+    <string name="chat_quota_notice">Limited free chats each day, resetting tomorrow.</string>
     <string name="chat_attach">Add image</string>
     <string name="chat_attach_camera">Take photo</string>
     <string name="chat_attach_album">Choose from album</string>

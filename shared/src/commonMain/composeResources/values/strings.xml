@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Trending AI</string>
+    <string name="beta_badge">Beta</string>
     <string name="period_daily">Today</string>
     <string name="period_weekly">This Week</string>
     <string name="period_monthly">This Month</string>

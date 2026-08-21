@@ -6,9 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,9 +20,9 @@ import whl.trending.chat.R
 /**
  * 空状态欢迎区：仅在尚无任何对话（`messages` 为空）时显示，发出第一条后随消息列表替换而消失。
  *
- * - 通用助手入口（[hasContext] = false）：`✨` + 「AI 助手」标题 + 额度/实验性说明。
+ * - 通用助手入口（[hasContext] = false）：`✨` + 「AI 助手」标题 + 额度说明。
  * - 上下文解读入口（[hasContext] = true）：标题与「介绍这个项目」快捷问已在别处呈现，
- *   这里只保留额度/实验性说明一行，不喧宾夺主。
+ *   这里只保留额度说明一行，不喧宾夺主。
  */
 @Composable
 fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
@@ -56,23 +54,6 @@ fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/** 标题旁的小号「Beta」徽标，标识 AI Chat 为实验性功能。 */
-@Composable
-fun BetaBadge(modifier: Modifier = Modifier) {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        shape = RoundedCornerShape(6.dp),
-        modifier = modifier,
-    ) {
-        Text(
-            text = stringResource(R.string.chat_beta_badge),
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
 }
