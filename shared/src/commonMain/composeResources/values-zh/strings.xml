@@ -357,9 +357,9 @@
     <string name="account_link_github_in_use">该 GitHub 账号已绑定到其他账号</string>
     <string name="account_link_already_linked">你的账号已绑定其他 GitHub 账号</string>
     <string name="account_link_failed">关联 GitHub 失败，请重试</string>
-    <string name="hiring_title">远程工作机会</string>
+    <string name="hiring_title">谁在招人</string>
     <string name="hiring_meta">%1$d 个岗位 · 数据截至 %2$s</string>
-    <string name="hiring_source_note">来源：Hacker News「Ask HN: Who is hiring?」· 点卡片可跳原帖</string>
+    <string name="hiring_source_note">来源：Hacker News「Ask HN: Who is hiring?」· 每张卡片均可跳回原帖</string>
     <string name="hiring_filter_region">地域</string>
     <string name="hiring_filter_remote">工作方式</string>
     <string name="hiring_filter_employment">类型</string>
@@ -380,5 +380,5 @@
     <string name="hiring_type_contract">合同</string>
     <string name="hiring_type_internship">实习</string>
     <string name="hiring_type_part_time">兼职</string>
-    <string name="hiring_entry">远程工作机会</string>
+    <string name="hiring_entry">谁在招人</string>
 </resources>

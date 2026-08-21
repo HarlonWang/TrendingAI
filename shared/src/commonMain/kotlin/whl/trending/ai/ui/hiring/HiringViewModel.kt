@@ -2,6 +2,8 @@ package whl.trending.ai.ui.hiring
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,31 +66,35 @@ class HiringViewModel(
     private val _uiState = MutableStateFlow<HiringUiState>(HiringUiState.Loading)
     val uiState: StateFlow<HiringUiState> = _uiState.asStateFlow()
 
+    /**
+     * 当前请求的月份，**不从 uiState 里反推**。
+     * uiState 会被 Loading 冲掉，取消息源放在那里会让「先置 Loading 再读月份」这种手滑
+     * 静默退化成「永远回到初始月份」——本类曾在 retry() 里正是这么错的。
+     * switchMonth 更新它，retry 与语言重载都读它，三条路径共用同一个真相来源。
+     */
+    private var requestedMonth: String? = initialMonth
+
+    /** 进行中的加载。新请求前取消旧的，防止慢的旧响应后到、用旧月份/旧语言的数据覆盖新状态 */
+    private var loadJob: Job? = null
+
     init {
-        load(initialMonth)
+        load()
 
         // 摘要语言切换后重载（对齐 DigestViewModel / FeedViewModel 的既有模式）：
         // viewModel 实例生命周期长于页面，init 里的语言只是创建时刻的快照。
         // 只有 title/summary 跟语言走，事实字段与筛选结果不受影响。
         viewModelScope.launch {
-            settingsManager.summaryLanguage.drop(1).collect {
-                val month = (_uiState.value as? HiringUiState.Ready)?.month ?: initialMonth
-                _uiState.value = HiringUiState.Loading
-                load(month)
-            }
+            settingsManager.summaryLanguage.drop(1).collect { load() }
         }
     }
 
-    fun retry() {
-        _uiState.value = HiringUiState.Loading
-        load((_uiState.value as? HiringUiState.Ready)?.month ?: initialMonth)
-    }
+    fun retry() = load()
 
     /** 往期切换。切月清空筛选——上一期选中的取值在新一期未必存在，留着会得到一个空列表且不知为何 */
     fun switchMonth(month: String) {
-        if ((_uiState.value as? HiringUiState.Ready)?.month == month) return
-        _uiState.value = HiringUiState.Loading
-        load(month)
+        if (requestedMonth == month && _uiState.value is HiringUiState.Ready) return
+        requestedMonth = month
+        load()
     }
 
     /** 单个取值的选中/取消。同维多选取并集 */
@@ -107,14 +113,16 @@ class HiringViewModel(
         }
     }
 
-    private fun load(month: String?) {
-        viewModelScope.launch {
+    private fun load() {
+        loadJob?.cancel()
+        _uiState.value = HiringUiState.Loading
+        loadJob = viewModelScope.launch {
             try {
                 // 语言跟「摘要语言」口径，与列表/解读页一致
                 val lang = settingsManager.currentContentLang()
-                val r = api.fetchHiring(month, lang)
-                _uiState.value = if (r.success && r.posts.isNotEmpty()) {
-                    HiringUiState.Ready(
+                val r = api.fetchHiring(requestedMonth, lang)
+                _uiState.value = when {
+                    r.success -> HiringUiState.Ready(
                         month = r.month,
                         months = r.months,
                         lastSyncedAt = r.lastSyncedAt,
@@ -122,12 +130,22 @@ class HiringViewModel(
                         // 进入页面一律无筛选态，且不记忆偏好——不替用户预设任何条件
                         selected = emptyMap(),
                     )
-                } else {
-                    HiringUiState.Unavailable
+                    // 只有后端明确说「这一期不存在」才是产品状态；其余（含仍返回 JSON 的 5xx）
+                    // 一律当故障处理，否则会把基础设施问题伪装成「本期尚未发布」，
+                    // 而那个态没有重试出口，用户直接卡死、读数也分不清两者
+                    r.code == CODE_ROUND_UNAVAILABLE -> HiringUiState.Unavailable
+                    else -> HiringUiState.Error
                 }
+            } catch (e: CancellationException) {
+                // 取消是新请求挤掉旧请求，不是失败——吞掉会让切月/切语言瞬间闪一下 Error
+                throw e
             } catch (e: Exception) {
                 _uiState.value = HiringUiState.Error
             }
         }
+    }
+
+    private companion object {
+        const val CODE_ROUND_UNAVAILABLE = "hiring_round_unavailable"
     }
 }

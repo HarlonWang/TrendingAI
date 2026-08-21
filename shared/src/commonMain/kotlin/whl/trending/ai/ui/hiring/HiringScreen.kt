@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -77,6 +76,7 @@ import whl.trending.ai.core.analytics.ListFilter
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.Hiring
 import whl.trending.ai.data.model.HiringPost
+import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 
@@ -366,7 +366,7 @@ private fun MonthSwitcher(s: HiringUiState.Ready, onPick: (String) -> Unit) {
             Text(s.month, style = MaterialTheme.typography.titleMedium)
             Icon(Icons.Default.ArrowDropDown, null)
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        TrendingDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             s.months.forEach { m ->
                 DropdownMenuItem(text = { Text(m) }, onClick = {
                     expanded = false

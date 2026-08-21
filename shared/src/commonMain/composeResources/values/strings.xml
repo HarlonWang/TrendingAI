@@ -359,7 +359,7 @@
     <string name="account_link_failed">Couldn't link GitHub, please try again</string>
     <string name="hiring_title">Who is Hiring</string>
     <string name="hiring_meta">%1$d roles · data as of %2$s</string>
-    <string name="hiring_source_note">Source: Hacker News “Ask HN: Who is hiring?” · tap a card to open the original post</string>
+    <string name="hiring_source_note">Source: Hacker News “Ask HN: Who is hiring?” · every card links back to its original post</string>
     <string name="hiring_filter_region">Location</string>
     <string name="hiring_filter_remote">Work mode</string>
     <string name="hiring_filter_employment">Type</string>
