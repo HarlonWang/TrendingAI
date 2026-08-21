@@ -16,6 +16,7 @@ import whl.trending.ai.ui.settings.ColorLabScreen
 import whl.trending.ai.ui.settings.DataSourcesScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.digest.DigestPage
+import whl.trending.ai.ui.hiring.HiringScreen
 import whl.trending.ai.ui.digest.DigestScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
 import whl.trending.ai.ui.theme.TrendingTheme
@@ -84,6 +85,16 @@ data object ProfileFollowers : Route { override val screen = Screen.PROFILE_FOLL
 data object ProfileFollowing : Route { override val screen = Screen.PROFILE_FOLLOWING }
 data object ProfileRepos : Route { override val screen = Screen.PROFILE_REPOS }
 data class Chat(val context: ChatContext?) : Route { override val screen = Screen.CHAT }
+
+/**
+ * HN 招聘月度专题。[month] 为 'YYYY-MM'，null = 最新一期（默认入口不带月份）。
+ *
+ * 与 [whl.trending.ai.ui.digest.DigestPage] 不同，本路由**不兼任数据载体**：
+ * 它不从列表带任何内容进来（专题内容整月一次拉取），因此按惯例声明在这里，
+ * 而不是跟着页面住在 ui 包——DigestPage 住在别处是被迫的例外（见 Route 的 KDoc），
+ * 不是可照抄的范式。
+ */
+data class Hiring(val month: String? = null) : Route { override val screen = Screen.HIRING }
 
 /**
  * 安全出栈：栈底（Home）永不弹出。
@@ -185,6 +196,10 @@ fun App() {
                                     },
                                     onOpenDigest = { page ->
                                         backStack.add(page)
+                                    },
+                                    onOpenHiring = {
+                                        // 不带 month = 进最新一期
+                                        backStack.add(Hiring())
                                     },
                                     onNavigateToGithubProfile = { backStack.add(GithubProfile) },
                                     onNavigateToSubscription = { backStack.add(ProSubscription) },
@@ -331,6 +346,14 @@ fun App() {
                                     onOpenUrl = { url ->
                                         openExternalUrl(url, "")
                                     }
+                                )
+                            }
+
+                            is Hiring -> NavEntry(key) {
+                                HiringScreen(
+                                    page = key,
+                                    onBack = { backStack.safePop() },
+                                    onOpenUrl = { url -> openExternalUrl(url, "") }
                                 )
                             }
 

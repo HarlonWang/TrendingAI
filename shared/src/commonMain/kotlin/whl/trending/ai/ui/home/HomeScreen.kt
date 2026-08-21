@@ -57,6 +57,10 @@ import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WorkOutline
+import androidx.compose.material3.IconButton
+import trendingai.shared.generated.resources.hiring_entry
 import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
@@ -85,6 +89,7 @@ fun HomeScreen(
     onOpenUrl: (url: String) -> Unit = {},
     onNavigateToSubscribe: () -> Unit = {},
     onOpenDigest: (DigestPage) -> Unit = {},
+    onOpenHiring: () -> Unit = {},
     onNavigateToGithubProfile: () -> Unit = {},
     onNavigateToSubscription: () -> Unit = {},
     onNavigateToFavorites: () -> Unit = {},
@@ -283,6 +288,16 @@ fun HomeScreen(
                                         modifier = Modifier.size(24.dp),
                                         tint = Color.Unspecified
                                     )
+                                },
+                                // 招聘月度专题入口。只挂在 HN 源上——内容本来就是 HN 的，
+                                // 来源归属由动线本身交代；GitHub / PH 的标题栏不受影响
+                                leadingActions = {
+                                    IconButton(onClick = onOpenHiring) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.WorkOutline,
+                                            contentDescription = stringResource(Res.string.hiring_entry),
+                                        )
+                                    }
                                 },
                                 onSettingsClick = onNavigateToSettings,
                             )

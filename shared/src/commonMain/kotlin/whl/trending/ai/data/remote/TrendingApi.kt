@@ -8,6 +8,7 @@ import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.model.ChatModelsResponse
 import whl.trending.ai.data.model.DigestResponse
+import whl.trending.ai.data.model.HiringResponse
 import whl.trending.ai.data.model.MeResponse
 import whl.trending.ai.data.model.ProRefreshResponse
 import whl.trending.ai.data.model.PicksResponse
@@ -109,6 +110,22 @@ open class TrendingApi {
             parameter("lang", lang)
         }
         return response.body<DigestResponse>()
+    }
+
+    /**
+     * HN 招聘月度专题。[month] 传 null 取最新一期。
+     * 无数据时服务端返回 404，但响应体仍是合法 JSON（success=false, code=hiring_round_unavailable）
+     * ——client 未开 expectSuccess，直接解析 body，与 fetchDigest 同款处理。
+     *
+     * **不要给这个请求加任何表示用户所在地的参数**（country / region / 设备 locale）：
+     * 服务端刻意不接受，产品上也不做「替用户判断能不能投」。见 HiringResponse 的注释。
+     */
+    open suspend fun fetchHiring(month: String?, lang: String): HiringResponse {
+        val response = client.get("$baseHost/api/hiring") {
+            if (month != null) parameter("month", month)
+            parameter("lang", lang)
+        }
+        return response.body<HiringResponse>()
     }
 
     open suspend fun fetchReadme(owner: String, repo: String): ReadmeResponse {
