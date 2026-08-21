@@ -360,7 +360,7 @@
     <string name="account_link_failed">关联 GitHub 失败，请重试</string>
     <string name="hiring_title">谁在招人</string>
     <string name="hiring_meta">%1$d 个岗位 · 数据截至 %2$s</string>
-    <string name="hiring_source_note">来源：Hacker News「Ask HN: Who is hiring?」· 每张卡片均可跳回原帖</string>
+    <string name="hiring_source_link">来源：Hacker News「Ask HN: Who is hiring?」</string>
     <string name="hiring_filter_region">地域</string>
     <string name="hiring_filter_remote">工作方式</string>
     <string name="hiring_filter_employment">类型</string>

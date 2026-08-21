@@ -23,6 +23,8 @@ sealed interface HiringUiState {
     data class Ready(
         val month: String,
         val months: List<String>,
+        /** 当月主帖 id（HN story）。来源行据此跳原帖；后端没给就降级成不可点的纯文字标注 */
+        val storyId: String,
         val lastSyncedAt: String?,
         /** 当期全部岗位，未经筛选。筛选是纯展示层的事，不动这份数据 */
         val all: List<HiringPost>,
@@ -125,6 +127,7 @@ class HiringViewModel(
                     r.success -> HiringUiState.Ready(
                         month = r.month,
                         months = r.months,
+                        storyId = r.storyId,
                         lastSyncedAt = r.lastSyncedAt,
                         all = r.posts,
                         // 进入页面一律无筛选态，且不记忆偏好——不替用户预设任何条件

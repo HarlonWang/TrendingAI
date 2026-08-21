@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.hiring
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,7 +69,7 @@ import trendingai.shared.generated.resources.hiring_type_full_time
 import trendingai.shared.generated.resources.hiring_type_internship
 import trendingai.shared.generated.resources.hiring_type_part_time
 import trendingai.shared.generated.resources.hiring_meta
-import trendingai.shared.generated.resources.hiring_source_note
+import trendingai.shared.generated.resources.hiring_source_link
 import trendingai.shared.generated.resources.hiring_title
 import trendingai.shared.generated.resources.hiring_unavailable_desc
 import trendingai.shared.generated.resources.hiring_unavailable_title
@@ -82,6 +85,9 @@ import whl.trending.ai.ui.common.BetaBadge
 import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.ai.ui.digest.hnDiscussionUrl
+import whl.trending.ai.ui.home.HackerNewsOrange
+import whl.trending.ai.ui.home.hackerNewsIcon
 
 private const val SOURCE = "hn_whoishiring"
 
@@ -193,7 +199,11 @@ private fun ReadyContent(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // 期次信息条：数据截止日期 + 来源标注。月更内容会陈化，呈现上必须诚实
+        // 来源标注 + 当月主帖入口（需求 §4.8）。放首屏第一行而不是列表末尾——
+        // 233 条之后的标注等于没标，且卡片只能逐条跳楼层，整月主帖本来无处可去
+        item { SourceHeader(s.storyId, onOpenUrl) }
+
+        // 期次信息条：数据截止日期。月更内容会陈化，呈现上必须诚实
         item {
             Text(
                 text = stringResource(
@@ -238,17 +248,6 @@ private fun ReadyContent(
 
         items(list, key = { it.externalId }) { post ->
             JobCard(post, onOpenUrl)
-        }
-
-        // 来源标注（需求 §4.8）：入口虽长在 HN 标题栏上，页内仍须明确标注
-        item {
-            Text(
-                text = stringResource(Res.string.hiring_source_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-            )
         }
     }
 }
@@ -368,6 +367,56 @@ private fun JobCard(post: HiringPost, onOpenUrl: (String) -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * 来源行：HN 图标 + 「来源：Hacker News『Ask HN: Who is hiring?』」，点击打开当月主帖。
+ *
+ * 兼两件事——合规上的来源标注，和整月主帖的唯一入口（卡片上的「查看原帖」跳的是单条楼层）。
+ * [storyId] 为空时降级为不可点的纯文字：标注不能因为缺个 id 就消失，但也不做假的可点感。
+ */
+@Composable
+private fun SourceHeader(storyId: String, onOpenUrl: (String) -> Unit) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val clickable = storyId.isNotBlank()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (clickable) {
+                    Modifier.clickable {
+                        track(AppEvent.ContentAction(ContentActionKind.HN_COMMENTS, SOURCE, storyId))
+                        onOpenUrl(hnDiscussionUrl(storyId))
+                    }
+                } else {
+                    Modifier
+                }
+            )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Icon(
+            imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = Color.Unspecified,
+        )
+        Text(
+            text = stringResource(Res.string.hiring_source_link),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (clickable) {
+            Icon(
+                imageVector = Icons.Outlined.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
