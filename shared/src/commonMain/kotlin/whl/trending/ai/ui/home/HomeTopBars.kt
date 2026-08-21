@@ -3,6 +3,7 @@ package whl.trending.ai.ui.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -210,6 +211,13 @@ internal fun FeedTopBar(
     title: String,
     navigationIcon: @Composable () -> Unit,
     onSettingsClick: () -> Unit,
+    /**
+     * 设置按钮**之前**的额外动作，默认空。
+     * 只有 HN 分支会传（招聘月度专题入口）——刻意开在 FeedTopBar 这一层而不是
+     * TrendingTopAppBar / SettingsAction 那种公共件里，否则 GitHub/PH/Me 页面
+     * 会跟着长出一个无意义的按钮。
+     */
+    leadingActions: @Composable RowScope.() -> Unit = {},
 ) {
     TrendingTopAppBar(
         title = {
@@ -223,6 +231,9 @@ internal fun FeedTopBar(
                 navigationIcon()
             }
         },
-        actions = { SettingsAction(onClick = onSettingsClick) },
+        actions = {
+            leadingActions()
+            SettingsAction(onClick = onSettingsClick)
+        },
     )
 }

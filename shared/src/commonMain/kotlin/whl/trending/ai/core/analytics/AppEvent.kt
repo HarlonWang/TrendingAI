@@ -217,6 +217,7 @@ enum class Screen {
     FAVORITES,
     FEEDBACK,
     GITHUB_PROFILE,
+    HIRING,
     HOME,
     /** 邮箱登录浮层。不在 backStack 里，是唯一手写上报的页面（L2 登录漏斗的分母）。 */
     LOGIN,
@@ -238,9 +239,24 @@ enum class NotificationStep { SHOWN, SKIPPED, RELINKED }
 
 enum class TabSwitchMethod { TAP, DOUBLE_TAP_REFRESH }
 
-enum class ContentActionKind { FAVORITE, UNFAVORITE, SHARE_TO_AI, STAR, READ_ORIGINAL, HN_COMMENTS }
+/**
+ * [APPLY] 是招聘专题的投递外链，与 [READ_ORIGINAL]（跳原帖）并列。
+ * 加的是**属性值**不是新事件——词汇表的核心原则是「维度进 props，不进事件名」，
+ * 21 个 settings_* 就是反面教材。
+ */
+enum class ContentActionKind { FAVORITE, UNFAVORITE, SHARE_TO_AI, STAR, READ_ORIGINAL, HN_COMMENTS, APPLY }
 
-enum class ListFilter { NEW_ONLY, SOURCE, PERIOD, LANGUAGE, HISTORY_DATE, HISTORY_BATCH }
+/**
+ * 后四项服务于招聘月度专题：[REGION_SCOPE] / [REMOTE_KIND] / [EMPLOYMENT] 是筛选维度，
+ * [MONTH] 是往期切换（本质也是把列表筛到某一期）。同样是加属性值而非新事件。
+ *
+ * 注意 [REGION_SCOPE] 的值域含 `unspecified`（原文没提地域）与 `worldwide`（原文明确不限），
+ * **两者是不同的事实，读数时不要合并**。
+ */
+enum class ListFilter {
+    NEW_ONLY, SOURCE, PERIOD, LANGUAGE, HISTORY_DATE, HISTORY_BATCH,
+    REGION_SCOPE, REMOTE_KIND, EMPLOYMENT, MONTH,
+}
 
 enum class AiKind { CHAT, DETAIL_SUMMARY, RESEARCH }
 
