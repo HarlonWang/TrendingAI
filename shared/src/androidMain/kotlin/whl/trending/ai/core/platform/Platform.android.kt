@@ -125,12 +125,14 @@ actual fun shareText(text: String) {
 }
 
 actual fun getAppVersion(): String {
-    val context = AndroidContextHolder.get() ?: return "1.0.0"
+    // context 在 TrendingApplication.onCreate 就绪，早于任何调用点；真取不到只能是初始化时序被改坏，
+    // 此时宁可上报哨兵值也不要编造一个合法版本号（见 [UNKNOWN_APP_VERSION]）
+    val context = AndroidContextHolder.get() ?: return UNKNOWN_APP_VERSION
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        packageInfo.versionName ?: "1.0.0"
+        packageInfo.versionName ?: UNKNOWN_APP_VERSION
     } catch (e: Exception) {
-        "1.0.0"
+        UNKNOWN_APP_VERSION
     }
 }
 

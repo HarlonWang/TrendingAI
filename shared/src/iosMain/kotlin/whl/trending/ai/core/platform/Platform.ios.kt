@@ -76,7 +76,7 @@ actual fun shareText(text: String) {
 
 actual fun getAppVersion(): String {
     val info = NSBundle.mainBundle.infoDictionary
-    return info?.get("CFBundleShortVersionString") as? String ?: "1.0.0"
+    return info?.get("CFBundleShortVersionString") as? String ?: UNKNOWN_APP_VERSION
 }
 
 actual fun isIosPlatform(): Boolean = true

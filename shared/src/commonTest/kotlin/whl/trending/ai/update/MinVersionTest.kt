@@ -1,5 +1,6 @@
 package whl.trending.ai.update
 
+import whl.trending.ai.core.platform.UNKNOWN_APP_VERSION
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -75,5 +76,15 @@ class MinVersionTest {
     fun malformed_current_version_is_not_blocked() {
         assertFalse(isVersionBlocked(current = "", minVersion = "0.15.0"))
         assertFalse(isVersionBlocked(current = "unknown", minVersion = "0.15.0"))
+    }
+
+    /**
+     * 把 [UNKNOWN_APP_VERSION] 与「解析失败即不拦截」绑死。上面那条测的是字面量 "unknown"，
+     * 而 getAppVersion() 的兜底值一度是可解析的 "1.0.0"——真走到兜底时用户会被锁死在强更页，
+     * 恰是本函数 KDoc 承诺要防的事。兜底值哪天再被改回数值形态，这条会红。
+     */
+    @Test
+    fun app_version_fallback_never_blocks() {
+        assertFalse(isVersionBlocked(current = UNKNOWN_APP_VERSION, minVersion = "99.0.0"))
     }
 }

@@ -59,6 +59,17 @@ fun openDownloadUrl(url: String) {
 /** 调起系统分享面板，把纯文本交给用户选择的目标 App（AI App / 笔记 / IM 等）。 */
 expect fun shareText(text: String)
 
+/**
+ * 取不到版本号时的兜底值。**必须是解析不出数值段的字符串**：
+ *
+ * - [whl.trending.ai.update.isVersionBlocked] 靠「任一侧解析失败即不拦截」保证兜底值不会把用户
+ *   锁死在强更页，而旧兜底值 `"1.0.0"` 能被正常解析——`isVersionBlocked("1.0.0", "1.4.0")` 返回 true，
+ *   那条保护一直形同虚设；
+ * - 它同时是个显眼的哨兵：埋点里看到 `unknown` 就知道取版本号的时机不对，而 `"1.0.0"` 会伪装成
+ *   真实版本悄悄污染版本切片（2026-08-21 首发当天就这么发生了，见父仓 eventbase-首发读数-2026-08-22.md）。
+ */
+const val UNKNOWN_APP_VERSION: String = "unknown"
+
 expect fun getAppVersion(): String
 
 /** 是否支持切换桌面图标（Android activity-alias 机制）。false 时外观页隐藏「应用图标」整块。 */
