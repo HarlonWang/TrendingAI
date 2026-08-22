@@ -1,0 +1,1 @@
+• Fixed several known issues and improved stability

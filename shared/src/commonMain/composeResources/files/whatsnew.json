@@ -1,9 +1,9 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "zh": [
-    "新增「谁在招人」：Hacker News 每月招聘帖，整理成可筛选的岗位卡片"
+    "修复若干已知问题，提升稳定性"
   ],
   "en": [
-    "New \"Who is Hiring\": Hacker News' monthly hiring thread, organized into filterable job cards"
+    "Fixed several known issues and improved stability"
   ]
 }
