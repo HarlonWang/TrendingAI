@@ -41,7 +41,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        whl.trending.ai.core.platform.AndroidContextHolder.initialize(this)
+        // AndroidContextHolder 已在 TrendingApplication.onCreate 初始化——必须早于埋点配置读
+        // getAppVersion()，别在这里重复调用（两处初始化正是版本号那次事故后收敛掉的）
 
         // loginbase 全部接线（建单例 + OAuth 发起注入），幂等，重建安全——见其文档
         installLoginbase(this)
