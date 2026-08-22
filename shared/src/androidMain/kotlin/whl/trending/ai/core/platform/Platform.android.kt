@@ -132,6 +132,9 @@ actual fun getAppVersion(): String {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: UNKNOWN_APP_VERSION
     } catch (e: Exception) {
+        // 与本文件其余 catch 一致地留一行：包管理器异常与「context 还没就绪」都会落到
+        // 同一个哨兵值上，不记就分不出是哪一种
+        Log.w("Platform", "getAppVersion failed", e)
         UNKNOWN_APP_VERSION
     }
 }
