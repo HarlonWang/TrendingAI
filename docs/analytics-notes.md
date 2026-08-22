@@ -434,7 +434,15 @@ Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量）�
 按撞上的概率排序，都不影响主口径，但改埋点时别忘了它们存在：
 
 1. **通知 receiver 的 `Eventbase.flush()` 耗时无上限**。旧实现是 `delay(2_000)`，有确定上界；`flush()` 会循环发到队列清空，单请求超时 20 秒。正常情况队列只有几条、一发就完，但队列积压时可能超过 `goAsync()` 的时限被系统掐掉。真撞上的表现是通知那批事件延到下次启动才上报，不会丢。
-2. **登录面板上旋转屏幕会多出一条 `auth_started`**。`MainActivity` 没声明 `configChanges`，旋转重建 composition，`LaunchedEffect(pendingSource)` 重跑并 `startFlow()` 覆盖掉原来的 flow_id。算登录转化率时分母会略微虚高。
+2. ~~**登录面板上旋转屏幕会多出一条 `auth_started`**~~ → **2026-08-22 已修**（1.4.0 首日读数暴露，见父仓 `eventbase-首发读数-2026-08-22.md`）。
+
+   **「低频/边缘」这个判断是错的，代价在首日就付了**：触发条件不止旋转——**从自定义标签页回跳会重建 Activity**（实测 backStack 回落首页），那是每个 GitHub 登录用户的必经路径。生产上 12 条 `auth_started(method=sheet)` 全是成对的，`auth_finished` 也成对，登录完成率算出 **200%**（4 条 github started 对 8 条 finished）。
+
+   两处一起修：`auth_started` 与 `startFlow()` 移到 `LoginSheetBus.request()`（发起即上报，与 composition 生命周期解耦）；OAuth 结果加 `OAuthResultGuard`，挡住重建期间新旧 composition 双订阅造成的重复消费。**判据是「同一次投递」而非「同一个 flow」**——同一条 flow 内用户可以真的取消两次，按 flow 去重会吞掉第二次（有回归测试锁定）。
+
+   `screen_viewed(login)` 的重复**保留不改**：重建后用户确实重新看到了这个页面，与路由源「不做跨重建去重」的口径一致。
+
+   教训：判定一个埋点缺陷是否「边缘」，要看**触发它的用户路径**，不是看代码分支有多窄。旋转确实少见，但重建不只由旋转引起。
 3. **research 重试可能留下落单的 `ai_requested`**。`retryResearch` 在入口无条件上报，而 `launchResearchPolling` 遇到同一条消息的轮询仍 active 会直接 return。要撞上得在协程结束的瞬间点重试——所有设 error 的路径都会先 `finishResearch()` 摘掉 job，窗口极窄。
 4. **`AccountLink` 的 `not_initialized` 分支拿到的是残留 flow_id**。该分支在 `startFlow()` 之前 return，`currentFlow()` 取到的是上一次登录/绑定留下的。生产上几乎不可达（`globalAuthManager` 初始化后恒为 `LoginbaseAuthManager`）。
 5. **「管理订阅」被协程取消时不补 `subscription_action`**。事件记在 `try` 块内 `openUrl` 之后，取消时 `finally` 只复位点击态。

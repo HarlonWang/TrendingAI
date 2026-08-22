@@ -22,6 +22,7 @@ import wang.harlon.loginbase.OAuthOutcome
 import whl.trending.ai.auth.GithubAuthResult
 import whl.trending.ai.auth.LoginSheetBus
 import whl.trending.ai.auth.LoginbaseAuthManager
+import whl.trending.ai.auth.OAuthResultGuard
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.analytics.AppEvent
@@ -60,6 +61,10 @@ fun OAuthOutcomeHost() {
 
     LaunchedEffect(client) {
         client?.oauthResults?.collect { outcome ->
+            // 从自定义标签页回跳会重建 Activity，新旧 composition 短暂并存、同时订阅这条
+            // replay=1 的流，同一次投递会被消费两次（埋点成对、一次性读取跑两遍）。
+            // 闸由 launchGithubSignIn / launchGithubLink 在发起时重置，见 [OAuthResultGuard]
+            if (!OAuthResultGuard.shouldHandle(outcome)) return@collect
             // 无论哪一种结果都在这里消费掉：漏一种，它就会滞留到下一次面板打开
             client.consumeOauthResult()
             when (outcome) {

@@ -83,14 +83,8 @@ fun LoginSheetHost() {
     val source by LoginSheetBus.request.collectAsState()
     val pendingSource = source ?: return
 
-    // 开一条 flow 串起本次登录：GitHub 那条要跳浏览器、进程可能已被杀，
-    // 回跳后的终态事件靠落盘的 flow_id 才接得回同一个漏斗
-    LaunchedEffect(pendingSource) {
-        track(
-            AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "sheet", source = pendingSource),
-            Eventbase.startFlow(),
-        )
-    }
+    // auth_started 与 flow 的开启都在 LoginSheetBus.request()——**不要挪回这里**：
+    // 挂在 composition 上的副作用会随 Activity 重建重跑，把漏斗分母做成两倍
 
     LoginSheet(
         source = pendingSource,

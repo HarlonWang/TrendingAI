@@ -7,11 +7,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import wang.harlon.eventbase.Eventbase
 import wang.harlon.loginbase.AuthClient
 import wang.harlon.loginbase.AuthState as LoginbaseState
 import wang.harlon.loginbase.RefreshOutcome
 import wang.harlon.loginbase.TokenStore
 import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.AuthAction
 import whl.trending.ai.core.analytics.setAnalyticsUser
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
@@ -174,10 +176,25 @@ object LoginSheetBus {
     private val _githubResult = MutableStateFlow<GithubAuthResult?>(null)
     val githubResult: StateFlow<GithubAuthResult?> = _githubResult
 
+    /**
+     * 发起一次登录请求。**漏斗起点 `auth_started` 记在这里**，而不是面板的 composition 里：
+     * 面板挂 `LaunchedEffect`，Activity 一重建（旋转、从自定义标签页回跳）就重跑，一次登录
+     * 被记成两条 started、各带一个新 flow_id——1.4.0 首日 12 条 sheet started 全是成对的，
+     * 登录完成率因此翻倍。事件语义本就是「用户发起了登录」，那正是本方法被调用的时刻。
+     *
+     * 同一入口的重复请求直接忽略：面板已经开着，再记一条 started 只会虚高分母。
+     */
     fun request(source: String) {
+        if (_request.value == source) return
         // 每次新请求都从干净状态开始：上一轮遗留的失败若留着，面板一打开就顶着红字
         _githubResult.value = null
         _request.value = source
+        // 开一条 flow 串起本次登录：GitHub 那条要跳浏览器、进程可能已被杀，
+        // 回跳后的终态事件靠落盘的 flow_id 才接得回同一个漏斗
+        track(
+            AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "sheet", source = source),
+            Eventbase.startFlow(),
+        )
     }
 
     fun reportGithubResult(result: GithubAuthResult) {
