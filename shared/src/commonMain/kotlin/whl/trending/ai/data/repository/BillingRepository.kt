@@ -15,14 +15,12 @@ import whl.trending.ai.data.remote.TrendingApi
 /**
  * Paddle 订阅数据源（后端 `src/api/billing.js`）。
  *
- * 三个需要身份的接口一律经 [AuthManager.authorized] 发出——access token 只有 1 小时寿命，
- * 各自 `getAccessToken()` 后直接打请求会把「刷新一下就能继续」的 401 摆成购买失败。
- * 这在下单路径上尤其要命：用户以为付款出了问题，实际只是 token 过期。
+ * 三个需要身份的接口一律经 [AuthManager.authorized] 发出——否则 access token 过期时，
+ * 「刷新一下就能继续」的 401 会被摆成购买失败，用户以为付款出了问题。
  *
  * 失败一律返回 null 而不抛：调用方是 UI，需要的是「展示降级形态」而不是崩溃路径。
  * **但 CancellationException 必须原样抛出**——它是 Exception 的子类，被 catch 吞掉就等于
- * 把「协程被取消」当成「请求失败」处理，结构化并发失效、调用方的取消再也传不下去
- * （与 ProfileViewModel 里的既有做法一致）。
+ * 把「协程被取消」当成「请求失败」处理，结构化并发失效、调用方的取消再也传不下去。
  * 失败原因经埋点上报（`billing_*_failed`，带 HTTP 状态码），漏斗断在哪一步查得到。
  *
  * open + 构造注入：与 [UserRepository] 同一套手动 DI，测试以子类替身注入。
@@ -44,10 +42,7 @@ open class BillingRepository(
         null
     }
 
-    /**
-     * 创建交易并拿收银台地址。[plan] 必填 `"annual"` / `"monthly"`，无默认值——
-     * 双档并列、不预设倾向是定价拍板的一部分，「主推年付」只体现在 UI 的默认选中与角标。
-     */
+    /** 创建交易并拿收银台地址。[plan] 取 `"annual"` / `"monthly"`，约束见 [TrendingApi.createCheckout]。 */
     open suspend fun createCheckout(plan: String): CheckoutResponse? = try {
         authManager().authorized { api.createCheckout(it, plan) }
     } catch (e: Exception) {

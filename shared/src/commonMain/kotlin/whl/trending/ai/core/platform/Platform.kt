@@ -24,10 +24,9 @@ expect fun openInSystemBrowser(url: String)
 expect fun openInCustomTab(url: String): Boolean
 
 /**
- * 外链统一出口。全 app 打开外链一律调这个，优先级：
- * ① 非 http/https（mailto/tel 等）→ 交系统处理；
- * ② 用户开启「用 Custom Tab」且成功调起 → [openInCustomTab]；
- * ③ 传了 [onInAppFallback] → 应用内 WebView；否则 → [openInSystemBrowser]。
+ * 外链统一出口。全 app 打开外链一律调这个。优先级：非 http/https（mailto/tel 等）交系统
+ * 处理；用户开启「用 Custom Tab」且成功调起走 [openInCustomTab]；传了 [onInAppFallback]
+ * 走应用内 WebView；否则 [openInSystemBrowser]。
  *
  * @param onInAppFallback 应用内 WebView 兜底。组合树外（如更新弹窗）拿不到导航栈时传 null，退化为系统浏览器。
  */
@@ -61,12 +60,10 @@ expect fun shareText(text: String)
 
 /**
  * 取不到版本号时的兜底值。**必须是解析不出数值段的字符串**：
- *
- * - [whl.trending.ai.update.isVersionBlocked] 靠「任一侧解析失败即不拦截」保证兜底值不会把用户
- *   锁死在强更页，而旧兜底值 `"1.0.0"` 能被正常解析——`isVersionBlocked("1.0.0", "1.4.0")` 返回 true，
- *   那条保护一直形同虚设；
- * - 它同时是个显眼的哨兵：埋点里看到 `unknown` 就知道取版本号的时机不对，而 `"1.0.0"` 会伪装成
- *   真实版本悄悄污染版本切片（2026-08-21 首发当天就这么发生了，见父仓 eventbase-首发读数-2026-08-22.md）。
+ * [whl.trending.ai.update.isVersionBlocked] 靠「任一侧解析失败即不拦截」保证兜底值不会把
+ * 用户锁死在强更页，可被正常解析的兜底值（如 `"1.0.0"`）会让这条保护形同虚设；
+ * 它同时是个显眼的哨兵——埋点里看到 `unknown` 就知道取版本号的时机不对，
+ * 而一个像真的版本号会悄悄污染版本切片。
  */
 const val UNKNOWN_APP_VERSION: String = "unknown"
 

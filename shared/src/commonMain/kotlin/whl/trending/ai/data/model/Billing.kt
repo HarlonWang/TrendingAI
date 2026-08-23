@@ -3,19 +3,11 @@ package whl.trending.ai.data.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Paddle 订阅相关的响应模型（后端 `src/api/billing.js`，设计见调研 D.3 / D.9）。
- *
- * 三个接口都只认 loginbase 轨的 token——身份键是 `app_users.user_id`，Logto 轨一律 401。
- * 这不是兼容遗漏而是后端刻意收窄的契约，客户端不必为 Logto 轨做任何回退。
- */
+/** Paddle 订阅相关的响应模型（后端 `src/api/billing.js`）。身份键是 `app_users.user_id`。 */
 
 /**
  * POST /api/billing/checkout 响应：Paddle 收银台地址。
- *
- * [url] 指向官网 `/pay?_ptxn=txn_xxx`，**必须在应用外打开**（Custom Tab / 系统浏览器）：
- * 收银台要走 Paddle 自己的三方支付跳转与风控，内置 WebView 里跑不通；且外跳才能保证
- * 用户付完回来必然触发 ON_RESUME，[whl.trending.ai.core.ProCheckout] 的回流对账才有机会执行。
+ * [url] 必须在应用外打开，约束与理由见 [whl.trending.ai.core.ProCheckout.openCheckout]。
  */
 @Serializable
 data class CheckoutResponse(
@@ -55,7 +47,7 @@ data class PaddleSubscription(
 /**
  * POST /api/billing/portal 响应：Paddle 客户门户深链。
  *
- * 会话是临时的、不可缓存，每次进管理页现取（后端 D.3.5）。取消订阅界面完全由 Paddle 承担，
+ * 会话是临时的、不可缓存，每次进管理页现取。取消订阅界面完全由 Paddle 承担，
  * 客户端不自建——这同时满足支付宝/微信「便捷解约」的合规要求。
  */
 @Serializable
@@ -69,9 +61,8 @@ data class PortalResponse(
  * GET /api/billing/prices 响应：按访客所在地算好的两档价格。
  *
  * 客户端**不做任何价格计算与格式化**——[formatted] 是 Paddle 按该地区规则格式化好的
- * 字符串（中国区「199.00 元」、美国「$39.00」），[savingsPercent] 也由服务端算。
- * 这与额度文案「不写死数字」是同一条原则：价格是后端说了算的东西，写进客户端就会说谎，
- * 而且中国区是真·本地价（¥199）不是 $39 的汇率换算，客户端根本猜不出来。
+ * 字符串（含货币符号与本地价），[savingsPercent] 也由服务端算。价格是后端说了算的东西，
+ * 写进客户端就会说谎。
  *
  * 三个字段**全部可空**：Paddle 超时或未配置时后端回 `{}`，此时订阅页降级为不报价，
  * 只留「查看价格」入口把定价交给收银台呈现——购买链路不依赖价格展示。

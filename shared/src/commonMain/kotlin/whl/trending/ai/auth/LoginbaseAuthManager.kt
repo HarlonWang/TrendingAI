@@ -27,11 +27,9 @@ private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
 private const val MAX_CAUSE_DEPTH = 8
 
 /**
- * loginbase 实现（2026-08 替代已删除的 LogtoAuthManager）。
- *
- * 与 Logto 时代最大的结构差别：**登录 UI 在 App 内**（邮箱验证码全程原生，不再跳
- * 托管页），所以 [signIn] 不再"拉起外部流程"，而是发布一个请求让根部的
- * LoginSheetHost 弹登录面板。GitHub 授权仍需外部浏览器（OAuth 授权页不能内嵌）。
+ * loginbase 实现。登录 UI 在 App 内（邮箱验证码全程原生），[signIn] 不拉起外部流程，
+ * 而是发布一个请求让根部的 LoginSheetHost 弹登录面板；GitHub 授权仍需外部浏览器
+ * （OAuth 授权页不能内嵌）。
  *
  * 单例性：`AuthClient` 的单飞刷新锁是实例字段，必须全进程一个实例——由
  * [initLoginbaseAuth] 保证，别在别处 new。
@@ -66,7 +64,7 @@ class LoginbaseAuthManager(
         }
     }
 
-    /** 请求登录：弹 App 内登录面板（邮箱输入 + GitHub 按钮同屏，不再有方式选择器） */
+    /** 请求登录：弹 App 内登录面板（邮箱输入 + GitHub 按钮同屏） */
     override fun signIn(source: String) {
         LoginSheetBus.request(source)
     }
@@ -134,10 +132,7 @@ class LoginbaseAuthManager(
     }
 
     /**
-     * 登出的本地清理（沿用 Logto 时代同一套清理集合）。
-     *
-     * **注意**：升级过渡期的"静默登出"**不得**复用这条路径——它会清收藏同步状态，
-     * 而 C 方案的硬要求是升级导致的未登录态不能清任何用户数据（见 plan.md 第 4 步）。
+     * 登出的本地清理。仅限用户主动登出：它会清收藏等用户数据，被动的会话失效不得复用。
      */
     private fun clearLocalUserState() {
         globalSettingsManager.setUserAvatarUrl(null)
@@ -179,8 +174,8 @@ object LoginSheetBus {
     /**
      * 发起一次登录请求。**漏斗起点 `auth_started` 记在这里**，而不是面板的 composition 里：
      * 面板挂 `LaunchedEffect`，Activity 一重建（旋转、从自定义标签页回跳）就重跑，一次登录
-     * 被记成两条 started、各带一个新 flow_id——1.4.0 首日 12 条 sheet started 全是成对的，
-     * 登录完成率因此翻倍。事件语义本就是「用户发起了登录」，那正是本方法被调用的时刻。
+     * 会被记成两条 started、各带一个新 flow_id。事件语义本就是「用户发起了登录」，
+     * 那正是本方法被调用的时刻。
      *
      * 同一入口的重复请求直接忽略：面板已经开着，再记一条 started 只会虚高分母。
      */

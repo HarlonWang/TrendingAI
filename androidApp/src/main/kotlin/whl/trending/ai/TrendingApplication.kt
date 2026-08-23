@@ -9,8 +9,8 @@ import whl.trending.ai.core.platform.ChannelHolder
 
 /**
  * app_opened / app_backgrounded 与会话时长全部由 eventbase-kt 自己算——它挂
- * ProcessLifecycleOwner，无界面的后台唤醒进程不会造出空会话（1.2.0 把日活推高 55%
- * 的那个坑，口径已定死在库里）。这里只负责初始化。
+ * ProcessLifecycleOwner，无界面的后台唤醒进程不会造出空会话，口径已定死在库里。
+ * 这里只负责初始化。
  */
 class TrendingApplication : Application() {
 
@@ -20,8 +20,7 @@ class TrendingApplication : Application() {
         ChannelHolder.set(BuildConfig.CHANNEL)
         // 同理，且同样是「漏了就静默错」：getAppVersion() 拿不到 context 就只能回落。
         // 这里是全 app 唯一的初始化点，且必须早于下面读 getAppVersion() 的埋点配置——
-        // 1.4.0 首日它还在 MainActivity（晚于本方法），全部事件的 app_version 因此恒为
-        // 当时的兜底值 1.0.0，版本切片直接作废（读数见父仓 eventbase-首发读数-2026-08-22.md）
+        // 晚了（如放在 MainActivity）全部事件的 app_version 都会静默变成兜底值，版本切片作废
         AndroidContextHolder.initialize(this)
         Eventbase.init(context = this, config = analyticsConfig(isDebug = BuildConfig.DEBUG))
     }

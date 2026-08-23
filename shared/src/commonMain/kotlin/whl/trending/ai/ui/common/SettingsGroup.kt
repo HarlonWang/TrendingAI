@@ -33,10 +33,6 @@ import androidx.compose.ui.unit.dp
  * 每项一张独立卡片，组内首尾大圆角、中间小圆角、彼此留 4dp 缝，视觉上是一整块被切开的圆角面板。
  * 分组之间靠圆角与 `primary` 色小标题分隔，**不用分隔线**。
  *
- * 用 slot API 而不是「一个 SettingsItem 数据类 + 遍历渲染」：参照仓库那套数据类会随特例不断长字段
- * （Echo 11 个、Rhythm 12 个），而我们的设置项恰恰有 iOS 分支、Switch、DropdownMenu 锚点这些不规则
- * 需求——slot 下它们就是调用处的普通 Compose 代码，组件不必知情。
- *
  * `content` 不是 `@Composable`：它先把每项收集成 lambda（同 `LazyListScope.item` 的做法），
  * 收集完才知道总数，进而给每项分配正确的圆角。方法名叫 `settingsItem` 而不是 `item`，
  * 是为了在 `LazyColumn.item { }` 内部调用时不与 `LazyListScope.item` 撞名。

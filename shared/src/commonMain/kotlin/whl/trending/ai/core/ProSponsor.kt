@@ -31,16 +31,10 @@ object ProSponsor {
     /**
      * upsell 点击（upsell_clicked）的 source 词汇，集中在此避免各入口自造事件名
      * 导致漏斗无法统一查询。新增赞助入口时在这里登记。
-     *
-     * 2026-07-26 起 chat 侧不再做 Pro 引导（配额触顶卡与模型锁定弹窗都降为纯提示），
-     * 曝光埋点 pro_upsell_shown 随之下线——赞助入口只剩设置页与账户页，均为用户主动点击，
-     * 「曝光」无从定义。历史 shown 事件的数据边界止于此日期，做漏斗时注意。
      */
     const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
     const val SOURCE_SETTINGS_DONATE = "settings_donate"
-    // SOURCE_ACCOUNT 已随账户页「升级 Pro」改指 Paddle 订阅页而移除（见 ProCheckout）。
-    // 现存两个入口都是「支持项目」语义而非买权益，继续走 Sponsors 是对的：
-    // 语言支持请求后的赞助引导、关于页的捐赠。
+    // 这两个入口都是「支持项目」语义而非买权益，走 Sponsors 而非 Paddle 订阅（见 ProCheckout）。
 
     /**
      * 打开赞助页统一入口。[upsellSource] 非空时上报统一的 upsell_clicked——各入口
@@ -65,15 +59,8 @@ object ProSponsor {
     }
 
     /**
-     * 「去过赞助页回来，账户却没关联 GitHub」信号。
-     *
-     * 注意这是**启发式**：合取的两个信号里，「去过赞助页」来自本地时间戳（[shouldReconcile]）
-     * 只能表达意图，「没关联 GitHub」才是后端事实——后端没有 github_user_id 可查，
-     * 无从知道这人到底付没付钱。因此宿主文案不得断言「赞助已收到」，详见 SponsorLinkHost。
-     *
-     * 这是 2026-07-29 首位赞助者被拦 48 分钟的修复面：当时对账返回的是裸 `pro:false`，
-     * 与「查证后确实没赞助」完全同形，客户端无从区分只能沉默，用户付完钱又连撞 8 次配额墙，
-     * 最后自己摸到账户页的「关联 GitHub」才解套。后端现在会带 `reason` 把两者分开。
+     * 「去过赞助页回来，账户却没关联 GitHub」信号。判定是**启发式**的：「去过赞助页」
+     * 只是本地意图时间戳（[shouldReconcile]），宿主文案不得断言「赞助已收到」，详见 SponsorLinkHost。
      *
      * 走总线 + 根部宿主（`SponsorLinkHost`）而不是在对账处直接弹窗：对账发生在 Activity 的
      * ON_RESUME，那里没有 composition，且用户从浏览器回来时可能停在任意页面。
@@ -92,8 +79,8 @@ object ProSponsor {
     }
 
     /**
-     * 对账结果该触发什么动作。抽成纯函数是因为它是 P0-4 的判定核心，
-     * 而调用点在 Activity 的 ON_RESUME 里、测不到。
+     * 对账结果该触发什么动作。抽成纯函数：调用点在 Activity 的 ON_RESUME 里、测不到，
+     * 判定本身必须能单独跑。
      *
      * [STAY_SILENT] 覆盖 `not_sponsor`（确实没赞助）、`lookup_failed`（查不到）与请求失败：
      * 这三种都**不该向用户断言任何事**，尤其查询失败时说「你没赞助」会把真赞助者气走。

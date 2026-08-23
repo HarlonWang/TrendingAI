@@ -14,7 +14,7 @@ data class FeedResponse(
 @Serializable
 data class FeedMetadata(
     val source: String = "",
-    /** 本源最近一次抓取时刻（UTC）。0.24.0 之前的后端不返回，缺省空串表示无从得知。 */
+    /** 本源最近一次抓取时刻（UTC）；缺省空串表示无从得知。 */
     @SerialName("captured_at")
     val capturedAt: String = ""
 )

@@ -15,18 +15,12 @@ import whl.trending.ai.data.local.globalSettingsManager
 /**
  * 关联 GitHub 身份的入口。
  *
- * 背景：Pro 权益以 GitHub 数字 ID 为唯一键发放（后端 `pro_entitlements`），邮箱登录用户
- * 的账号没有 `github_user_id`，直接去赞助会「钱付了但权益对不上」——2026-07-29 首位
- * 赞助者就被这个坑拦了 48 分钟（见 SponsorLinkHost）。此处引导他们先把 GitHub 关联到
- * 当前账号，关联后 Pro 判定与 GitHub 能力全部自动打通。
+ * Pro 权益以 GitHub 数字 ID 为唯一键发放（后端 `pro_entitlements`），邮箱登录用户
+ * 的账号没有 `github_user_id`，直接去赞助会「钱付了但权益对不上」。此处引导他们先把
+ * GitHub 关联到当前账号，关联后 Pro 判定与 GitHub 能力全部自动打通。
  *
- * **2026-08-13 改造**：从 Logto 账户中心的预构建页换成 loginbase 的 link 流程
- * （`POST /oauth/github/link/start` → 系统浏览器授权 → deepLink 回跳）。
- *
- * 随之删掉的是一整套为 Logto 网页流程做的补偿：那个关联页是 web 单任务流程、
- * **回跳不了 App**，所以过去只能靠「用户手动返回 → ON_RESUME → 30 分钟窗口内刷新身份」
- * 去猜是否关联成功。现在 callback 直接 302 回 deepLink，结果是确定的——`?linked=github`
- * 或 `?error=<reason>`，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 消费。
+ * 流程：`POST /oauth/github/link/start` → 系统浏览器授权 → deepLink 回跳，结果是确定的
+ * ——`?linked=github` 或 `?error=<reason>`，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 消费。
  */
 object AccountLink {
 
@@ -45,9 +39,6 @@ object AccountLink {
      * **落盘而非内存变量**：绑定要跳出去开系统浏览器，授权期间进程随时可能被系统回收，
      * 回跳时是冷启动。内存标记那时已经没了，绑定失败会被误判成登录失败、提示分派到错误
      * 的地方。落盘后跨进程存活。
-     *
-     * 更彻底的解法在服务端——link 分支的错误回跳自带 `mode=link`，客户端就完全不需要这个
-     * 标记；已记入 loginbase 的协议待办，等那边落地后这里可以删掉。
      */
     private var pendingSource: String?
         get() = globalSettingsManager.accountLinkSource()
@@ -72,12 +63,7 @@ object AccountLink {
         }
     }
 
-    /**
-     * 发起阶段失败的信号，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 弹提示。
-     *
-     * 没有它的话调用方拿到的是一个「返回失败原因」的返回值——而两个入口都只是把它丢掉，
-     * 用户点了「关联 GitHub」什么也不会发生。
-     */
+    /** 发起阶段失败的信号，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 弹提示。 */
     private val _launchFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val launchFailed: SharedFlow<Unit> = _launchFailed
 

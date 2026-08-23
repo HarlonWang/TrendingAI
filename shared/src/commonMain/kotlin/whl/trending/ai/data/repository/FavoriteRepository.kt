@@ -14,14 +14,14 @@ import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.remote.TrendingApi
 
 /**
- * 收藏云同步引擎（设计稿 2026-07-24-favorites-cloud-sync，B 档：本地缓存 + 幂等 CRUD + 打开时全量拉取覆盖）。
+ * 收藏云同步引擎：本地缓存 + 幂等 CRUD + 打开时全量拉取覆盖。
  *
  * - 本地缓存（[SettingsManager] 的 favorites）始终是 UI 即时真源，离线可用；网络在后台跑、失败不打断。
  * - 收藏/取消：先落本地即时生效，登录且已完成首次合并后入队一条 op 并后台 flush；失败留队列下次重试。
  * - [sync]（登录/启动触发）：首次登录把全部本地收藏 batch 上云合并，之后 flush 增量 op；随后全量 GET 覆盖本地。
  * - 删除跨设备传播靠「打开时全量 GET 覆盖」完成，无墓碑。
  *
- * UI 只需把原先直调 SettingsManager 的收藏读写改为调本类；收藏列表流仍读 SettingsManager.favorites 不变。
+ * 收藏列表流仍读 SettingsManager.favorites。
  */
 class FavoriteRepository(
     private val settings: SettingsManager,
@@ -29,10 +29,8 @@ class FavoriteRepository(
     /**
      * 带鉴权执行一次请求（见 [whl.trending.ai.auth.AuthManager.authorized]）：
      * 拿 token 交给 block，**401 时刷新后重试一次**；无会话则不执行 block。
-     *
-     * 从「取 token 再自己发请求」换成这个形态，是因为收藏同步常发生在 App 启动或
-     * 回前台的瞬间——access token 恰好过期时，旧写法会静默失败、把用户的收藏留在
-     * 待推队列里，下次再撞。
+     * 收藏同步常发生在 App 启动或回前台的瞬间——access token 恰好过期时，
+     * 没有重试就会静默失败、把用户的收藏留在待推队列里，下次再撞。
      */
     private val authorized: suspend (suspend (String) -> Unit) -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -90,7 +88,7 @@ class FavoriteRepository(
      * 必须用它、而非在 composable 的 LaunchedEffect 里直接 await [sync]——否则用户登录后
      * 一旦离开当前屏（如登录发生在账户页、随即进"我的收藏"），composition 退出会取消协程
      * （LeftCompositionCancellationException），[sync] 半途中断、[replaceFavorites] 不执行，
-     * 云端收藏拉不下来。token 由自身 [tokenProvider] 取，调用方无需持有。
+     * 云端收藏拉不下来。token 由 [authorized] 自取，调用方无需持有。
      */
     fun requestSync() {
         scope.launch {
@@ -100,18 +98,11 @@ class FavoriteRepository(
 
     /**
      * 登出清理：清空本地收藏 + 同步状态，避免账号间串味。由登出流程调用。
-     *
-     * 取舍：会一并清掉未 flush 成功的 pending op。极端场景「离线新增一条收藏（flush 失败留队列）
-     * → 立即登出」下，该条既未上云也被清除 → 丢失。不在此做 best-effort flush，因为：
-     * (1) 该场景前提是离线，flush 同样发不出去；(2) 登出流程开头已吊销凭证，此刻已无有效 token。
-     * 唯一能不丢的做法是「登出不清、留到下次登录再传」，但那会重开要防的账号串味。
-     * 详见设计稿 §6.2。
+     * 未 flush 成功的 pending op 一并清掉、不做 best-effort flush——登出时凭证已吊销，也发不出去。
      */
     fun onSignOut() {
         settings.clearFavoritesOnSignOut()
     }
-
-    // ---- 内部 ----
 
     /**
      * 仅在已完成首次合并后才入队增量 op；否则本地改动由首次 batch 合并整体覆盖。

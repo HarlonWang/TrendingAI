@@ -17,16 +17,11 @@ import whl.trending.ai.data.local.globalSettingsManager
 /**
  * Paddle 收银台外跳 + 权益回流对账。
  *
- * 与 [ProSponsor] 是一对姊妹通道，骨架相同（外跳 → 记意图时间戳 → 回前台对账），
- * 但**刻意不合并**，因为三处语义不同：
- *   - 对账端点不同：Sponsors 走 `/api/pro/refresh`（后端要烧维护者 PAT 配额核对赞助），
- *     Paddle 走 `/api/me`（纯 D1 查询，几乎零成本）；
- *   - 失败语义不同：Sponsors 有「付了钱但没关联 GitHub」这一支要主动引导，
- *     Paddle 的身份键就是 `app_users.user_id`，**不存在对不上号的情形**；
- *   - 时序不同：Sponsors 的权益在赞助那一刻就已成立，Paddle 的权益要等 webhook 落库，
- *     用户完全可能比 webhook 先回到 App——所以这里必须**轮询**而不是查一次。
- *
- * 合并只会让其中一条的策略绑架另一条。
+ * 与 [ProSponsor] 骨架相同（外跳 → 记意图时间戳 → 回前台对账）但**刻意不合并**：
+ * 对账端点不同（Sponsors 走 `/api/pro/refresh` 要烧维护者 PAT 配额，Paddle 走 `/api/me`
+ * 纯 D1 查询）；失败语义不同（Sponsors 有「付了钱但没关联 GitHub」要主动引导，Paddle 的
+ * 身份键就是 `app_users.user_id`，不存在对不上号的情形）；时序不同（Paddle 权益要等
+ * webhook 落库，用户可能比 webhook 先回 App，所以这里必须**轮询**而不是查一次）。
  */
 object ProCheckout {
 
@@ -34,9 +29,8 @@ object ProCheckout {
     private val RECONCILE_WINDOW = 30.minutes
 
     /**
-     * 回前台后的重查节奏。第一次立即查（多数情况 webhook 早已落库），
-     * 之后 3s / 8s / 15s 递增——合计约 26 秒、4 次请求，覆盖 webhook 的常见延迟；
-     * 再久就不该让用户对着转圈等，交给窗口内的下一次回前台。
+     * 回前台后的重查节奏：第一次立即查（多数情况 webhook 早已落库），之后递增退避覆盖
+     * webhook 的常见延迟；再久就不该让用户对着转圈等，交给窗口内的下一次回前台。
      */
     private val RETRY_DELAYS = listOf(0.seconds, 3.seconds, 8.seconds, 15.seconds)
 
@@ -77,10 +71,9 @@ object ProCheckout {
      * 副作用全部交给调用方（见 [markActivated]），与 [ProSponsor.reconcileAction] 同一范式：
      * 判定核心的调用点在 Activity 的 ON_RESUME 里、测不到，所以判定本身必须能单独跑。
      *
-     * [refreshPro] 传入「刷新一次并返回是否已是 Pro」的动作（实际调用方给的是
-     * `UserRepository.syncMe` + 本地 isPro 读取），本对象不碰网络层。
+     * [refreshPro] 传入「刷新一次并返回是否已是 Pro」的动作，本对象不碰网络层。
      *
-     * 返回第几次尝试拿到了权益（1 起，供埋点区分「秒到」与「等了 26 秒」），
+     * 返回第几次尝试拿到了权益（1 起，供埋点区分到账快慢），
      * 未到账返回 null——此时**窗口刻意不清**，用户下次回前台会再试一轮，
      * 且不弹任何提示：付款可能只是没走完，此刻断言任何事都可能是错的。
      */

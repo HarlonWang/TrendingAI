@@ -184,7 +184,7 @@ open class TrendingApi {
 
     /**
      * [fresh] = true 时带 `?fresh=1`：让服务端绕过 userinfo claims 的 10 分钟缓存重新拉取。
-     * 仅用于刚在账户中心关联身份后——否则读到的仍是关联前的 identities，UI 会以为没绑上。
+     * 仅用于刚关联身份后——否则读到的仍是关联前的 identities，UI 会以为没绑上。
      */
     open suspend fun fetchMe(accessToken: String, fresh: Boolean = false): MeResponse {
         val response = client.get("$baseHost/api/me${if (fresh) "?fresh=1" else ""}") {
@@ -226,11 +226,9 @@ open class TrendingApi {
     }
 
     /**
-     * 创建 Paddle 交易，返回收银台地址（Paddle 订阅，后端 `api/billing.js`）。
+     * 创建 Paddle 交易，返回收银台地址（后端 `api/billing.js`）。
      *
-     * [plan] 必填且无默认值——双档并列、不预设倾向是 2026-08-15 的定价拍板，
-     * 「主推年付」只体现在 UI 的默认选中与角标上，协议层不替用户选。
-     * 仅 loginbase 轨 token 可用，Logto 轨会收到 401（后端刻意收窄的契约）。
+     * [plan] 必填且无默认值——协议层不替用户预选档位，「主推年付」只体现在 UI 的默认选中与角标上。
      */
     open suspend fun createCheckout(accessToken: String, plan: String): CheckoutResponse {
         val response = client.post("$baseHost/api/billing/checkout") {
@@ -299,8 +297,7 @@ open class TrendingApi {
         return response.body<ChatModelsResponse>()
     }
 
-    // ---- 收藏云同步（设计稿 2026-07-24-favorites-cloud-sync，B 档）----
-    // 全部经 Bearer 鉴权；调用方（FavoriteRepository）负责传入 externalId 已回填的条目。
+    // 收藏接口全部经 Bearer 鉴权；调用方（FavoriteRepository）负责传入 externalId 已回填的条目。
 
     /** 拉取该用户全量收藏。非 2xx 抛 [ApiException]，供调用方在失败时保留本地、不覆盖。 */
     open suspend fun fetchFavorites(accessToken: String): List<FavoriteItem> {

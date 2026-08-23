@@ -9,10 +9,9 @@ import kotlinx.serialization.Serializable
  * 存的同样是它（见 ModelPicker 的 onClick）。两种来路刻意不做区分：都表示「默认是谁由服务端
  * 说了算」，于是后端换默认模型时它们一起跟着走。
  *
- * 客户端刻意不再硬编码默认模型 id。后端 `resolveModel(tier, undefined)` 两档都回落
- * `DEFAULT_MODEL`，所以「不传」就是「跟随后端默认」——后端换默认模型不必跟着发版。
- * 曾经硬编码是有代价的：免费档被后端白名单拍平看不出问题，Pro 档 `isOfferedModel` 放行，
- * 于是未手选的 Pro 用户实际被钉在客户端常量上，后端调档对存量版本无效（0aac277）。
+ * 客户端刻意不硬编码默认模型 id。后端 `resolveModel(tier, undefined)` 两档都回落
+ * `DEFAULT_MODEL`，所以「不传」就是「跟随后端默认」——后端换默认模型不必跟着发版；
+ * 硬编码会把未手选的 Pro 用户钉在客户端常量上，后端调档对存量版本无效。
  */
 const val FOLLOW_SERVER_DEFAULT = ""
 

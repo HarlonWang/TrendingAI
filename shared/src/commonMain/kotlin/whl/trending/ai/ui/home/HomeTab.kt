@@ -38,10 +38,7 @@ enum class HomeTab {
     companion object {
         /**
          * 解析持久化的 tab name；非法值（枚举改名、脏数据）回落 [Home]。
-         *
-         * 存量值一律靠这条回落收口，不写迁移代码——回落目标就是第一个 tab 本身，落点不变：
-         * 0.23 之前的 "GitHub"/"HackerNews"/"ProductHunt"（现为 Home 的三个子源）、
-         * 0.23 的 "Trending"（本 tab 改名前的旧名），全都落到 Home。"Picks"/"Me" 名字没变，正常匹配。
+         * 存量旧值（历史版本的 tab 名）对应的落点恰好都是 Home，靠这条回落即可收口，不写迁移代码。
          */
         fun fromNameOrDefault(name: String): HomeTab =
             entries.firstOrNull { it.name == name } ?: Home
