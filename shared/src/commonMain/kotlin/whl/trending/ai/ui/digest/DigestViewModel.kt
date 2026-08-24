@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.SettingsManager

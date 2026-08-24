@@ -50,6 +50,7 @@ import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.chat.globalChatScreen
+import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.trackScreenView
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.repository.ChatModelsProvider
@@ -61,7 +62,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.IconButton
 import trendingai.shared.generated.resources.hiring_entry
-import whl.trending.ai.ui.digest.DigestPage
 import whl.trending.ai.ui.feed.FeedScreen
 import whl.trending.ai.ui.feed.FeedViewModel
 import whl.trending.ai.ui.picks.PicksScreen

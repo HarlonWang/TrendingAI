@@ -1,4 +1,4 @@
-package whl.trending.ai.ui.digest
+package whl.trending.ai.core
 
 import whl.trending.ai.data.model.FavoriteItem
 import kotlin.test.Test

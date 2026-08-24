@@ -61,7 +61,9 @@ import trendingai.shared.generated.resources.picks_no_data
 import trendingai.shared.generated.resources.picks_section_debut
 import trendingai.shared.generated.resources.picks_section_deep_dive
 import trendingai.shared.generated.resources.retry
+import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.toDigestPage
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.NewsletterActionKind
@@ -77,8 +79,6 @@ import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.SourceMetaFooter
 import whl.trending.ai.ui.common.aiShareText
 import whl.trending.ai.ui.common.generatedStampText
-import whl.trending.ai.ui.digest.DigestPage
-import whl.trending.ai.ui.digest.toDigestPage
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
