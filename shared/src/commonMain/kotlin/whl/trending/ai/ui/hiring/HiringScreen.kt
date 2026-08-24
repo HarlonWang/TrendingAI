@@ -75,6 +75,7 @@ import trendingai.shared.generated.resources.hiring_unavailable_desc
 import trendingai.shared.generated.resources.hiring_unavailable_title
 import trendingai.shared.generated.resources.hiring_view_post
 import trendingai.shared.generated.resources.retry
+import whl.trending.ai.core.hnDiscussionUrl
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.ListFilter
@@ -85,7 +86,6 @@ import whl.trending.ai.ui.common.BetaBadge
 import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
-import whl.trending.ai.ui.digest.hnDiscussionUrl
 import whl.trending.ai.ui.home.HackerNewsOrange
 import whl.trending.ai.ui.home.hackerNewsIcon
 

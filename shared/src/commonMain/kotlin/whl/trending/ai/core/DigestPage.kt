@@ -1,6 +1,5 @@
-package whl.trending.ai.ui.digest
+package whl.trending.ai.core
 
-import whl.trending.ai.core.Route
 import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem

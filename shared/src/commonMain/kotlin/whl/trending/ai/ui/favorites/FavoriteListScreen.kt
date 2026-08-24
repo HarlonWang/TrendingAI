@@ -51,13 +51,13 @@ import trendingai.shared.generated.resources.favorites_empty
 import trendingai.shared.generated.resources.favorites_empty_hint
 import trendingai.shared.generated.resources.favorites_removed
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.core.DigestPage
+import whl.trending.ai.core.toDigestPage
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
-import whl.trending.ai.ui.digest.DigestPage
-import whl.trending.ai.ui.digest.toDigestPage
 import whl.trending.ai.ui.picks.SourceTag
 
 @OptIn(ExperimentalMaterial3Api::class)

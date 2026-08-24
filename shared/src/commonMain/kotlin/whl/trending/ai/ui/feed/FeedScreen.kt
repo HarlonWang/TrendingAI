@@ -53,6 +53,8 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.no_data
 import trendingai.shared.generated.resources.retry
+import whl.trending.ai.core.DigestPage
+import whl.trending.ai.core.toDigestPage
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
@@ -68,8 +70,6 @@ import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.SourceMetaFooter
 import whl.trending.ai.ui.common.aiShareText
 import whl.trending.ai.ui.common.updateStampText
-import whl.trending.ai.ui.digest.DigestPage
-import whl.trending.ai.ui.digest.toDigestPage
 
 /** 左侧标识位尺寸，序号圆圈和产品 logo 共用；请求像素按 3x 屏取整，避免高密度屏上发虚。 */
 private val LEADING_SIZE = 28.dp

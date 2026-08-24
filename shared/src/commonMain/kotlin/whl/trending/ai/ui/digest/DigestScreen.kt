@@ -55,6 +55,7 @@ import trendingai.shared.generated.resources.digest_read_original
 import trendingai.shared.generated.resources.digest_unavailable_desc
 import trendingai.shared.generated.resources.digest_unavailable_title
 import trendingai.shared.generated.resources.retry
+import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
