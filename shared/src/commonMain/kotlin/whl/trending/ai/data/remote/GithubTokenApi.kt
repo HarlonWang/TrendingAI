@@ -29,16 +29,7 @@ data class GithubTokenResponse(
  * 凭据是 loginbase 的 access token（后端 requireAuth 的 loginbase 轨道）。
  */
 open class GithubTokenApi {
-    private val client = HttpClient {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 15000
-            connectTimeoutMillis = 15000
-            socketTimeoutMillis = 15000
-        }
-    }
+    private val client get() = sharedClient
 
     /**
      * 取 GitHub access token。404 = 该用户没存 token（纯邮箱账号、或撤销过授权），
@@ -58,5 +49,19 @@ open class GithubTokenApi {
 
     private companion object {
         const val API_BASE = "https://api.trendingai.cn"
+
+        // 进程级共享、从不 close，理由见 TrendingApi.sharedClient
+        val sharedClient by lazy {
+            HttpClient {
+                install(ContentNegotiation) {
+                    json(Json { ignoreUnknownKeys = true })
+                }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = 15000
+                    connectTimeoutMillis = 15000
+                    socketTimeoutMillis = 15000
+                }
+            }
+        }
     }
 }

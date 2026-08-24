@@ -44,22 +44,29 @@ import kotlinx.serialization.json.put
 class ApiException(val statusCode: Int, message: String) : Exception(message)
 
 open class TrendingApi {
-    private val client = HttpClient {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                coerceInputValues = true
-            })
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 15000
-            connectTimeoutMillis = 15000
-            socketTimeoutMillis = 15000
-        }
-        install(DefaultRequest) {
-            header(HttpHeaders.UserAgent, getUserAgent())
+    private companion object {
+        // 进程级共享、从不 close：每实例自建 client 会随导航反复付连接池/线程池与冷连接 TLS 的成本
+        val sharedClient by lazy {
+            HttpClient {
+                install(ContentNegotiation) {
+                    json(Json {
+                        ignoreUnknownKeys = true
+                        coerceInputValues = true
+                    })
+                }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = 15000
+                    connectTimeoutMillis = 15000
+                    socketTimeoutMillis = 15000
+                }
+                install(DefaultRequest) {
+                    header(HttpHeaders.UserAgent, getUserAgent())
+                }
+            }
         }
     }
+
+    private val client get() = sharedClient
 
     private val baseHost = "https://api.trendingai.cn"
 
