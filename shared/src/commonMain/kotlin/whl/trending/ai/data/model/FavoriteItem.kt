@@ -11,24 +11,19 @@ data class FavoriteItem(
     val description: String? = null,
     val summary: String? = null,
     val savedAt: Long = 0L,
-    /**
-     * 点击收藏时实际打开的地址（如 PH 条目的原帖链接）。
-     * 与 [url] 一致或未记录时为 null；旧版本存的收藏均为 null，回退用 [url] 打开。
-     */
+    /** 点击收藏时实际打开的地址；与 [url] 一致或未记录（旧版本收藏）时为 null，回退用 [url]。 */
     val openUrl: String? = null,
     /**
-     * 与后端 contents 表对齐的内容标识（github=owner/repo、hn=story id、ph=node id），
-     * 云同步以 (source, externalId) 为唯一键。存量本地收藏 / 无法解析时为空串，
-     * 首次同步由 [resolvedExternalId] best-effort 回填（github 从 url 反解，其余用 url 派生）。
+     * 与后端 contents 表对齐的内容标识，云同步以 (source, externalId) 为唯一键。
+     * 存量收藏 / 无法解析时为空串，由 [resolvedExternalId] best-effort 回填。
      */
     val externalId: String = ""
 ) {
-    /** 打开收藏时应使用的地址 */
     val targetUrl: String get() = openUrl?.takeIf { it.isNotBlank() } ?: url
 
     /**
-     * 云同步用的 external_id：优先用已有值；缺失时 best-effort 回填——
-     * github 从 url 反解 owner/repo，其余源用 url 派生合成键（`url:<url>`，仅保证用户内唯一，不与 contents join）。
+     * 云同步用的 external_id：缺失时 github 从 url 反解 owner/repo，
+     * 其余源用 `url:<url>` 合成键（仅保证用户内唯一，不与 contents join）。
      */
     val resolvedExternalId: String
         get() = externalId.ifBlank {

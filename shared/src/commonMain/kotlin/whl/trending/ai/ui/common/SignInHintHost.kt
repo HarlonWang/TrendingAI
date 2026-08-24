@@ -26,12 +26,8 @@ import whl.trending.ai.auth.globalAuthManager
  * 连通性类（NETWORK/TIMEOUT）引导检查网络；会话失效类（SESSION_EXPIRED）引导重新登录：
  * 本地会话已被清除，确认键直接拉起登录面板。
  *
- * 时钟偏差类（CLOCK_SKEW）随 Logto 退场一并删除——它是 id_token 本地校验的产物，
- * loginbase 客户端不解析 JWT，这一整类问题在客户端不复存在（见 [SignInFailureReason]）。
- *
- * 用弹窗（独立窗口）而非 Snackbar：① 不占/不盖 app 布局；② 登录失败值得被明确看见，Snackbar 易被错过。
- * 放在 App 根部（与 WhatsNewHost 平级），是因为登录有 4 个触发点（首页头像 / Trending·Readme 的
- * star Snackbar / chat 配额卡），OAuth 走系统浏览器后可能回到任意页面；根部宿主对所有入口统一生效。
+ * 用弹窗而非 Snackbar：登录失败值得被明确看见，Snackbar 易被错过。
+ * 放在 App 根部：登录触发点多且 OAuth 回来可能停在任意页面，根部宿主对所有入口统一生效。
  */
 @Composable
 fun SignInHintHost() {

@@ -239,7 +239,7 @@ private fun RepoList(
             PullToRefreshDefaults.LoadingIndicator(
                 state = state,
                 isRefreshing = uiState.isRefreshing,
-                // 列表铺满全高后指示器的出生点在头部背后，要往下让（静止截图看不出，拉一下才见）
+                // 指示器出生点在悬浮头部背后，要往下让（拉一下才见）
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = LocalContentTopPadding.current),

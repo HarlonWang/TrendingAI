@@ -13,24 +13,12 @@ import whl.trending.ai.core.analytics.NotificationStep
 import whl.trending.ai.core.analytics.track
 
 /**
- * 每日 Picks 通知的闹钟调度器。触发时机走 AlarmManager 而非 WorkManager（JobScheduler）：
- * 延迟作业的执行受待机分桶配额支配，激进 ROM 把 app 压进 RARE 桶后"到点"常被推迟到
- * 充电空闲窗、甚至用户打开 app 才放行——7/8 月埋点实测收到过通知的 55 台设备里仅 1 台
- * 基本准点。闹钟不走作业配额，是"用户可感知定时事件"的正确通道；准点性对比见
- * shown 埋点的 delay_min 属性。
- *
- * 分档：有精确闹钟权限（Android 11- 恒有；12/13 安装即默认授予）用
- * setExactAndAllowWhileIdle 准点触发；无权限（14+ 新装默认拒绝）降级
- * setAndAllowWhileIdle，接受晚几分钟——内容摘要不是闹钟，不为整点触发引入
- * 权限管理面（设置页入口/权限变更广播/同槽换档曾实现过，评估后删除，见 PR #91）。
- * 降级不选 setWindow：一夜未动的设备 9:30 常还在 Doze 里，setWindow 要等
- * 维护窗口，前者 Doze 中也放行，最差情况更好。
- *
- * 闹钟不像 WorkManager 会持久化：重启会连闹钟一起清掉，改时间/换时区则让 RTC 锚定的
- * 绝对时刻落在错误的墙钟上。这三种情况**不再**监听系统广播重排（静态 filter 会绕开
- * 开关唤醒全体用户的进程，理由见模块 manifest），统一由 [reconcile] 冷启动对账恢复：
- * 改时间/换时区最多让当天那一次偏，之后 [scheduleNextDay] 按新时区自愈；重启则要等
- * 用户下次打开 app。真空期由 `daily_picks_alarm_relinked` 埋点量化。
+ * 每日 Picks 通知的闹钟调度器。走 AlarmManager 而非 WorkManager：延迟作业受待机分桶
+ * 配额支配，激进 ROM 会把「到点」推迟到充电空闲窗甚至打开 app 才放行；闹钟不走作业配额。
+ * 有精确闹钟权限用 setExactAndAllowWhileIdle；无权限降级 setAndAllowWhileIdle 接受晚几分钟，
+ * 不选 setWindow——后者要等维护窗口，前者 Doze 中也放行。
+ * 闹钟不持久化（重启即清、改时间/换时区会错位），且**不**监听系统广播重排
+ * （静态 filter 会绕开开关唤醒全体用户进程，理由见模块 manifest），统一由 [reconcile] 冷启动对账恢复。
  */
 object DailyPicksAlarmScheduler {
 
@@ -48,15 +36,11 @@ object DailyPicksAlarmScheduler {
     internal const val MAX_ATTEMPTS = 5
     internal const val RETRY_INTERVAL_MS = 30L * 60 * 1000
 
-    /**
-     * 对账宽限：排期时刻已过但在此宽限内不算断链——不精确档本就可能晚点，
-     * 此刻抢着重排反而把今天瞄到明天、白丢一次。
-     */
+    /** 对账宽限：不精确档本就可能晚点，此刻抢着重排反而把今天瞄到明天、白丢一次。 */
     private const val RECONCILE_SLACK_MS = 6L * 60 * 60 * 1000
 
-    // 本地 09:30：服务端 Picks 于 UTC 01:00（北京 09:00）开始生成、Newsletter 排在
-    // UTC 01:15 发送。取 09:30 让 UTC+8 主力用户一次命中新内容，避免每天固定吃一轮
-    // 重试；其他时区靠重试梯子兜底
+    // 本地 09:30：Picks 于北京 09:00 开始生成，取 09:30 让 UTC+8 主力用户一次命中新内容，
+    // 其他时区靠重试梯子兜底
     private const val NOTIFY_HOUR = 9
     private const val NOTIFY_MINUTE = 30
 
@@ -87,14 +71,9 @@ object DailyPicksAlarmScheduler {
 
     /**
      * 冷启动对账：链断了才补排，不打断进行中的排期或重试梯子。断链判据取并集——
-     * PendingIntent 不存在（force-stop / 重启会连闹钟一起清掉），或记录的触发时刻
-     * 已过期超出宽限（进程死在终局重排之前）。PI 存在不代表闹钟还挂着（响过之后
-     * PI 仍在注册表里），所以两个信号缺一不可。
-     *
-     * 系统广播重排移除后这里是断链的唯一恢复点，因此每次补排都上报
-     * `daily_picks_alarm_relinked`：`reason` 区分断链信号，`overdue_min` 是距记录
-     * 触发时刻的分钟数（负值＝闹钟本还没到点就没了，重启清空的典型形态）。这两个
-     * 维度用来回答「不要 BOOT_COMPLETED 到底漏了多少」，攒够数据再决定是否加回。
+     * PI 不存在，或记录的触发时刻过期超出宽限；PI 存在不代表闹钟还挂着（响过之后
+     * PI 仍在注册表里），两个信号缺一不可。这里是断链的唯一恢复点，每次补排上报
+     * `daily_picks_alarm_relinked` 量化「不要 BOOT_COMPLETED 到底漏了多少」。
      */
     fun reconcile(context: Context) {
         val piMissing = pendingIntent(context, PendingIntent.FLAG_NO_CREATE) == null
@@ -205,9 +184,8 @@ internal object DailyPicksPrefs {
     }
 
     /**
-     * open 埋点去重：同一天的通知只上报一次（最近任务重建会重投原始 intent，
-     * `removeExtra` 只挡得住配置变更；8 月数据里 open 因此有重放污染）。
-     * 无 date 的旧版通知（升级期一次性存量）按旧行为放行。
+     * open 埋点去重：同一天的通知只上报一次——最近任务重建会重投原始 intent，
+     * `removeExtra` 只挡得住配置变更。无 date 的旧版通知按旧行为放行。
      */
     fun consumeOpen(context: Context, date: String?): Boolean {
         if (date.isNullOrBlank()) return true

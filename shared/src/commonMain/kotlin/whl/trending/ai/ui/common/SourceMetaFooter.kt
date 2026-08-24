@@ -23,20 +23,10 @@ import trendingai.shared.generated.resources.update_stamp_yesterday
 import whl.trending.ai.core.DateTimeUtils
 
 /**
- * 列表尾部的抓取时机行：一行居中淡灰字「今天 08:17 更新 · 上午批次」。
- *
- * 放在列表**最后一项之后**，并顺带承担列表底部的视觉收尾——三源的 `contentPadding`
- * 底部只让出悬浮底栏的高度、不留呼吸量，末条卡片本来是贴着底栏边缘的。
- *
- * 曾试过挪到列表头部（0.24.0 开发期）：那里它与列表项同宽同边距、文字起点又跟序号圆点
- * 对齐而非标题对齐，读起来像「第 0 条内容」；改居中后仍嫌重，最终回到尾部。代价是
- * 「数据新不新」的答案在最后一屏，取舍上认了——这行是**背景信息**，不是主动要传达的话。
- *
- * **纯展示、不可点**：口径说明的入口只留「我的 › 关于 › 数据来源与更新」一处。列表内
- * 挂一个隐形可点区（没有图标提示）只会带来误触，不会带来发现。
- *
- * 时间为什么不用相对时间（"3 小时前"）：三源都是日更节律，相对时间会把正常节律说成
- * 「13 小时前更新」，读起来像陈旧数据。详见 [DateTimeUtils.updateStamp] 的说明。
+ * 列表尾部的抓取时机行：一行居中淡灰字「今天 08:17 更新 · 上午批次」，
+ * 顺带承担列表底部的视觉收尾（三源 contentPadding 底部不留呼吸量）。
+ * **纯展示、不可点**：口径说明入口只留「我的 › 关于 › 数据来源与更新」一处。
+ * 不用相对时间的理由见 [DateTimeUtils.updateStamp]。
  */
 @Composable
 fun SourceMetaFooter(
@@ -53,11 +43,8 @@ fun SourceMetaFooter(
 }
 
 /**
- * 抓取时刻的整句文案：「今天 08:17 更新」。[capturedAt] 为 UTC 串，无从得知时返回 null，
- * 由调用方据此整行不渲染——宁可不显示，也不显示一个假的时间。
- *
- * 不做 `remember`：里面只是几个 Instant 算术，而缓存住 now 会让用户从后台切回来时看到
- * 过期的「今天」判断（`capturedAt` 没变、key 也不会变，缓存永不失效）。
+ * 抓取时刻的整句文案：「今天 08:17 更新」。解析不出返回 null，调用方整行不渲染。
+ * 不做 `remember`：缓存住 now 会让从后台切回的用户看到过期的「今天」判断，且 key 永不失效。
  */
 @Composable
 fun updateStampText(capturedAt: String): String? {
@@ -96,12 +83,7 @@ private fun stampTimePart(utcString: String): String? {
 fun withBatchSuffix(text: String, batch: String): String =
     stringResource(Res.string.meta_batch, text, batchLabel(batch))
 
-/**
- * 历史快照态的整句：「2026-08-09 · 上午批次快照」。
- *
- * 快照看的是过去某一批，说「今天 08:17 更新」是错的——这一支直接用选中的日期，不走
- * [updateStampText]。
- */
+/** 历史快照态的整句：「2026-08-09 · 上午批次快照」。直接用选中的日期，不走 [updateStampText]。 */
 @Composable
 fun snapshotStampText(date: String, batch: String): String =
     stringResource(Res.string.meta_snapshot, date, batchLabel(batch))

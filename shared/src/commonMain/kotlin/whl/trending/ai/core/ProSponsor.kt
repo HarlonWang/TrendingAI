@@ -13,33 +13,21 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.ProRefreshResponse
 
 /**
- * Pro 赞助页统一入口 + 权益对账窗口。
- *
- * 打开赞助页必须经 [openSponsorPage]：它记录赞助意图时间戳，并强制在应用外打开
- * （Custom Tab / 系统浏览器，不传 onInAppFallback）——一是 GitHub Sponsors 依赖
- * 浏览器的 github.com 登录态，内置 WebView 里没有；二是保证返回 app 时必然触发
- * ON_RESUME，前台对账（MainActivity.onResume → refreshPro）才有机会执行。
- *
- * 对账只在 [shouldReconcile] 的窗口内进行：没打开过赞助页的用户回前台零后端请求
- * （服务端 pro-refresh 每次都要消耗 GitHub PAT 配额，不能拿 resume 当轮询点）。
+ * Pro 赞助页统一入口 + 权益对账窗口。打开赞助页必须经 [openSponsorPage]：记意图时间戳，
+ * 并强制应用外打开——Sponsors 依赖浏览器的 github.com 登录态，且外跳才保证回来触发 ON_RESUME 对账。
+ * 对账只在 [shouldReconcile] 窗口内：pro-refresh 烧 GitHub PAT 配额，不能拿 resume 当轮询点。
  */
 object ProSponsor {
 
-    /** 打开赞助页后允许对账的时间窗口：覆盖赞助生效的「几分钟内」延迟，又给请求数封顶。 */
+    /** 打开赞助页后允许对账的时间窗口：覆盖赞助生效延迟，又给请求数封顶。 */
     private val RECONCILE_WINDOW = 30.minutes
 
-    /**
-     * upsell 点击（upsell_clicked）的 source 词汇，集中在此避免各入口自造事件名
-     * 导致漏斗无法统一查询。新增赞助入口时在这里登记。
-     */
+    /** upsell_clicked 的 source 词汇，新增赞助入口在此登记，别在调用点自造。 */
     const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
     const val SOURCE_SETTINGS_DONATE = "settings_donate"
-    // 这两个入口都是「支持项目」语义而非买权益，走 Sponsors 而非 Paddle 订阅（见 ProCheckout）。
+    // 这两个入口是「支持项目」语义而非买权益，走 Sponsors 而非 Paddle 订阅。
 
-    /**
-     * 打开赞助页统一入口。[upsellSource] 非空时上报统一的 upsell_clicked——各入口
-     * 不再自报点击事件，clicked→refreshPro 漏斗才能按同一词汇横向对比。
-     */
+    /** 打开赞助页统一入口。[upsellSource] 非空时上报 upsell_clicked，各入口不再自报点击事件。 */
     fun openSponsorPage(upsellSource: String? = null) {
         upsellSource?.let { track(AppEvent.UpsellClicked(source = it, target = UpsellTarget.SPONSOR)) }
         globalSettingsManager.setSponsorPageOpenedAt(Clock.System.now().toEpochMilliseconds())
@@ -59,12 +47,9 @@ object ProSponsor {
     }
 
     /**
-     * 「去过赞助页回来，账户却没关联 GitHub」信号。判定是**启发式**的：「去过赞助页」
-     * 只是本地意图时间戳（[shouldReconcile]），宿主文案不得断言「赞助已收到」，详见 SponsorLinkHost。
-     *
-     * 走总线 + 根部宿主（`SponsorLinkHost`）而不是在对账处直接弹窗：对账发生在 Activity 的
-     * ON_RESUME，那里没有 composition，且用户从浏览器回来时可能停在任意页面。
-     * replay=1 保证「宿主尚未订阅就已 emit」不丢事件，代价是必须 [consumeNeedsGithubLink]。
+     * 「去过赞助页回来，账户却没关联 GitHub」信号。判定是启发式的，宿主文案不得断言「赞助已收到」。
+     * ON_RESUME 处无 composition，走总线由根部宿主 `SponsorLinkHost` 弹；
+     * replay=1 防宿主未订阅丢事件，代价是必须 [consumeNeedsGithubLink]。
      */
     private val _needsGithubLink = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
     val needsGithubLink: SharedFlow<Unit> = _needsGithubLink.asSharedFlow()
@@ -73,17 +58,15 @@ object ProSponsor {
         _needsGithubLink.tryEmit(Unit)
     }
 
-    /** 收到即消费：清 replay 缓存，避免重建的收集者（旋转/主题切换）把同一次事件再弹一遍。 */
+    /** 收到即消费：清 replay 缓存，避免重建的收集者把同一次事件再弹一遍。 */
     fun consumeNeedsGithubLink() {
         _needsGithubLink.resetReplayCache()
     }
 
     /**
-     * 对账结果该触发什么动作。抽成纯函数：调用点在 Activity 的 ON_RESUME 里、测不到，
-     * 判定本身必须能单独跑。
-     *
-     * [STAY_SILENT] 覆盖 `not_sponsor`（确实没赞助）、`lookup_failed`（查不到）与请求失败：
-     * 这三种都**不该向用户断言任何事**，尤其查询失败时说「你没赞助」会把真赞助者气走。
+     * 对账结果该触发什么动作。抽成纯函数：调用点在 ON_RESUME 里测不到，判定必须能单独跑。
+     * [STAY_SILENT] 覆盖没赞助/查不到/请求失败三种——都不该向用户断言任何事，
+     * 查询失败时说「你没赞助」会把真赞助者气走。
      */
     fun reconcileAction(result: ProRefreshResponse?): ReconcileAction = when {
         result?.pro == true -> ReconcileAction.MARK_PRO

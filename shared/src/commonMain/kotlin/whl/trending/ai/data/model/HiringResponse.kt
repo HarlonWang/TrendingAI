@@ -5,16 +5,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * GET /api/hiring 响应 —— HN「Ask HN: Who is hiring?」月度专题。
- *
- * **一次返回整月全量、不分页**，是「不做个性化」的直接红利：一份数据全球通用、
- * 可做成单个 CDN 对象，筛选与计数全在客户端本地算，用户点筛选零往返。
- * 实测 233 条约 187KB（gzip 50KB）。服务端注释里标了破坏性变更点：
- * 超过 500KB 或 1000 条时才改分页，届时本模型要跟着改。
- *
- * **产品硬边界**：这里只有原文写明的**约束事实**，没有也不允许有「可投性」字段。
- * 能不能投由读者结合自身情况判断——我们既测不准他在哪（代理、海外用户），
- * 也不该把「有绿卡 / 愿 relocate / 有海外实体」这种多变量个人决策压成系统推断。
- * 不要新增 canApply / isEligible 之类的派生字段，也不要按设备地区做默认过滤。
+ * 一次返回整月全量、不分页，筛选与计数全在客户端本地算；服务端改分页时本模型要跟着改。
+ * **产品硬边界**：只有原文写明的约束事实，不允许有「可投性」派生字段
+ * （canApply / isEligible 之类），也不按设备地区做默认过滤——能不能投由读者自己判断。
  */
 @Serializable
 data class HiringResponse(
@@ -62,14 +55,13 @@ data class HiringPost(
     @SerialName("apply_url")
     val applyUrl: String? = null,
 
-    // —— 地域与准入约束（原文写明的事实，不是判断）——
+    // 以下地域与准入字段是原文写明的事实，不是判断
     /** remote / onsite / hybrid / unspecified */
     @SerialName("remote_kind")
     val remoteKind: String = "unspecified",
     /**
-     * worldwide / restricted / unspecified。
-     * **unspecified 不等于 worldwide**：前者是原文没提（信息缺失），后者是原文明确写了不限。
-     * 呈现上必须分开，合并等于把缺失伪造成事实。
+     * worldwide / restricted / unspecified。**unspecified 不等于 worldwide**——
+     * 前者是原文没提，呈现上必须分开，合并等于把缺失伪造成事实。
      */
     @SerialName("region_scope")
     val regionScope: String = "unspecified",

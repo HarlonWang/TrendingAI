@@ -13,14 +13,9 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 
 /**
- * 关联 GitHub 身份的入口。
- *
- * Pro 权益以 GitHub 数字 ID 为唯一键发放（后端 `pro_entitlements`），邮箱登录用户
- * 的账号没有 `github_user_id`，直接去赞助会「钱付了但权益对不上」。此处引导他们先把
- * GitHub 关联到当前账号，关联后 Pro 判定与 GitHub 能力全部自动打通。
- *
- * 流程：`POST /oauth/github/link/start` → 系统浏览器授权 → deepLink 回跳，结果是确定的
- * ——`?linked=github` 或 `?error=<reason>`，由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 消费。
+ * 关联 GitHub 身份的入口。Pro 权益以 GitHub 数字 ID 为唯一键发放，邮箱登录用户没有
+ * `github_user_id`，不先关联直接去赞助会「钱付了但权益对不上」。
+ * 回跳结果（`?linked=github` / `?error=<reason>`）由 [whl.trending.ai.ui.common.OAuthOutcomeHost] 消费。
  */
 object AccountLink {
 
@@ -29,28 +24,17 @@ object AccountLink {
     const val SOURCE_UPGRADE_DIALOG = "upgrade_dialog"
 
     /**
-     * 是否有一次由本入口发起、尚未收到回跳的绑定。
-     *
-     * 用途：协议里登录失败与绑定失败都回跳 `?error=`，两者形状相同（`internal` 两边都会
-     * 出现），仅凭回跳 URL 分不出来；靠这个标记把失败事件分派给正确的处理方
-     * （绑定失败归账户页提示，登录失败归登录面板）。存 source 而非裸布尔，顺带让终态
-     * 埋点带得上发起入口。
-     *
-     * **落盘而非内存变量**：绑定要跳出去开系统浏览器，授权期间进程随时可能被系统回收，
-     * 回跳时是冷启动。内存标记那时已经没了，绑定失败会被误判成登录失败、提示分派到错误
-     * 的地方。落盘后跨进程存活。
+     * 尚未收到回跳的绑定的发起 source。登录失败与绑定失败的回跳形状相同，仅凭 URL 分不出来，
+     * 靠它把失败事件分派给正确的处理方。**落盘而非内存变量**：授权期间进程可能被回收、
+     * 回跳时是冷启动，内存标记会丢，绑定失败会被误判成登录失败。
      */
     private var pendingSource: String?
         get() = globalSettingsManager.accountLinkSource()
         set(value) = globalSettingsManager.setAccountLinkSource(value)
 
     /**
-     * 发起绑定。浏览器环节归 loginbase-kt-browser：授权 URL 的换取（带 Bearer 的
-     * link/start）在库的管理页内完成，网络失败与用户取消都会从
-     * `client.oauthResults` 以 Failed / Cancelled 送达 [whl.trending.ai.ui.common.OAuthOutcomeHost]。
-     *
-     * **发起阶段**的失败（未初始化、无宿主 Activity）到不了那条通道——浏览器还没开起来。
-     * 走 [launchFailed]，与授权阶段的失败汇到同一个宿主、同一个提示，调用方不必各自兜。
+     * 发起绑定。浏览器环节归 loginbase-kt-browser，授权阶段的失败从 `client.oauthResults` 送达宿主；
+     * **发起阶段**的失败到不了那条通道（浏览器还没开），走 [launchFailed] 汇到同一个宿主提示。
      */
     fun openLinkGithubPage(source: String) {
         val manager = globalAuthManager as? LoginbaseAuthManager
@@ -81,17 +65,12 @@ object AccountLink {
         _launchFailed.tryEmit(Unit)
     }
 
-    /**
-     * 取走本次绑定流程的发起 source（一次性）。返回非 null 即「这次回跳属于绑定流程」，
-     * 同时把 source 交给终态事件——漏斗按入口分组要的就是它，而回跳时（可能已冷启动）
-     * 只有落盘的这一份还在。
-     */
+    /** 取走本次绑定流程的发起 source（一次性）。返回非 null 即「这次回跳属于绑定流程」。 */
     fun consumePendingSource(): String? = pendingSource.also { pendingSource = null }
 
     /**
-     * 关联成功信号。刷新身份的是 [whl.trending.ai.ui.common.OAuthOutcomeHost]，而账户页的
-     * ProfileViewModel 早已组合完毕、不会自己重拉——没有这个信号，身份已经绑好了，
-     * 界面却仍停在「关联 GitHub」。
+     * 关联成功信号。账户页的 ProfileViewModel 不会自己重拉——没有它，
+     * 身份已绑好、界面却仍停在「关联 GitHub」。
      */
     private val _linked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val linked: SharedFlow<Unit> = _linked

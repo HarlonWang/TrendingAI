@@ -174,7 +174,7 @@ fun ProfileScreen(
             PullToRefreshDefaults.LoadingIndicator(
                 state = pullToRefreshState,
                 isRefreshing = uiState.isRefreshing,
-                // 列表铺满全高后指示器的出生点在头部背后，要往下让（静止截图看不出，拉一下才见）
+                // 指示器出生点在悬浮头部背后，要往下让（拉一下才见）
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = LocalContentTopPadding.current),
@@ -191,7 +191,6 @@ fun ProfileScreen(
             ),
         ) {
             if (authSupported) {
-                // ① 身份区
                 item(key = "account_header") {
                     AccountHeader(
                         uiState = uiState,
@@ -201,7 +200,6 @@ fun ProfileScreen(
                     )
                 }
 
-                // ② 套餐 & 用量
                 item(key = "plan_card") {
                     PlanUsageCard(
                         quota = uiState.quota,
@@ -217,18 +215,15 @@ fun ProfileScreen(
                     )
                 }
 
-                // ②-b 管理订阅：仅 Paddle 订阅者出现（组件自己查，查不到整行不显示）。
-                // Sponsors 那条通道的 Pro 用户在 GitHub 上管续费，这里不给入口。
+                // 管理订阅仅 Paddle 订阅者出现；Sponsors 通道的 Pro 在 GitHub 上管续费，不给入口
                 if (isPro) {
                     item(key = "manage_subscription") {
                         ManageSubscriptionItem(isPro = isPro)
                     }
                 }
 
-                // ③ GitHub 区：已关联给主页入口，未关联给关联入口。
-                // 两处条件刻意不对称——githubUserId 是「是否已关联」的权威（Pro 判定同源），
-                // githubLogin 才是能展示的名字。中间态（有 id 无 login，资料未同步）两块都不显示，
-                // 好过让已关联的用户看到「关联 GitHub」或让主页卡显示 @null。
+                // 两处条件刻意不对称：githubUserId 是「是否已关联」的权威，githubLogin 才是能展示的名字；
+                // 中间态（有 id 无 login）两块都不显示，好过显示「关联 GitHub」或 @null
                 if (uiState.user?.githubLogin != null) {
                     item(key = "github_entry") {
                         GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
@@ -242,8 +237,7 @@ fun ProfileScreen(
                 }
             }
 
-            // ④ 收藏入口。设置与关于我们不在这里——它们挂在底栏的「⋯」扩展菜单上，
-                // 两处都放会变成同一个入口的两个按钮。
+            // 设置与关于不在这里——已挂在底栏「⋯」菜单，两处都放会变成同一入口的两个按钮
             item(key = "favorites") {
                 SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     settingsItem(
@@ -256,7 +250,6 @@ fun ProfileScreen(
                 }
             }
 
-            // ⑤ 退出登录（仅登录用户）
             if (uiState.loggedIn) {
                 item(key = "sign_out") {
                     SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp)) {

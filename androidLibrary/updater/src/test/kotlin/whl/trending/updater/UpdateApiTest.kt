@@ -7,7 +7,7 @@ import whl.trending.ai.update.WhatsNewInfo
 
 class UpdateApiTest {
 
-    // ---- parseLatestRelease ----
+    // parseLatestRelease
 
     @Test
     fun parse_release_with_whatsnew_asset() {
@@ -56,7 +56,7 @@ class UpdateApiTest {
         assertNull(parseLatestRelease(""))
     }
 
-    // ---- acceptWhatsNew ----
+    // acceptWhatsNew
 
     @Test
     fun accept_matching_version_with_content() {

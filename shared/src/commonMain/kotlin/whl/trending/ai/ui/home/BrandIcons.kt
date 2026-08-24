@@ -26,9 +26,7 @@ fun githubLogoPainter(): Painter {
     )
 }
 
-/**
- * 纯 Y 字母图标，用于底部导航栏（颜色由 tint 控制）
- */
+/** 纯 Y 字母图标，用于底部导航栏（颜色由 tint 控制） */
 val HackerNewsYIcon: ImageVector by lazy {
     ImageVector.Builder(
         defaultWidth = 24.dp,
@@ -52,10 +50,7 @@ val HackerNewsYIcon: ImageVector by lazy {
     }.build()
 }
 
-/**
- * 纯 P 字母图标，用于底部导航栏（颜色由 tint 控制）
- * 粗细与 HackerNewsYIcon 保持一致
- */
+/** 纯 P 字母图标，用于底部导航栏；粗细与 HackerNewsYIcon 保持一致 */
 val ProductHuntPIcon: ImageVector by lazy {
     ImageVector.Builder(
         defaultWidth = 24.dp,
@@ -88,17 +83,14 @@ val ProductHuntPIcon: ImageVector by lazy {
     }.build()
 }
 
-/**
- * 带方形背景的 HN 图标，用于 TopBar
- */
+/** 带方形背景的 HN 图标，用于 TopBar */
 fun hackerNewsIcon(bgColor: Color): ImageVector {
-    // 原始 Y 字母在 64x64 视口中，四周间距不足
-    // 将方形扩大到 76x76 并居中 Y，既增加 Y 与边缘的间距，又通过外边距 3 控制整体大小
-    val outerPadding = 3f    // 图标与 viewBox 边缘的间距
-    val innerPadding = 10f   // Y 字母与方形边缘的额外间距
-    val boxSize = 64f + innerPadding * 2  // 方形大小 76
-    val viewportSize = boxSize + outerPadding * 2  // 视口大小 82
-    val yOffset = outerPadding + innerPadding  // Y 字母偏移 9
+    // 原始 Y 在 64x64 视口里四周间距不足：方形扩到 76 并居中，外边距 3 控整体大小
+    val outerPadding = 3f
+    val innerPadding = 10f
+    val boxSize = 64f + innerPadding * 2
+    val viewportSize = boxSize + outerPadding * 2
+    val yOffset = outerPadding + innerPadding
 
     return ImageVector.Builder(
         defaultWidth = 24.dp,

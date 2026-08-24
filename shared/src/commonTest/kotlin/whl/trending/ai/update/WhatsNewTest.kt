@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 class WhatsNewTest {
 
-    // ---- shouldShowWhatsNew ----
+    // shouldShowWhatsNew
 
     @Test
     fun first_install_does_not_show() {
@@ -37,7 +37,7 @@ class WhatsNewTest {
         assertFalse(shouldShowWhatsNew("0.9.0-beta", "0.9.0", lastSeenVersion = "0.8.0"))
     }
 
-    // ---- parseWhatsNew ----
+    // parseWhatsNew
 
     @Test
     fun parse_full_payload() {
@@ -75,7 +75,7 @@ class WhatsNewTest {
         assertNull(parseWhatsNew(""))
     }
 
-    // ---- pickByLanguage ----
+    // pickByLanguage
 
     @Test
     fun chinese_picks_zh_list() {

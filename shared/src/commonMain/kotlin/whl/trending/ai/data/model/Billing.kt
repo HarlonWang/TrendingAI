@@ -5,10 +5,7 @@ import kotlinx.serialization.Serializable
 
 /** Paddle 订阅相关的响应模型（后端 `src/api/billing.js`）。身份键是 `app_users.user_id`。 */
 
-/**
- * POST /api/billing/checkout 响应：Paddle 收银台地址。
- * [url] 必须在应用外打开，约束与理由见 [whl.trending.ai.core.ProCheckout.openCheckout]。
- */
+/** POST /api/billing/checkout 响应；[url] 必须在应用外打开，见 [whl.trending.ai.core.ProCheckout.openCheckout]。 */
 @Serializable
 data class CheckoutResponse(
     val url: String,
@@ -22,14 +19,9 @@ data class SubscriptionResponse(
 )
 
 /**
- * 一条 Paddle 订阅的落库快照（webhook 写入，客户端只读）。
- *
- * 权益判定**不看这里**——那是 `/api/me` 的 `pro` 字段（后端 `isProUser` 一条 SQL 取或，
- * 同时覆盖 Sponsors 与 Paddle 两路）。本模型只服务于「管理订阅」页面的展示：
- * 到期时间、是否已约定周期末取消。两处口径分开是有意的，别用 status 自行推权益。
- *
- * @param scheduledChange Paddle 的预约变更原文（JSON 字符串），非空通常意味着「已约定周期末取消」。
- *   客户端不解析其内部结构——Paddle 可能扩展字段，取消与否用非空判断足够。
+ * 一条 Paddle 订阅的落库快照，只服务「管理订阅」页展示。
+ * 权益判定**不看这里**——那是 `/api/me` 的 `pro` 字段，别用 status 自行推权益。
+ * @param scheduledChange Paddle 预约变更原文；客户端不解析内部结构，取消与否用非空判断。
  */
 @Serializable
 data class PaddleSubscription(
@@ -40,16 +32,11 @@ data class PaddleSubscription(
     @SerialName("current_period_end") val currentPeriodEnd: String? = null,
     @SerialName("scheduled_change") val scheduledChange: String? = null,
 ) {
-    /** 是否已约定在本周期结束时取消（仍可用到期末，UI 文案要与「立即失效」区分）。 */
+    /** 已约定周期末取消（仍可用到期末，UI 文案要与「立即失效」区分）。 */
     val cancelScheduled: Boolean get() = !scheduledChange.isNullOrBlank()
 }
 
-/**
- * POST /api/billing/portal 响应：Paddle 客户门户深链。
- *
- * 会话是临时的、不可缓存，每次进管理页现取。取消订阅界面完全由 Paddle 承担，
- * 客户端不自建——这同时满足支付宝/微信「便捷解约」的合规要求。
- */
+/** POST /api/billing/portal 响应：Paddle 客户门户深链。会话临时不可缓存，每次进管理页现取。 */
 @Serializable
 data class PortalResponse(
     val overview: String? = null,
@@ -58,14 +45,8 @@ data class PortalResponse(
 )
 
 /**
- * GET /api/billing/prices 响应：按访客所在地算好的两档价格。
- *
- * 客户端**不做任何价格计算与格式化**——[formatted] 是 Paddle 按该地区规则格式化好的
- * 字符串（含货币符号与本地价），[savingsPercent] 也由服务端算。价格是后端说了算的东西，
- * 写进客户端就会说谎。
- *
- * 三个字段**全部可空**：Paddle 超时或未配置时后端回 `{}`，此时订阅页降级为不报价，
- * 只留「查看价格」入口把定价交给收银台呈现——购买链路不依赖价格展示。
+ * GET /api/billing/prices 响应。客户端**不做任何价格计算与格式化**，全由服务端算好。
+ * 字段全部可空：Paddle 超时或未配置时后端回 `{}`，订阅页降级为不报价。
  */
 @Serializable
 data class PricesResponse(
@@ -73,10 +54,10 @@ data class PricesResponse(
     val country: String? = null,
     val annual: PriceView? = null,
     val monthly: PriceView? = null,
-    /** 年付相对「按月付满一年」省下的百分比；服务端向下取整，不划算时为 null。 */
+    /** 年付相对按月付满一年省下的百分比；不划算时为 null。 */
     @SerialName("annual_savings_percent") val savingsPercent: Int? = null,
 ) {
-    /** 两档都拿到才算可展示——只报一半价格比不报更让人犯嘀咕。 */
+    /** 两档都拿到才算可展示。 */
     val available: Boolean get() = annual != null && monthly != null
 }
 

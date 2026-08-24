@@ -15,20 +15,14 @@ expect fun openAppSettings()
 expect fun openInSystemBrowser(url: String)
 
 /**
- * 底层原语：在系统浏览器环境中打开链接（Android Custom Tabs / iOS SFSafariViewController）。
- * 真实浏览器指纹可正常通过 Cloudflare 等人机验证，并自带翻译/密码填充/登录态。
- * 供 [openUrl] 调用，勿直接调用。
- *
+ * 底层原语：Custom Tabs / SFSafariViewController 打开链接。供 [openUrl] 调用，勿直接调用。
  * @return 是否成功调起；false 时由 [openUrl] 兜底。
  */
 expect fun openInCustomTab(url: String): Boolean
 
 /**
- * 外链统一出口。全 app 打开外链一律调这个。优先级：非 http/https（mailto/tel 等）交系统
- * 处理；用户开启「用 Custom Tab」且成功调起走 [openInCustomTab]；传了 [onInAppFallback]
- * 走应用内 WebView；否则 [openInSystemBrowser]。
- *
- * @param onInAppFallback 应用内 WebView 兜底。组合树外（如更新弹窗）拿不到导航栈时传 null，退化为系统浏览器。
+ * 外链统一出口，全 app 打开外链一律调这个。
+ * @param onInAppFallback 应用内 WebView 兜底；组合树外拿不到导航栈时传 null，退化为系统浏览器。
  */
 fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
     // ignoreCase：scheme 大小写不敏感（RFC 3986）。大写 scheme 若被判非 web，会绕过
@@ -45,11 +39,8 @@ fun openUrl(url: String, onInAppFallback: ((url: String) -> Unit)? = null) {
 }
 
 /**
- * 文件直链下载统一出口（如 APK）：跳过 Custom Tab / 应用内 WebView，直接交系统浏览器接管下载。
- * 直链文件在 Custom Tab 里体验糟糕——Chrome 下载后留一个空白页挂在前台，其他 provider 行为不定。
- *
- * 约定仅用于 http(s) 直链；非 web scheme 请走 [openUrl]（两者对非 web 最终都是同一条
- * [openInSystemBrowser] 路径，行为一致，此约定只为语义清晰）。
+ * 文件直链下载统一出口（如 APK）：跳过 Custom Tab / 应用内 WebView——直链在 Custom Tab
+ * 里下载后会留空白页挂在前台。仅用于 http(s) 直链，非 web scheme 走 [openUrl]。
  */
 fun openDownloadUrl(url: String) {
     openInSystemBrowser(url)
@@ -59,11 +50,8 @@ fun openDownloadUrl(url: String) {
 expect fun shareText(text: String)
 
 /**
- * 取不到版本号时的兜底值。**必须是解析不出数值段的字符串**：
- * [whl.trending.ai.update.isVersionBlocked] 靠「任一侧解析失败即不拦截」保证兜底值不会把
- * 用户锁死在强更页，可被正常解析的兜底值（如 `"1.0.0"`）会让这条保护形同虚设；
- * 它同时是个显眼的哨兵——埋点里看到 `unknown` 就知道取版本号的时机不对，
- * 而一个像真的版本号会悄悄污染版本切片。
+ * 取不到版本号时的兜底值。**必须是解析不出数值段的字符串**——
+ * [whl.trending.ai.update.isVersionBlocked] 靠「解析失败即不拦截」保证它不会把用户锁死在强更页。
  */
 const val UNKNOWN_APP_VERSION: String = "unknown"
 
@@ -72,10 +60,7 @@ expect fun getAppVersion(): String
 /** 是否支持切换桌面图标（Android activity-alias 机制）。false 时外观页隐藏「应用图标」整块。 */
 expect fun supportsAlternateAppIcons(): Boolean
 
-/**
- * 切换桌面图标：启用 [preset] 对应的 launcher alias、禁用其余。
- * 立即生效（`DONT_KILL_APP`），不支持的平台为空操作。
- */
+/** 切换桌面图标：启用 [preset] 对应的 launcher alias、禁用其余；不支持的平台为空操作。 */
 expect fun applyAppIcon(preset: AppIconPreset)
 
 expect fun isIosPlatform(): Boolean
@@ -86,9 +71,8 @@ expect fun getSystemLanguage(): String
 expect fun getSystemLanguageDisplayName(): String
 
 /**
- * 系统级完整 locale 标签（BCP-47，如 "zh-Hant-TW" / "de-DE"），用于埋点。
- * 必须读系统配置而非 [getSystemLanguage] 的 Locale.getDefault()——应用内切换语言
- * （setApplicationLocales）会覆盖后者，导致上报的是 app 语言而非用户真实设备语言。
+ * 系统级完整 locale 标签（BCP-47），用于埋点。必须读系统配置而非 Locale.getDefault()——
+ * 应用内切换语言会覆盖后者，上报的会是 app 语言而非真实设备语言。
  */
 expect fun getSystemLocaleTag(): String
 

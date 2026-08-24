@@ -162,9 +162,7 @@ class GithubFeedMapperTest {
         )
     }
 
-    // =========================================================
     // isHighlight 判定测试
-    // =========================================================
 
     private fun feedItem(
         actorLogin: String,

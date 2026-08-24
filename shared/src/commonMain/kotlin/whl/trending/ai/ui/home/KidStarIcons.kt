@@ -8,14 +8,10 @@ import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.unit.dp
 
 /**
- * Material Symbols 的 kid_star（圆角星）实心/描边两态，用于底栏 Picks 项。
- *
- * Compose 自带的经典 Material Icons 集没有这个图标（只有 Star / StarOutline 那种尖角星），
- * 所以按 [BrandIcons] 的做法自绘：path 原样取自 google/material-design-icons 仓库的
- * `symbols/web/kid_star/materialsymbolsoutlined` 24px 版本，颜色交给 `Icon` 的 tint。
- *
- * Symbols 的 viewBox 是 `0 -960 960 960`——y 落在 -960..0，直接喂给 ImageVector 会整个跑到
- * 画布外，因此把路径包进一个 `translationY = 960` 的 group 搬回 0..960。
+ * Material Symbols 的 kid_star（圆角星）实心/描边两态，用于底栏 Picks 项；path 原样取自
+ * google/material-design-icons 的 `symbols/web/kid_star/materialsymbolsoutlined` 24px 版本。
+ * Symbols 的 viewBox 是 `0 -960 960 960`，直接喂给 ImageVector 会整个跑到画布外，
+ * 用 `translationY = 960` 的 group 搬回 0..960。
  */
 private const val KID_STAR_FILLED_PATH =
     "m305-704 112-145q12-16 28.5-23.5T480-880q18 0 34.5 7.5T543-849l112 145 170 57q26 8 41 " +

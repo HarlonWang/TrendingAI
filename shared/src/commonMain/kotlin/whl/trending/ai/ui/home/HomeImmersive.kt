@@ -21,18 +21,10 @@ import androidx.compose.ui.unit.Dp
 
 /**
  * 沉浸式浏览的统一隐藏状态：一条 [NestedScrollConnection] 产出隐藏进度
- * [ImmersiveState.progress]，各栏按**自己的行程**消费——同一进度 × 不同行程，速率差
- * 即视差：子 tab 行行程最长（1:1 跟手）、顶栏次之、底栏向下——三栏 + 状态栏 scrim
- * 四个消费点全部挂在 HomeScreen。
- *
- * 由设置项开关（`SettingsManager.immersiveBrowsing`，默认关）决定要不要接入。
- * 关闭时调用方传 null：[immersiveNestedScroll] 与 [immersiveExit] 原样返回 receiver，
- * 首页的 modifier 链与接入前逐字节相同——没有 nestedScroll 分发、没有额外渲染层；
- * [rememberImmersiveState] 也不会被调用，state / behavior / effect 一概不进组合树。
- *
- * 只复用 M3 [FloatingToolbarDefaults.exitAlwaysScrollBehavior] 的**曲线**（跟手 1:1、
- * 抛掷衰减、松手吸附到全显示/全隐藏），手势行程与各栏位移自己算、自己施加——它自带的
- * 位移量不到我们的真实行程，且只能驱动工具栏自己，管不到顶栏和子 tab 行。
+ * [ImmersiveState.progress]，各栏按自己的行程消费——同一进度 × 不同行程，速率差即视差。
+ * 开关关闭时调用方传 null，各扩展原样返回 receiver，modifier 链与接入前相同。
+ * 只复用 M3 [FloatingToolbarDefaults.exitAlwaysScrollBehavior] 的**曲线**，
+ * 位移自己算自己施加——它自带的位移量不到真实行程，且管不到顶栏和子 tab 行。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 class ImmersiveState internal constructor(
@@ -41,14 +33,12 @@ class ImmersiveState internal constructor(
 ) {
     /**
      * 隐藏进度：0 = 全显示，1 = 全隐藏。
-     * **只应在 draw 阶段（graphicsLayer lambda）读取**——读进 composition 会把滚动
-     * 变成逐帧重组，这是本机制的性能红线。
+     * **只应在 draw 阶段（graphicsLayer lambda）读取**——读进 composition 会把滚动变成逐帧重组。
      */
     internal val progress: Float
         get() {
             val limit = toolbarState.offsetLimit
-            // offsetLimit 初始为 -Float.MAX_VALUE（SideEffect 首帧后才写入真值），
-            // 此时 offset/limit ≈ 0，天然落在「全显示」，无首帧跳变；仅防 0 除。
+            // offsetLimit 首帧前是 -Float.MAX_VALUE，offset/limit ≈ 0 天然全显示；仅防 0 除
             return if (limit == 0f) 0f else (toolbarState.offset / limit).coerceIn(0f, 1f)
         }
 
@@ -90,12 +80,8 @@ fun Modifier.immersiveExit(state: ImmersiveState?, edge: ImmersiveEdge, travel: 
 
 /**
  * 建立沉浸式所需的状态。**只在开关打开时调用**——关闭时整个组合分支都不存在。
- *
- * @param gestureTravel 手势行程：滚动累计这么多距离后进度走满。取**所有栏中最长的行程**
- *   （Home 的子 tab 行：状态栏 + 顶栏 + tab 行），让最长行程那个元素 1:1 跟手，
- *   其余栏按行程比例减速——这正是视差的来源。
- * @param revealKeys 这些值一变就收回显示态（切 tab、切子源）：不把上一屏滑到一半的
- *   隐藏量带过去，也免得新一屏内容不足一屏时各栏没机会自己回来。
+ * @param gestureTravel 手势行程，取所有栏中最长的行程：最长者 1:1 跟手，其余按比例减速即视差
+ * @param revealKeys 这些值一变就收回显示态，不把上一屏滑到一半的隐藏量带过去
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -112,8 +98,7 @@ fun rememberImmersiveState(
 
     SideEffect {
         toolbarState.offsetLimit = -gestureTravelPx
-        // offset 只在写入时 coerce：行程变了（转屏、手势导航切三键导航改的是 inset）
-        // 得把已有位移夹回新区间，否则会一直停在按旧区间算出来的那个值上
+        // 行程变了（转屏、切导航模式）得把已有位移夹回新区间，否则停在按旧区间算的值上
         toolbarState.offset = toolbarState.offset.coerceAtLeast(-gestureTravelPx)
     }
 

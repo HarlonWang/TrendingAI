@@ -14,23 +14,16 @@ import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.remote.TrendingApi
 
 /**
- * 收藏云同步引擎：本地缓存 + 幂等 CRUD + 打开时全量拉取覆盖。
- *
- * - 本地缓存（[SettingsManager] 的 favorites）始终是 UI 即时真源，离线可用；网络在后台跑、失败不打断。
- * - 收藏/取消：先落本地即时生效，登录且已完成首次合并后入队一条 op 并后台 flush；失败留队列下次重试。
- * - [sync]（登录/启动触发）：首次登录把全部本地收藏 batch 上云合并，之后 flush 增量 op；随后全量 GET 覆盖本地。
- * - 删除跨设备传播靠「打开时全量 GET 覆盖」完成，无墓碑。
- *
- * 收藏列表流仍读 SettingsManager.favorites。
+ * 收藏云同步引擎。本地缓存是 UI 即时真源，网络后台跑、失败留队列重试；
+ * [sync] 首次登录 batch 上云合并、之后 flush 增量 op，随后全量 GET 覆盖本地——
+ * 删除的跨设备传播就靠这次覆盖，无墓碑。收藏列表流仍读 SettingsManager.favorites。
  */
 class FavoriteRepository(
     private val settings: SettingsManager,
     private val api: TrendingApi,
     /**
-     * 带鉴权执行一次请求（见 [whl.trending.ai.auth.AuthManager.authorized]）：
-     * 拿 token 交给 block，**401 时刷新后重试一次**；无会话则不执行 block。
-     * 收藏同步常发生在 App 启动或回前台的瞬间——access token 恰好过期时，
-     * 没有重试就会静默失败、把用户的收藏留在待推队列里，下次再撞。
+     * 带鉴权执行一次请求（[whl.trending.ai.auth.AuthManager.authorized]，401 刷新重试一次）；
+     * 无会话不执行 block。没有重试的话启动瞬间的同步会因 token 恰好过期而静默失败。
      */
     private val authorized: suspend (suspend (String) -> Unit) -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -84,11 +77,9 @@ class FavoriteRepository(
     }
 
     /**
-     * 触发一次同步，运行在仓库自有 [scope] 上（**不绑定任何 Compose composition**）。
-     * 必须用它、而非在 composable 的 LaunchedEffect 里直接 await [sync]——否则用户登录后
-     * 一旦离开当前屏（如登录发生在账户页、随即进"我的收藏"），composition 退出会取消协程
-     * （LeftCompositionCancellationException），[sync] 半途中断、[replaceFavorites] 不执行，
-     * 云端收藏拉不下来。token 由 [authorized] 自取，调用方无需持有。
+     * 触发一次同步，运行在仓库自有 [scope]（不绑定 composition）。必须用它、而非在
+     * LaunchedEffect 里直接 await [sync]——composition 退出会取消协程，[sync] 半途中断、
+     * 云端收藏拉不下来。token 由 [authorized] 自取。
      */
     fun requestSync() {
         scope.launch {
@@ -96,25 +87,20 @@ class FavoriteRepository(
         }
     }
 
-    /**
-     * 登出清理：清空本地收藏 + 同步状态，避免账号间串味。由登出流程调用。
-     * 未 flush 成功的 pending op 一并清掉、不做 best-effort flush——登出时凭证已吊销，也发不出去。
-     */
+    /** 登出清理，避免账号间串味。pending op 一并清掉不 flush——凭证已吊销，也发不出去。 */
     fun onSignOut() {
         settings.clearFavoritesOnSignOut()
     }
 
     /**
-     * 仅在已完成首次合并后才入队增量 op；否则本地改动由首次 batch 合并整体覆盖。
-     * merged 只有在带真实 token 的 [sync] 成功后才置 true，故匿名 / iOS(Noop 无 token) 恒为 false，
-     * 天然不入队、队列不膨胀，无需再看平台是否支持登录。
+     * 仅在已完成首次合并后才入队增量 op（此前本地改动由首次 batch 整体覆盖）；
+     * merged 只在带真实 token 的 [sync] 成功后置 true，匿名恒 false、天然不入队。
      */
     private fun canSyncOps(): Boolean = settings.favoritesMerged()
 
     /**
-     * 入队一条 op 并尝试 flush，全程持 [mutex]——与 [sync] 串行化。
-     * 关键：pending 键的读-改-写只允许在 mutex 内发生（enqueue/flush/sync 都在锁内），
-     * 否则主线程 enqueue 与后台 flush 并行 RMW 同一 prefs 键会 lost-update、静默丢一条收藏。
+     * 入队一条 op 并尝试 flush，全程持 [mutex]。pending 键的读-改-写只允许在 mutex 内发生，
+     * 否则并行 RMW 同一 prefs 键会 lost-update、静默丢收藏。
      */
     private suspend fun pushOp(op: PendingFavoriteOp) {
         mutex.withLock {

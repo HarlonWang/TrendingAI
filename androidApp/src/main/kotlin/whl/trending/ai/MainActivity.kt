@@ -142,8 +142,8 @@ class MainActivity : AppCompatActivity() {
                 when (ProSponsor.reconcileAction(result)) {
                     ReconcileAction.MARK_PRO -> ProSponsor.markReconciled()
 
-                    // 钱付了，但账户没关联 GitHub，权益无从匹配。一并结束对账窗口：引导已经给出，
-                    // 后续交给关联流程（分支①）补对账；不结束的话每次回前台都会再弹，比不提示还烦。
+                    // 钱付了但没关联 GitHub：一并结束对账窗口，补对账交给关联流程——
+                    // 不结束的话每次回前台都会再弹，比不提示还烦。
                     ReconcileAction.GUIDE_LINK -> {
                         ProSponsor.markReconciled()
                         ProSponsor.signalNeedsGithubLink()

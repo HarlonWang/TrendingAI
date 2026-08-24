@@ -10,14 +10,8 @@ import whl.trending.ai.data.model.catalogDefaultChatModel
 import whl.trending.ai.data.remote.TrendingApi
 
 /**
- * 聊天模型目录的进程级缓存 + 预热。
- *
- * 根因：模型选择器 chip 仅在 `models.size > 1` 时显示，而模型目录原先在每个 [ChatViewModel] 的 init 里
- * 各自网络拉取。首个打开的会话触发后端冷路径（`/api/chat/models` 冷 isolate 同步拉 OpenAI /models，耗时数秒），
- * 期间 chip 一直不出现——被误认为「没有模型列表」；后续会话命中后端热缓存才秒出。
- *
- * 修法：全进程只拉一次并缓存（[get]），且在应用启动时[warmUp]预热，让 chip 在任何会话打开前就绪。
- * 失败不缓存空结果，下次自动重试。缓存单元是完整响应（目录 + 服务端默认 id），不拆散。
+ * 聊天模型目录的进程级缓存 + 预热：全进程只拉一次，启动时 [warmUp]——后端冷路径耗时数秒，
+ * 各会话自拉会让模型选择器 chip 迟迟不出现。失败不缓存空结果，下次自动重试。
  */
 object ChatModelsProvider {
     /** 测试注入口（FakeApi 覆写模式）；生产恒为真实 API。 */
@@ -28,9 +22,8 @@ object ChatModelsProvider {
     private var cache: ChatModelsResponse? = null
 
     /**
-     * 取模型目录：命中缓存直接返回；否则拉一次，**完整**才缓存——目录非空且 default 指向
-     * 目录内（default 已是契约必需字段，缺失/悬空的破损响应当次照常返回、但不足以长期缓存，
-     * 否则一次坏响应会钉住整个进程、后端恢复后也不自愈）。失败/不完整下次 [get] 自动重试。
+     * 取模型目录：命中缓存直接返回；否则拉一次，**完整**（目录非空且 default 指向目录内）才缓存——
+     * 否则一次坏响应会钉住整个进程、后端恢复后也不自愈。
      */
     suspend fun get(): ChatModelsResponse {
         cache?.let { return it }

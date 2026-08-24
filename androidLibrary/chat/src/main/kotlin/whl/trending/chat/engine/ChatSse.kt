@@ -17,7 +17,7 @@ internal object ChatSse {
         data class Delta(val text: String) : Event
         data class Done(val cached: Boolean) : Event
 
-        /** P2 搜索事件：一次搜索开始（transient 指示器） */
+        /** 一次搜索开始（transient 指示器） */
         data object SearchStarted : Event
 
         /** 单次搜索完成；query 服务端尽力而为（open_page 等动作无 query） */

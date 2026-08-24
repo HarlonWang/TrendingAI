@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class ThemeCustomizationTest {
 
-    // ---- 风格档位 ----
+    // 风格档位
 
     @Test
     fun style_options_cover_every_preset_style() {
@@ -48,7 +48,7 @@ class ThemeCustomizationTest {
         assertEquals(DEFAULT_THEME_STYLE_STORAGE, ThemeStyleOption.SOFT.storageValue)
     }
 
-    // ---- 对比度档位 ----
+    // 对比度档位
 
     @Test
     fun contrast_storage_round_trips() {
@@ -74,7 +74,7 @@ class ThemeCustomizationTest {
         }
     }
 
-    // ---- hex 解析 ----
+    // hex 解析
 
     @Test
     fun parses_hex_with_and_without_hash() {
@@ -108,7 +108,7 @@ class ThemeCustomizationTest {
             }
     }
 
-    // ---- HSV 转换 ----
+    // HSV 转换
 
     @Test
     fun hsv_round_trips_for_all_presets() {
@@ -151,7 +151,7 @@ class ThemeCustomizationTest {
         assertEquals(0xFF000000L, argb and 0xFF000000L)
     }
 
-    // ---- 生效配置解析 ----
+    // 生效配置解析
 
     @Test
     fun preset_config_uses_palette_style_and_standard_contrast() {

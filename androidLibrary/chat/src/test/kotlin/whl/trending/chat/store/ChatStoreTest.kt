@@ -69,7 +69,7 @@ class ChatStoreTest {
     private fun cacheImage(name: String): String =
         File(cacheDir, name).apply { writeBytes(byteArrayOf(1, 2, 3)) }.absolutePath
 
-    // ---- 懒建与入口恢复 ----
+    // 懒建与入口恢复
 
     @Test
     fun `repo 入口懒建：标题取 context 标题，entryKey 为 repo 前缀`() = runTest {
@@ -92,7 +92,7 @@ class ChatStoreTest {
         assertEquals(0, db.threadDao().observeAll().first().size)
     }
 
-    // ---- context 往返 ----
+    // context 往返
 
     @Test
     fun `contextJson 往返：恢复的会话还原 ChatContext 关键字段`() = runTest {
@@ -106,7 +106,7 @@ class ChatStoreTest {
         assertFalse(restored.autoDetailSummary)
     }
 
-    // ---- 标题策略 ----
+    // 标题策略
 
     @Test
     fun `通用入口标题取首条消息，超长截断`() = runTest {
@@ -122,7 +122,7 @@ class ChatStoreTest {
         assertEquals(ChatStore.DEFAULT_TITLE, db.threadDao().getById(id)!!.title)
     }
 
-    // ---- 消息落库 ----
+    // 消息落库
 
     @Test
     fun `persistUserMessage 把图片从 cache 拷入 filesDir 并回写新路径`() = runTest {
@@ -170,7 +170,7 @@ class ChatStoreTest {
         assertTrue(loaded[1].id > loaded[0].id)
     }
 
-    // ---- 删除 ----
+    // 删除
 
     @Test
     fun `deleteThread 先删图片文件再删行`() = runTest {

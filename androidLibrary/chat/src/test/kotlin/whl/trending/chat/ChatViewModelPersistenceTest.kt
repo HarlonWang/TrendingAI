@@ -228,7 +228,7 @@ class ChatViewModelPersistenceTest {
         assertTrue(v.uiState.value.messages.isEmpty())
     }
 
-    // ---- P2 web search ----
+    // P2 web search
 
     /** 带搜索事件的假引擎 */
     private class SearchEngine(var reply: String = "答案") : ChatEngine {
@@ -295,7 +295,7 @@ class ChatViewModelPersistenceTest {
     }
 
 
-    // ---- P3 Deep Research ----
+    // P3 Deep Research
 
     /** research 假引擎：脚本化状态序列 + 可编程失败 + history 捕获 */
     private class ResearchEngine(

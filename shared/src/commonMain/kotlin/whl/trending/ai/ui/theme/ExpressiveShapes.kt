@@ -17,20 +17,14 @@ import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 
 /**
- * M3 Expressive 形状工具。
- *
- * [MaterialShapes] 给的是 [RoundedPolygon]（Cookie / Sunny / Clover…）而不是 Compose 的 [Shape]，
- * 要喂给 Surface 得自己包一层。material3 自带 `RoundedPolygon.toShape()`，但只支持单个多边形；
- * 这里补的是它没有的那半边——两个多边形之间的形变（morph），用来把「选中」表达成形状变化
- * 而不是加一圈描边。
+ * M3 Expressive 形状工具：补 material3 `RoundedPolygon.toShape()` 没有的那半边——
+ * 两个多边形之间的形变（morph），把「选中」表达成形状变化而不是描边。
  */
 
 /**
  * 把 [Morph] 在 [progress]（0f..1f）处的形状裁成 [Shape]。
- *
- * 缩放照搬 material3 `toShape()` 的做法：[MaterialShapes] 的多边形都是归一化的（坐标 0..1），
- * 直接按布局尺寸整体缩放，再按各自 bounds 的中心对齐——非正方形的中间态才不会偏到一边，
- * 卡片里的勾也就始终在正中。
+ * 缩放照搬 material3 `toShape()`：归一化多边形按布局尺寸整体缩放，
+ * 再按各自 bounds 中心对齐——非正方形的中间态才不会偏到一边。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 class MorphPolygonShape(

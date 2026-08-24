@@ -27,12 +27,8 @@ private const val AUTH_BASE_URL = "https://api.trendingai.cn/auth"
 private const val MAX_CAUSE_DEPTH = 8
 
 /**
- * loginbase 实现。登录 UI 在 App 内（邮箱验证码全程原生），[signIn] 不拉起外部流程，
- * 而是发布一个请求让根部的 LoginSheetHost 弹登录面板；GitHub 授权仍需外部浏览器
- * （OAuth 授权页不能内嵌）。
- *
- * 单例性：`AuthClient` 的单飞刷新锁是实例字段，必须全进程一个实例——由
- * [initLoginbaseAuth] 保证，别在别处 new。
+ * loginbase 实现。[signIn] 不拉起外部流程，发布请求让根部 LoginSheetHost 弹登录面板。
+ * `AuthClient` 的单飞刷新锁是实例字段，必须全进程一个实例——由 [initLoginbaseAuth] 保证，别在别处 new。
  */
 class LoginbaseAuthManager(
     val client: AuthClient,
@@ -48,16 +44,14 @@ class LoginbaseAuthManager(
         scope.launch {
             client.restore()
             client.authState.collect { state ->
-                // 会话被清就解除埋点的账号关联。挂在这里而不是只挂 signOut()——被动失效
-                // （token 撤销、刷新拿到 SessionEnded）不走那条路，而 user_id 是落盘的，
-                // 不清就会一直带在之后的匿名事件上。Unknown 是 restore 前的未知态，不算登出
+                // 挂在这里而不是只挂 signOut()：被动失效不走那条路，落盘的 user_id
+                // 不清会一直带在之后的匿名事件上
                 if (state is LoginbaseState.SignedOut) setAnalyticsUser(null)
                 _authState.value = when (state) {
                     // Unknown 只在 restore 之前出现，对 App 而言等同未登录
                     LoginbaseState.Unknown, is LoginbaseState.SignedOut -> AuthState.LoggedOut
-                    // RefreshFailed 不是登出：会话没被清、多半只是弱网（库文档的硬性要求，
-                    // 当登出处理会把漫游/地铁用户踢下线）。被动失效的用户提示由
-                    // [authorized] 的 SessionEnded 分支负责，这里不重复
+                    // RefreshFailed 不是登出（库文档硬性要求）：多半只是弱网，当登出处理会把
+                    // 漫游/地铁用户踢下线
                     LoginbaseState.SignedIn, is LoginbaseState.RefreshFailed -> AuthState.LoggedIn
                 }
             }
@@ -81,20 +75,10 @@ class LoginbaseAuthManager(
     override suspend fun getAccessToken(): String? = client.accessToken()
 
     /**
-     * 401 → 单飞刷新 → 重试一次。只重试一次：刷新后仍 401 说明不是过期问题
-     * （会话已被撤销、或该端点本就拒绝这个身份），再试无益。
-     *
-     * 刷新走 [AuthClient.refresh] 的单飞路径——并发的多个业务请求同时 401 时，
-     * 只会产生一次真实刷新，不会打爆服务端的救活配额。
-     *
-     * **调用契约：401 必须以异常形式冒出来**，本方法才看得见。沿 `cause` 链找
-     * [ApiException]，所以中间包一层别的异常类型也没关系，只要底层原因还在。
-     *
-     * **已知不覆盖的一类**：返回 `Boolean` 的写接口（`putFavorite` /
-     * `deleteFavorite` / `batchPutFavorites`）把 401 变成 `false` 而不抛异常，
-     * 这里无从感知。它们不会因此丢数据——失败的 op 留在待推队列里，下次 sync
-     * 重试（见 FavoriteRepository.flushPending）；代价只是这一次上行同步延后。
-     * 要让它们也参与重试，得先把那几个接口改成抛异常，属独立改动。
+     * 401 → 单飞刷新 → 重试一次（刷新后仍 401 说明不是过期问题，再试无益）。
+     * **调用契约：401 必须以异常形式冒出来**——沿 `cause` 链找 [ApiException]。
+     * 已知不覆盖：返回 `Boolean` 的收藏写接口把 401 变 false 不抛异常，这里无从感知；
+     * 不丢数据，失败的 op 留在待推队列下次 sync 重试（见 FavoriteRepository.flushPending）。
      */
     override suspend fun <T> authorized(block: suspend (String) -> T): T? {
         val token = client.accessToken() ?: return null
@@ -105,9 +89,7 @@ class LoginbaseAuthManager(
             if (!e.isUnauthorized()) throw e
             when (val outcome = client.refresh()) {
                 is RefreshOutcome.Success -> block(outcome.tokens.accessToken)
-                // 服务端明确说这个 refresh token 不存在了（吊销/重用检测/护栏）——本地会话
-                // 已被清除。**必须告诉用户**：否则他只会发现自己莫名未登录，而这发生在
-                // 任意页面（后台刷新），他根本没在看登录面板，没有别的地方能给出解释。
+                // refresh token 已不存在、本地会话已清——必须提示，理由见 SESSION_EXPIRED
                 is RefreshOutcome.SessionEnded -> {
                     SignInFailureBus.emit(SignInFailureReason.SESSION_EXPIRED)
                     null
@@ -122,7 +104,6 @@ class LoginbaseAuthManager(
     private fun Throwable.isUnauthorized(): Boolean {
         var current: Throwable? = this
         var depth = 0
-        // 深度封顶：防自引用的 cause 链把这里转成死循环
         while (current != null && depth < MAX_CAUSE_DEPTH) {
             if (current is ApiException && current.statusCode == 401) return true
             current = current.cause
@@ -131,9 +112,7 @@ class LoginbaseAuthManager(
         return false
     }
 
-    /**
-     * 登出的本地清理。仅限用户主动登出：它会清收藏等用户数据，被动的会话失效不得复用。
-     */
+    /** 登出的本地清理。仅限用户主动登出：它会清收藏等用户数据，被动的会话失效不得复用。 */
     private fun clearLocalUserState() {
         globalSettingsManager.setUserAvatarUrl(null)
         globalSettingsManager.setGithubIdentity(null, null)
@@ -151,8 +130,7 @@ class LoginbaseAuthManager(
 enum class GithubAuthResult { FAILED, CANCELED }
 
 /**
- * 登录面板请求总线：6 个登录入口零改动，
- * 面板只实现一次。用 StateFlow 而非事件流——"当前是否有待处理的登录请求"是状态，
+ * 登录面板请求总线。用 StateFlow 而非事件流——「当前是否有待处理的登录请求」是状态，
  * 配置变更重建后收集者能立刻恢复。
  */
 object LoginSheetBus {
@@ -163,29 +141,22 @@ object LoginSheetBus {
 
     /**
      * GitHub 授权的结果，由常驻的 [whl.trending.ai.ui.common.OAuthOutcomeHost] 写、面板读。
-     *
-     * 面板不直接订阅 `client.oauthResults`：授权要跳出 App，回来时面板可能已经不存在了
-     * （进程被回收 → 冷启动，本总线是内存态、`request` 已是 null），那条结果就没有消费者。
-     * 改由常驻宿主统一消费，面板只读这里。
+     * 面板不直接订阅 `client.oauthResults`：授权跳出 App 回来时面板可能已不存在，结果会没有消费者。
      */
     private val _githubResult = MutableStateFlow<GithubAuthResult?>(null)
     val githubResult: StateFlow<GithubAuthResult?> = _githubResult
 
     /**
-     * 发起一次登录请求。**漏斗起点 `auth_started` 记在这里**，而不是面板的 composition 里：
-     * 面板挂 `LaunchedEffect`，Activity 一重建（旋转、从自定义标签页回跳）就重跑，一次登录
-     * 会被记成两条 started、各带一个新 flow_id。事件语义本就是「用户发起了登录」，
-     * 那正是本方法被调用的时刻。
-     *
-     * 同一入口的重复请求直接忽略：面板已经开着，再记一条 started 只会虚高分母。
+     * 发起一次登录请求。**漏斗起点 `auth_started` 记在这里**而非面板 composition——
+     * 面板的 `LaunchedEffect` 随 Activity 重建重跑，一次登录会记成两条 started。
+     * 同一入口的重复请求直接忽略，避免虚高分母。
      */
     fun request(source: String) {
         if (_request.value == source) return
-        // 每次新请求都从干净状态开始：上一轮遗留的失败若留着，面板一打开就顶着红字
+        // 上一轮遗留的失败若留着，面板一打开就顶着红字
         _githubResult.value = null
         _request.value = source
-        // 开一条 flow 串起本次登录：GitHub 那条要跳浏览器、进程可能已被杀，
-        // 回跳后的终态事件靠落盘的 flow_id 才接得回同一个漏斗
+        // 开一条 flow 串起本次登录：回跳可能是冷启动，终态事件靠落盘的 flow_id 才接得回同一个漏斗
         track(
             AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "sheet", source = source),
             Eventbase.startFlow(),
@@ -203,14 +174,11 @@ object LoginSheetBus {
 }
 
 /**
- * 进程级初始化。Android 在 MainActivity.onCreate 调用，传入平台存储实现——
- * `SharedPreferencesTokenStore` 用同步 commit 落盘，这是与服务端"丢回执救活"
- * 配套的硬要求，别改用 App 自己那份 `Settings`（multiplatform-settings 默认走
- * 异步 apply，进程被杀会丢刚轮换的令牌）。
+ * 进程级初始化，Android 在 MainActivity.onCreate 调用。传入的 TokenStore 必须同步 commit 落盘
+ * （服务端「丢回执救活」的配套硬要求）——别改用 App 那份异步 apply 的 `Settings`，进程被杀会丢刚轮换的令牌。
  */
 fun initLoginbaseAuth(tokenStore: TokenStore): LoginbaseAuthManager {
-    // 幂等：已初始化则复用。AuthClient 的单飞锁是实例字段、每进程必须一个实例，
-    // 而本函数会被 Activity 重建路径反复经过
+    // 幂等：本函数会被 Activity 重建路径反复经过
     (globalAuthManager as? LoginbaseAuthManager)?.let { return it }
     val manager = LoginbaseAuthManager(AuthClient(AUTH_BASE_URL, tokenStore))
     globalAuthManager = manager

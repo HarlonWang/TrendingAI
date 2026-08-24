@@ -146,7 +146,7 @@ class ChatStore(
 
     fun threads() = db.threadDao().observeAll()
 
-    // ---- 内部 ----
+    // 内部
 
     private fun copyIntoStore(sourcePath: String): String {
         val source = File(sourcePath)

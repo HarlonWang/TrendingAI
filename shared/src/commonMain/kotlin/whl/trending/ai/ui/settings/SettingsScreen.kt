@@ -227,7 +227,6 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // ① 个性化
             item(key = "group_personalization") {
                 SettingsGroup(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -371,7 +370,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ② 订阅与提醒
             item(key = "group_subscription") {
                 SettingsGroup(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -430,7 +428,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ③ 通用
             item(key = "group_general") {
                 SettingsGroup(
                     modifier = Modifier.padding(horizontal = 16.dp),

@@ -6,7 +6,7 @@ import kotlin.test.assertTrue
 
 class VersionCompareTest {
 
-    // ---- 数字版本比较（原有行为，防回归） ----
+    // 数字版本比较（原有行为，防回归）
 
     @Test
     fun higher_stable_is_newer() {
@@ -34,7 +34,7 @@ class VersionCompareTest {
         assertTrue(isNewerVersion("0.22.0-beta.1", "0.21.0"))
     }
 
-    // ---- 预发布后缀（semver：正式版 > 同号预发布版） ----
+    // 预发布后缀（semver：正式版 > 同号预发布版）
 
     @Test
     fun stable_is_newer_than_same_version_prerelease() {

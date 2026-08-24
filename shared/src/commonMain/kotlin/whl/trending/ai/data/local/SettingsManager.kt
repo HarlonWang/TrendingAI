@@ -38,17 +38,16 @@ enum class ThemeMode(val title: String) {
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
 
 /**
- * 自定义主题的风格/对比度缺省持久化值，字面量对应 `ThemeStyleOption.SOFT` /
- * `ThemeContrastOption.STANDARD`。这里刻意不引用 ui 层的枚举，避免 data.local 反向依赖 UI；
- * 两侧的对应关系由 ThemeCustomizationTest 断言守住。
+ * 自定义主题的风格/对比度缺省持久化值。刻意不引用 ui 层枚举（避免 data.local 反向依赖 UI），
+ * 两侧对应关系由 ThemeCustomizationTest 断言守住。
  */
 const val DEFAULT_THEME_STYLE_STORAGE: String = "soft"
 const val DEFAULT_THEME_CONTRAST_STORAGE: String = "standard"
 
-/** 默认首页 tab 的持久化值（HomeTab.name），仅 SettingsManager 内部作缺省值使用 */
+/** HomeTab.name 缺省值 */
 private const val DEFAULT_HOME_TAB_NAME = "Home"
 
-/** 首页上次停留的子源（TrendingSource.name），仅 SettingsManager 内部作缺省值使用 */
+/** TrendingSource.name 缺省值 */
 private const val DEFAULT_TRENDING_SOURCE_NAME = "GitHub"
 
 enum class AppLanguage(val isoCode: String?) {
@@ -62,9 +61,8 @@ val SUPPORTED_SUMMARY_LANGS = setOf("zh", "en")
 private const val FALLBACK_SUMMARY_LANG = "en"
 
 /**
- * 摘要内容语言，与 App 界面语言（[AppLanguage]）解耦：
- * 界面语言受限于打包的 strings 翻译，摘要语言只受后端支持范围约束，两者扩展节奏独立。
- * 持久化存 [storageValue] 字符串而非 ordinal，便于后续在任意位置插入新语言。
+ * 摘要内容语言，与 App 界面语言（[AppLanguage]）解耦——两者扩展节奏独立。
+ * 持久化存 [storageValue] 字符串而非 ordinal，便于任意位置插入新语言。
  */
 enum class SummaryLanguage(val isoCode: String?) {
     FOLLOW_SYSTEM(null),
@@ -80,12 +78,9 @@ enum class SummaryLanguage(val isoCode: String?) {
 }
 
 /**
- * 动态 App 图标档位（仅 Android 生效，iOS 隐藏入口）。
- *
- * 同一箭头 glyph 换底色出变体；[backgroundArgb] 是外观页预览用的底色，
- * **必须与 androidApp `res/values/ic_launcher_variants.xml` 里同名色值一致**（两处手动同步）。
- * 持久化存 [id] 字符串而非 ordinal，便于后续插档；图标真实状态由系统组件开关记住，
- * 本地存储只用于设置页回显选中态。
+ * 动态 App 图标档位（仅 Android 生效）。[backgroundArgb] 是外观页预览底色，
+ * **必须与 androidApp `res/values/ic_launcher_variants.xml` 同名色值一致**（两处手动同步）。
+ * 持久化存 [id] 而非 ordinal；本地存储只用于设置页回显，图标真实状态由系统组件开关记住。
  */
 enum class AppIconPreset(val id: String, val backgroundArgb: Long, val darkGlyph: Boolean = false) {
     DEFAULT("default", 0xFF6750A4),
@@ -102,10 +97,7 @@ enum class AppIconPreset(val id: String, val backgroundArgb: Long, val darkGlyph
     }
 }
 
-/**
- * 一条自定义主题记录。风格/对比度存字符串（`ThemeStyleOption.storageValue` 等），
- * 不引用 ui 层的枚举，避免 data 层反向依赖。
- */
+/** 一条自定义主题记录；风格/对比度存 storageValue 字符串，不引用 ui 层枚举。 */
 @Serializable
 data class CustomThemeEntry(
     val seedArgb: Long,
@@ -122,7 +114,7 @@ data class ThemeSnapshot(
     val customSeed: Long?,
 )
 
-/** 自定义色历史保留条数：够覆盖一次调色过程中的反复试错，又不至于把调色台塞满 */
+/** 够覆盖一次调色的反复试错，又不把调色台塞满 */
 private const val CUSTOM_HISTORY_LIMIT = 10
 
 @OptIn(ExperimentalSettingsApi::class)
@@ -142,8 +134,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val FAVORITES_KEY = "prefs_favorites"
     private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
     private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
-    // 存的是发起绑定的 source（非空即「绑定流程进行中」）。旧的 prefs_account_link_pending
-    // 是 Boolean，类型不兼容，故换 key 而不是复用
+    // 旧 key prefs_account_link_pending 是 Boolean、类型不兼容，勿复用
     private val ACCOUNT_LINK_SOURCE_KEY = "prefs_account_link_source"
     private val SUBSCRIBED_EMAIL_KEY = "prefs_subscribed_email"
     private val INSTALL_ID_KEY = "prefs_install_id"
@@ -167,12 +158,9 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val IMMERSIVE_BROWSING_KEY = "prefs_immersive_browsing"
 
     /**
-     * 安装级匿名标识：首次访问时生成并持久化，之后保持不变（卸载重装才会重新生成）。
-     * 用于跨天/跨会话的留存分析；同时是埋点的 install_id 与 chat 配额的 X-Install-Id，
-     * 三处必须同一个值，否则客户端事件与服务端补发的事件串不成漏斗。
-     *
-     * 用 lazy 缓存：每进程只生成一次，既消除 check-then-write 的并发竞态，
-     * 也避免每条事件都读一次 settings。
+     * 安装级匿名标识（卸载重装才重新生成）。埋点 install_id 与 chat 配额 X-Install-Id
+     * 必须同一个值，否则客户端事件与服务端补发的事件串不成漏斗。
+     * lazy 缓存：消除 check-then-write 竞态，也免得每条事件都读一次 settings。
      */
     @OptIn(ExperimentalUuidApi::class)
     private val installId: String by lazy {
@@ -211,10 +199,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 是否处于「自定义主题」状态。
-     *
-     * 用显式标志而非「seed 是否命中预设表」来判断：用户完全可能在调色台里把颜色
-     * 调到与某个预设一模一样，靠反查会误判成预设档，连带丢掉他调的风格与对比度。
+     * 是否处于「自定义主题」状态。用显式标志而非「seed 是否命中预设表」——
+     * 用户可能把颜色调到与预设一样，反查会误判、连带丢掉他调的风格与对比度。
      */
     val themeCustom: Flow<Boolean> = settings.getBooleanFlow(THEME_CUSTOM_KEY, false)
 
@@ -235,11 +221,8 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.getString(THEME_CONTRAST_KEY, DEFAULT_THEME_CONTRAST_STORAGE)
 
     /**
-     * 用户调过的自定义色，独立于当前生效的 [seedColor] 保存。
-     *
-     * 有它，切回预设档之后外观页仍能显示「自定义」那颗圆、一点即回到原来调好的配色；
-     * 没有它，自定义色会被预设 seed 覆盖掉，用户想回去只能重调一遍。
-     * null 表示从没进过调色台。
+     * 用户调过的自定义色，独立于生效的 [seedColor] 保存——否则会被预设 seed 覆盖，
+     * 用户想回去只能重调一遍。null 表示从没进过调色台。
      */
     val customSeedColor: Flow<Long?> = settings.getLongOrNullFlow(THEME_CUSTOM_SEED_KEY)
 
@@ -260,10 +243,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 进入调色台时的完整主题状态快照，供「撤销修改」整体写回。
-     *
-     * 调色台是实时生效的——拖一下色相整个 App 立刻变，按返回键并不会撤销。
-     * 用户调坏了却记不起原来是什么色，这份快照就是他唯一的退路。
+     * 进入调色台时的完整主题状态快照，供「撤销修改」整体写回——
+     * 调色台实时生效、返回键不撤销，这份快照是用户唯一的退路。
      */
     fun currentThemeSnapshot(): ThemeSnapshot = ThemeSnapshot(
         seedArgb = currentSeedColor(),
@@ -279,17 +260,15 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putBoolean(THEME_CUSTOM_KEY, snapshot.isCustom)
         settings.putString(THEME_STYLE_KEY, snapshot.style)
         settings.putString(THEME_CONTRAST_KEY, snapshot.contrast)
-        // 进入前没有自定义色就把 key 抹掉，否则本次编辑产生的那个会留下来，
-        // 外观页末尾那颗圆仍显示成一个已经被撤销掉的颜色
+        // 进入前没有自定义色就抹掉 key，否则本次编辑产生的会留下来、显示成已撤销的颜色
         val customSeed = snapshot.customSeed
         if (customSeed == null) settings.remove(THEME_CUSTOM_SEED_KEY)
         else settings.putLong(THEME_CUSTOM_SEED_KEY, customSeed)
     }
 
     /**
-     * 调色台落盘：四项一起写，避免中间态让主题闪烁成半套配置。
-     * 不在这里入历史——拖动过程每 120ms 就落一次盘，会把历史冲成一堆中间色；
-     * 由调色台在离开时记一条最终值。
+     * 调色台落盘：四项一起写，避免中间态闪烁。不在这里入历史——拖动过程频繁落盘
+     * 会把历史冲成一堆中间色，由调色台离开时记一条最终值。
      */
     fun setCustomTheme(argb: Long, styleStorage: String, contrastStorage: String) {
         settings.putLong(SEED_COLOR_KEY, argb)
@@ -299,12 +278,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putBoolean(THEME_CUSTOM_KEY, true)
     }
 
-    /**
-     * 自定义色历史，最新在前。
-     *
-     * 调色本身就是试错过程，只留一个「当前自定义色」的话，调错一次、或点一下恢复默认，
-     * 之前调好的就永久没了。取色类 UI 普遍保留最近用过的颜色，这里照同一结构做。
-         */
+    /** 自定义色历史，最新在前——只留「当前自定义色」的话，调错一次之前调好的就永久没了。 */
     val customThemeHistory: Flow<List<CustomThemeEntry>> =
         settings.getStringOrNullFlow(THEME_CUSTOM_HISTORY_KEY).map { decodeHistory(it) }
 
@@ -325,8 +299,7 @@ class SettingsManager(private val settings: ObservableSettings) {
 
 
     init {
-        // 摘要语言一次性迁移：旧版本摘要语言复用 App 语言设置，升级后首次构造时
-        // 用当时的 App 语言初始化摘要语言，解耦本身不改变既有用户看到的摘要语言
+        // 摘要语言一次性迁移：首次构造用当时的 App 语言初始化，解耦不改变既有用户看到的摘要语言
         if (!settings.hasKey(SUMMARY_LANGUAGE_KEY)) {
             val app = AppLanguage.entries.getOrElse(
                 settings.getInt(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
@@ -366,9 +339,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 当前内容语言：读摘要语言设置，FOLLOW_SYSTEM 时取系统语言并钳制到后端支持清单
-     * （清单外回落英文，避免发出后端无数据的 lang 导致摘要整页为空）。
-     * 供摘要请求与邮件订阅复用，避免各处各自推导导致口径分叉。
+     * 当前内容语言：FOLLOW_SYSTEM 时取系统语言并钳制到后端支持清单（清单外回落英文，
+     * 避免发出后端无数据的 lang 导致摘要整页为空）。摘要请求与邮件订阅共用，免得口径分叉。
      */
     suspend fun currentContentLang(): String {
         summaryLanguage.first().isoCode?.let { return it }
@@ -412,14 +384,12 @@ class SettingsManager(private val settings: ObservableSettings) {
         if (current.any { it.url == item.url }) return
         val updated = listOf(item) + current
         settings.putString(FAVORITES_KEY, Json.encodeToString(updated))
-        // 当前所有调用点均为用户手势，集中在此埋点即可覆盖各页面入口；
-        // 若未来引入同步/导入等非手势写入，需绕开本方法或拆分埋点
+        // 调用点均为用户手势，集中在此埋点；非手势写入（同步/导入）须绕开本方法
         track(
             AppEvent.ContentAction(
                 ContentActionKind.FAVORITE,
                 source = item.source,
-                // 与 content_opened 同一个键（github=owner/repo、hn=story id、ph=node id），
-                // 传 url 会让「看了又收藏」这条漏斗两头对不上
+                // 与 content_opened 同一个键；传 url 会让「看了又收藏」漏斗两头对不上
                 contentId = item.resolvedExternalId,
             )
         )
@@ -447,15 +417,10 @@ class SettingsManager(private val settings: ObservableSettings) {
         return runCatching { Json.decodeFromString<List<FavoriteItem>>(json) }.getOrElse { emptyList() }
     }
 
-    /**
-     * 用服务端全量列表覆盖本地收藏缓存（云同步「打开时全量拉取」用）。
-     * 非用户手势，不埋点；与 [addFavorite]/[removeFavorite] 的手势写入区分。
-     */
+    /** 用服务端全量列表覆盖本地收藏缓存（云同步用）。非用户手势，不埋点。 */
     fun replaceFavorites(items: List<FavoriteItem>) {
         settings.putString(FAVORITES_KEY, Json.encodeToString(items))
     }
-
-    // ---- 云同步状态：待同步 op 队列 + 首次登录合并标记 ----
 
     fun getPendingFavoriteOps(): List<PendingFavoriteOp> {
         val json = settings.getStringOrNull(FAVORITES_PENDING_KEY) ?: return emptyList()
@@ -474,13 +439,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putBoolean(FAVORITES_MERGED_KEY, value)
     }
 
-    /**
-     * 是否有一次已发起、尚未收到回跳的 GitHub 绑定（见 [whl.trending.ai.core.AccountLink]）。
-     *
-     * **必须落盘而不能只放内存**：绑定要跳出去开系统浏览器，授权期间 App 进程随时可能被
-     * 系统回收；回跳时是冷启动，内存标记早没了，绑定失败的 `?error=` 会被当成登录失败
-     * 分派错地方。落盘后跨进程存活。
-     */
+    /** 尚未收到回跳的 GitHub 绑定标记；必须落盘的理由见 [whl.trending.ai.core.AccountLink]。 */
     fun accountLinkSource(): String? = settings.getStringOrNull(ACCOUNT_LINK_SOURCE_KEY)
 
     fun setAccountLinkSource(value: String?) {
@@ -488,10 +447,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         else settings.putString(ACCOUNT_LINK_SOURCE_KEY, value)
     }
 
-    /**
-     * 登出时清空账号收藏与同步状态：收藏已安全存于该账号云端，清本地避免账号间数据串味
-     * （下个账号登录时不会把上一个账号的收藏 batch 合并上去）。匿名重新收藏从空开始。
-     */
+    /** 登出时清空账号收藏与同步状态：收藏已在云端，清本地避免下个账号把上一个的收藏合并上去。 */
     fun clearFavoritesOnSignOut() {
         settings.remove(FAVORITES_KEY)
         settings.remove(FAVORITES_PENDING_KEY)
@@ -509,10 +465,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         }
     }
 
-    /**
-     * 已登录用户 GitHub 身份缓存（login + 数字 id）：syncMe 时随头像一起写入，登出清除。
-     * 供需要带身份的同步场景（如语言意图采集的反馈正文）直接读取，免去现场再拉一次 /api/me。
-     */
+    /** 已登录用户 GitHub 身份缓存：syncMe 写入、登出清除，同步场景直接读，免现场再拉 /api/me。 */
     fun currentGithubLogin(): String? = settings.getStringOrNull(USER_GITHUB_LOGIN_KEY)
 
     fun currentGithubUserId(): Long? = settings.getLongOrNull(USER_GITHUB_USER_ID_KEY)
@@ -563,10 +516,7 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     /**
      * 最近一次打开 Paddle 收银台的时间戳（epoch millis），0 表示无待对账的购买意图。
-     *
-     * 与 [currentSponsorPageOpenedAt] 分开存而不是共用一个「外跳意图」时间戳：两条路的对账
-     * 端点、成本与失败语义都不同（Sponsors 走 /api/pro/refresh，每次消耗维护者 PAT 配额；
-     * Paddle 走 /api/me，纯 D1 查询）。合并会让其中一条的窗口策略绑架另一条。
+     * 与 [currentSponsorPageOpenedAt] 刻意分开存：两条路对账端点与失败语义不同，合并会互相绑架。
      */
     fun currentCheckoutOpenedAt(): Long = settings.getLong(CHECKOUT_OPENED_AT_KEY, 0L)
 
@@ -579,10 +529,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 用户的聊天模型意向：钉住的模型 id，或 [FOLLOW_SERVER_DEFAULT]（默认）＝跟随服务端默认、
-     * 请求不带 model 字段。两种取值对应下面的 [pinChatModel] / [followServerDefault]。
-     *
-     * 发请求时透传钉住的值：免费档服务端按白名单强制，Pro 档服务端尊重此选择。
+     * 用户的聊天模型意向：钉住的模型 id，或 [FOLLOW_SERVER_DEFAULT]（默认）。
+     * 发请求时透传钉住的值，服务端按 tier 强制。
      */
     val chatModelChoice: Flow<String> = settings.getStringFlow(CHAT_MODEL_CHOICE_KEY, FOLLOW_SERVER_DEFAULT)
 
@@ -593,10 +541,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(CHAT_MODEL_CHOICE_KEY, id)
     }
 
-    /**
-     * 回到「跟随服务端默认」。三处调用语义一致：用户点中下拉里的默认项、选择已下架/越权时自愈、
-     * 登出时清掉可能残留的 Pro 模型选择（避免下个用户继承）。
-     */
+    /** 回到「跟随服务端默认」：手选默认项、下架/越权自愈、登出清残留三处共用。 */
     fun followServerDefault() {
         settings.remove(CHAT_MODEL_CHOICE_KEY)
     }
@@ -622,9 +567,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 外链打开方式：true 走系统浏览器（Custom Tabs / SFSafariViewController），
-     * false 走内置 WebView。默认 true——真实浏览器指纹可通过 Cloudflare 等人机验证，
-     * 且自带翻译/密码填充/登录态。GitHub README 阅读不经外链路由，不受此设置影响。
+     * 外链打开方式：true 走 Custom Tabs，false 走内置 WebView。默认 true——真实浏览器指纹
+     * 可通过 Cloudflare 等人机验证，且自带登录态。README 阅读不经外链路由，不受此设置影响。
      */
     val openLinksInCustomTab: Flow<Boolean> = settings.getBooleanFlow(OPEN_LINKS_IN_CUSTOM_TAB_KEY, true)
 
@@ -635,8 +579,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 沉浸式浏览：首页顶栏、子 tab 行、悬浮底栏跟随滚动收起/恢复（#88）。默认 false——常驻的顶/底栏是导航锚点，藏起来换到的屏幕空间不值得
-     * 让所有人默认承担「想操作得先往回滑」的代价，留给需要的人自己打开。
+     * 沉浸式浏览：首页三栏跟随滚动收起/恢复。默认 false——顶/底栏是导航锚点，代价留给需要的人自己开。
      * 关闭时首页不接入任何滚动监听（见 ui/home/HomeImmersive.kt 的 null 模式）。
      */
     val immersiveBrowsing: Flow<Boolean> = settings.getBooleanFlow(IMMERSIVE_BROWSING_KEY, false)
@@ -648,9 +591,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * GitHub 榜「只看 New」的记忆状态：榜单页显式切换时回写，冷启动恢复上次状态（开关即设置）。
-     * 视图切换导致的自动关闭（New-only 仅 daily 全语言榜有效）不回写，不覆盖用户意图。
-     * 存储键沿用旧「默认值」设置的键，老用户已设置的默认值自然延续为初始记忆状态。
+     * GitHub 榜「只看 New」的记忆状态：显式切换时回写；视图切换导致的自动关闭不回写，
+     * 不覆盖用户意图。存储键沿用旧「默认值」设置的键，老用户的默认值自然延续。
      */
     fun currentTrendingNewOnly(): Boolean =
         settings.getBoolean(TRENDING_NEW_ONLY_DEFAULT_KEY, false)
@@ -660,9 +602,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 每日 Picks 本地通知开关（默认关，用户在设置页主动开启）。
-     * 仅记录用户意图；实际调度/取消由 DailyPicksNotifier 平台实现负责，
-     * worker 执行时也会再读一次此值兜底（关闭后未及时取消的任务不发通知）。
+     * 每日 Picks 本地通知开关（默认关）。仅记录意图；调度/取消由 DailyPicksNotifier 负责，
+     * worker 执行时再读一次此值兜底（关闭后未及时取消的任务不发通知）。
      */
     val dailyPicksNotificationEnabled: Flow<Boolean> =
         settings.getBooleanFlow(DAILY_PICKS_NOTIFICATION_KEY, false)
@@ -686,11 +627,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 冷启动默认显示的首页 tab，存 ui 层 HomeTab 枚举的 name（如 "Home"、"Picks"）。
-     * data 层不依赖 ui 层枚举，只存取字符串；解析与回落由 HomeTab.defaultFromName 负责——
-     * 历史上存过 "GitHub"/"HackerNews"/"ProductHunt"（0.23 前）与 "Trending"（本 tab 旧名），
-     * 都匹配不上，统一回落到 Home，落点与改名前一致。
-     * 只决定初始值；会话内切 tab 不回写此设置。
+     * 冷启动默认显示的首页 tab，存 HomeTab.name。data 层只存取字符串，
+     * 解析与回落由 HomeTab.defaultFromName 负责。只决定初始值，会话内切 tab 不回写。
      */
     val defaultHomeTab: Flow<String> = settings.getStringFlow(DEFAULT_HOME_TAB_KEY, DEFAULT_HOME_TAB_NAME)
 
@@ -700,10 +638,7 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(DEFAULT_HOME_TAB_KEY, name)
     }
 
-    /**
-     * 首页上次停留的子源，存 ui 层 TrendingSource 枚举的 name。
-     * 与「默认首页」不同，这个值每次切子源都回写——用户上次看的是哪个源，下次冷启动就回哪。
-     */
+    /** 首页上次停留的子源（TrendingSource.name）。与「默认首页」不同，每次切子源都回写。 */
     fun currentTrendingSource(): String = settings.getString(TRENDING_SOURCE_KEY, DEFAULT_TRENDING_SOURCE_NAME)
 
     fun setTrendingSource(name: String) {

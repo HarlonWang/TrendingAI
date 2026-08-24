@@ -304,7 +304,7 @@ class ChatViewModel(
         )
     }
 
-    // ---- 会话管理（抽屉） ----
+    // 会话管理（抽屉）
 
     fun switchThread(id: Long) {
         if (id == _currentThreadId.value) return
@@ -336,7 +336,7 @@ class ChatViewModel(
         }
     }
 
-    // ---- 内部 ----
+    // 内部
 
     private suspend fun openThread(id: Long, fallbackContext: ChatContext? = null) {
         val s = store ?: return
@@ -461,7 +461,7 @@ class ChatViewModel(
         streams[threadId] = job
     }
 
-    // ---- Deep Research（P3）----
+    // Deep Research（P3）
 
     /** 解读卡尾部「深度调研此项目」升级入口：按 research 管线直发，不依赖模式开关 */
     fun sendRepoResearch(promptText: String) {

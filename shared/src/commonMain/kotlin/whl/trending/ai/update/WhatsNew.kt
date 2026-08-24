@@ -23,18 +23,13 @@ private val whatsNewJson = Json { ignoreUnknownKeys = true }
 fun parseWhatsNew(raw: String): WhatsNewInfo? =
     runCatching { whatsNewJson.decodeFromString<WhatsNewInfo>(raw) }.getOrNull()
 
-/**
- * 按语言从中英双列表里选一份展示：zh 语言取 zh、缺失回退 en，其他语言反之。
- * WhatsNewHost（升级首启弹窗）与 UpdateDialog（更新提示弹窗）共用。
- */
+/** 按语言从中英双列表里选一份展示：zh 语言取 zh、缺失回退 en，其他语言反之。 */
 fun pickByLanguage(lang: String, zh: List<String>, en: List<String>): List<String> =
     if (lang.startsWith("zh")) zh.ifEmpty { en } else en.ifEmpty { zh }
 
 /**
- * 升级后首启弹一次：
- * - lastSeen 为空（首次安装）不弹，由调用方静默写入当前版本
- * - lastSeen == 当前版本（日常启动）不弹
- * - 内置 changelog 版本与当前版本不一致（dev 构建 / CI 生成失败的占位文件）不弹
+ * 升级后首启弹一次。首次安装（lastSeen 为空，调用方静默写入当前版本）与
+ * 内置 changelog 版本不匹配（dev 构建 / CI 生成失败的占位文件）都不弹。
  */
 fun shouldShowWhatsNew(
     currentVersion: String,

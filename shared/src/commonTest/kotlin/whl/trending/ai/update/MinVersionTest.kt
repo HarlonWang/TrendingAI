@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 class MinVersionTest {
 
-    // ---- 基本比较 ----
+    // 基本比较
 
     @Test
     fun lower_version_is_blocked() {
@@ -32,7 +32,7 @@ class MinVersionTest {
         assertTrue(isVersionBlocked(current = "1.9.9", minVersion = "2.0.0"))
     }
 
-    // ---- 缺段补 0 ----
+    // 缺段补 0
 
     @Test
     fun missing_segments_are_treated_as_zero() {
@@ -41,7 +41,7 @@ class MinVersionTest {
         assertFalse(isVersionBlocked(current = "0.15.1", minVersion = "0.15"))
     }
 
-    // ---- 后缀（prerelease / 本地 git describe）----
+    // 后缀（prerelease / 本地 git describe）
 
     @Test
     fun prerelease_suffix_is_ignored_in_comparison() {
@@ -56,7 +56,7 @@ class MinVersionTest {
         assertFalse(isVersionBlocked(current = "0.15.0-5-gabc123", minVersion = "0.15.0"))
     }
 
-    // ---- 防御：解析失败一律不拦截 ----
+    // 防御：解析失败一律不拦截
 
     @Test
     fun null_or_blank_min_version_is_not_blocked() {
