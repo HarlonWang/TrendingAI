@@ -134,16 +134,23 @@ private const val CONTRIBUTION_QUERY =
 
 /** GitHub REST 直连：feed 与计数。token 来自 GithubTokenProvider（Secret Vault 取回）。 */
 open class GithubApi {
-    private val client = HttpClient {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 15000
-            connectTimeoutMillis = 15000
-            socketTimeoutMillis = 15000
+    private companion object {
+        // 进程级共享、从不 close，理由见 TrendingApi.sharedClient
+        val sharedClient by lazy {
+            HttpClient {
+                install(ContentNegotiation) {
+                    json(Json { ignoreUnknownKeys = true })
+                }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = 15000
+                    connectTimeoutMillis = 15000
+                    socketTimeoutMillis = 15000
+                }
+            }
         }
     }
+
+    private val client get() = sharedClient
 
     private val baseHost = "https://api.github.com"
 
