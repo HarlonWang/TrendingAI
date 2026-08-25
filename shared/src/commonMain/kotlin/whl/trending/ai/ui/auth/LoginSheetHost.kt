@@ -146,6 +146,14 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         else -> genericError
     }
 
+    // 埋点归因**不能**复用 describe 的返回值：那是本地化文案，进了 props 就是多语言高基数脏值
+    fun reasonOf(e: Throwable): String = when (e) {
+        is LoginbaseException.Api -> e.rawError
+        is LoginbaseException.Network -> "network"
+        is LoginbaseException.MalformedResponse -> "malformed_response"
+        else -> "unknown"
+    }
+
     fun send() {
         error = null
         busy = true
@@ -205,6 +213,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                             AuthOutcome.ERROR,
                             method = "email",
                             source = source,
+                            reason = reasonOf(it),
                         ),
                         Eventbase.currentFlow(),
                     )

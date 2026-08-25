@@ -113,6 +113,7 @@ fun OAuthOutcomeHost() {
                                 AuthOutcome.ERROR,
                                 method = "github",
                                 source = LoginSheetBus.request.value ?: "cold_start",
+                                reason = outcome.reason,
                             ),
                             Eventbase.currentFlow(),
                         )
