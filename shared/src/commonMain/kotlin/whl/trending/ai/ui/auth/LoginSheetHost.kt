@@ -164,7 +164,20 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                     step = Step.CODE
                     code = ""
                 }
-                .onFailure { error = describe(it) }
+                .onFailure {
+                    error = describe(it)
+                    // 发码这段没有终态事件的话，「输了邮箱→没收到码」的流失在漏斗里是暗的
+                    track(
+                        AppEvent.AuthFinished(
+                            AuthAction.SIGN_IN,
+                            AuthOutcome.ERROR,
+                            method = "email",
+                            source = source,
+                            reason = reasonOf(it),
+                        ),
+                        Eventbase.currentFlow(),
+                    )
+                }
             busy = false
         }
     }

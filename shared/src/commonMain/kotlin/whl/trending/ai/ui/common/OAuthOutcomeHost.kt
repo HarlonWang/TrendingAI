@@ -88,7 +88,20 @@ fun OAuthOutcomeHost() {
                 // 登录失败与绑定失败回跳形状相同，靠落盘标记区分是哪条流程发起的
                 is OAuthOutcome.Failed -> {
                     val linkSource = AccountLink.consumePendingSource()
-                    if (linkSource != null) {
+                    if (outcome.reason == "access_denied") {
+                        // 在 GitHub 授权页点了「拒绝」：与关掉 CCT 同类的主动放弃，不弹红字
+                        track(
+                            AppEvent.AuthFinished(
+                                if (linkSource != null) AuthAction.LINK else AuthAction.SIGN_IN,
+                                AuthOutcome.CANCELED,
+                                method = "github",
+                                source = linkSource ?: LoginSheetBus.request.value ?: "cold_start",
+                                reason = outcome.reason,
+                            ),
+                            Eventbase.currentFlow(),
+                        )
+                        LoginSheetBus.reportGithubResult(GithubAuthResult.CANCELED)
+                    } else if (linkSource != null) {
                         track(
                             AppEvent.AuthFinished(
                                 AuthAction.LINK,
