@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,6 +42,7 @@ import trendingai.shared.generated.resources.login_code_expired
 import trendingai.shared.generated.resources.login_code_hint
 import trendingai.shared.generated.resources.login_code_invalid
 import trendingai.shared.generated.resources.login_code_sent_to
+import trendingai.shared.generated.resources.login_code_spam_hint
 import trendingai.shared.generated.resources.login_code_title
 import trendingai.shared.generated.resources.login_continue
 import trendingai.shared.generated.resources.login_continue_github
@@ -51,6 +53,7 @@ import trendingai.shared.generated.resources.login_oauth_failed
 import trendingai.shared.generated.resources.login_or
 import trendingai.shared.generated.resources.login_resend
 import trendingai.shared.generated.resources.login_resend_in
+import trendingai.shared.generated.resources.login_signup_hint
 import trendingai.shared.generated.resources.login_title
 import trendingai.shared.generated.resources.login_too_many_attempts
 import trendingai.shared.generated.resources.login_too_many_requests
@@ -257,10 +260,17 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 }
 
                 Step.CODE -> {
-                    Text(
-                        text = stringResource(Res.string.login_code_sent_to).replace("%s", email.trim()),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(Res.string.login_code_sent_to).replace("%s", email.trim()),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = stringResource(Res.string.login_code_spam_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     OutlinedTextField(
                         value = code,
                         onValueChange = { input ->
@@ -357,6 +367,18 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 } else {
                     Text(stringResource(Res.string.login_continue))
                 }
+            }
+
+            // 无密码体系里登录即注册，但「登录」二字不传达这点——不加这句，新用户会去找
+            // 找不到的注册入口。覆盖邮箱与 GitHub 两条路，故放在按钮组之下而非输入框内
+            if (step == Step.EMAIL) {
+                Text(
+                    text = stringResource(Res.string.login_signup_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             Spacer(Modifier.height(8.dp))

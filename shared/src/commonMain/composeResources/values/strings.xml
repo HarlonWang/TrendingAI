@@ -338,11 +338,12 @@
     <string name="digest_load_failed">Failed to load, please retry</string>
 
     <!-- 登录（loginbase 自建登录 UI） -->
-    <string name="login_title">Sign in</string>
+    <string name="login_title">Sign in or sign up</string>
     <string name="login_code_title">Enter code</string>
     <string name="login_email_hint">Email address</string>
     <string name="login_code_hint">6-digit code</string>
     <string name="login_code_sent_to">Code sent to %s</string>
+    <string name="login_code_spam_hint">Did not get it? Check your spam folder.</string>
     <string name="login_continue">Continue</string>
     <string name="login_resend">Resend code</string>
     <string name="login_resend_in">Resend in %ds</string>
@@ -355,6 +356,7 @@
     <string name="login_or">or</string>
     <string name="login_continue_github">Continue with GitHub</string>
     <string name="login_oauth_failed">GitHub sign-in failed, please try again</string>
+    <string name="login_signup_hint">First time here? Signing in creates your account — no separate sign-up.</string>
     <string name="account_link_github_in_use">This GitHub account is already linked to another account</string>
     <string name="account_link_already_linked">Your account is already linked to a different GitHub account</string>
     <string name="account_link_failed">Couldn't link GitHub, please try again</string>
