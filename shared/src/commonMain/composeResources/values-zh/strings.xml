@@ -206,11 +206,6 @@
     <string name="sign_in">登录</string>
     <string name="sign_out">退出登录</string>
     <string name="sign_out_confirm">确定要退出登录吗？</string>
-    <string name="sign_in_method_title">登录 TrendingAI</string>
-    <string name="sign_in_method_github">使用 GitHub 登录</string>
-    <string name="sign_in_method_github_desc">跳转浏览器完成授权</string>
-    <string name="sign_in_method_email">使用邮箱验证码登录</string>
-    <string name="sign_in_method_email_desc">验证码将发送至你的邮箱，无需密码</string>
     <string name="sign_in_hint_title">登录未完成</string>
     <string name="sign_in_hint_connectivity">GitHub 登录需要能正常访问 github.com，请检查网络后重试。</string>
     <string name="sign_in_hint_dismiss">知道了</string>
