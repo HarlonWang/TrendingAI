@@ -29,7 +29,7 @@ import whl.trending.chat.model.ChatError
  * 登录档触顶不做 Pro 引导（2026-07-26 起）：撞墙时刻推销转化低、观感差，Pro 信息统一
  * 留在账户页由用户主动了解。匿名档的登录 CTA 保留——那是身份引导，不是付费引导。
  *
- * 文案刻意不写具体数字：后端配额是 credits 账本（chat=1 / search=3 / research=10），
+ * 文案刻意不写具体数字：后端配额是 credits 账本、各 feature 费率不同，
  * 一次深度调研就吃掉登录档一天的额度，任何写死的「每天 N 条」都会立刻变成谎话。
  */
 @Composable

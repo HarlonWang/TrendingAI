@@ -170,7 +170,7 @@ class ChatViewModel(
      * 跨进程恢复**所有**未完成的 research 轮询，不依赖「进入时恢复了哪个会话」。
      *
      * 通用入口不再恢复会话之后，那条挂着任务的会话不会被打开——恢复若仍挂在
-     * [openThread] 上，后台被杀再回来就没人接这 10 credits 的任务了（服务端跑完也没人
+     * [openThread] 上，后台被杀再回来就没人接这个已扣费的任务了（服务端跑完也没人
      * 写回）。轮询照常落库，用户从抽屉切过去就能看到完整报告。
      *
      * 落在 init 而非 [enterEntry]：Activity 被系统重建时 Screen 侧的 `enteredKey`
