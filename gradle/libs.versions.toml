@@ -35,7 +35,7 @@ kmp-webview = "0.1.11"
 # 改了 loginbase-kt 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
 loginbase-kt = "0.1.1"
 # 与 loginbase-kt 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
-eventbase-kt = "0.1.0"
+eventbase-kt = "0.2.0"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
 room = "2.8.4"
