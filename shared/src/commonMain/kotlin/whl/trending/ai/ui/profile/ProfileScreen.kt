@@ -116,8 +116,8 @@ import whl.trending.ai.ui.subscription.ManageSubscriptionItem
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProfileScreen(
-    modifier: Modifier = Modifier,
     onNavigateToGithubProfile: () -> Unit,
+    modifier: Modifier = Modifier,
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToSubscription: () -> Unit = {},
 ) {

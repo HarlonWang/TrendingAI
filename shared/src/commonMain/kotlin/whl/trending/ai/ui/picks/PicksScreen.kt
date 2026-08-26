@@ -86,8 +86,8 @@ fun PicksScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onOpenUrl: (url: String) -> Unit,
     onNavigateToSubscribe: () -> Unit,
-    modifier: Modifier = Modifier,
     viewModel: PicksViewModel,
+    modifier: Modifier = Modifier,
     onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()

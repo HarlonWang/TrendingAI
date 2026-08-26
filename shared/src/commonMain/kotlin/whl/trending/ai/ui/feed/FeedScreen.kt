@@ -92,9 +92,9 @@ private val INDICATOR_DOT_SIZE = 6.dp
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
-    modifier: Modifier = Modifier,
     viewModel: FeedViewModel,
     onOpenUrl: (url: String) -> Unit,
+    modifier: Modifier = Modifier,
     onOpenDigest: (DigestPage) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()

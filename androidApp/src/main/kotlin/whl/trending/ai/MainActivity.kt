@@ -178,6 +178,6 @@ class MainActivity : AppCompatActivity() {
 
 @Preview
 @Composable
-fun AppAndroidPreview() {
+private fun AppAndroidPreview() {
     App()
 }

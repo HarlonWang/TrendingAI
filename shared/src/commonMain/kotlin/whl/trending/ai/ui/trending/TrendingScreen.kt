@@ -210,9 +210,9 @@ fun TrendingScreen(
 @Composable
 private fun RepoList(
     uiState: TrendingUiState,
-    modifier: Modifier = Modifier,
     onRefresh: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    modifier: Modifier = Modifier,
     /** 非空时列表项菜单显示「Star 到 GitHub」，null（不支持登录的平台）则隐藏 */
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
 ) {

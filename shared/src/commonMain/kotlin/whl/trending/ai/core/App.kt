@@ -45,7 +45,6 @@ import whl.trending.ai.data.repository.globalFavoriteRepository
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.ai.chat.ChatContext
@@ -103,7 +102,6 @@ internal fun MutableList<Route>.safePop() {
 }
 
 @Composable
-@Preview
 fun App() {
     val backStack = remember { mutableStateListOf<Route>(Home) }
 

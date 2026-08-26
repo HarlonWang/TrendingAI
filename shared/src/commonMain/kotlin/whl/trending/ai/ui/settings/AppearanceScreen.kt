@@ -261,8 +261,8 @@ private fun appIconName(preset: AppIconPreset): String {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AppIconGrid(
-    modifier: Modifier = Modifier,
     selected: AppIconPreset,
+    modifier: Modifier = Modifier,
     onSelect: (AppIconPreset) -> Unit,
 ) {
     FlowRow(
@@ -287,9 +287,9 @@ private fun AppIconGrid(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppIconSwatch(
-    modifier: Modifier = Modifier,
     preset: AppIconPreset,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val name = appIconName(preset)
@@ -365,11 +365,11 @@ internal fun themeModeText(mode: ThemeMode): String {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SwatchGrid(
-    modifier: Modifier = Modifier,
     selected: Long,
     isCustomSelected: Boolean,
     customSeed: Long?,
     onSelect: (ThemeSeed) -> Unit,
+    modifier: Modifier = Modifier,
     onOpenColorLab: () -> Unit,
 ) {
     // 每行 5 列、各列等宽：14 个预设 + 自定义正好 5×3 满排，不留缺角。
@@ -410,9 +410,9 @@ private fun SwatchGrid(
  */
 @Composable
 private fun CustomSwatch(
-    modifier: Modifier = Modifier,
     customSeed: Long?,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val wheel = remember {
@@ -441,12 +441,12 @@ private fun CustomSwatch(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun MorphSwatch(
-    modifier: Modifier = Modifier,
     name: String,
     brush: Brush,
     contentTint: Color,
     idleIcon: ImageVector?,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val morph = rememberMorph(SwatchShapes.idle, SwatchShapes.selected)
@@ -539,9 +539,9 @@ private fun ThemeModeGrid(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemeModeCard(
-    modifier: Modifier = Modifier,
     mode: ThemeMode,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val icon = when (mode) {
