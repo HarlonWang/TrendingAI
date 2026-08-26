@@ -76,7 +76,7 @@ fun MessageItem(
 }
 
 @Composable
-private fun UserMessage(message: ChatMessage, modifier: Modifier) {
+private fun UserMessage(message: ChatMessage, modifier: Modifier = Modifier) {
     var viewerPath by remember { mutableStateOf<String?>(null) }
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -150,7 +150,7 @@ private fun UserImageThumb(path: String, onClick: () -> Unit, modifier: Modifier
 private fun AssistantMessage(
     message: ChatMessage,
     onRetry: () -> Unit,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     onResearchUpsell: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
