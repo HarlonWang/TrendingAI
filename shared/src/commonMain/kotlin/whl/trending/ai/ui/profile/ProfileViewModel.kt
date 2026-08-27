@@ -6,9 +6,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.FollowingInfo
@@ -32,6 +33,8 @@ private const val FEED_PAGE_SIZE = 30
 private const val FEED_MAX_EVENTS = 300 // GitHub received_events 硬上限
 private const val HIGHLIGHTS_MIN_PER_LOAD = 10   // 精选档单次调用至少累计新增条目
 private const val MAX_PAGES_PER_LOAD = 5          // 单次调用最多连续拉取页数（防止过久）
+// 等登录态落定的上限，见 awaitResolvedAuthState
+private val AUTH_RESOLVE_TIMEOUT = 3.seconds
 
 data class ProfileUiState(
     val isLoading: Boolean = true,
@@ -161,10 +164,15 @@ class ProfileViewModel(
     /**
      * 等登录态从 [AuthState.Unknown] 落定。Hub 对匿名用户可达，所以「不是 LoggedIn 就按匿名收尾」
      * 这个判断一旦提前生效，冷启动直奔账户页的登录用户会被摆上登录引导。
-     * 等待是毫秒级：restore 只读一次本地存储。
+     * 正常是毫秒级：restore 只读一次本地存储。
+     *
+     * 超时兜底防的不是某个已知 bug，而是**这个等待无界**——落不了定就永远转圈，没有崩溃、
+     * 没有日志、没有提示。超时把那类静默硬故障降级成「按未登录处理」，用户点一下就能重试。
      */
     private suspend fun awaitResolvedAuthState(): AuthState =
-        authManager().authState.first { it !is AuthState.Unknown }
+        withTimeoutOrNull(AUTH_RESOLVE_TIMEOUT) {
+            authManager().authState.first { it !is AuthState.Unknown }
+        } ?: AuthState.LoggedOut
 
     fun load() {
         // 余额每次进页都拉实时值（独立协程，不受下方跳过逻辑影响）：

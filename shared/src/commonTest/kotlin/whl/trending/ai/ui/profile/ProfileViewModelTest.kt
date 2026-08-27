@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -228,7 +229,7 @@ class ProfileViewModelTest {
 
         val vm = viewModel(cache, auth = auth)
         vm.load()
-        advanceUntilIdle()
+        advanceTimeBy(1_000) // 不能用 advanceUntilIdle：它会跨过落定超时，直接把页面判成未登录
 
         // 还没落定：不下匿名结论，停在加载态
         assertTrue(vm.uiState.value.isLoading)
@@ -240,6 +241,25 @@ class ProfileViewModelTest {
 
         assertTrue(vm.uiState.value.loggedIn)
         assertEquals("octo", vm.uiState.value.user?.githubLogin)
+    }
+
+    /**
+     * 等落定是个无界等待，落不了定就永远转圈、没有任何提示。超时兜底把这类静默硬故障
+     * 降级成「按未登录处理」，用户点一下就能重试。
+     */
+    @Test
+    fun loadFallsBackToAnonymousWhenAuthStateNeverResolves() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val cache = cache()
+        val auth = FakeAuthManager().apply { state.value = AuthState.Unknown }
+
+        val vm = viewModel(cache, auth = auth)
+        vm.load()
+        advanceUntilIdle() // 虚拟时间跨过超时；authState 始终停在 Unknown
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.loggedIn)
+        assertNull(vm.uiState.value.user)
     }
 
     @Test
