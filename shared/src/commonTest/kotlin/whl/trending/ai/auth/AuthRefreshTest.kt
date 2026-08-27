@@ -9,6 +9,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,6 +21,7 @@ import wang.harlon.loginbase.AuthClient
 import wang.harlon.loginbase.InMemoryTokenStore
 import wang.harlon.loginbase.TokenPair
 import whl.trending.ai.data.remote.installTrendingAuth
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -29,6 +31,20 @@ import kotlin.test.assertNull
  * 业务代码不再经手 token。这里测的就是那条接线——它写错了不会有任何编译或运行期报错。
  */
 class AuthRefreshTest {
+
+    /**
+     * [LoginbaseAuthManager] 的 init 会常驻 collect `client.authState`，用例结束后不取消就一直活着。
+     * `SignInFailureBus` 是进程级单例，漏下来的 collector 能把事件 emit 进去污染后续用例。
+     */
+    private val managedScopes = mutableListOf<CoroutineScope>()
+
+    private fun managed(scope: CoroutineScope): CoroutineScope = scope.also { managedScopes += it }
+
+    @AfterTest
+    fun cancelManagedScopes() {
+        managedScopes.forEach { it.cancel() }
+        managedScopes.clear()
+    }
 
     private class FakeAuth(
         private var token: String?,
@@ -126,7 +142,9 @@ class AuthRefreshTest {
         val client = AuthClient("https://x/auth", InMemoryTokenStore(TokenPair("a0", "r0"))) {
             httpEngine = MockEngine { throw RuntimeException("network down") }
         }
-        assertNull(LoginbaseAuthManager(client, CoroutineScope(Dispatchers.Unconfined)).refreshAccessToken())
+        assertNull(
+            LoginbaseAuthManager(client, managed(CoroutineScope(Dispatchers.Unconfined))).refreshAccessToken(),
+        )
         runCurrent()
 
         assertEquals(emptyList(), seen)
@@ -144,7 +162,7 @@ class AuthRefreshTest {
             httpEngine = MockEngine { respond("", HttpStatusCode.OK) }
         }
         // 用 StandardTestDispatcher 才拦得住 init 里的 restore——Unconfined 会当场跑完
-        val manager = LoginbaseAuthManager(client, CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val manager = LoginbaseAuthManager(client, managed(CoroutineScope(StandardTestDispatcher(testScheduler))))
 
         assertEquals(AuthState.Unknown, manager.authState.value)
 
@@ -173,7 +191,7 @@ class AuthRefreshTest {
             }
         }
         val client = AuthClient("https://x/auth", InMemoryTokenStore(tokens)) { httpEngine = engine }
-        // 传入 scope：默认的 Dispatchers.Main 在单测环境不存在（init 块会立刻炸）
-        return LoginbaseAuthManager(client, CoroutineScope(Dispatchers.Unconfined))
+        // 必须传 scope：默认的 Dispatchers.Main 在单测环境不存在（init 块会立刻炸）
+        return LoginbaseAuthManager(client, managed(CoroutineScope(Dispatchers.Unconfined)))
     }
 }

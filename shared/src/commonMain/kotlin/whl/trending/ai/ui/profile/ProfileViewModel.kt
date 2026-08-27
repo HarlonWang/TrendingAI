@@ -135,7 +135,6 @@ class ProfileViewModel(
                         hasLoaded = false
                         load()
                     }
-                    is AuthState.LoggingIn -> Unit
                 }
             }
         }

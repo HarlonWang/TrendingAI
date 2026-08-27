@@ -14,7 +14,6 @@ sealed interface AuthState {
      */
     data object Unknown : AuthState
     data object LoggedOut : AuthState
-    data object LoggingIn : AuthState
     data object LoggedIn : AuthState
 }
 
