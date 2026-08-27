@@ -56,8 +56,8 @@ class ProfileViewModelTest {
             QuotaResponse(balance = 8, dailyGrant = 10, resetAt = "2026-07-24T00:00:00.000Z", tier = "user")
         },
     ) : UserRepository() {
-        override suspend fun fetchMe(accessToken: String): MeUser = onFetchMe()
-        override suspend fun fetchQuota(accessToken: String?): QuotaResponse = onFetchQuota()
+        override suspend fun fetchMe(): MeUser = onFetchMe()
+        override suspend fun fetchQuota(): QuotaResponse = onFetchQuota()
     }
 
     private class FakeGithubApi : GithubApi() {

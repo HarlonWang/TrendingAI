@@ -204,19 +204,16 @@ class ProfileViewModel(
             consumedRawCount = 0
             followingInfo = null
             ownRepoItems = emptyList()
-            val token = authManager().getAccessToken()
-            if (token == null) {
-                // 未登录是 Hub 的正常态（展示登录引导 + 匿名额度）；仅当 authState 声称已登录
-                // 却拿不到 token 才算异常（可重试）。匿名额度由上面的 reloadQuota 拉取。
-                val loggedIn = authManager().authState.value is AuthState.LoggedIn
+            if (authManager().authState.value !is AuthState.LoggedIn) {
+                // 未登录是 Hub 的正常态（展示登录引导 + 匿名额度，后者由上面的 reloadQuota 拉取）
                 freshState { quota, quotaError ->
-                    ProfileUiState(isLoading = false, isError = loggedIn, loggedIn = false, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                    ProfileUiState(isLoading = false, loggedIn = false, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
                 }
-                hasLoaded = !loggedIn
+                hasLoaded = true
                 return@launch
             }
             val user = try {
-                repository.fetchMe(token)
+                repository.fetchMe()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 freshState { quota, quotaError ->
@@ -376,17 +373,9 @@ class ProfileViewModel(
     }
 
     private suspend fun loadQuota() {
-        // Hub 对未登录用户可达：匿名用户按 install-id 拉匿名档额度，token 传 null 即可。
-        // 唯一要防的是「登录态但 token 处于刷新瞬态暂为 null」——此时不请求，否则不带 Bearer 的
-        // /api/quota 会回落匿名档、覆盖登录/Pro 用户的真实额度。保留旧值等下次刷新。
-        val loggedIn = authManager().authState.value is AuthState.LoggedIn
+        // Hub 对未登录用户可达：带不带 Bearer 由鉴权插件按会话决定，服务端据此定档
         try {
-            // 登录态走 authorized：token 过期时刷新后重试，不再把「加载失败」直接摆给用户。
-            val quota = if (loggedIn) {
-                authManager().authorized { repository.fetchQuota(it) } ?: return
-            } else {
-                repository.fetchQuota(null)
-            }
+            val quota = repository.fetchQuota()
             _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -402,20 +391,13 @@ class ProfileViewModel(
         consumedRawCount = 0
         followingInfo = null
         ownRepoItems = emptyList()
-        val token = authManager().getAccessToken()
-        if (token == null) {
+        if (authManager().authState.value !is AuthState.LoggedIn) {
             // 未登录下拉刷新：额度由 refresh() 的 reloadQuota 刷新，这里落回匿名态，不报错
-            val loggedIn = authManager().authState.value is AuthState.LoggedIn
-            _uiState.value = _uiState.value.copy(isRefreshing = false, isError = loggedIn, loggedIn = false, user = null)
+            _uiState.value = _uiState.value.copy(isRefreshing = false, loggedIn = false, user = null)
             return
         }
-        // authorized 返回 null = 刷新后仍无会话（会话已终结），按错误态收尾，
-        // 与请求抛异常同路——用户看到可重试的失败，而不是空白的登录态
         val user = try {
-            authManager().authorized { repository.fetchMe(it) } ?: run {
-                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
-                return
-            }
+            repository.fetchMe()
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)

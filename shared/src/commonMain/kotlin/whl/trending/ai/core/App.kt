@@ -116,7 +116,7 @@ fun App() {
     LaunchedEffect(authState) {
         if (authState is AuthState.LoggedIn) {
             globalFavoriteRepository.requestSync()
-            globalAuthManager.authorized { userRepository.syncMe(it) }
+            userRepository.syncMe()
         }
     }
 

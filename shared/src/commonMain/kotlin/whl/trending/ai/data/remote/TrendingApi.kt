@@ -62,7 +62,8 @@ open class TrendingApi {
                 install(DefaultRequest) {
                     header(HttpHeaders.UserAgent, getUserAgent())
                 }
-            }
+                installTrendingAuth()
+            }.trackAuthTokenCache()
         }
     }
 
@@ -193,10 +194,8 @@ open class TrendingApi {
      * [fresh] = true 时带 `?fresh=1`：让服务端绕过 userinfo claims 的 10 分钟缓存重新拉取。
      * 仅用于刚关联身份后——否则读到的仍是关联前的 identities，UI 会以为没绑上。
      */
-    open suspend fun fetchMe(accessToken: String, fresh: Boolean = false): MeResponse {
-        val response = client.get("$baseHost/api/me${if (fresh) "?fresh=1" else ""}") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-        }
+    open suspend fun fetchMe(fresh: Boolean = false): MeResponse {
+        val response = client.get("$baseHost/api/me${if (fresh) "?fresh=1" else ""}")
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
@@ -207,10 +206,9 @@ open class TrendingApi {
      * credits 余额查询（账户页配额卡）。X-Install-Id 必传（匿名记账主体）；
      * 已登录再带 Bearer——服务端按 user 主体与档位返回。响应服务端禁缓存，每次都是实时余额。
      */
-    open suspend fun fetchQuota(installId: String, accessToken: String?): QuotaResponse {
+    open suspend fun fetchQuota(installId: String): QuotaResponse {
         val response = client.get("$baseHost/api/quota") {
             header("X-Install-Id", installId)
-            accessToken?.let { header(HttpHeaders.Authorization, "Bearer $it") }
         }
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
@@ -222,10 +220,8 @@ open class TrendingApi {
      * 即时激活/对账：后端权威核对赞助并 upsert，返回最新 Pro 态。用户从 Sponsors 返回时调用。
      * 返回整个响应而非裸 Boolean——调用方要靠 `reason` 区分「没赞助」与「赞助了但没关联 GitHub」。
      */
-    open suspend fun refreshPro(accessToken: String): ProRefreshResponse {
-        val response = client.post("$baseHost/api/pro/refresh") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-        }
+    open suspend fun refreshPro(): ProRefreshResponse {
+        val response = client.post("$baseHost/api/pro/refresh")
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
@@ -237,9 +233,8 @@ open class TrendingApi {
      *
      * [plan] 必填且无默认值——协议层不替用户预选档位，「主推年付」只体现在 UI 的默认选中与角标上。
      */
-    open suspend fun createCheckout(accessToken: String, plan: String): CheckoutResponse {
+    open suspend fun createCheckout(plan: String): CheckoutResponse {
         val response = client.post("$baseHost/api/billing/checkout") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
             contentType(ContentType.Application.Json)
             setBody(buildJsonObject { put("plan", plan) })
         }
@@ -262,10 +257,8 @@ open class TrendingApi {
     }
 
     /** 当前用户的订阅快照（管理订阅页展示用）；无订阅时 `subscription` 为 null 而非 404。 */
-    open suspend fun fetchSubscription(accessToken: String): SubscriptionResponse {
-        val response = client.get("$baseHost/api/billing/subscription") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-        }
+    open suspend fun fetchSubscription(): SubscriptionResponse {
+        val response = client.get("$baseHost/api/billing/subscription")
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
@@ -276,10 +269,8 @@ open class TrendingApi {
      * 取 Paddle 客户门户深链（取消订阅 / 更换支付方式）。会话临时、不可缓存，每次现取。
      * 无订阅记录时后端回 404 `no_subscription`——调用方据此提示，而不是当网络错误。
      */
-    open suspend fun createPortalSession(accessToken: String): PortalResponse {
-        val response = client.post("$baseHost/api/billing/portal") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-        }
+    open suspend fun createPortalSession(): PortalResponse {
+        val response = client.post("$baseHost/api/billing/portal")
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
@@ -307,10 +298,8 @@ open class TrendingApi {
     // 收藏接口全部经 Bearer 鉴权；调用方（FavoriteRepository）负责传入 externalId 已回填的条目。
 
     /** 拉取该用户全量收藏。非 2xx 抛 [ApiException]，供调用方在失败时保留本地、不覆盖。 */
-    open suspend fun fetchFavorites(accessToken: String): List<FavoriteItem> {
-        val response = client.get("$baseHost/api/favorites") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-        }
+    open suspend fun fetchFavorites(): List<FavoriteItem> {
+        val response = client.get("$baseHost/api/favorites")
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
         }
@@ -318,9 +307,8 @@ open class TrendingApi {
     }
 
     /** upsert 单条收藏（幂等）。返回是否成功，失败由调用方入队重试。 */
-    open suspend fun putFavorite(accessToken: String, item: FavoriteItem): Boolean {
+    open suspend fun putFavorite(item: FavoriteItem): Boolean {
         val response = client.put("$baseHost/api/favorites") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
             contentType(ContentType.Application.Json)
             setBody(item)
         }
@@ -328,9 +316,8 @@ open class TrendingApi {
     }
 
     /** 删一条收藏（幂等，服务端不存在也 200）。 */
-    open suspend fun deleteFavorite(accessToken: String, source: String, externalId: String): Boolean {
+    open suspend fun deleteFavorite(source: String, externalId: String): Boolean {
         val response = client.delete("$baseHost/api/favorites") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
             parameter("source", source)
             parameter("external_id", externalId)
         }
@@ -338,9 +325,8 @@ open class TrendingApi {
     }
 
     /** 批量 upsert（登录首次合并本地收藏）。 */
-    open suspend fun batchPutFavorites(accessToken: String, items: List<FavoriteItem>): Boolean {
+    open suspend fun batchPutFavorites(items: List<FavoriteItem>): Boolean {
         val response = client.post("$baseHost/api/favorites/batch") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
             contentType(ContentType.Application.Json)
             setBody(FavoritesResponse(items))
         }

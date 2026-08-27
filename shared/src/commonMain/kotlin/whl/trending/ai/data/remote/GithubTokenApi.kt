@@ -33,13 +33,10 @@ open class GithubTokenApi {
 
     /**
      * 取 GitHub access token。404 = 该用户没存 token（纯邮箱账号、或撤销过授权），
-     * 返回 null——调用方据此显示「关联 GitHub」引导而不是报错。
-     * 其余非 2xx 抛 ApiException（401 含 token 过期，调用方决定重试/登出）。
+     * 返回 null——调用方据此显示「关联 GitHub」引导而不是报错。其余非 2xx 抛 ApiException。
      */
-    open suspend fun fetchGithubToken(accessToken: String): String? {
-        val response = client.get("$API_BASE/api/github/token") {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-        }
+    open suspend fun fetchGithubToken(): String? {
+        val response = client.get("$API_BASE/api/github/token")
         if (response.status.value == 404) return null
         if (response.status.value !in 200..299) {
             throw ApiException(response.status.value, response.bodyAsText())
@@ -61,7 +58,8 @@ open class GithubTokenApi {
                     connectTimeoutMillis = 15000
                     socketTimeoutMillis = 15000
                 }
-            }
+                installTrendingAuth()
+            }.trackAuthTokenCache()
         }
     }
 }

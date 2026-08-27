@@ -1,8 +1,6 @@
 package whl.trending.ai.data.repository
 
 import kotlinx.coroutines.CancellationException
-import whl.trending.ai.auth.AuthManager
-import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.model.CheckoutResponse
@@ -14,13 +12,11 @@ import whl.trending.ai.data.remote.TrendingApi
 
 /**
  * Paddle 订阅数据源（后端 `src/api/billing.js`）。
- * 需要身份的接口一律经 [AuthManager.authorized] 发出——否则 token 过期的 401 会被摆成购买失败。
  * 失败一律返回 null 而不抛（UI 要的是降级形态），但 CancellationException 必须原样抛出——
  * 吞掉会把「协程被取消」当成「请求失败」，取消再也传不下去。
  */
 open class BillingRepository(
     private val api: TrendingApi = TrendingApi(),
-    private val authManager: () -> AuthManager = { globalAuthManager },
 ) {
 
     /**
@@ -37,7 +33,7 @@ open class BillingRepository(
 
     /** 创建交易并拿收银台地址。[plan] 取 `"annual"` / `"monthly"`，约束见 [TrendingApi.createCheckout]。 */
     open suspend fun createCheckout(plan: String): CheckoutResponse? = try {
-        authManager().authorized { api.createCheckout(it, plan) }
+        api.createCheckout(plan)
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         track(AppEvent.ApiFailed("billing/checkout", statusOf(e)))
@@ -46,7 +42,7 @@ open class BillingRepository(
 
     /** 当前订阅快照；无订阅时后端回 `{subscription: null}`，与请求失败（null）不同形。 */
     open suspend fun fetchSubscription(): PaddleSubscription? = try {
-        authManager().authorized { api.fetchSubscription(it) }?.subscription
+        api.fetchSubscription().subscription
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         track(AppEvent.ApiFailed("billing/subscription", statusOf(e)))
@@ -58,7 +54,7 @@ open class BillingRepository(
      * 无订阅记录时后端回 404——不额外区分，UI 统一按「暂时打不开」处理即可。
      */
     open suspend fun createPortal(): PortalResponse? = try {
-        authManager().authorized { api.createPortalSession(it) }
+        api.createPortalSession()
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         track(AppEvent.ApiFailed("billing/portal", statusOf(e)))

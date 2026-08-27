@@ -61,16 +61,20 @@ interface AuthManager {
     fun signIn(source: String)
 
     fun signOut()
+
+    /**
+     * 当前 access token，无会话返回 null。**业务代码不该调它**——鉴权由
+     * [whl.trending.ai.data.remote.installTrendingAuth] 装的 ktor `Auth` 插件统一处理，
+     * 这里只是插件 `loadTokens` 的取值口。
+     */
     suspend fun getAccessToken(): String?
 
     /**
-     * 带鉴权执行一次请求：拿 token 交给 [block]，**若因 401 失败则刷新后重试一次**。
-     * 默认实现不重试，loginbase 实现覆盖；返回 null 表示无会话，调用方按未登录处理。
+     * 单飞刷新一次，返回新 token；放弃时返回 null（会话终结或暂时性失败均如此，
+     * 二者的区分走 [authState]，插件只需要知道「还能不能重试」）。
+     * 默认实现不刷新；loginbase 实现覆盖。
      */
-    suspend fun <T> authorized(block: suspend (String) -> T): T? {
-        val token = getAccessToken() ?: return null
-        return block(token)
-    }
+    suspend fun refreshAccessToken(): String? = null
 }
 
 object NoopAuthManager : AuthManager {

@@ -8,16 +8,13 @@ import whl.trending.ai.data.remote.GithubTokenApi
  */
 open class GithubTokenProvider(
     private val accountApi: GithubTokenApi = GithubTokenApi(),
-    private val authManager: () -> AuthManager = { globalAuthManager },
 ) {
     private var cached: String? = null
 
     open suspend fun get(): String? {
         cached?.let { return it }
         return try {
-            // authorized：自家 token 过期时刷新重试，否则 GitHub 数据面会在
-            // access token 过期后整片失效（表现为「未关联 GitHub」的假象）
-            authManager().authorized { accountApi.fetchGithubToken(it) }?.also { cached = it }
+            accountApi.fetchGithubToken()?.also { cached = it }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             null
