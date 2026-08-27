@@ -35,7 +35,7 @@ class LoginbaseAuthManager(
 
     override val isSupported: Boolean = true
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedOut)
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     init {
@@ -54,8 +54,10 @@ class LoginbaseAuthManager(
                     }
                 }
                 _authState.value = when (state) {
-                    // Unknown 只在 restore 之前出现，对 App 而言等同未登录
-                    LoginbaseState.Unknown, is LoginbaseState.SignedOut -> AuthState.LoggedOut
+                    // 原样透传：restore 之前「是否登录」还没有答案，当未登录会让登录用户在
+                    // 那一小段里被按匿名对待（见 AuthState.Unknown）
+                    LoginbaseState.Unknown -> AuthState.Unknown
+                    is LoginbaseState.SignedOut -> AuthState.LoggedOut
                     // RefreshFailed 不是登出（库文档硬性要求）：多半只是弱网，当登出处理会把
                     // 漫游/地铁用户踢下线
                     LoginbaseState.SignedIn, is LoginbaseState.RefreshFailed -> AuthState.LoggedIn

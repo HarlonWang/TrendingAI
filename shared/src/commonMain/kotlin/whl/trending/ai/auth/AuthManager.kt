@@ -7,6 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 sealed interface AuthState {
+    /**
+     * 会话还没从存储恢复出来，「登录与否」尚无答案。**不等于未登录**：盘上可能正躺着有效令牌。
+     * 判 `is LoggedIn` 的地方按未登录处理即可（至多少显示一瞬登录引导），但**据此下匿名结论、
+     * 并把结果写进 UI 的地方必须先等它落定**——否则登录用户会被拉到匿名档数据（账户页配额卡）。
+     */
+    data object Unknown : AuthState
     data object LoggedOut : AuthState
     data object LoggingIn : AuthState
     data object LoggedIn : AuthState

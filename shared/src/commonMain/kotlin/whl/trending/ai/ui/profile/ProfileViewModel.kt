@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
@@ -113,10 +114,13 @@ class ProfileViewModel(
         viewModelScope.launch {
             var prev: AuthState? = null
             authManager().authState.collect { state ->
-                val changed = prev != null && prev != state
+                val previous = prev
                 prev = state
-                if (!changed) return@collect
+                // 跳过初始发射，以及 Unknown→已知 的首次落定：后者不是登录态转变，只是答案揭晓，
+                // 当成转变会与 Screen 的首帧 load() 撞成双重加载
+                if (previous == null || previous is AuthState.Unknown || previous == state) return@collect
                 when (state) {
+                    AuthState.Unknown -> Unit // 落定后不会再回到未知
                     is AuthState.LoggedOut -> {
                         hasLoaded = false
                         loadJob?.cancel()
@@ -154,6 +158,14 @@ class ProfileViewModel(
         val snapshot = ProfileCache.from(_uiState.value, cache.get(ProfileCache.KEY)) ?: return
         cache.put(ProfileCache.KEY, snapshot)
     }
+
+    /**
+     * 等登录态从 [AuthState.Unknown] 落定。Hub 对匿名用户可达，所以「不是 LoggedIn 就按匿名收尾」
+     * 这个判断一旦提前生效，冷启动直奔账户页的登录用户会被摆上登录引导。
+     * 等待是毫秒级：restore 只读一次本地存储。
+     */
+    private suspend fun awaitResolvedAuthState(): AuthState =
+        authManager().authState.first { it !is AuthState.Unknown }
 
     fun load() {
         // 余额每次进页都拉实时值（独立协程，不受下方跳过逻辑影响）：
@@ -204,7 +216,7 @@ class ProfileViewModel(
             consumedRawCount = 0
             followingInfo = null
             ownRepoItems = emptyList()
-            if (authManager().authState.value !is AuthState.LoggedIn) {
+            if (awaitResolvedAuthState() !is AuthState.LoggedIn) {
                 // 未登录是 Hub 的正常态（展示登录引导 + 匿名额度，后者由上面的 reloadQuota 拉取）
                 freshState { quota, quotaError ->
                     ProfileUiState(isLoading = false, loggedIn = false, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
@@ -391,7 +403,7 @@ class ProfileViewModel(
         consumedRawCount = 0
         followingInfo = null
         ownRepoItems = emptyList()
-        if (authManager().authState.value !is AuthState.LoggedIn) {
+        if (awaitResolvedAuthState() !is AuthState.LoggedIn) {
             // 未登录下拉刷新：额度由 refresh() 的 reloadQuota 刷新，这里落回匿名态，不报错
             _uiState.value = _uiState.value.copy(isRefreshing = false, loggedIn = false, user = null)
             return

@@ -12,6 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import wang.harlon.loginbase.AuthClient
@@ -130,6 +132,25 @@ class AuthRefreshTest {
         assertEquals(emptyList(), seen)
         collector.cancel()
         SignInFailureBus.consume()
+    }
+
+    /**
+     * 会话恢复完成之前，登录态必须是 Unknown 而不是 LoggedOut。当成未登录的话，盘上明明有
+     * 令牌的用户会在冷启动那一小段里被按匿名对待（账户页摆登录引导）。
+     */
+    @Test
+    fun `restore 完成前登录态是 Unknown 而非未登录`() = runTest {
+        val client = AuthClient("https://x/auth", InMemoryTokenStore(TokenPair("a0", "r0"))) {
+            httpEngine = MockEngine { respond("", HttpStatusCode.OK) }
+        }
+        // 用 StandardTestDispatcher 才拦得住 init 里的 restore——Unconfined 会当场跑完
+        val manager = LoginbaseAuthManager(client, CoroutineScope(StandardTestDispatcher(testScheduler)))
+
+        assertEquals(AuthState.Unknown, manager.authState.value)
+
+        advanceUntilIdle()
+
+        assertEquals(AuthState.LoggedIn, manager.authState.value)
     }
 
     private fun managerWith(

@@ -216,23 +216,30 @@ class ProfileViewModelTest {
     }
 
     // 回归：token 刷新瞬态为 null 时，loadQuota 不得请求匿名档覆盖登录/Pro 用户已有的真实余额
+    /**
+     * Hub 对匿名用户可达，所以「不是 LoggedIn 就摆登录引导」这个判断必须等会话恢复完
+     * ——冷启动直奔账户页的登录用户，否则会先被当成未登录。
+     */
     @Test
-    fun quotaNotOverwrittenWhenTokenNull() = runTest {
+    fun loadWaitsForAuthStateToResolve() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val cache = cache()
-        val auth = FakeAuthManager()
+        val auth = FakeAuthManager().apply { state.value = AuthState.Unknown }
 
         val vm = viewModel(cache, auth = auth)
         vm.load()
         advanceUntilIdle()
-        assertEquals(8, vm.uiState.value.quota?.balance) // 登录档余额
 
-        // 模拟刷新瞬态：token 变 null。此时重拉余额不应退到匿名档（5/5）覆盖登录档
-        auth.token = null
-        vm.refresh()
+        // 还没落定：不下匿名结论，停在加载态
+        assertTrue(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.loggedIn)
+        assertNull(vm.uiState.value.user)
+
+        auth.state.value = AuthState.LoggedIn
         advanceUntilIdle()
 
-        assertEquals(8, vm.uiState.value.quota?.balance) // 旧登录档保留，未被匿名覆盖
+        assertTrue(vm.uiState.value.loggedIn)
+        assertEquals("octo", vm.uiState.value.user?.githubLogin)
     }
 
     @Test
