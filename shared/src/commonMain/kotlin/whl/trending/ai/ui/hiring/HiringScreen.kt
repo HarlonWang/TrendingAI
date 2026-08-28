@@ -103,8 +103,7 @@ private fun HiringFilterDim.toListFilter() = when (this) {
  *
  * **产品边界：只呈现原文写明的约束事实，不替用户判断能不能投。**
  * 因此：不推断所在地、不做默认过滤、进入页面一律无筛选态、不记忆筛选偏好。
- * 筛选器带实时计数且首屏可见——缓解「满屏投不了」观感的正确方式是让用户看见有什么，
- * 而不是替他删掉。这条是本页成败的关键，不要把筛选器折叠成一个漏斗图标。
+ * 筛选项带实时计数——缓解「满屏投不了」观感的正确方式是让用户看见有什么，而不是替他删掉。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -199,7 +198,7 @@ private fun ReadyContent(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // 来源标注 + 当月主帖入口（需求 §4.8）。放首屏第一行而不是列表末尾——
+        // 来源标注 + 当月主帖入口（需求「版权与来源标注」一节）。放首屏第一行而不是列表末尾——
         // 233 条之后的标注等于没标，且卡片只能逐条跳楼层，整月主帖本来无处可去
         item { SourceHeader(s.storyId, onOpenUrl) }
 
@@ -217,7 +216,7 @@ private fun ReadyContent(
             )
         }
 
-        // 筛选器：首屏可见、不折叠、每项带实时计数。
+        // 筛选器：每项带实时计数。
         // 计数在「其余维度已生效」的子集上算，所以点了一个条件后其他数字会跟着变
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
