@@ -35,26 +35,14 @@ sealed interface HiringUiState {
         /** 当期全部岗位，未经筛选。筛选是纯展示层的事，不动这份数据 */
         val all: List<HiringPost>,
         val selected: Map<HiringFilterDim, Set<String>>,
-        /** 关键词，只在本地过滤，不发请求 */
-        val query: String = "",
     ) : HiringUiState {
-        /** 命中当前筛选与关键词的岗位。多维之间取交集，同维多选取并集 */
-        val filtered: List<HiringPost> get() = all.filter { matchesQuery(it) && matchesFilters(it) }
-
-        private fun matchesFilters(p: HiringPost) = selected.all { (dim, vals) ->
-            vals.isEmpty() || values(p, dim).any { it in vals }
-        }
-
-        private fun matchesQuery(p: HiringPost): Boolean {
-            val q = query.trim()
-            if (q.isEmpty()) return true
-            val hay = p.company.orEmpty() + p.roles.joinToString(" ") +
-                p.techStack.joinToString(" ") + p.title.orEmpty() + p.summary.orEmpty()
-            return hay.contains(q, ignoreCase = true)
+        /** 命中当前筛选的岗位。多维之间取交集，同维多选取并集 */
+        val filtered: List<HiringPost> get() = all.filter { p ->
+            selected.all { (dim, vals) -> vals.isEmpty() || values(p, dim).any { it in vals } }
         }
 
         /**
-         * 某维度各取值的计数，**在「其余维度与关键词已生效」的子集上算**——这样点了一个条件后，
+         * 某维度各取值的计数，**在「其余维度已生效」的子集上算**——这样点了一个条件后，
          * 其他条件的数字会跟着变，用户能看到「再叠一个还剩多少」。
          * 服务端返回的 facets 只是首屏的初值，联动计数必须本地算（数据全在手，零往返）。
          *
@@ -63,14 +51,14 @@ sealed interface HiringUiState {
          */
         fun counts(dim: HiringFilterDim): Map<String, Int> {
             val base = all.filter { p ->
-                matchesQuery(p) && selected.all { (d, vals) ->
+                selected.all { (d, vals) ->
                     d == dim || vals.isEmpty() || values(p, d).any { it in vals }
                 }
             }
             return base.flatMap { values(it, dim) }.groupingBy { it }.eachCount()
         }
 
-        val isFiltering: Boolean get() = selected.values.any { it.isNotEmpty() } || query.isNotBlank()
+        val isFiltering: Boolean get() = selected.values.any { it.isNotEmpty() }
     }
 
     data object Unavailable : HiringUiState
@@ -134,12 +122,8 @@ class HiringViewModel(
 
     fun clearFilters() {
         _uiState.update { s ->
-            if (s !is HiringUiState.Ready) s else s.copy(selected = emptyMap(), query = "")
+            if (s !is HiringUiState.Ready) s else s.copy(selected = emptyMap())
         }
-    }
-
-    fun search(q: String) {
-        _uiState.update { s -> if (s !is HiringUiState.Ready) s else s.copy(query = q) }
     }
 
     private fun load() {

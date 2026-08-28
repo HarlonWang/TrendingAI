@@ -376,8 +376,6 @@
     <string name="hiring_type_internship">实习</string>
     <string name="hiring_type_part_time">兼职</string>
     <string name="hiring_filter_role">职能</string>
-    <string name="hiring_search_hint">搜岗位、公司、技术栈</string>
-    <string name="hiring_result_count">%1$d 个岗位</string>
     <string name="hiring_clear">清除</string>
     <string name="hiring_more_roles">%1$d 个岗位</string>
     <string name="hiring_role_backend">后端</string>

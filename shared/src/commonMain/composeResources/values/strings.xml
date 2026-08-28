@@ -376,8 +376,6 @@
     <string name="hiring_type_internship">Internship</string>
     <string name="hiring_type_part_time">Part-time</string>
     <string name="hiring_filter_role">Role</string>
-    <string name="hiring_search_hint">Search roles, companies, stacks</string>
-    <string name="hiring_result_count">%1$d roles</string>
     <string name="hiring_clear">Clear</string>
     <string name="hiring_more_roles">%1$d roles</string>
     <string name="hiring_role_backend">Backend</string>
