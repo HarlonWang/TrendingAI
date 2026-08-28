@@ -43,16 +43,41 @@ adb -s "$serial" install -r "$APK" >/dev/null 2>&1 || {
   adb -s "$serial" install "$APK" >/dev/null
 }
 
+check_alive() {
+  stage="$1"
+  crash=$(adb -s "$serial" logcat -d -b crash -v brief 2>/dev/null | grep -c "$PKG" || true)
+  pid=$(adb -s "$serial" shell pidof "$PKG" 2>/dev/null | tr -d '\r' || true)
+  if [ "$crash" -gt 0 ] || [ -z "$pid" ]; then
+    echo "FAIL: ${stage}未通过（crash 日志行数=${crash}, pid=[${pid}]）"
+    adb -s "$serial" logcat -d -b crash -v time | tail -40
+    exit 1
+  fi
+  echo "  ok: ${stage}（pid=${pid}）"
+}
+
 echo "==> 启动并观察 10 秒"
 adb -s "$serial" logcat -c
 adb -s "$serial" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 10
+check_alive "启动冒烟"
 
-crash=$(adb -s "$serial" logcat -d -b crash -v brief 2>/dev/null | grep -c "$PKG" || true)
-pid=$(adb -s "$serial" shell pidof "$PKG" 2>/dev/null | tr -d '\r' || true)
-if [ "$crash" -gt 0 ] || [ -z "$pid" ]; then
-  echo "FAIL: 启动冒烟未通过（crash 日志行数=${crash}, pid=[${pid}]）"
-  adb -s "$serial" logcat -d -b crash -v time | tail -40
+# 首页不含 TextField，只验启动会漏掉「渲染输入框才炸」的那一类。material3 与 CMP 版本
+# 脱节时就是这个形状：编译、单测、启动冒烟全绿，一进聊天页/登录面板即 AbstractMethodError。
+echo "==> 打开聊天页（验 TextField 渲染）"
+size=$(adb -s "$serial" shell wm size 2>/dev/null | sed -n 's/.*: *\([0-9]*\)x\([0-9]*\).*/\1 \2/p')
+w=$(echo "$size" | cut -d' ' -f1)
+h=$(echo "$size" | cut -d' ' -f2)
+[ -n "$w" ] && [ -n "$h" ] || { echo "FAIL: 取不到屏幕尺寸，无法定位聊天入口"; exit 1; }
+adb -s "$serial" shell input tap $((w * 70 / 100)) $((h * 93 / 100))   # 底栏右侧的聊天 FAB
+sleep 6
+check_alive "聊天页渲染"
+
+# 没点中入口时上一步等于没验，用 dump 里有没有输入框来兜底（EditText 与界面语言无关）
+adb -s "$serial" shell uiautomator dump /sdcard/smoke_ui.xml >/dev/null 2>&1 || true
+if ! adb -s "$serial" shell cat /sdcard/smoke_ui.xml 2>/dev/null | grep -q "EditText"; then
+  echo "FAIL: 没进到含输入框的界面——聊天入口坐标可能已失效，这一步等于没验"
   exit 1
 fi
-echo "PASS: 进程存活（pid=${pid}），无崩溃日志。可以打 tag 发布。"
+adb -s "$serial" shell rm -f /sdcard/smoke_ui.xml >/dev/null 2>&1 || true
+
+echo "PASS: 启动与 TextField 渲染均无崩溃。可以打 tag 发布。"
