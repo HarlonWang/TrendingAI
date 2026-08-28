@@ -46,6 +46,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
@@ -243,6 +245,7 @@ private fun ReadyContent(
 ) {
     val list = s.filtered
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     var detail by remember { mutableStateOf<HiringPost?>(null) }
 
     // 概览区滚出视野后，把当前筛选压缩成一条常驻摘要——结构看一次就够（内容），筛选随时
@@ -253,7 +256,13 @@ private fun ReadyContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (collapsed && s.isFiltering) {
-            SummaryBar(s, list.size, onClear = viewModel::clearFilters)
+            SummaryBar(
+                s = s,
+                shown = list.size,
+                // 摘要条只读不可编辑，点它滚回概览区——否则关键词筛着却改不了，只能手动往回翻
+                onExpand = { scope.launch { listState.animateScrollToItem(0) } },
+                onClear = viewModel::clearFilters,
+            )
         }
 
         LazyColumn(
@@ -403,18 +412,30 @@ private fun FacetItem(text: String, count: Int, selected: Boolean, onClick: () -
     }
 }
 
-/** 概览区滚走后的常驻摘要：当前选中 + 结果数 + 清除 */
+/**
+ * 概览区滚走后的常驻摘要：当前生效的条件 + 结果数 + 清除。
+ *
+ * 维度标签与关键词**必须同时呈现**：只显示其一会让另一个变成看不见的筛选条件，
+ * 用户看着 41 条结果却不知道是什么把它筛成这样的。关键词用「」括起来与维度标签区分。
+ */
 @Composable
-private fun SummaryBar(s: HiringUiState.Ready, shown: Int, onClear: () -> Unit) {
-    val picked = s.selected.values.flatten().map { labelOf(it) }.joinToString(" · ")
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+private fun SummaryBar(s: HiringUiState.Ready, shown: Int, onExpand: () -> Unit, onClear: () -> Unit) {
+    val active = listOfNotNull(
+        s.selected.values.flatten().map { labelOf(it) }.joinToString(" · ").ifEmpty { null },
+        s.query.trim().ifEmpty { null }?.let { "「$it」" },
+    ).joinToString(" · ")
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        onClick = onExpand,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         ) {
             Text(
-                text = picked.ifEmpty { s.query },
+                text = active,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f, fill = false),
@@ -467,6 +488,20 @@ private fun labelOf(value: String): String = when (value) {
 }
 
 /**
+ * 卡片上的地域事实。地区多于两个时截断，但**必须带 +N 显式说明还有几个**——
+ * 静默截断会把不完整的准入范围呈现成完整的，比原文没写更糟（读者会据此排除自己）。
+ * 完整列表在详情工作表里。2026-08 期 233 条中有 11 条命中这条分支，最多的一条 6 个地区。
+ */
+private fun regionsLabel(regions: List<String>): String {
+    if (regions.size <= 2) return regions.joinToString(" · ")
+    return regions.take(2).joinToString(" · ") + " +" + (regions.size - 2)
+}
+
+@Composable
+private fun regionFact(post: HiringPost): String =
+    regionsLabel(post.allowedRegions).ifEmpty { labelOf(post.regionScope) }
+
+/**
  * 岗位卡片。只留三个决策事实（工作方式 / 地域 / 薪资），其余进详情——时区、语言、签证、
  * 城市、技术栈全平铺时能撑到四五行且全是同一种灰，读者无从判断先看哪个。
  */
@@ -511,7 +546,7 @@ private fun JobCard(post: HiringPost, onOpenUrl: (String) -> Unit, onOpenDetail:
                 modifier = Modifier.padding(top = 8.dp),
             ) {
                 Fact(labelOf(post.remoteKind))
-                Fact(post.allowedRegions.take(2).joinToString(" · ").ifEmpty { labelOf(post.regionScope) })
+                Fact(regionFact(post))
                 post.salaryRaw?.let { Fact(it) }
             }
 
