@@ -31,24 +31,24 @@ private class FakeApi : TrendingApi() {
         items.forEach { server[key(it.source, it.externalId)] = it }
     }
 
-    override suspend fun fetchFavorites(accessToken: String): List<FavoriteItem> {
+    override suspend fun fetchFavorites(): List<FavoriteItem> {
         getCount++
         return server.values.toList()
     }
 
-    override suspend fun putFavorite(accessToken: String, item: FavoriteItem): Boolean {
+    override suspend fun putFavorite(item: FavoriteItem): Boolean {
         puts += item
         server[key(item.source, item.externalId)] = item
         return true
     }
 
-    override suspend fun deleteFavorite(accessToken: String, source: String, externalId: String): Boolean {
+    override suspend fun deleteFavorite(source: String, externalId: String): Boolean {
         deletes += source to externalId
         server.remove(key(source, externalId))
         return true
     }
 
-    override suspend fun batchPutFavorites(accessToken: String, items: List<FavoriteItem>): Boolean {
+    override suspend fun batchPutFavorites(items: List<FavoriteItem>): Boolean {
         if (failNextBatch) { failNextBatch = false; return false }
         batchCount++
         items.forEach { server[key(it.source, it.externalId)] = it }
@@ -60,8 +60,8 @@ class FavoriteRepositoryTest {
     private lateinit var settings: SettingsManager
     private lateinit var api: FakeApi
 
-    private fun repo(token: String? = "tok") =
-        FavoriteRepository(settings, api, authorized = { block -> token?.let { block(it) } })
+    private fun repo(loggedIn: Boolean = true) =
+        FavoriteRepository(settings, api, loggedIn = { loggedIn })
 
     private fun gh(name: String, ext: String = name) = FavoriteItem(
         url = "https://github.com/$name",
@@ -82,7 +82,7 @@ class FavoriteRepositoryTest {
         settings.replaceFavorites(listOf(gh("a/b"), gh("c/d")))
         api.seedServer(gh("e/f")) // 云端已有的另一条
 
-        repo().sync("tok")
+        repo().sync()
 
         assertEquals(1, api.batchCount)
         assertTrue(settings.favoritesMerged())
@@ -96,7 +96,7 @@ class FavoriteRepositoryTest {
         // 存量本地收藏：externalId 为空
         settings.replaceFavorites(listOf(FavoriteItem(url = "https://github.com/foo/bar", title = "foo/bar", source = "github")))
 
-        repo().sync("tok")
+        repo().sync()
 
         // batch 上推的条目 externalId 已回填为 owner/repo
         assertEquals("foo/bar", api.server.keys.first().removePrefix("github|"))
@@ -107,7 +107,7 @@ class FavoriteRepositoryTest {
         settings.replaceFavorites(listOf(gh("a/b")))
         api.failNextBatch = true
 
-        repo().sync("tok")
+        repo().sync()
 
         assertFalse(settings.favoritesMerged())
         assertEquals(0, api.getCount) // 未走到 GET
@@ -121,7 +121,7 @@ class FavoriteRepositoryTest {
         settings.replaceFavorites(listOf(gh("a/b")))
         // api.server 为空
 
-        repo().sync("tok")
+        repo().sync()
 
         assertEquals(0, api.batchCount) // 已合并，不再 batch
         assertTrue(settings.currentFavorites().isEmpty()) // X 被服务端全量覆盖移除
@@ -135,7 +135,7 @@ class FavoriteRepositoryTest {
             listOf(PendingFavoriteOp("add", "https://github.com/x/y", "github", "x/y", gh("x/y")))
         )
 
-        repo().sync("tok")
+        repo().sync()
 
         // GET 返回空，但 pending add 叠加回来，本地仍含 x/y
         assertEquals(listOf("x/y"), settings.currentFavorites().map { it.externalId })
@@ -149,17 +149,17 @@ class FavoriteRepositoryTest {
             listOf(PendingFavoriteOp("add", "https://github.com/a/b", "github", "a/b", gh("a/b")))
         )
 
-        repo().sync("tok")
+        repo().sync()
 
         assertEquals(1, api.puts.size) // pending add 被 flush
         assertTrue(settings.getPendingFavoriteOps().isEmpty()) // flush 成功后出队
     }
 
     @Test
-    fun 匿名_token为null时sync直接返回不动本地() = runTest {
+    fun 匿名时sync直接返回不动本地() = runTest {
         settings.replaceFavorites(listOf(gh("a/b")))
 
-        repo(token = null).sync(null)
+        repo(loggedIn = false).sync()
 
         assertFalse(settings.favoritesMerged())
         assertEquals(0, api.getCount)
@@ -178,7 +178,7 @@ class FavoriteRepositoryTest {
         settings.setFavoritesMerged(true)
         settings.replaceFavorites(emptyList())
         api.seedServer(gh("a/b"), gh("c/d"))
-        val repo = FavoriteRepository(settings, api, authorized = { block -> block("tok") }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val repo = FavoriteRepository(settings, api, loggedIn = { true }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
 
         repo.requestSync()
         advanceUntilIdle()
@@ -187,10 +187,10 @@ class FavoriteRepositoryTest {
     }
 
     @Test
-    fun requestSync_token为null时不动本地() = runTest {
+    fun requestSync_匿名时不动本地() = runTest {
         settings.setFavoritesMerged(true)
         settings.replaceFavorites(listOf(gh("x/y")))
-        val repo = FavoriteRepository(settings, api, authorized = { }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val repo = FavoriteRepository(settings, api, loggedIn = { false }, scope = CoroutineScope(StandardTestDispatcher(testScheduler)))
 
         repo.requestSync()
         advanceUntilIdle()

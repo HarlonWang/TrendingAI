@@ -71,17 +71,10 @@ fun OAuthOutcomeHost() {
 
                 is OAuthOutcome.Linked -> {
                     val linkSource = AccountLink.consumePendingSource()
-                    // markLinked 必须留在重试块**外**：authorized 撞 401 会重跑整个 block，
-                    // 放块内会重复上报 auth_finished
-                    var synced = false
-                    globalAuthManager.authorized { token ->
-                        repo.syncMe(token, fresh = true)
-                        synced = true
-                    }
-                    if (synced) {
+                    if (repo.syncMe(fresh = true) != null) {
                         // 身份变了但登录态没变，authState 不会发射，只能靠 markLinked 通知界面
                         AccountLink.markLinked(linkSource)
-                        globalAuthManager.authorized { token -> repo.refreshPro(token) }
+                        repo.refreshPro()
                     }
                 }
 

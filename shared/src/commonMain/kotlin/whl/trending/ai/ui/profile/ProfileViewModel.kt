@@ -6,8 +6,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.FollowingInfo
@@ -31,6 +33,8 @@ private const val FEED_PAGE_SIZE = 30
 private const val FEED_MAX_EVENTS = 300 // GitHub received_events 硬上限
 private const val HIGHLIGHTS_MIN_PER_LOAD = 10   // 精选档单次调用至少累计新增条目
 private const val MAX_PAGES_PER_LOAD = 5          // 单次调用最多连续拉取页数（防止过久）
+// 等登录态落定的上限，见 awaitResolvedAuthState
+private val AUTH_RESOLVE_TIMEOUT = 3.seconds
 
 data class ProfileUiState(
     val isLoading: Boolean = true,
@@ -113,10 +117,13 @@ class ProfileViewModel(
         viewModelScope.launch {
             var prev: AuthState? = null
             authManager().authState.collect { state ->
-                val changed = prev != null && prev != state
+                val previous = prev
                 prev = state
-                if (!changed) return@collect
+                // 跳过初始发射，以及 Unknown→已知 的首次落定：后者不是登录态转变，只是答案揭晓，
+                // 当成转变会与 Screen 的首帧 load() 撞成双重加载
+                if (previous == null || previous is AuthState.Unknown || previous == state) return@collect
                 when (state) {
+                    AuthState.Unknown -> Unit // 落定后不会再回到未知
                     is AuthState.LoggedOut -> {
                         hasLoaded = false
                         loadJob?.cancel()
@@ -131,7 +138,6 @@ class ProfileViewModel(
                         hasLoaded = false
                         load()
                     }
-                    is AuthState.LoggingIn -> Unit
                 }
             }
         }
@@ -154,6 +160,19 @@ class ProfileViewModel(
         val snapshot = ProfileCache.from(_uiState.value, cache.get(ProfileCache.KEY)) ?: return
         cache.put(ProfileCache.KEY, snapshot)
     }
+
+    /**
+     * 等登录态从 [AuthState.Unknown] 落定。Hub 对匿名用户可达，所以「不是 LoggedIn 就按匿名收尾」
+     * 这个判断一旦提前生效，冷启动直奔账户页的登录用户会被摆上登录引导。
+     * 正常是毫秒级：restore 只读一次本地存储。
+     *
+     * 超时兜底防的不是某个已知 bug，而是**这个等待无界**——落不了定就永远转圈，没有崩溃、
+     * 没有日志、没有提示。超时把那类静默硬故障降级成「按未登录处理」，用户点一下就能重试。
+     */
+    private suspend fun awaitResolvedAuthState(): AuthState =
+        withTimeoutOrNull(AUTH_RESOLVE_TIMEOUT) {
+            authManager().authState.first { it !is AuthState.Unknown }
+        } ?: AuthState.LoggedOut
 
     fun load() {
         // 余额每次进页都拉实时值（独立协程，不受下方跳过逻辑影响）：
@@ -204,19 +223,16 @@ class ProfileViewModel(
             consumedRawCount = 0
             followingInfo = null
             ownRepoItems = emptyList()
-            val token = authManager().getAccessToken()
-            if (token == null) {
-                // 未登录是 Hub 的正常态（展示登录引导 + 匿名额度）；仅当 authState 声称已登录
-                // 却拿不到 token 才算异常（可重试）。匿名额度由上面的 reloadQuota 拉取。
-                val loggedIn = authManager().authState.value is AuthState.LoggedIn
+            if (awaitResolvedAuthState() !is AuthState.LoggedIn) {
+                // 未登录是 Hub 的正常态（展示登录引导 + 匿名额度，后者由上面的 reloadQuota 拉取）
                 freshState { quota, quotaError ->
-                    ProfileUiState(isLoading = false, isError = loggedIn, loggedIn = false, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
+                    ProfileUiState(isLoading = false, loggedIn = false, highlightsOnly = highlightsOnly, quota = quota, quotaError = quotaError)
                 }
-                hasLoaded = !loggedIn
+                hasLoaded = true
                 return@launch
             }
             val user = try {
-                repository.fetchMe(token)
+                repository.fetchMe()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 freshState { quota, quotaError ->
@@ -376,17 +392,9 @@ class ProfileViewModel(
     }
 
     private suspend fun loadQuota() {
-        // Hub 对未登录用户可达：匿名用户按 install-id 拉匿名档额度，token 传 null 即可。
-        // 唯一要防的是「登录态但 token 处于刷新瞬态暂为 null」——此时不请求，否则不带 Bearer 的
-        // /api/quota 会回落匿名档、覆盖登录/Pro 用户的真实额度。保留旧值等下次刷新。
-        val loggedIn = authManager().authState.value is AuthState.LoggedIn
+        // Hub 对未登录用户可达：带不带 Bearer 由鉴权插件按会话决定，服务端据此定档
         try {
-            // 登录态走 authorized：token 过期时刷新后重试，不再把「加载失败」直接摆给用户。
-            val quota = if (loggedIn) {
-                authManager().authorized { repository.fetchQuota(it) } ?: return
-            } else {
-                repository.fetchQuota(null)
-            }
+            val quota = repository.fetchQuota()
             _uiState.value = _uiState.value.copy(quota = quota, quotaError = false)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -402,20 +410,13 @@ class ProfileViewModel(
         consumedRawCount = 0
         followingInfo = null
         ownRepoItems = emptyList()
-        val token = authManager().getAccessToken()
-        if (token == null) {
+        if (awaitResolvedAuthState() !is AuthState.LoggedIn) {
             // 未登录下拉刷新：额度由 refresh() 的 reloadQuota 刷新，这里落回匿名态，不报错
-            val loggedIn = authManager().authState.value is AuthState.LoggedIn
-            _uiState.value = _uiState.value.copy(isRefreshing = false, isError = loggedIn, loggedIn = false, user = null)
+            _uiState.value = _uiState.value.copy(isRefreshing = false, loggedIn = false, user = null)
             return
         }
-        // authorized 返回 null = 刷新后仍无会话（会话已终结），按错误态收尾，
-        // 与请求抛异常同路——用户看到可重试的失败，而不是空白的登录态
         val user = try {
-            authManager().authorized { repository.fetchMe(it) } ?: run {
-                _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)
-                return
-            }
+            repository.fetchMe()
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             _uiState.value = _uiState.value.copy(isRefreshing = false, isError = true)

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -56,8 +57,8 @@ class ProfileViewModelTest {
             QuotaResponse(balance = 8, dailyGrant = 10, resetAt = "2026-07-24T00:00:00.000Z", tier = "user")
         },
     ) : UserRepository() {
-        override suspend fun fetchMe(accessToken: String): MeUser = onFetchMe()
-        override suspend fun fetchQuota(accessToken: String?): QuotaResponse = onFetchQuota()
+        override suspend fun fetchMe(): MeUser = onFetchMe()
+        override suspend fun fetchQuota(): QuotaResponse = onFetchQuota()
     }
 
     private class FakeGithubApi : GithubApi() {
@@ -216,23 +217,49 @@ class ProfileViewModelTest {
     }
 
     // 回归：token 刷新瞬态为 null 时，loadQuota 不得请求匿名档覆盖登录/Pro 用户已有的真实余额
+    /**
+     * Hub 对匿名用户可达，所以「不是 LoggedIn 就摆登录引导」这个判断必须等会话恢复完
+     * ——冷启动直奔账户页的登录用户，否则会先被当成未登录。
+     */
     @Test
-    fun quotaNotOverwrittenWhenTokenNull() = runTest {
+    fun loadWaitsForAuthStateToResolve() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val cache = cache()
-        val auth = FakeAuthManager()
+        val auth = FakeAuthManager().apply { state.value = AuthState.Unknown }
 
         val vm = viewModel(cache, auth = auth)
         vm.load()
-        advanceUntilIdle()
-        assertEquals(8, vm.uiState.value.quota?.balance) // 登录档余额
+        advanceTimeBy(1_000) // 不能用 advanceUntilIdle：它会跨过落定超时，直接把页面判成未登录
 
-        // 模拟刷新瞬态：token 变 null。此时重拉余额不应退到匿名档（5/5）覆盖登录档
-        auth.token = null
-        vm.refresh()
+        // 还没落定：不下匿名结论，停在加载态
+        assertTrue(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.loggedIn)
+        assertNull(vm.uiState.value.user)
+
+        auth.state.value = AuthState.LoggedIn
         advanceUntilIdle()
 
-        assertEquals(8, vm.uiState.value.quota?.balance) // 旧登录档保留，未被匿名覆盖
+        assertTrue(vm.uiState.value.loggedIn)
+        assertEquals("octo", vm.uiState.value.user?.githubLogin)
+    }
+
+    /**
+     * 等落定是个无界等待，落不了定就永远转圈、没有任何提示。超时兜底把这类静默硬故障
+     * 降级成「按未登录处理」，用户点一下就能重试。
+     */
+    @Test
+    fun loadFallsBackToAnonymousWhenAuthStateNeverResolves() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val cache = cache()
+        val auth = FakeAuthManager().apply { state.value = AuthState.Unknown }
+
+        val vm = viewModel(cache, auth = auth)
+        vm.load()
+        advanceUntilIdle() // 虚拟时间跨过超时；authState 始终停在 Unknown
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.loggedIn)
+        assertNull(vm.uiState.value.user)
     }
 
     @Test

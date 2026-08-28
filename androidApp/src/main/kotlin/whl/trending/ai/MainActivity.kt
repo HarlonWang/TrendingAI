@@ -137,8 +137,7 @@ class MainActivity : AppCompatActivity() {
         // 赞助对账窗口
         if (!globalSettingsManager.currentIsPro() && ProSponsor.shouldReconcile()) {
             lifecycleScope.launch {
-                val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
-                val result = whl.trending.ai.data.repository.UserRepository().refreshPro(token)
+                val result = whl.trending.ai.data.repository.UserRepository().refreshPro()
                 when (ProSponsor.reconcileAction(result)) {
                     ReconcileAction.MARK_PRO -> ProSponsor.markReconciled()
 
@@ -162,9 +161,8 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val repository = whl.trending.ai.data.repository.UserRepository()
                 val attempt = ProCheckout.reconcile {
-                    val token = whl.trending.ai.auth.globalAuthManager.getAccessToken()
                     // syncMe 会把 isPro 落到本地设置，UI 各处（模型选择器、配额卡）随之解锁
-                    repository.syncMe(token) != null && globalSettingsManager.currentIsPro()
+                    repository.syncMe() != null && globalSettingsManager.currentIsPro()
                 }
                 // attempt 区分「秒到」与「等满 26 秒」，是判断 webhook 时延是否需要调窗口的依据
                 if (attempt != null) {

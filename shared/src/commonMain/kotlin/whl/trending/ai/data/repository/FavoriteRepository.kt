@@ -6,6 +6,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
@@ -22,10 +23,10 @@ class FavoriteRepository(
     private val settings: SettingsManager,
     private val api: TrendingApi,
     /**
-     * 带鉴权执行一次请求（[whl.trending.ai.auth.AuthManager.authorized]，401 刷新重试一次）；
-     * 无会话不执行 block。没有重试的话启动瞬间的同步会因 token 恰好过期而静默失败。
+     * 是否已登录。鉴权本身由 ktor `Auth` 插件统一处理（见 `TrendingAuth.kt`），这里只用来
+     * 在匿名期短路——避免明知没会话还发一轮必然 401 的请求。
      */
-    private val authorized: suspend (suspend (String) -> Unit) -> Unit,
+    private val loggedIn: () -> Boolean = { globalAuthManager.authState.value is AuthState.LoggedIn },
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     // 序列化所有网络同步，避免 flush 与全量覆盖交错导致缓存被旧快照回冲
@@ -50,26 +51,26 @@ class FavoriteRepository(
     }
 
     /**
-     * 登录 / 启动时的同步。传入 access token（null=匿名，直接返回，纯本地）。
+     * 登录 / 启动时的同步。匿名直接返回，纯本地。
      * 内部吞掉网络异常：失败保留本地态，下次再试。
      */
-    suspend fun sync(accessToken: String?) {
-        val token = accessToken ?: return
+    suspend fun sync() {
+        if (!loggedIn()) return
         mutex.withLock {
             runCatching {
                 if (!settings.favoritesMerged()) {
                     // 首次登录合并：全部本地收藏（含匿名期 + 存量，externalId 回填）batch 上云
                     val local = settings.currentFavorites().map { withResolvedId(it) }
-                    if (local.isNotEmpty() && !api.batchPutFavorites(token, local)) {
+                    if (local.isNotEmpty() && !api.batchPutFavorites(local)) {
                         return@runCatching // batch 失败：不置 merged、不覆盖本地，下次重试
                     }
                     settings.setPendingFavoriteOps(emptyList()) // batch 已全覆盖，清历史 op
                     settings.setFavoritesMerged(true)
                 } else {
-                    flushPending(token)
+                    flushPending()
                 }
                 // 全量拉取覆盖本地；叠加在途/未 flush 成功的 pending，避免刚发生的本地改动被旧快照冲掉
-                val server = api.fetchFavorites(token)
+                val server = api.fetchFavorites()
                 val merged = applyPending(server, settings.getPendingFavoriteOps())
                 settings.replaceFavorites(merged)
             }
@@ -79,11 +80,11 @@ class FavoriteRepository(
     /**
      * 触发一次同步，运行在仓库自有 [scope]（不绑定 composition）。必须用它、而非在
      * LaunchedEffect 里直接 await [sync]——composition 退出会取消协程，[sync] 半途中断、
-     * 云端收藏拉不下来。token 由 [authorized] 自取。
+     * 云端收藏拉不下来。
      */
     fun requestSync() {
         scope.launch {
-            authorized { sync(it) }
+            sync()
         }
     }
 
@@ -94,7 +95,7 @@ class FavoriteRepository(
 
     /**
      * 仅在已完成首次合并后才入队增量 op（此前本地改动由首次 batch 整体覆盖）；
-     * merged 只在带真实 token 的 [sync] 成功后置 true，匿名恒 false、天然不入队。
+     * merged 只在登录态的 [sync] 成功后置 true，匿名恒 false、天然不入队。
      */
     private fun canSyncOps(): Boolean = settings.favoritesMerged()
 
@@ -106,7 +107,7 @@ class FavoriteRepository(
         mutex.withLock {
             enqueueLocked(op)
             // 匿名/无会话：留队列，下次 sync 再推
-            runCatching { authorized { flushPending(it) } }
+            if (loggedIn()) runCatching { flushPending() }
         }
     }
 
@@ -117,14 +118,14 @@ class FavoriteRepository(
     }
 
     /** 逐条推送队列；成功的移出队列，遇失败保留剩余（含当前）待下次重试。必须在 [mutex] 内调用。 */
-    private suspend fun flushPending(token: String) {
+    private suspend fun flushPending() {
         val ops = settings.getPendingFavoriteOps()
         if (ops.isEmpty()) return
         val done = mutableListOf<PendingFavoriteOp>()
         for (op in ops) {
             val ok = when (op.op) {
-                "add" -> op.item?.let { api.putFavorite(token, withResolvedId(it)) } ?: true
-                "delete" -> api.deleteFavorite(token, op.source, op.externalId)
+                "add" -> op.item?.let { api.putFavorite(withResolvedId(it)) } ?: true
+                "delete" -> api.deleteFavorite(op.source, op.externalId)
                 else -> true // 未知 op 直接丢弃
             }
             if (ok) done += op else break
@@ -151,11 +152,10 @@ class FavoriteRepository(
     }
 }
 
-/** 全局单例：注入全局 SettingsManager / TrendingApi / 登录态 token。 */
+/** 全局单例：注入全局 SettingsManager / TrendingApi。 */
 val globalFavoriteRepository by lazy {
     FavoriteRepository(
         settings = globalSettingsManager,
         api = TrendingApi(),
-        authorized = { block -> globalAuthManager.authorized(block) },
     )
 }

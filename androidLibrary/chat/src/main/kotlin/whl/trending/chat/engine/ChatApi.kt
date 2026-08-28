@@ -34,6 +34,8 @@ import whl.trending.ai.chat.ChatContext
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.resolveEffectiveChatModel
+import whl.trending.ai.data.remote.installTrendingAuth
+import whl.trending.ai.data.remote.trackAuthTokenCache
 import whl.trending.ai.data.repository.ChatModelsProvider
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
@@ -138,7 +140,8 @@ class ChatApi(
             // OkHttp 引擎默认 readTimeout=10s；流式场景它约束的是「相邻数据块间隔」，放宽到 60s
             socketTimeoutMillis = 60_000
         }
-    }
+        installTrendingAuth()
+    }.trackAuthTokenCache()
 
     override suspend fun send(
         history: List<ChatMessage>,
@@ -220,7 +223,6 @@ class ChatApi(
             val response = client.request("$baseUrl/$path") {
                 this.method = method
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
-                globalAuthManager.getAccessToken()?.let { header("Authorization", "Bearer $it") }
                 timeout { requestTimeoutMillis = 30_000 }
                 configure()
             }
@@ -256,8 +258,6 @@ class ChatApi(
             val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
             return client.preparePost("$baseUrl/$path") {
                 header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
-                // 已登录则带 token 走登录档配额；detail 生成仅登录档开放（服务端真闸）
-                globalAuthManager.getAccessToken()?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
                 timeout { requestTimeoutMillis = STREAM_REQUEST_TIMEOUT_MS }
                 configure()
