@@ -1,15 +1,17 @@
-name: Android Release
+name: Release
 
 on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+*' # 匹配 1.0.0, 1.2.3-alpha 等格式
+  workflow_dispatch: # 仅跑 build-ios 验证构建链路：不创建/不触碰 Release，产物走 workflow artifact
 
 permissions:
   contents: write
 
 jobs:
   build-and-release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       # App 内置更新说明文件，同时被「Generate What's New Changelog」和「Generate Release Notes」引用
@@ -456,4 +458,83 @@ jobs:
             --skip_upload_metadata true \
             --skip_upload_images true \
             --skip_upload_screenshots true
+
+  # iOS 无签名 IPA：挂到 Release 供用户用免费 Apple ID 自签侧载（Sideloadly / AltStore）。
+  # shared framework 是静态链接（isStatic），.app 内无需嵌入签名的动态库，无签名构建可直接分发。
+  build-ios:
+    # tag push 时等 Android job 建好 Release 再上传附件；workflow_dispatch 单独验证 iOS 构建
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.build-and-release.result == 'success') }}
+    needs: build-and-release
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # Kotlin/Native 编译器与平台库约 1GB，不缓存每次冷下载十分钟起
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-konan-
+
+      - name: Build unsigned IPA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # CURRENT_PROJECT_VERSION 不在这里重算：从 Release 资产 version_code.txt 取
+          # （Create Release 步骤从实际 APK badging 提取后上传，needs 保证已存在），
+          # versionCode 公式只在 androidApp/build.gradle.kts 一处维护
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION_NAME="${{ github.ref_name }}"
+            VCODE=$(gh release download "$VERSION_NAME" -p version_code.txt -O - | sed -n 's/^versionCode=//p')
+            if [ -z "$VCODE" ]; then
+              echo "❌ 未能从 Release 资产 version_code.txt 读到 versionCode"
+              exit 1
+            fi
+          else
+            VERSION_NAME="0.0.0"
+            VCODE=0
+          fi
+          # MARKETING_VERSION 只接受 x.y.z，剥掉预发布后缀
+          BASE_VERSION="${VERSION_NAME%%-*}"
+
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
+            -configuration Release -sdk iphoneos \
+            -derivedDataPath "$RUNNER_TEMP/ios-build" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="$BASE_VERSION" CURRENT_PROJECT_VERSION="$VCODE" \
+            build
+
+          APP_DIR="$RUNNER_TEMP/ios-build/Build/Products/Release-iphoneos"
+          IPA_NAME="TrendingAI-${VERSION_NAME}.ipa"
+          mkdir "$APP_DIR/Payload"
+          cp -R "$APP_DIR/Trending.app" "$APP_DIR/Payload/"
+          (cd "$APP_DIR" && zip -qr "$IPA_NAME" Payload)
+          mv "$APP_DIR/$IPA_NAME" .
+          shasum -a 256 "$IPA_NAME" > "$IPA_NAME.sha256"
+          echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
+
+      - name: Upload IPA to Release
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" "$IPA_NAME" "$IPA_NAME.sha256"
+
+      - name: Upload IPA as artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: |
+            TrendingAI-*.ipa
+            TrendingAI-*.ipa.sha256
 
