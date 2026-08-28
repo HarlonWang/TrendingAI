@@ -454,3 +454,17 @@ Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量）�
 - **`flow_id` 串联**：登录与绑定的 `auth_started` → `auth_finished` 用落盘的 flow 串起来，GitHub 授权跳浏览器期间进程被杀也接得回同一条漏斗。上一节说的「回跳没能送达 App 造成的低估」现在能从"有 started 无 finished 且 flow 一致"这一形态里量出来。
 - **`user_id`**：登录后事件带 identity id（`syncMe` 成功时关联），服务端据此建 install↔identity 映射。
 - **离线队列**：事件落盘、批量上报、7 天自清。通知 receiver 那条「留 2 秒上传窗口」的补丁随之删除——改成显式 flush，队列已落盘不再需要拿时间换送达率。
+
+## 招聘页筛选维度换代（2026-08-28 实现，尚未发版）
+
+招聘页原有三个筛选维度（`region_scope` / `remote_kind` / `employment`），改版后只剩两个：
+新增的 `role_category`（职能）与保留的 `remote_kind`。`region_scope` 与 `employment` **停产**——
+它们退出的是筛选，事实仍在卡片与详情里呈现。
+
+跨版本看曲线要按发版日切段：旧版本仍在报 `region_scope` / `employment`，新版本永远不会再报，
+把两段拼起来看会得出「筛选使用量断崖下跌」的假象。
+
+**`role_category` 是多值维度**：一条多职能的招聘帖会命中多个取值，所以
+
+- 按 `value` 分组的**人数与次数不可跨取值相加**（同一个人点两个职能会被算两次）；
+- 服务端 facets 里该维各项之和大于当期岗位总数，这是正确行为，不是重复计数 bug。

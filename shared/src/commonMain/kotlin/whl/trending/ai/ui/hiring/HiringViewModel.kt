@@ -15,8 +15,14 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.HiringPost
 import whl.trending.ai.data.remote.TrendingApi
 
-/** 筛选维度。与 [whl.trending.ai.core.analytics.ListFilter] 一一对应，改这里记得同步那边 */
-enum class HiringFilterDim { REGION_SCOPE, REMOTE_KIND, EMPLOYMENT }
+/**
+ * 筛选维度。与 [whl.trending.ai.core.analytics.ListFilter] 一一对应，改这里记得同步那边。
+ *
+ * 只留两维是刻意的：职能是「这是不是我干的活」，远程形态是「我能不能干」，两刀覆盖绝大多数意图。
+ * 地域开放度与雇佣类型退出筛选（前者 restricted+unspecified 占 94%，筛了不解决问题；后者全职占
+ * 六成），但事实仍在卡片与详情里明示——退出的是筛选，不是信息。
+ */
+enum class HiringFilterDim { ROLE_CATEGORY, REMOTE_KIND }
 
 sealed interface HiringUiState {
     data object Loading : HiringUiState
@@ -29,35 +35,52 @@ sealed interface HiringUiState {
         /** 当期全部岗位，未经筛选。筛选是纯展示层的事，不动这份数据 */
         val all: List<HiringPost>,
         val selected: Map<HiringFilterDim, Set<String>>,
+        /** 关键词，只在本地过滤，不发请求 */
+        val query: String = "",
     ) : HiringUiState {
-        /** 命中当前筛选的岗位。多维之间取交集，同维多选取并集 */
-        val filtered: List<HiringPost> get() = all.filter { p -> selected.all { (dim, vals) ->
-            vals.isEmpty() || value(p, dim) in vals
-        } }
+        /** 命中当前筛选与关键词的岗位。多维之间取交集，同维多选取并集 */
+        val filtered: List<HiringPost> get() = all.filter { matchesQuery(it) && matchesFilters(it) }
 
-        /**
-         * 某维度各取值的计数，**在「其余维度已生效」的子集上算**——这样点了一个条件后，
-         * 其他条件的数字会跟着变，用户能看到「再叠一个还剩多少」。
-         * 服务端返回的 facets 只是首屏的初值，联动计数必须本地算（数据全在手，零往返）。
-         */
-        fun counts(dim: HiringFilterDim): Map<String, Int> {
-            val base = all.filter { p -> selected.all { (d, vals) ->
-                d == dim || vals.isEmpty() || value(p, d) in vals
-            } }
-            return base.groupingBy { value(p = it, dim = dim) }.eachCount()
+        private fun matchesFilters(p: HiringPost) = selected.all { (dim, vals) ->
+            vals.isEmpty() || values(p, dim).any { it in vals }
         }
 
-        val isFiltering: Boolean get() = selected.values.any { it.isNotEmpty() }
+        private fun matchesQuery(p: HiringPost): Boolean {
+            val q = query.trim()
+            if (q.isEmpty()) return true
+            val hay = p.company.orEmpty() + p.roles.joinToString(" ") +
+                p.techStack.joinToString(" ") + p.title.orEmpty() + p.summary.orEmpty()
+            return hay.contains(q, ignoreCase = true)
+        }
+
+        /**
+         * 某维度各取值的计数，**在「其余维度与关键词已生效」的子集上算**——这样点了一个条件后，
+         * 其他条件的数字会跟着变，用户能看到「再叠一个还剩多少」。
+         * 服务端返回的 facets 只是首屏的初值，联动计数必须本地算（数据全在手，零往返）。
+         *
+         * ⚠️ 多值维度（职能）里一条帖子会在它命中的每个取值下各计一次，
+         * **所以各项之和大于岗位总数**，界面文案不能让用户以为这些数能加成总条数。
+         */
+        fun counts(dim: HiringFilterDim): Map<String, Int> {
+            val base = all.filter { p ->
+                matchesQuery(p) && selected.all { (d, vals) ->
+                    d == dim || vals.isEmpty() || values(p, d).any { it in vals }
+                }
+            }
+            return base.flatMap { values(it, dim) }.groupingBy { it }.eachCount()
+        }
+
+        val isFiltering: Boolean get() = selected.values.any { it.isNotEmpty() } || query.isNotBlank()
     }
 
     data object Unavailable : HiringUiState
     data object Error : HiringUiState
 }
 
-private fun value(p: HiringPost, dim: HiringFilterDim): String = when (dim) {
-    HiringFilterDim.REGION_SCOPE -> p.regionScope
-    HiringFilterDim.REMOTE_KIND -> p.remoteKind
-    HiringFilterDim.EMPLOYMENT -> p.employment ?: "unspecified"
+/** 一条岗位在某维度上的取值。职能是多值（一帖多岗），远程形态是单值，统一成列表处理 */
+private fun values(p: HiringPost, dim: HiringFilterDim): List<String> = when (dim) {
+    HiringFilterDim.ROLE_CATEGORY -> p.roleCategories
+    HiringFilterDim.REMOTE_KIND -> listOf(p.remoteKind)
 }
 
 class HiringViewModel(
@@ -111,8 +134,12 @@ class HiringViewModel(
 
     fun clearFilters() {
         _uiState.update { s ->
-            if (s !is HiringUiState.Ready) s else s.copy(selected = emptyMap())
+            if (s !is HiringUiState.Ready) s else s.copy(selected = emptyMap(), query = "")
         }
+    }
+
+    fun search(q: String) {
+        _uiState.update { s -> if (s !is HiringUiState.Ready) s else s.copy(query = q) }
     }
 
     private fun load() {
