@@ -29,6 +29,12 @@ data class HiringResponse(
 
 @Serializable
 data class HiringFacets(
+    /**
+     * 多值维度：一条多职能的帖子在每个职能里各计一次，**所以各项之和大于岗位总数**。
+     * 界面上不能让用户以为这些数字能加成总条数。
+     */
+    @SerialName("role_category")
+    val roleCategory: Map<String, Int> = emptyMap(),
     @SerialName("region_scope")
     val regionScope: Map<String, Int> = emptyMap(),
     @SerialName("remote_kind")
@@ -45,7 +51,11 @@ data class HiringPost(
     @SerialName("posted_at")
     val postedAt: String,
     val company: String? = null,
+    /** 原文岗位名，可读不可筛（实测 450 个唯一值）。筛选走 [roleCategories] */
     val roles: List<String> = emptyList(),
+    /** 受控职能枚举，一帖多岗天然多值；原文没写岗位则为空 */
+    @SerialName("role_categories")
+    val roleCategories: List<String> = emptyList(),
     @SerialName("tech_stack")
     val techStack: List<String> = emptyList(),
     val employment: String? = null,

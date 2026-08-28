@@ -247,15 +247,14 @@ enum class TabSwitchMethod { TAP, DOUBLE_TAP_REFRESH }
 enum class ContentActionKind { FAVORITE, UNFAVORITE, SHARE_TO_AI, STAR, READ_ORIGINAL, HN_COMMENTS, APPLY }
 
 /**
- * 后四项服务于招聘月度专题：[REGION_SCOPE] / [REMOTE_KIND] / [EMPLOYMENT] 是筛选维度，
+ * 后三项服务于招聘月度专题：[ROLE_CATEGORY] / [REMOTE_KIND] 是筛选维度，
  * [MONTH] 是往期切换（本质也是把列表筛到某一期）。同样是加属性值而非新事件。
  *
- * 注意 [REGION_SCOPE] 的值域含 `unspecified`（原文没提地域）与 `worldwide`（原文明确不限），
- * **两者是不同的事实，读数时不要合并**。
+ * [ROLE_CATEGORY] 是多值维度——一条多职能的帖子命中多个取值，读数时人数不可直接相加。
  */
 enum class ListFilter {
     NEW_ONLY, SOURCE, PERIOD, LANGUAGE, HISTORY_DATE, HISTORY_BATCH,
-    REGION_SCOPE, REMOTE_KIND, EMPLOYMENT, MONTH,
+    ROLE_CATEGORY, REMOTE_KIND, MONTH,
 }
 
 enum class AiKind { CHAT, DETAIL_SUMMARY, RESEARCH }
