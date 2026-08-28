@@ -32,6 +32,8 @@
     <string name="chat_quota_auth_degraded">登录状态未生效，本次请求被按未登录处理——请检查网络后重试，必要时退出后重新登录。</string>
     <string name="chat_error_auth_invalid">登录状态已过期，请退出后重新登录再继续。</string>
     <string name="chat_quota_notice">每日有限免费额度，用尽次日恢复。</string>
+    <string name="chat_quota_notice_user">每日额度，用尽次日恢复。</string>
+    <string name="chat_quota_notice_pro">Pro 额度已生效，高阶模型均可选用。</string>
     <string name="chat_attach">添加图片</string>
     <string name="chat_attach_camera">拍照</string>
     <string name="chat_attach_album">从相册选择</string>
