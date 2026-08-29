@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
+import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -133,11 +134,9 @@ object ChatImages {
         val edge = maxOf(bitmap.width, bitmap.height)
         if (edge <= MAX_EDGE) return bitmap
         val ratio = MAX_EDGE.toFloat() / edge
-        return Bitmap.createScaledBitmap(
-            bitmap,
+        return bitmap.scale(
             (bitmap.width * ratio).toInt().coerceAtLeast(1),
             (bitmap.height * ratio).toInt().coerceAtLeast(1),
-            true,
         )
     }
 }
