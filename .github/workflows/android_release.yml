@@ -490,9 +490,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # CURRENT_PROJECT_VERSION 不在这里重算：从 Release 资产 version_code.txt 取
-          # （Create Release 步骤从实际 APK badging 提取后上传，needs 保证已存在），
-          # versionCode 公式只在 androidApp/build.gradle.kts 一处维护
+          # versionCode 公式唯一维护点在 androidApp/build.gradle.kts；这里只消费
+          # Create Release 步骤上传的 version_code.txt，不要就地重算
           if [ "${{ github.event_name }}" = "push" ]; then
             VERSION_NAME="${{ github.ref_name }}"
             VCODE=$(gh release download "$VERSION_NAME" -p version_code.txt -O - | sed -n 's/^versionCode=//p')
