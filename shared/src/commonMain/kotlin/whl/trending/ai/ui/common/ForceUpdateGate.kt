@@ -36,14 +36,14 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.remote.TrendingApi
 import whl.trending.ai.update.isVersionBlocked
+import whl.trending.ai.update.refreshAppConfig
 
 /**
  * 强制更新门：当前版本低于服务端下发的 min_version 时，整屏替换主界面，
  * 引导用户去官方渠道更新（应对第三方镜像站收录的老包）。
  *
- * - 冷启动拉取 /api/app-config，成功即缓存；失败静默（接口未上线/断网不影响使用）。
+ * - 冷启动经 [refreshAppConfig] 拉取 app-config（各字段的缓存落地在彼处），本组件只消费 min_version。
  * - 初始态用缓存判定，保证强更一旦下发、离线重启也拦得住。
  * - 整屏替换而非弹窗：没有 dismiss 语义可绕过，也天然避免与 What's New 双弹窗叠加。
  */
@@ -53,17 +53,7 @@ fun ForceUpdateGate(content: @Composable () -> Unit) {
     var minVersion by remember { mutableStateOf(globalSettingsManager.getCachedMinVersion()) }
 
     LaunchedEffect(Unit) {
-        runCatching { TrendingApi().fetchAppConfig() }.onSuccess { config ->
-            globalSettingsManager.setCachedMinVersion(config.minVersion)
-            globalSettingsManager.setChatImagesConfig(
-                config.chatImages?.maxCount,
-                config.chatImages?.perImageJpegKb,
-            )
-            minVersion = config.minVersion
-        }.onFailure {
-            // fail-open：接口未上线（404）/断网都不影响使用，仅留日志便于排查服务端误配置
-            println("ForceUpdateGate: fetchAppConfig failed: $it")
-        }
+        refreshAppConfig()?.let { minVersion = it.minVersion }
     }
 
     if (isVersionBlocked(current, minVersion)) {
