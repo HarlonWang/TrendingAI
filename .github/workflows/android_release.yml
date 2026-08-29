@@ -514,8 +514,13 @@ jobs:
 
           APP_DIR="$RUNNER_TEMP/ios-build/Build/Products/Release-iphoneos"
           IPA_NAME="TrendingAI-${VERSION_NAME}.ipa"
+          APP_PATH=$(find "$APP_DIR" -maxdepth 1 -name '*.app' | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ 构建产物目录中未找到 .app"
+            exit 1
+          fi
           mkdir "$APP_DIR/Payload"
-          cp -R "$APP_DIR/Trending.app" "$APP_DIR/Payload/"
+          cp -R "$APP_PATH" "$APP_DIR/Payload/"
           (cd "$APP_DIR" && zip -qr "$IPA_NAME" Payload)
           mv "$APP_DIR/$IPA_NAME" .
           shasum -a 256 "$IPA_NAME" > "$IPA_NAME.sha256"
