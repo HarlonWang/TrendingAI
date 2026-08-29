@@ -490,8 +490,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # versionCode 公式唯一维护点在 androidApp/build.gradle.kts；这里只消费
-          # Create Release 步骤上传的 version_code.txt，不要就地重算
+          # versionCode 从 Create Release 步骤上传的 version_code.txt 取
           if [ "${{ github.event_name }}" = "push" ]; then
             VERSION_NAME="${{ github.ref_name }}"
             VCODE=$(gh release download "$VERSION_NAME" -p version_code.txt -O - | sed -n 's/^versionCode=//p')
@@ -503,7 +502,7 @@ jobs:
             VERSION_NAME="0.0.0"
             VCODE=0
           fi
-          # MARKETING_VERSION 只接受 x.y.z，剥掉预发布后缀
+          # CFBundleShortVersionString 按 Apple 约定为纯 x.y.z，预发布后缀只进 IPA 文件名
           BASE_VERSION="${VERSION_NAME%%-*}"
 
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
