@@ -151,6 +151,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val OPEN_LINKS_IN_CUSTOM_TAB_KEY = "prefs_open_links_in_custom_tab"
     private val TRENDING_NEW_ONLY_DEFAULT_KEY = "prefs_trending_new_only_default"
     private val MIN_VERSION_KEY = "prefs_min_version"
+    private val CHAT_IMAGES_MAX_KEY = "prefs_chat_images_max"
+    private val CHAT_IMAGES_PER_KB_KEY = "prefs_chat_images_per_kb"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
@@ -364,6 +366,22 @@ class SettingsManager(private val settings: ObservableSettings) {
     fun setCachedMinVersion(version: String?) {
         if (version == null) settings.remove(MIN_VERSION_KEY)
         else settings.putString(MIN_VERSION_KEY, version)
+    }
+
+    // chat 图片参数：app-config 下发缓存，未拉到用与服务端一致的内置默认；
+    // 读取时 clamp，异常缓存值不外泄（区间与服务端 lib/chat-images.js 一致）
+
+    /** 单条消息图片张数上限 */
+    fun chatImagesMaxCount(): Int =
+        settings.getInt(CHAT_IMAGES_MAX_KEY, 9).coerceIn(1, 12)
+
+    /** 单张图片压缩预算（KB，JPEG 字节） */
+    fun chatImagesPerImageJpegKb(): Int =
+        settings.getInt(CHAT_IMAGES_PER_KB_KEY, 280).coerceIn(64, 375)
+
+    fun setChatImagesConfig(maxCount: Int?, perImageJpegKb: Int?) {
+        if (maxCount != null) settings.putInt(CHAT_IMAGES_MAX_KEY, maxCount)
+        if (perImageJpegKb != null) settings.putInt(CHAT_IMAGES_PER_KB_KEY, perImageJpegKb)
     }
 
     /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */

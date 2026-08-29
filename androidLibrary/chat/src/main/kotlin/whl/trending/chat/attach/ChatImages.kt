@@ -11,6 +11,7 @@ import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.UUID
+import whl.trending.ai.data.local.globalSettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -21,15 +22,14 @@ import kotlinx.coroutines.withContext
  * → 按 EXIF Orientation 旋正像素 → 长边缩至 ≤[MAX_EDGE] → JPEG 重编码写入私有缓存。
  * 重编码产物不含任何 EXIF（GPS/时间/设备随之剥除）；Orientation 是唯一先消费再丢弃的字段。
  *
- * 单张产物必须 ≤[MAX_JPEG_BYTES]：质量沿 [QUALITY_LADDER] 递降直到达标。预算按服务端
- * 总闸（1.5MB base64）摊到单条消息图片数上限（ChatWire.MAX_IMAGES_PER_MESSAGE）得出——
- * 文字密集的书页/截图在固定 q80 下可达 400KB/张，攒满 4 张会撞闸。
+ * 单张产物必须不超预算（app-config 下发，服务端 KV 单源；未拉到用与服务端一致的默认）：
+ * 质量沿 [QUALITY_LADDER] 递降直到达标。预算 = 服务端图片总闸摊到单条消息张数上限——
+ * 文字密集的书页/截图在固定 q80 下可达 400KB/张，攒满一条消息会撞闸。
  */
 object ChatImages {
 
     private const val TAG = "ChatImages"
     private const val MAX_EDGE = 1568
-    private const val MAX_JPEG_BYTES = 280 * 1024
     private val QUALITY_LADDER = intArrayOf(80, 65, 50)
     private const val DIR = "chat_images"
     private const val MAX_AGE_MS = 24 * 60 * 60 * 1000L
@@ -72,13 +72,14 @@ object ChatImages {
             val upright = applyOrientation(decoded, orientation)
             val scaled = scaleDown(upright)
 
-            // 阶梯走完仍超预算时用最低档结果兜底（1568px q50 实际到不了 280KB，防御性）
+            // 阶梯走完仍超预算时用最低档结果兜底（1568px q50 实际到不了默认 280KB，防御性）
+            val budgetBytes = globalSettingsManager.chatImagesPerImageJpegKb() * 1024
             var bytes: ByteArray? = null
             for (quality in QUALITY_LADDER) {
                 val buf = ByteArrayOutputStream()
                 scaled.compress(Bitmap.CompressFormat.JPEG, quality, buf)
                 bytes = buf.toByteArray()
-                if (bytes.size <= MAX_JPEG_BYTES) break
+                if (bytes.size <= budgetBytes) break
             }
             val out = File(imageDir(context), "${UUID.randomUUID()}.jpg")
             out.writeBytes(bytes!!)

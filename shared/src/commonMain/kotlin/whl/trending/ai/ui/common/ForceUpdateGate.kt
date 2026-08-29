@@ -55,6 +55,10 @@ fun ForceUpdateGate(content: @Composable () -> Unit) {
     LaunchedEffect(Unit) {
         runCatching { TrendingApi().fetchAppConfig() }.onSuccess { config ->
             globalSettingsManager.setCachedMinVersion(config.minVersion)
+            globalSettingsManager.setChatImagesConfig(
+                config.chatImages?.maxCount,
+                config.chatImages?.perImageJpegKb,
+            )
             minVersion = config.minVersion
         }.onFailure {
             // fail-open：接口未上线（404）/断网都不影响使用，仅留日志便于排查服务端误配置

@@ -197,7 +197,7 @@ class ChatViewModel(
     /** 追加一张已压缩好的待发图片（本地缓存路径），超过单条上限时忽略。 */
     fun addPendingImage(path: String) {
         _uiState.update {
-            if (it.pendingImages.size >= MAX_IMAGES_PER_MESSAGE || path in it.pendingImages) it
+            if (it.pendingImages.size >= maxImagesPerMessage() || path in it.pendingImages) it
             else it.copy(pendingImages = it.pendingImages + path)
         }
     }
@@ -688,8 +688,8 @@ class ChatViewModel(
     }
 
     companion object {
-        /** 单条消息图片数上限，与服务端及 [whl.trending.chat.engine.ChatWire] 对齐 */
-        const val MAX_IMAGES_PER_MESSAGE = 4
+        /** 单条消息图片数上限：服务端 app-config 下发（KV 单源），未拉到用与服务端一致的默认 */
+        fun maxImagesPerMessage(): Int = globalSettingsManager.chatImagesMaxCount()
 
         /** research 轮询节奏：快轮 8s×90（≈12 分钟）覆盖正常任务时长，慢轮 60s×110（≈110 分钟）
          *  盖过服务端 2h 超龄判死闸——每个任务都能等到服务端终态，不留僵尸占位 */
