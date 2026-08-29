@@ -262,6 +262,7 @@ private fun errorMessageRes(error: ChatError): Int = when (error.code) {
     "auth_invalid" -> R.string.chat_error_auth_invalid
     "images_require_login" -> R.string.chat_error_images_require_login
     "content_too_long" -> R.string.chat_error_content_too_long
+    "image_too_large", "images_too_large" -> R.string.chat_error_images_too_large
     "quota_global" -> R.string.chat_error_quota_global
     ChatError.CODE_QUOTA_DEVICE -> R.string.chat_quota_exceeded
     "upstream_timeout" -> R.string.chat_error_timeout
