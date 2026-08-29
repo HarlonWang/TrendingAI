@@ -37,6 +37,7 @@ import whl.trending.ai.data.model.resolveEffectiveChatModel
 import whl.trending.ai.data.remote.installTrendingAuth
 import whl.trending.ai.data.remote.trackAuthTokenCache
 import whl.trending.ai.data.repository.ChatModelsProvider
+import whl.trending.chat.ChatViewModel
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
@@ -152,6 +153,7 @@ class ChatApi(
     ): String {
         val lang = resolveLang()
         val imagePlaceholder = if (lang == "zh") "[图片]" else "[image]"
+        val maxImages = ChatViewModel.maxImagesPerMessage()
         return executeStreaming(path = "chat", onDelta = onDelta, onSearch = onSearch) {
             setBody(
                 ChatRequest(
@@ -162,6 +164,7 @@ class ChatApi(
                                 message = m,
                                 isLast = index == history.lastIndex,
                                 imagePlaceholder = imagePlaceholder,
+                                maxImages = maxImages,
                                 readImageBytes = { path ->
                                     runCatching { File(path).readBytes() }.getOrNull()
                                 },

@@ -22,13 +22,11 @@ import whl.trending.chat.model.Role
  */
 internal object ChatWire {
 
-    /** 单条消息图片数上限，与服务端 MAX_IMAGES_PER_MSG 对齐 */
-    const val MAX_IMAGES_PER_MESSAGE = 4
-
     fun buildContent(
         message: ChatMessage,
         isLast: Boolean,
         imagePlaceholder: String,
+        maxImages: Int,
         readImageBytes: (String) -> ByteArray?,
     ): JsonElement {
         if (message.images.isEmpty()) return JsonPrimitive(message.content)
@@ -49,7 +47,7 @@ internal object ChatWire {
                 )
             }
             var encoded = 0
-            for (path in message.images.take(MAX_IMAGES_PER_MESSAGE)) {
+            for (path in message.images.take(maxImages)) {
                 val bytes = readImageBytes(path) ?: continue
                 add(
                     buildJsonObject {

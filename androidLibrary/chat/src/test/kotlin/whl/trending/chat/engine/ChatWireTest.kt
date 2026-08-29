@@ -22,7 +22,7 @@ class ChatWireTest {
 
     @Test
     fun `纯文本消息 content 仍是 JSON string`() {
-        val element = ChatWire.buildContent(user(1, "hi"), isLast = true, imagePlaceholder = "[图片]", readImageBytes = reader)
+        val element = ChatWire.buildContent(user(1, "hi"), isLast = true, imagePlaceholder = "[图片]", maxImages = 4, readImageBytes = reader)
         assertEquals(JsonPrimitive("hi"), element)
     }
 
@@ -31,7 +31,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "这是什么", images = listOf("ok1.jpg", "ok2.jpg")),
             isLast = true,
-            imagePlaceholder = "[图片]",
+            imagePlaceholder = "[图片]", maxImages = 4,
             readImageBytes = reader,
         )
         val parts = element.jsonArray
@@ -50,7 +50,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "", images = listOf("ok1.jpg")),
             isLast = true,
-            imagePlaceholder = "[图片]",
+            imagePlaceholder = "[图片]", maxImages = 4,
             readImageBytes = reader,
         )
         val parts = element.jsonArray
@@ -63,7 +63,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "看这张", images = listOf("ok1.jpg", "ok2.jpg")),
             isLast = false,
-            imagePlaceholder = "[图片]",
+            imagePlaceholder = "[图片]", maxImages = 4,
             readImageBytes = reader,
         )
         assertEquals(JsonPrimitive("看这张 [图片][图片]"), element)
@@ -74,7 +74,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "", images = listOf("ok1.jpg")),
             isLast = false,
-            imagePlaceholder = "[image]",
+            imagePlaceholder = "[image]", maxImages = 4,
             readImageBytes = reader,
         )
         assertEquals(JsonPrimitive("[image]"), element)
@@ -85,7 +85,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "hi", images = listOf("missing.jpg", "ok1.jpg")),
             isLast = true,
-            imagePlaceholder = "[图片]",
+            imagePlaceholder = "[图片]", maxImages = 4,
             readImageBytes = reader,
         )
         val parts = element.jsonArray
@@ -97,7 +97,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "", images = listOf("missing.jpg")),
             isLast = true,
-            imagePlaceholder = "[图片]",
+            imagePlaceholder = "[图片]", maxImages = 4,
             readImageBytes = reader,
         )
         val parts = element.jsonArray
@@ -111,7 +111,7 @@ class ChatWireTest {
         val element = ChatWire.buildContent(
             user(1, "", images = List(6) { "ok$it.jpg" }),
             isLast = true,
-            imagePlaceholder = "[图片]",
+            imagePlaceholder = "[图片]", maxImages = 4,
             readImageBytes = reader,
         )
         assertTrue(element is JsonArray)

@@ -121,7 +121,8 @@ fun ChatInputBar(
     var captureTarget by remember { mutableStateOf<Pair<Uri, File>?>(null) }
 
     val failedText = stringResource(R.string.chat_image_processing_failed)
-    val remaining = ChatViewModel.MAX_IMAGES_PER_MESSAGE - pendingImages.size - processingCount
+    val maxImages = ChatViewModel.maxImagesPerMessage()
+    val remaining = maxImages - pendingImages.size - processingCount
 
     fun ingest(uri: Uri, deleteAfter: File? = null) {
         processingCount++
@@ -138,7 +139,8 @@ fun ChatInputBar(
     }
 
     val albumLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(ChatViewModel.MAX_IMAGES_PER_MESSAGE),
+        // PickMultipleVisualMedia 要求 maxItems > 1，配置极端收紧到 1 时也不能让它抛
+        ActivityResultContracts.PickMultipleVisualMedia(maxImages.coerceAtLeast(2)),
     ) { uris ->
         // 选择器允许选满上限，剩余名额不足时截断
         uris.take(remaining.coerceAtLeast(0)).forEach { ingest(it) }
