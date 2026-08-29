@@ -368,16 +368,16 @@ class SettingsManager(private val settings: ObservableSettings) {
         else settings.putString(MIN_VERSION_KEY, version)
     }
 
-    // chat 图片参数：app-config 下发缓存，未拉到用与服务端一致的内置默认；
-    // 读取时 clamp，异常缓存值不外泄（区间与服务端 lib/chat-images.js 一致）
+    // chat 图片参数：app-config 下发缓存（服务端单源见后端 lib/chat-images.js），
+    // 未拉到或值非法时用与服务端一致的内置默认
 
     /** 单条消息图片张数上限 */
     fun chatImagesMaxCount(): Int =
-        settings.getInt(CHAT_IMAGES_MAX_KEY, 9).coerceIn(1, 12)
+        settings.getInt(CHAT_IMAGES_MAX_KEY, 9).takeIf { it > 0 } ?: 9
 
     /** 单张图片压缩预算（KB，JPEG 字节） */
     fun chatImagesPerImageJpegKb(): Int =
-        settings.getInt(CHAT_IMAGES_PER_KB_KEY, 280).coerceIn(64, 375)
+        settings.getInt(CHAT_IMAGES_PER_KB_KEY, 280).takeIf { it > 0 } ?: 280
 
     fun setChatImagesConfig(maxCount: Int?, perImageJpegKb: Int?) {
         if (maxCount != null) settings.putInt(CHAT_IMAGES_MAX_KEY, maxCount)

@@ -121,7 +121,7 @@ fun ChatInputBar(
     var captureTarget by remember { mutableStateOf<Pair<Uri, File>?>(null) }
 
     val failedText = stringResource(R.string.chat_image_processing_failed)
-    val maxImages = remember { ChatViewModel.maxImagesPerMessage() }
+    val maxImages = ChatViewModel.maxImagesPerMessage()
     val remaining = maxImages - pendingImages.size - processingCount
 
     fun ingest(uri: Uri, deleteAfter: File? = null) {
