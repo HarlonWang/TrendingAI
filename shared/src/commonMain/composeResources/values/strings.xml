@@ -58,7 +58,7 @@
     <string name="picks_newsletter_title">Get Picks by email</string>
     <string name="picks_newsletter_desc">One email a day, unsubscribe anytime</string>
     <string name="retry">Retry</string>
-    <string name="error_fetch">Failed to fetch data: %1$s</string>
+    <string name="error_network">Network unavailable. Check your connection and try again.</string>
     <string name="back">Back</string>
     <string name="filter_options">Filter</string>
     <string name="filter_period">Trending Period</string>

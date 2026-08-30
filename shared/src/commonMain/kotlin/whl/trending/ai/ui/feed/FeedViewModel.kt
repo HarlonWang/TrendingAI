@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.feed
 
+import whl.trending.ai.core.toUserMessage
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.data.model.FeedResponse
 import whl.trending.ai.data.repository.TrendingRepository
@@ -106,7 +107,7 @@ class FeedViewModel(
                     isLoading = false,
                     isRefreshing = false,
                     // 有内容（缓存或旧数据）时刷新失败静默保留，避免整页错误盖掉可用内容
-                    error = if (it.items.isEmpty()) e.message ?: "Unknown Error" else null
+                    error = if (it.items.isEmpty()) e.toUserMessage() else null
                 )
             }
         }

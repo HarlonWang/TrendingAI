@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.trending
 
+import whl.trending.ai.core.toUserMessage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -150,7 +151,7 @@ class TrendingViewModel(
                     isLoading = false,
                     isRefreshing = false,
                     // 有内容（缓存或旧数据）时刷新失败静默保留，避免整页错误盖掉可用内容
-                    error = if (it.repos.isEmpty()) e.message ?: "Unknown Error" else null
+                    error = if (it.repos.isEmpty()) e.toUserMessage() else null
                 )
             }
         }

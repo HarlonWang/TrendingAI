@@ -58,7 +58,7 @@
     <string name="picks_newsletter_title">邮件订阅每日精选</string>
     <string name="picks_newsletter_desc">每天一封，随时可退订</string>
     <string name="retry">重试</string>
-    <string name="error_fetch">获取数据失败: %1$s</string>
+    <string name="error_network">网络不可用，请检查网络后重试</string>
     <string name="back">返回</string>
     <string name="filter_options">筛选</string>
     <string name="filter_period">趋势周期</string>

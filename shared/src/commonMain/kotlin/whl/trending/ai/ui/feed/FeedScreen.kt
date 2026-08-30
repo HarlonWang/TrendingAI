@@ -63,6 +63,7 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FeedItem
 import whl.trending.ai.data.repository.globalFavoriteRepository
+import whl.trending.ai.ui.common.ErrorState
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.common.ItemActionMenu
 import whl.trending.ai.ui.common.LocalContentBottomPadding
@@ -127,25 +128,11 @@ fun FeedScreen(
             }
 
             uiState.error != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = LocalContentTopPadding.current)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = uiState.error ?: "",
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { viewModel.retry() }) {
-                        Text(stringResource(Res.string.retry))
-                    }
-                }
+                ErrorState(
+                    message = uiState.error ?: "",
+                    onRetry = { viewModel.retry() },
+                    modifier = Modifier.padding(top = LocalContentTopPadding.current),
+                )
             }
 
             uiState.items.isEmpty() -> {

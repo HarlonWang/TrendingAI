@@ -61,6 +61,7 @@ import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.shareText
+import whl.trending.ai.ui.common.ErrorState
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.common.aiShareText
@@ -234,25 +235,11 @@ fun ReadmeScreen(
             }
 
             uiState.error != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = uiState.error ?: "",
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Button(onClick = { viewModel.fetchReadme() }) {
-                            Text(stringResource(Res.string.retry))
-                        }
-                    }
-                }
+                ErrorState(
+                    message = uiState.error ?: "",
+                    onRetry = { viewModel.fetchReadme() },
+                    modifier = Modifier.padding(innerPadding),
+                )
             }
 
             uiState.html.isBlank() -> {

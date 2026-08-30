@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.picks
 
+import whl.trending.ai.core.toUserMessage
 import whl.trending.ai.data.model.PicksResponse
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.data.local.LastDataCache
@@ -94,7 +95,7 @@ class PicksViewModel(
                     isLoading = false,
                     isRefreshing = false,
                     // 有内容（缓存或旧数据）时刷新失败静默保留，避免整页错误盖掉可用内容
-                    error = if (it.picks == null) e.message ?: "Unknown Error" else null
+                    error = if (it.picks == null) e.toUserMessage() else null
                 )
             }
         }

@@ -1,5 +1,6 @@
 package whl.trending.ai.ui.detail
 
+import whl.trending.ai.core.toUserMessage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -94,7 +95,7 @@ class ReadmeViewModel(
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Unknown Error", isLoading = false) }
+                _uiState.update { it.copy(error = e.toUserMessage(), isLoading = false) }
             }
         }
     }

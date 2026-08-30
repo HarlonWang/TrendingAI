@@ -77,7 +77,6 @@ import trendingai.shared.generated.resources.batch_pm
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.click_to_select_date
 import trendingai.shared.generated.resources.confirm
-import trendingai.shared.generated.resources.error_fetch
 import trendingai.shared.generated.resources.filter_done
 import trendingai.shared.generated.resources.filter_language
 import trendingai.shared.generated.resources.filter_options
@@ -115,6 +114,7 @@ import whl.trending.ai.data.model.TrendingContributor
 import whl.trending.ai.data.model.TrendingRepo
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.common.AiSummaryBox
+import whl.trending.ai.ui.common.ErrorState
 import whl.trending.ai.ui.common.InfoDialog
 import whl.trending.ai.ui.common.ItemActionMenu
 import whl.trending.ai.ui.common.LocalContentBottomPadding
@@ -260,25 +260,11 @@ private fun RepoList(
             }
 
             uiState.error != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = LocalContentTopPadding.current)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(Res.string.error_fetch, uiState.error),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onRefresh) {
-                        Text(stringResource(Res.string.retry))
-                    }
-                }
+                ErrorState(
+                    message = uiState.error,
+                    onRetry = onRefresh,
+                    modifier = Modifier.padding(top = LocalContentTopPadding.current),
+                )
             }
 
             displayRepos.isEmpty() -> {
