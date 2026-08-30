@@ -28,8 +28,17 @@ kotlin {
         }
     }
 
-    iosArm64()
-    iosSimulatorArm64()
+    // markdown 解析的 iOS 侧绑 cmark-gfm（apple/swift-cmark 源，tag 与产物见 native/build-cmark.sh）
+    listOf(
+        iosArm64() to "ios_arm64",
+        iosSimulatorArm64() to "ios_simulator_arm64",
+    ).forEach { (target, libDir) ->
+        target.compilations.getByName("main").cinterops.create("cmarkgfm") {
+            definitionFile.set(project.file("native/cmarkgfm.def"))
+            includeDirs(project.file("native/out/$libDir/include"))
+            extraOpts("-libraryPath", project.file("native/out/$libDir").absolutePath)
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -91,4 +100,16 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
+}
+
+// cinterop 前先把 cmark-gfm 静态库编出来（已就绪则秒退，--force 见脚本）
+val buildCmarkGfm by tasks.registering(Exec::class) {
+    workingDir = projectDir
+    commandLine("bash", "native/build-cmark.sh")
+    inputs.file("native/build-cmark.sh")
+    outputs.dir("native/out/ios_arm64")
+    outputs.dir("native/out/ios_simulator_arm64")
+}
+tasks.matching { it.name.startsWith("cinteropCmarkgfm") }.configureEach {
+    dependsOn(buildCmarkGfm)
 }

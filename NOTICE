@@ -1,0 +1,7 @@
+TrendingAI bundles the following third-party components:
+
+cmark-gfm (via apple/swift-cmark, statically linked into the iOS binary)
+  https://github.com/apple/swift-cmark
+  Copyright (c) 2014, John MacFarlane; portions Copyright (c) GitHub, Inc.
+  Licensed under BSD-2-Clause and other permissive terms.
+  Full license text: chat/native/cmark-gfm-COPYING

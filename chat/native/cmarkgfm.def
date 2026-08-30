@@ -1,0 +1,5 @@
+package = cmarkgfm
+headers = cmark-gfm.h cmark-gfm-core-extensions.h
+headerFilter = cmark-gfm*.h export.h
+compilerOpts = -DCMARK_GFM_STATIC_DEFINE
+staticLibraries = libcmark-gfm.a libcmark-gfm-extensions.a

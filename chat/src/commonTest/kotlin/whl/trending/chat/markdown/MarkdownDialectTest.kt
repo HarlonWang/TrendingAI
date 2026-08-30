@@ -10,7 +10,6 @@ import kotlin.test.assertTrue
  * 必须产出相同的自有 AST——双解析器方案的行为防线。样本偏向真实 chat 回复的形态，
  * 含流式中间态（未闭合围栏、只有表头的表格）。
  */
-@IgnoreIos
 class MarkdownDialectTest {
 
     private fun parse(md: String): List<MdBlock> = parseMarkdown(md).blocks
