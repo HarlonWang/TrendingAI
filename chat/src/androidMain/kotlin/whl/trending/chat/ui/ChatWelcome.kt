@@ -14,12 +14,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.host.chatHost
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_assistant_title
+import trendingai.chat.generated.resources.chat_model_provider
+import trendingai.chat.generated.resources.chat_quota_login_cta
+import trendingai.chat.generated.resources.chat_quota_notice
+import trendingai.chat.generated.resources.chat_quota_notice_pro
+import trendingai.chat.generated.resources.chat_quota_notice_user
 
 /** 欢迎区的额度口径档位，与服务端 `resolveQuotaTier` 的三档同名同义。 */
 internal enum class WelcomeTier { Anonymous, Free, Pro }
@@ -70,7 +76,7 @@ internal fun ChatWelcomeContent(
             Text(text = "✨", style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.chat_assistant_title),
+                text = stringResource(Res.string.chat_assistant_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(16.dp))
@@ -82,9 +88,9 @@ internal fun ChatWelcomeContent(
         Text(
             text = stringResource(
                 when (tier) {
-                    WelcomeTier.Pro -> R.string.chat_quota_notice_pro
-                    WelcomeTier.Free -> R.string.chat_quota_notice_user
-                    WelcomeTier.Anonymous -> R.string.chat_quota_notice
+                    WelcomeTier.Pro -> Res.string.chat_quota_notice_pro
+                    WelcomeTier.Free -> Res.string.chat_quota_notice_user
+                    WelcomeTier.Anonymous -> Res.string.chat_quota_notice
                 }
             ),
             style = MaterialTheme.typography.bodySmall,
@@ -94,14 +100,14 @@ internal fun ChatWelcomeContent(
         // 匿名档的登录 CTA 与触顶卡同源：身份引导，不是付费引导（取舍见 QuotaLimitCard 头注释）
         if (tier == WelcomeTier.Anonymous && canSignIn) {
             TextButton(onClick = onSignIn) {
-                Text(stringResource(R.string.chat_quota_login_cta))
+                Text(stringResource(Res.string.chat_quota_login_cta))
             }
         } else {
             Spacer(Modifier.height(6.dp))
         }
         // 模型出处不做视觉强调：OpenAI 品牌指南要求其展示不得比我们自己的名称更显著
         Text(
-            text = stringResource(R.string.chat_model_provider),
+            text = stringResource(Res.string.chat_model_provider),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

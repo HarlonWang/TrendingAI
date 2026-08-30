@@ -35,7 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,7 +43,16 @@ import kotlinx.coroutines.launch
 import whl.trending.chat.ChatContext
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.DetailSummaryPolicy
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_action_detail_summary
+import trendingai.chat.generated.resources.chat_action_what_can_you_do
+import trendingai.chat.generated.resources.chat_action_what_can_you_do_prompt
+import trendingai.chat.generated.resources.chat_action_what_is_this
+import trendingai.chat.generated.resources.chat_action_what_is_this_prompt
+import trendingai.chat.generated.resources.chat_assistant_title
+import trendingai.chat.generated.resources.chat_back
+import trendingai.chat.generated.resources.chat_history
+import trendingai.chat.generated.resources.chat_research_repo_prefill
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
@@ -93,7 +102,7 @@ fun ChatScreen(
     }
 
     // 「一键解读」入口：进入会话自动触发一次详细解读；chipVisible 判定天然幂等、防重复触发
-    val autoDetailPrompt = stringResource(R.string.chat_action_detail_summary)
+    val autoDetailPrompt = stringResource(Res.string.chat_action_detail_summary)
     LaunchedEffect(entryKey) {
         if (initialContext?.autoDetailSummary == true &&
             DetailSummaryPolicy.chipVisible(initialContext, viewModel.uiState.value.messages)
@@ -103,7 +112,7 @@ fun ChatScreen(
     }
 
     // 解读卡尾部「深度调研此项目」升级漏斗的调研主题（见下方 onResearchUpsell）
-    val researchPrefill = stringResource(R.string.chat_research_repo_prefill)
+    val researchPrefill = stringResource(Res.string.chat_research_repo_prefill)
 
     // AI 一开始回复就收起键盘；clearFocus 而非只 hide，避免「键盘没了但光标还在闪」
     val focusManager = LocalFocusManager.current
@@ -144,7 +153,7 @@ fun ChatScreen(
                     title = {
                         Text(
                             text = initialContext?.title
-                                ?: stringResource(R.string.chat_assistant_title),
+                                ?: stringResource(Res.string.chat_assistant_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -153,7 +162,7 @@ fun ChatScreen(
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.chat_back),
+                                contentDescription = stringResource(Res.string.chat_back),
                             )
                         }
                     },
@@ -163,7 +172,7 @@ fun ChatScreen(
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(
                                     imageVector = Icons.Filled.Menu,
-                                    contentDescription = stringResource(R.string.chat_history),
+                                    contentDescription = stringResource(Res.string.chat_history),
                                 )
                             }
                         }
@@ -180,9 +189,9 @@ fun ChatScreen(
                     // 天然覆盖「发送后隐藏」与「恢复历史会话不再显示」
                     val quickAction = when {
                         initialContext == null ->
-                            R.string.chat_action_what_can_you_do to R.string.chat_action_what_can_you_do_prompt
+                            Res.string.chat_action_what_can_you_do to Res.string.chat_action_what_can_you_do_prompt
                         initialContext.sourceUrl != null ->
-                            R.string.chat_action_what_is_this to R.string.chat_action_what_is_this_prompt
+                            Res.string.chat_action_what_is_this to Res.string.chat_action_what_is_this_prompt
                         else -> null
                     }
                     val quickVisible = quickAction != null && state.messages.isEmpty()
@@ -194,7 +203,7 @@ fun ChatScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             if (detailVisible) {
-                                val detailPrompt = stringResource(R.string.chat_action_detail_summary)
+                                val detailPrompt = stringResource(Res.string.chat_action_detail_summary)
                                 OutlinedButton(
                                     onClick = { viewModel.sendDetailSummary(detailPrompt) },
                                     enabled = !state.isSending,

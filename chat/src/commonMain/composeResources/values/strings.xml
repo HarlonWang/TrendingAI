@@ -8,8 +8,8 @@
     <string name="chat_error_network">No network connection. Please check and try again.</string>
     <string name="chat_error_timeout">The response timed out. Please try again.</string>
     <string name="chat_error_server">The service is temporarily unavailable. Please try again later.</string>
-    <string name="chat_error_region_blocked">AI service isn\'t available from your current network region. Retrying won\'t help — we\'re working on it.</string>
-    <string name="chat_error_bad_request">This message can\'t be processed. Try rephrasing or starting a new chat.</string>
+    <string name="chat_error_region_blocked">AI service isn&apos;t available from your current network region. Retrying won&apos;t help — we&apos;re working on it.</string>
+    <string name="chat_error_bad_request">This message can&apos;t be processed. Try rephrasing or starting a new chat.</string>
     <string name="chat_error_content_too_long">The message is too long and exceeds the length limit.</string>
     <string name="chat_error_images_too_large">The images are too large. Remove some or retake them.</string>
     <string name="chat_error_quota_global">The service is busy today. Please come back tomorrow.</string>
@@ -21,10 +21,10 @@
     <string name="chat_share">Share</string>
     <string name="chat_copy">Copy</string>
     <string name="chat_copied">Copied</string>
-    <string name="chat_quota_exceeded">You\'ve used up today\'s free quota. It resets tomorrow.</string>
+    <string name="chat_quota_exceeded">You&apos;ve used up today&apos;s free quota. It resets tomorrow.</string>
     <string name="chat_quota_login_cta">Sign in for more quota</string>
-    <string name="chat_quota_user_exceeded">You\'ve used up today\'s quota. It resets tomorrow.</string>
-    <string name="chat_quota_pro_exceeded">You\'ve been chatting a lot today — check back a bit later.</string>
+    <string name="chat_quota_user_exceeded">You&apos;ve used up today&apos;s quota. It resets tomorrow.</string>
+    <string name="chat_quota_pro_exceeded">You&apos;ve been chatting a lot today — check back a bit later.</string>
     <string name="chat_model_unlock_title">Pro-only model</string>
     <string name="chat_model_unlock_message">%1$s is currently available to Pro only. You can keep using the default model.</string>
     <string name="chat_model_unlock_dismiss">Got it</string>
@@ -45,7 +45,7 @@
     <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in with GitHub to send photos and pictures.</string>
     <string name="chat_image_login_confirm">Sign in</string>
     <string name="chat_image_login_dismiss">Not now</string>
-    <string name="chat_image_processing_failed">Couldn\'t process the image. Please try another one.</string>
+    <string name="chat_image_processing_failed">Couldn&apos;t process the image. Please try another one.</string>
     <string name="chat_image_remove">Remove image</string>
     <string name="chat_user_image">Image</string>
     <string name="chat_image_viewer_close">Close</string>
@@ -53,7 +53,7 @@
     <string name="chat_action_detail_summary">In-depth overview</string>
     <string name="chat_detail_login_message">Sign in to generate an in-depth overview.</string>
     <string name="chat_detail_login_unlocked">Signed in — tap retry to continue generating.</string>
-    <string name="chat_error_readme_too_short">This project\'s README is too short for an in-depth overview.</string>
+    <string name="chat_error_readme_too_short">This project&apos;s README is too short for an in-depth overview.</string>
     <!-- 会话抽屉 -->
     <string name="chat_history">Conversations</string>
     <string name="chat_new_thread">New chat</string>

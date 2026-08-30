@@ -60,7 +60,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -68,7 +68,21 @@ import java.io.File
 import kotlinx.coroutines.launch
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_attach
+import trendingai.chat.generated.resources.chat_attach_album
+import trendingai.chat.generated.resources.chat_attach_camera
+import trendingai.chat.generated.resources.chat_deep_research
+import trendingai.chat.generated.resources.chat_image_login_confirm
+import trendingai.chat.generated.resources.chat_image_login_dismiss
+import trendingai.chat.generated.resources.chat_image_login_message
+import trendingai.chat.generated.resources.chat_image_login_title
+import trendingai.chat.generated.resources.chat_image_processing_failed
+import trendingai.chat.generated.resources.chat_image_remove
+import trendingai.chat.generated.resources.chat_input_hint
+import trendingai.chat.generated.resources.chat_send
+import trendingai.chat.generated.resources.chat_user_image
+import trendingai.chat.generated.resources.chat_web_search
 import whl.trending.chat.attach.ChatImages
 
 /**
@@ -118,7 +132,7 @@ fun ChatInputBar(
     var processingCount by remember { mutableIntStateOf(0) }
     var captureTarget by remember { mutableStateOf<Pair<Uri, File>?>(null) }
 
-    val failedText = stringResource(R.string.chat_image_processing_failed)
+    val failedText = stringResource(Res.string.chat_image_processing_failed)
     val maxImages = ChatViewModel.maxImagesPerMessage()
     val remaining = maxImages - pendingImages.size - processingCount
 
@@ -161,19 +175,19 @@ fun ChatInputBar(
     if (showLoginDialog) {
         AlertDialog(
             onDismissRequest = { showLoginDialog = false },
-            title = { Text(stringResource(R.string.chat_image_login_title)) },
-            text = { Text(stringResource(R.string.chat_image_login_message)) },
+            title = { Text(stringResource(Res.string.chat_image_login_title)) },
+            text = { Text(stringResource(Res.string.chat_image_login_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showLoginDialog = false
                     chatHost.signIn("chat_image_dialog")
                 }) {
-                    Text(stringResource(R.string.chat_image_login_confirm))
+                    Text(stringResource(Res.string.chat_image_login_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLoginDialog = false }) {
-                    Text(stringResource(R.string.chat_image_login_dismiss))
+                    Text(stringResource(Res.string.chat_image_login_dismiss))
                 }
             },
         )
@@ -219,7 +233,7 @@ fun ChatInputBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = stringResource(R.string.chat_attach),
+                                contentDescription = stringResource(Res.string.chat_attach),
                                 tint = if (remaining > 0) {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 } else {
@@ -233,7 +247,7 @@ fun ChatInputBar(
                         ) {
                             // 能力开关：联网搜索（勾选态 = 已开启；EchoFlow 的「菜单开启 + chip 回显」范式）
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.chat_web_search)) },
+                                text = { Text(stringResource(Res.string.chat_web_search)) },
                                 leadingIcon = { Icon(Icons.Outlined.TravelExplore, contentDescription = null) },
                                 trailingIcon = {
                                     if (searchActive) Icon(Icons.Filled.Check, contentDescription = null)
@@ -244,7 +258,7 @@ fun ChatInputBar(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.chat_deep_research)) },
+                                text = { Text(stringResource(Res.string.chat_deep_research)) },
                                 leadingIcon = { Icon(Icons.Outlined.Science, contentDescription = null) },
                                 trailingIcon = {
                                     if (researchActive) Icon(Icons.Filled.Check, contentDescription = null)
@@ -255,7 +269,7 @@ fun ChatInputBar(
                                 },
                             )
                             if (chatHost.canSignIn) DropdownMenuItem(
-                                text = { Text(stringResource(R.string.chat_attach_camera)) },
+                                text = { Text(stringResource(Res.string.chat_attach_camera)) },
                                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
                                 onClick = {
                                     menuExpanded = false
@@ -274,7 +288,7 @@ fun ChatInputBar(
                                 },
                             )
                             if (chatHost.canSignIn) DropdownMenuItem(
-                                text = { Text(stringResource(R.string.chat_attach_album)) },
+                                text = { Text(stringResource(Res.string.chat_attach_album)) },
                                 leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
                                 onClick = {
                                     menuExpanded = false
@@ -297,7 +311,7 @@ fun ChatInputBar(
                     onValueChange = onInputChange,
                     // focusRequester 必须声明在可聚焦项之前才会关联（官方文档「焦点修饰符的优先级」）
                     modifier = Modifier.focusRequester(inputFocusRequester).weight(1f),
-                    placeholder = { Text(stringResource(R.string.chat_input_hint)) },
+                    placeholder = { Text(stringResource(Res.string.chat_input_hint)) },
                     textStyle = MaterialTheme.typography.bodyLarge,
                     // 容器与指示线全部透明：外层胶囊已经是这块区域的视觉容器，
                     // 再叠一层 TextField 自己的底色/下划线就成了「框中框」
@@ -324,7 +338,7 @@ fun ChatInputBar(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = stringResource(R.string.chat_send),
+                        contentDescription = stringResource(Res.string.chat_send),
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -347,7 +361,7 @@ private fun PendingImageStrip(
             Box(modifier = Modifier.padding(end = 8.dp)) {
                 AsyncImage(
                     model = File(path),
-                    contentDescription = stringResource(R.string.chat_user_image),
+                    contentDescription = stringResource(Res.string.chat_user_image),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(72.dp)
@@ -367,7 +381,7 @@ private fun PendingImageStrip(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.chat_image_remove),
+                            contentDescription = stringResource(Res.string.chat_image_remove),
                             modifier = Modifier.size(14.dp),
                         )
                     }

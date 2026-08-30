@@ -22,13 +22,15 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_copied
+import trendingai.chat.generated.resources.chat_copy
 
 /** 复制成功后图标停留在「对勾」的时长 */
 private val COPIED_FEEDBACK_DURATION = 1500.milliseconds
@@ -75,7 +77,7 @@ fun CopyIconButton(
                 imageVector = if (done) Icons.Outlined.Check else icon,
                 // 状态同步进语义树，读屏用户也能听到「已复制」
                 contentDescription = stringResource(
-                    if (done) R.string.chat_copied else R.string.chat_copy,
+                    if (done) Res.string.chat_copied else Res.string.chat_copy,
                 ),
                 tint = if (done) {
                     MaterialTheme.colorScheme.primary

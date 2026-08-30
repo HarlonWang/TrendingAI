@@ -9,10 +9,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.StringResource
 import whl.trending.chat.host.chatHost
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_detail_login_message
+import trendingai.chat.generated.resources.chat_detail_login_unlocked
+import trendingai.chat.generated.resources.chat_quota_auth_degraded
+import trendingai.chat.generated.resources.chat_quota_exceeded
+import trendingai.chat.generated.resources.chat_quota_login_cta
+import trendingai.chat.generated.resources.chat_quota_pro_exceeded
+import trendingai.chat.generated.resources.chat_quota_unlocked
+import trendingai.chat.generated.resources.chat_quota_user_exceeded
+import trendingai.chat.generated.resources.chat_retry
 import whl.trending.chat.model.ChatError
 
 /**
@@ -48,25 +58,25 @@ internal fun QuotaLimitCard(
                     // 发请求时自认已登录、却被按匿名档处理（Logto 故障降级）：如实提示登录态未生效，
                     // 不给「已登录、重试即可」的死循环误导——authDegraded 就是为此而生，此分支必须消费它
                     error.authDegraded -> {
-                        QuotaText(R.string.chat_quota_auth_degraded)
+                        QuotaText(Res.string.chat_quota_auth_degraded)
                         TextButton(onClick = onRetry) {
-                            Text(stringResource(R.string.chat_retry))
+                            Text(stringResource(Res.string.chat_retry))
                         }
                     }
                     // 登录完成：与触顶卡的放行例外同构，点重试续上生成
                     loggedIn -> {
-                        QuotaText(R.string.chat_detail_login_unlocked)
+                        QuotaText(Res.string.chat_detail_login_unlocked)
                         TextButton(onClick = onRetry) {
-                            Text(stringResource(R.string.chat_retry))
+                            Text(stringResource(Res.string.chat_retry))
                         }
                     }
                     else -> {
-                        QuotaText(R.string.chat_detail_login_message)
+                        QuotaText(Res.string.chat_detail_login_message)
                         if (chatHost.canSignIn) {
                             Button(onClick = {
                                 chatHost.signIn("detail_summary_quota_card")
                             }) {
-                                Text(stringResource(R.string.chat_quota_login_cta))
+                                Text(stringResource(Res.string.chat_quota_login_cta))
                             }
                         }
                     }
@@ -74,32 +84,32 @@ internal fun QuotaLimitCard(
             }
             isProTier -> {
                 // Pro 触顶（极罕见）：不透数字的软着陆，无 CTA（已是 Pro，明日恢复）
-                QuotaText(R.string.chat_quota_pro_exceeded)
+                QuotaText(Res.string.chat_quota_pro_exceeded)
             }
             isUserTier -> {
                 // 登录档触顶：与 Pro 触顶同为纯提示，不推销、不外跳
-                QuotaText(R.string.chat_quota_user_exceeded)
+                QuotaText(Res.string.chat_quota_user_exceeded)
             }
             loggedIn -> {
                 if (error.authDegraded) {
                     // 发请求时就自认已登录、却被按匿名档处理（token 刷新失败/被拒）：
                     // 如实提示登录态未生效，不给「已解锁、重发即可」的死循环误导
-                    QuotaText(R.string.chat_quota_auth_degraded)
+                    QuotaText(Res.string.chat_quota_auth_degraded)
                 } else {
                     // 匿名触顶后完成了登录：配额键已切换，重发即可继续
-                    QuotaText(R.string.chat_quota_unlocked)
+                    QuotaText(Res.string.chat_quota_unlocked)
                 }
                 TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.chat_retry))
+                    Text(stringResource(Res.string.chat_retry))
                 }
             }
             else -> {
-                QuotaText(R.string.chat_quota_exceeded)
+                QuotaText(Res.string.chat_quota_exceeded)
                 if (chatHost.canSignIn) {
                     Button(onClick = {
                         chatHost.signIn("chat_quota_card")
                     }) {
-                        Text(stringResource(R.string.chat_quota_login_cta))
+                        Text(stringResource(Res.string.chat_quota_login_cta))
                     }
                 }
             }
@@ -108,7 +118,7 @@ internal fun QuotaLimitCard(
 }
 
 @Composable
-private fun QuotaText(resId: Int) {
+private fun QuotaText(resId: StringResource) {
     Text(
         text = stringResource(resId),
         style = MaterialTheme.typography.bodyMedium,

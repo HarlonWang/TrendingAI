@@ -24,12 +24,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_image_viewer_close
+import trendingai.chat.generated.resources.chat_user_image
 
 private const val MIN_SCALE = 1f
 private const val MAX_SCALE = 5f
@@ -79,7 +81,7 @@ fun ImageViewerDialog(
         ) {
             AsyncImage(
                 model = model,
-                contentDescription = stringResource(R.string.chat_user_image),
+                contentDescription = stringResource(Res.string.chat_user_image),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
@@ -99,7 +101,7 @@ fun ImageViewerDialog(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.chat_image_viewer_close),
+                    contentDescription = stringResource(Res.string.chat_image_viewer_close),
                     tint = Color.White,
                 )
             }

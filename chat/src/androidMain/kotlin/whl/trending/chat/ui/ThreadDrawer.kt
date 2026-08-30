@@ -26,10 +26,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_dialog_cancel
+import trendingai.chat.generated.resources.chat_dialog_confirm
+import trendingai.chat.generated.resources.chat_history
+import trendingai.chat.generated.resources.chat_new_thread
+import trendingai.chat.generated.resources.chat_thread_delete
+import trendingai.chat.generated.resources.chat_thread_delete_text
+import trendingai.chat.generated.resources.chat_thread_delete_title
+import trendingai.chat.generated.resources.chat_thread_more
+import trendingai.chat.generated.resources.chat_thread_rename
 import whl.trending.chat.ThreadSummary
 
 /**
@@ -50,13 +59,13 @@ fun ThreadDrawer(
 
     ModalDrawerSheet {
         Text(
-            text = stringResource(R.string.chat_history),
+            text = stringResource(Res.string.chat_history),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp),
         )
         NavigationDrawerItem(
-            label = { Text(stringResource(R.string.chat_new_thread)) },
+            label = { Text(stringResource(Res.string.chat_new_thread)) },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             selected = false,
             onClick = onNewThread,
@@ -94,17 +103,17 @@ fun ThreadDrawer(
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text(stringResource(R.string.chat_thread_delete_title)) },
-            text = { Text(stringResource(R.string.chat_thread_delete_text)) },
+            title = { Text(stringResource(Res.string.chat_thread_delete_title)) },
+            text = { Text(stringResource(Res.string.chat_thread_delete_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete(target.id)
                     deleteTarget = null
-                }) { Text(stringResource(R.string.chat_thread_delete)) }
+                }) { Text(stringResource(Res.string.chat_thread_delete)) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTarget = null }) {
-                    Text(stringResource(R.string.chat_dialog_cancel))
+                    Text(stringResource(Res.string.chat_dialog_cancel))
                 }
             },
         )
@@ -121,20 +130,20 @@ private fun ThreadItemMenu(
     IconButton(onClick = { expanded = true }) {
         Icon(
             Icons.Filled.MoreVert,
-            contentDescription = stringResource(R.string.chat_thread_more),
+            contentDescription = stringResource(Res.string.chat_thread_more),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.chat_thread_rename)) },
+            text = { Text(stringResource(Res.string.chat_thread_rename)) },
             onClick = {
                 expanded = false
                 onRenameRequest(thread)
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.chat_thread_delete)) },
+            text = { Text(stringResource(Res.string.chat_thread_delete)) },
             onClick = {
                 expanded = false
                 onDeleteRequest(thread)
@@ -148,17 +157,17 @@ private fun RenameDialog(initial: String, onConfirm: (String) -> Unit, onDismiss
     var value by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.chat_thread_rename)) },
+        title = { Text(stringResource(Res.string.chat_thread_rename)) },
         text = {
             OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true)
         },
         confirmButton = {
             TextButton(
                 onClick = { if (value.isNotBlank()) onConfirm(value) },
-            ) { Text(stringResource(R.string.chat_dialog_confirm)) }
+            ) { Text(stringResource(Res.string.chat_dialog_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_dialog_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.chat_dialog_cancel)) }
         },
     )
 }

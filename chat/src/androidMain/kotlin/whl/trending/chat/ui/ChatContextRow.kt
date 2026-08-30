@@ -21,10 +21,12 @@ import androidx.compose.material3.TonalToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.model.ChatModelsResponse
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_deep_research
+import trendingai.chat.generated.resources.chat_web_search
 import whl.trending.chat.model.ChatMode
 
 /**
@@ -87,7 +89,7 @@ internal fun ChatContextRow(
                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                 Text(
                     stringResource(
-                        if (isResearch) R.string.chat_deep_research else R.string.chat_web_search,
+                        if (isResearch) Res.string.chat_deep_research else Res.string.chat_web_search,
                     ),
                 )
             }

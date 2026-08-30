@@ -30,13 +30,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import java.io.File
 import androidx.compose.ui.platform.LocalContext
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_action_research_upsell
+import trendingai.chat.generated.resources.chat_error_auth_invalid
+import trendingai.chat.generated.resources.chat_error_bad_request
+import trendingai.chat.generated.resources.chat_error_content_too_long
+import trendingai.chat.generated.resources.chat_error_images_require_login
+import trendingai.chat.generated.resources.chat_error_images_too_large
+import trendingai.chat.generated.resources.chat_error_message
+import trendingai.chat.generated.resources.chat_error_network
+import trendingai.chat.generated.resources.chat_error_quota_global
+import trendingai.chat.generated.resources.chat_error_readme_too_short
+import trendingai.chat.generated.resources.chat_error_region_blocked
+import trendingai.chat.generated.resources.chat_error_server
+import trendingai.chat.generated.resources.chat_error_timeout
+import trendingai.chat.generated.resources.chat_quota_exceeded
+import trendingai.chat.generated.resources.chat_researching
+import trendingai.chat.generated.resources.chat_retry
+import trendingai.chat.generated.resources.chat_searching
+import trendingai.chat.generated.resources.chat_share
+import trendingai.chat.generated.resources.chat_user_image
 import whl.trending.chat.markdown.MarkdownText
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
@@ -138,7 +158,7 @@ private fun UserImages(images: List<String>, onImageClick: (String) -> Unit) {
 private fun UserImageThumb(path: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     AsyncImage(
         model = File(path),
-        contentDescription = stringResource(R.string.chat_user_image),
+        contentDescription = stringResource(Res.string.chat_user_image),
         contentScale = ContentScale.Crop,
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
@@ -164,8 +184,8 @@ private fun AssistantMessage(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = stringResource(
-                            if (message.kind == whl.trending.chat.model.MessageKind.DEEP_RESEARCH) R.string.chat_researching
-                            else R.string.chat_searching,
+                            if (message.kind == whl.trending.chat.model.MessageKind.DEEP_RESEARCH) Res.string.chat_researching
+                            else Res.string.chat_searching,
                         ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -217,7 +237,7 @@ private fun AssistantMessage(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Share,
-                        contentDescription = stringResource(R.string.chat_share),
+                        contentDescription = stringResource(Res.string.chat_share),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
@@ -227,7 +247,7 @@ private fun AssistantMessage(
             if (onResearchUpsell != null) {
                 AssistChip(
                     onClick = onResearchUpsell,
-                    label = { Text(stringResource(R.string.chat_action_research_upsell)) },
+                    label = { Text(stringResource(Res.string.chat_action_research_upsell)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.TravelExplore,
@@ -250,7 +270,7 @@ private fun AssistantMessage(
             // 按钮再留着就是把用户按在一个必失败的循环里
             if (error.category.retryable && error.code != ChatError.CODE_REGION_BLOCKED) {
                 TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.chat_retry))
+                    Text(stringResource(Res.string.chat_retry))
                 }
             }
         }
@@ -258,24 +278,24 @@ private fun AssistantMessage(
 }
 
 /** 选具体文案：优先服务端 [ChatError.code]，未知则回落到 [ChatError.category]。 */
-private fun errorMessageRes(error: ChatError): Int = when (error.code) {
-    "readme_too_short" -> R.string.chat_error_readme_too_short
-    "auth_invalid" -> R.string.chat_error_auth_invalid
-    "images_require_login" -> R.string.chat_error_images_require_login
-    "content_too_long" -> R.string.chat_error_content_too_long
-    "image_too_large", "images_too_large" -> R.string.chat_error_images_too_large
-    "quota_global" -> R.string.chat_error_quota_global
-    ChatError.CODE_QUOTA_DEVICE -> R.string.chat_quota_exceeded
-    "upstream_timeout" -> R.string.chat_error_timeout
-    ChatError.CODE_REGION_BLOCKED -> R.string.chat_error_region_blocked
-    "upstream_error" -> R.string.chat_error_server
+private fun errorMessageRes(error: ChatError): StringResource = when (error.code) {
+    "readme_too_short" -> Res.string.chat_error_readme_too_short
+    "auth_invalid" -> Res.string.chat_error_auth_invalid
+    "images_require_login" -> Res.string.chat_error_images_require_login
+    "content_too_long" -> Res.string.chat_error_content_too_long
+    "image_too_large", "images_too_large" -> Res.string.chat_error_images_too_large
+    "quota_global" -> Res.string.chat_error_quota_global
+    ChatError.CODE_QUOTA_DEVICE -> Res.string.chat_quota_exceeded
+    "upstream_timeout" -> Res.string.chat_error_timeout
+    ChatError.CODE_REGION_BLOCKED -> Res.string.chat_error_region_blocked
+    "upstream_error" -> Res.string.chat_error_server
     else -> when (error.category) {
-        ChatErrorCategory.NETWORK -> R.string.chat_error_network
-        ChatErrorCategory.TIMEOUT -> R.string.chat_error_timeout
-        ChatErrorCategory.SERVER -> R.string.chat_error_server
-        ChatErrorCategory.QUOTA -> R.string.chat_quota_exceeded
-        ChatErrorCategory.BAD_REQUEST -> R.string.chat_error_bad_request
-        ChatErrorCategory.UNKNOWN -> R.string.chat_error_message
+        ChatErrorCategory.NETWORK -> Res.string.chat_error_network
+        ChatErrorCategory.TIMEOUT -> Res.string.chat_error_timeout
+        ChatErrorCategory.SERVER -> Res.string.chat_error_server
+        ChatErrorCategory.QUOTA -> Res.string.chat_quota_exceeded
+        ChatErrorCategory.BAD_REQUEST -> Res.string.chat_error_bad_request
+        ChatErrorCategory.UNKNOWN -> Res.string.chat_error_message
     }
 }
 

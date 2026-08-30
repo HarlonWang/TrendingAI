@@ -27,7 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
@@ -36,7 +36,11 @@ import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.catalogDefaultChatModel
 import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.model.resolveEffectiveChatModel
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_model_provider
+import trendingai.chat.generated.resources.chat_model_unlock_dismiss
+import trendingai.chat.generated.resources.chat_model_unlock_message
+import trendingai.chat.generated.resources.chat_model_unlock_title
 
 /**
  * [ModelPicker] 是否有东西可渲染。
@@ -79,11 +83,11 @@ internal fun ModelPicker(
     unlockDialogModel?.let { model ->
         AlertDialog(
             onDismissRequest = { unlockDialogModel = null },
-            title = { Text(stringResource(R.string.chat_model_unlock_title)) },
-            text = { Text(stringResource(R.string.chat_model_unlock_message, model.name)) },
+            title = { Text(stringResource(Res.string.chat_model_unlock_title)) },
+            text = { Text(stringResource(Res.string.chat_model_unlock_message, model.name)) },
             confirmButton = {
                 TextButton(onClick = { unlockDialogModel = null }) {
-                    Text(stringResource(R.string.chat_model_unlock_dismiss))
+                    Text(stringResource(Res.string.chat_model_unlock_dismiss))
                 }
             },
         )
@@ -180,7 +184,7 @@ internal fun ModelPicker(
             // 名称更显著，且醒目的供应商声明本身会读作辩解。
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Text(
-                text = stringResource(R.string.chat_model_provider),
+                text = stringResource(Res.string.chat_model_provider),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

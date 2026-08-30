@@ -18,12 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
-import whl.trending.chat.R
+import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_user_image
 
 /**
  * 助手 Markdown 里的块级网络图片:
@@ -55,7 +56,7 @@ internal fun MarkdownImage(
     val loading = ratio == null
     AsyncImage(
         model = url,
-        contentDescription = alt.ifBlank { stringResource(R.string.chat_user_image) },
+        contentDescription = alt.ifBlank { stringResource(Res.string.chat_user_image) },
         contentScale = ContentScale.Fit,
         onState = { state = it },
         modifier = modifier
