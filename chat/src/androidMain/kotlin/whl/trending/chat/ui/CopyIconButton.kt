@@ -1,6 +1,5 @@
 package whl.trending.chat.ui
 
-import android.content.ClipData
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -19,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalHapticFeedback
 import org.jetbrains.compose.resources.stringResource
@@ -63,7 +61,7 @@ fun CopyIconButton(
             scope.launch {
                 // 写剪贴板失败时不点亮对勾——否则是「显示成功但其实没复制」
                 runCatching {
-                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("chat", text)))
+                    copyPlainText(clipboard, text)
                 }.onSuccess {
                     copied = true
                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)

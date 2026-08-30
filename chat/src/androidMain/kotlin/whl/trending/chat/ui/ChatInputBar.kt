@@ -1,10 +1,5 @@
 package whl.trending.chat.ui
 
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +45,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,13 +53,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import java.io.File
-import kotlinx.coroutines.launch
+import whl.trending.chat.attach.rememberChatImagePicker
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
 import trendingai.chat.generated.resources.Res
@@ -77,13 +70,11 @@ import trendingai.chat.generated.resources.chat_image_login_confirm
 import trendingai.chat.generated.resources.chat_image_login_dismiss
 import trendingai.chat.generated.resources.chat_image_login_message
 import trendingai.chat.generated.resources.chat_image_login_title
-import trendingai.chat.generated.resources.chat_image_processing_failed
 import trendingai.chat.generated.resources.chat_image_remove
 import trendingai.chat.generated.resources.chat_input_hint
 import trendingai.chat.generated.resources.chat_send
 import trendingai.chat.generated.resources.chat_user_image
 import trendingai.chat.generated.resources.chat_web_search
-import whl.trending.chat.attach.ChatImages
 
 /**
  * 底部输入区：图片入口（拍照/相册）+ 待发缩略图条 + 输入框 + 发送按钮。
@@ -117,9 +108,6 @@ fun ChatInputBar(
     onToggleResearch: () -> Unit = {},
     autoFocus: Boolean = false,
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     // 进入页面自动聚焦输入框，键盘随焦点自动弹出（官方做法：focusRequester + 在组合外 requestFocus）
     val inputFocusRequester = remember { FocusRequester() }
     LaunchedEffect(autoFocus) {
@@ -130,47 +118,15 @@ fun ChatInputBar(
     var menuExpanded by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
     var processingCount by remember { mutableIntStateOf(0) }
-    var captureTarget by remember { mutableStateOf<Pair<Uri, File>?>(null) }
 
-    val failedText = stringResource(Res.string.chat_image_processing_failed)
     val maxImages = ChatViewModel.maxImagesPerMessage()
     val remaining = maxImages - pendingImages.size - processingCount
-
-    fun ingest(uri: Uri, deleteAfter: File? = null) {
-        processingCount++
-        scope.launch {
-            val path = ChatImages.ingest(context, uri)
-            deleteAfter?.delete()
-            processingCount--
-            if (path != null) {
-                onAddImage(path)
-            } else {
-                Toast.makeText(context, failedText, Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val albumLauncher = rememberLauncherForActivityResult(
-        // PickMultipleVisualMedia 要求 maxItems > 1，配置极端收紧到 1 时也不能让它抛
-        ActivityResultContracts.PickMultipleVisualMedia(maxImages.coerceAtLeast(2)),
-    ) { uris ->
-        // 选择器允许选满上限，剩余名额不足时截断
-        uris.take(remaining.coerceAtLeast(0)).forEach { ingest(it) }
-    }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture(),
-    ) { success ->
-        val target = captureTarget
-        captureTarget = null
-        if (target != null) {
-            if (success) {
-                ingest(Uri.fromFile(target.second), deleteAfter = target.second)
-            } else {
-                target.second.delete()
-            }
-        }
-    }
+    val picker = rememberChatImagePicker(
+        maxImages = maxImages,
+        remaining = { maxImages - pendingImages.size - processingCount },
+        onProcessingChange = { processingCount += it },
+        onImageReady = onAddImage,
+    )
 
     if (showLoginDialog) {
         AlertDialog(
@@ -268,7 +224,7 @@ fun ChatInputBar(
                                     onToggleResearch()
                                 },
                             )
-                            if (chatHost.canSignIn) DropdownMenuItem(
+                            if (chatHost.canSignIn && picker.canCapture) DropdownMenuItem(
                                 text = { Text(stringResource(Res.string.chat_attach_camera)) },
                                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
                                 onClick = {
@@ -277,14 +233,7 @@ fun ChatInputBar(
                                         showLoginDialog = true
                                         return@DropdownMenuItem
                                     }
-                                    val target = ChatImages.newCaptureTarget(context)
-                                    captureTarget = target
-                                    // 极少数无相机应用的设备：launch 会抛 ActivityNotFoundException
-                                    runCatching { cameraLauncher.launch(target.first) }
-                                        .onFailure {
-                                            captureTarget = null
-                                            Toast.makeText(context, failedText, Toast.LENGTH_SHORT).show()
-                                        }
+                                    picker.capture()
                                 },
                             )
                             if (chatHost.canSignIn) DropdownMenuItem(
@@ -296,11 +245,7 @@ fun ChatInputBar(
                                         showLoginDialog = true
                                         return@DropdownMenuItem
                                     }
-                                    albumLauncher.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly,
-                                        ),
-                                    )
+                                    picker.pickFromAlbum()
                                 },
                             )
                         }
