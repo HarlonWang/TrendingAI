@@ -22,7 +22,7 @@
 
 | Android | iOS | Website                                |
 | --- | --- |----------------------------------------|
-| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | *Coming Soon* | [trendingai.cn](https://trendingai.cn) |
+| [![Download](https://img.shields.io/badge/Download-APK-green?style=flat-square&logo=android)](https://download.trendingai.cn/TrendingAI-latest.apk) | [![Install](https://img.shields.io/badge/Install-Sideload%20Guide-blue?style=flat-square&logo=apple)](https://trendingai.cn/app/ios/) | [trendingai.cn](https://trendingai.cn) |
 
 > Supports [Obtainium](https://github.com/ImranR98/Obtainium) for auto-updates.
 
