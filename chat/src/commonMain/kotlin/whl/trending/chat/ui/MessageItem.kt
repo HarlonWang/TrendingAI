@@ -32,11 +32,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import java.io.File
-import androidx.compose.ui.platform.LocalContext
+import okio.Path.Companion.toPath
+import whl.trending.chat.core.logWarn
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_action_research_upsell
 import trendingai.chat.generated.resources.chat_error_auth_invalid
@@ -124,7 +124,7 @@ private fun UserMessage(message: ChatMessage, modifier: Modifier = Modifier) {
         }
     }
     viewerPath?.let { path ->
-        ImageViewerDialog(model = File(path), onDismiss = { viewerPath = null })
+        ImageViewerDialog(model = path.toPath(), onDismiss = { viewerPath = null })
     }
 }
 
@@ -157,7 +157,7 @@ private fun UserImages(images: List<String>, onImageClick: (String) -> Unit) {
 @Composable
 private fun UserImageThumb(path: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     AsyncImage(
-        model = File(path),
+        model = path.toPath(),
         contentDescription = stringResource(Res.string.chat_user_image),
         contentScale = ContentScale.Crop,
         modifier = modifier
@@ -230,9 +230,9 @@ private fun AssistantMessage(
                     text = message.content,
                     modifier = Modifier.size(32.dp),
                 )
-                val shareContext = LocalContext.current
+                val share = rememberShareText()
                 IconButton(
-                    onClick = { shareText(shareContext, message.content) },
+                    onClick = { share(message.content) },
                     modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
@@ -340,7 +340,7 @@ private fun SourcesRow(sources: List<SourceRef>) {
                 // 失败留日志便于排查，不打扰用户（Sourcery 建议采纳日志、toast 评估后不做）
                 onClick = {
                     runCatching { uriHandler.openUri(source.url) }
-                        .onFailure { android.util.Log.w("SourcesRow", "open source failed: ${'$'}{source.url}", it) }
+                        .onFailure { logWarn("SourcesRow", "open source failed: ${'$'}{source.url}", it) }
                 },
                 label = {
                     Text(source.title, maxLines = 1, overflow = TextOverflow.Ellipsis)

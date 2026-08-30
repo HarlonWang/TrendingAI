@@ -53,7 +53,7 @@ class ChatStoreTest {
         ).build()
         imagesDir = File.createTempFile("imgs", null).apply { delete(); mkdirs() }
         cacheDir = File.createTempFile("cache", null).apply { delete(); mkdirs() }
-        store = ChatStore(db, imagesDir, clock = { now })
+        store = ChatStore(db, imagesDir.absolutePath, clock = { now })
     }
 
     @After

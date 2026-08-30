@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,11 +52,10 @@ import trendingai.chat.generated.resources.chat_assistant_title
 import trendingai.chat.generated.resources.chat_back
 import trendingai.chat.generated.resources.chat_history
 import trendingai.chat.generated.resources.chat_research_repo_prefill
-import whl.trending.chat.db.chatDatabase
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.store.ChatStore
-import java.io.File
+import whl.trending.chat.store.rememberDefaultChatStore
 
 /** 入口键，驱动「同一入口只 enterEntry 一次」 */
 private fun entryKeyOf(context: ChatContext?): String = ChatStore.entryKeyOf(context)
@@ -78,11 +76,7 @@ fun ChatScreen(
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
     persistent: Boolean = true,
 ) {
-    val appContext = LocalContext.current.applicationContext
-    val store = remember(persistent) {
-        if (!persistent) null
-        else ChatStore(chatDatabase(appContext), File(appContext.filesDir, "chat_images"))
-    }
+    val store = if (persistent) rememberDefaultChatStore() else null
     val viewModel: ChatViewModel = viewModel(key = "chat") {
         ChatViewModel(engine, initialContext, initialMessages, store)
     }

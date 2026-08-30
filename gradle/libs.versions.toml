@@ -43,6 +43,8 @@ eventbase-kt = "0.2.0"
 room = "2.8.4"
 # Room KMP 的 iOS 驱动；版本随 room 的 androidx.sqlite 依赖走
 sqlite = "2.6.1"
+# chat 的跨平台文件操作；版本对齐 coil 传递的 okio
+okio = "3.17.0"
 # KSP2 起版本线与 Kotlin 解耦（不再是 kotlin-x.y.z 配对命名）
 ksp = "2.3.10"
 robolectric = "4.16.1"
@@ -83,6 +85,7 @@ androidx-graphics-shapes = { module = "androidx.graphics:graphics-shapes", versi
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+compose-components-uiToolingPreview = { module = "org.jetbrains.compose.components:components-ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "composeIcons" }
 compose-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeIcons" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
@@ -100,6 +103,7 @@ room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
 

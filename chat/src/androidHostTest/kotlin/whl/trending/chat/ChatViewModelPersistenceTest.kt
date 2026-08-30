@@ -87,7 +87,7 @@ class ChatViewModelPersistenceTest {
             .allowMainThreadQueries()
             .build()
         imagesDir = File.createTempFile("imgs", null).apply { delete(); mkdirs() }
-        store = ChatStore(db, imagesDir, clock = { 1000L })
+        store = ChatStore(db, imagesDir.absolutePath, clock = { 1000L })
     }
 
     @After

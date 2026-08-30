@@ -10,8 +10,12 @@ import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
 import whl.trending.chat.model.SourceRef
-import java.io.File
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import okio.FileSystem
+import okio.Path.Companion.toPath
+import okio.SYSTEM
+import whl.trending.chat.core.epochMillis
 
 /**
  * 会话持久化层。落库策略（EchoFlow 经验的裁剪版，见 ai-chat/chat-改造评估方案-v2.md P1）：
@@ -24,8 +28,8 @@ import java.util.UUID
  */
 class ChatStore(
     private val db: ChatDatabase,
-    private val imagesDir: File,
-    private val clock: () -> Long = { System.currentTimeMillis() },
+    private val imagesDir: String,
+    private val clock: () -> Long = { epochMillis() },
 ) {
 
     /** 入口恢复语义：该入口最近活跃的会话 id；无历史返回 null（UI 呈现空态，不落库） */
@@ -139,7 +143,7 @@ class ChatStore(
     suspend fun deleteThread(threadId: Long) {
         db.messageDao().imagesJsonFor(threadId).forEach { raw ->
             runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull()
-                ?.forEach { path -> File(path).delete() }
+                ?.forEach { path -> runCatching { FileSystem.SYSTEM.delete(path.toPath()) } }
         }
         db.threadDao().delete(threadId)
     }
@@ -148,16 +152,19 @@ class ChatStore(
 
     // 内部
 
+    @OptIn(ExperimentalUuidApi::class)
     private fun copyIntoStore(sourcePath: String): String {
-        val source = File(sourcePath)
-        if (!source.exists() || source.parentFile?.absolutePath == imagesDir.absolutePath) return sourcePath
-        imagesDir.mkdirs()
+        val fs = FileSystem.SYSTEM
+        val source = sourcePath.toPath()
+        val dir = imagesDir.toPath()
+        if (!fs.exists(source) || source.parent == dir) return sourcePath
         // 保留源扩展名（当前附件层恒产 JPEG，此处是对未来透传原图的加固；无扩展名回退 jpg）
-        val extension = source.extension.takeIf { it.isNotBlank() } ?: "jpg"
-        val target = File(imagesDir, "${UUID.randomUUID()}.$extension")
+        val extension = source.name.substringAfterLast('.', "").takeIf { it.isNotBlank() } ?: "jpg"
+        val target = dir / "${Uuid.random()}.$extension"
         return runCatching {
-            source.copyTo(target, overwrite = true)
-            target.absolutePath
+            fs.createDirectories(dir)
+            fs.copy(source, target)
+            target.toString()
         }.getOrDefault(sourcePath) // 拷贝失败退回原路径：宁可将来图裂，不阻塞发送
     }
 

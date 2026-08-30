@@ -1,8 +1,6 @@
 package whl.trending.chat.engine
 
-import android.util.Log
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.timeout
@@ -20,17 +18,20 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readUTF8Line
-import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import okio.FileSystem
+import okio.Path.Companion.toPath
+import okio.SYSTEM
 import whl.trending.chat.ChatContext
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.chat.model.resolveEffectiveChatModel
 import whl.trending.chat.ChatViewModel
+import whl.trending.chat.core.logWarn
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
@@ -124,7 +125,7 @@ class ChatApi(
 
     private val json = wireJson
 
-    private val client = HttpClient(OkHttp) {
+    private val client = HttpClient {
         install(ContentNegotiation) {
             json(json)
         }
@@ -159,7 +160,7 @@ class ChatApi(
                                 imagePlaceholder = imagePlaceholder,
                                 maxImages = maxImages,
                                 readImageBytes = { path ->
-                                    runCatching { File(path).readBytes() }.getOrNull()
+                                    runCatching { FileSystem.SYSTEM.read(path.toPath()) { readByteArray() } }.getOrNull()
                                 },
                             ),
                         )
@@ -320,7 +321,7 @@ class ChatApi(
     }
 
     private fun logFailure(path: String, error: ChatError) {
-        Log.w(
+        logWarn(
             TAG,
             "$path failed: category=${error.category} code=${error.code} " +
                 "status=${error.httpStatus} detail=${error.detail}",

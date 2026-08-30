@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import whl.trending.chat.core.epochMillis
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.host.ChatAiKind
 import whl.trending.chat.host.ChatAiOutcome
@@ -381,7 +382,7 @@ class ChatViewModel(
      * 成功以全文定稿并终局落库，失败清空已渲染部分（整条重试）并挂上分类错误（不落库）。
      */
     private fun launchRequest(threadId: Long?, kind: MessageKind, context: ChatContext?) {
-        val startedAt = System.currentTimeMillis()
+        val startedAt = epochMillis()
         var cacheHit = false
         val placeholderId = nextId()
         updateThreadMessages(threadId) { it + ChatMessage(placeholderId, Role.ASSISTANT, "", kind = kind) }
@@ -453,7 +454,7 @@ class ChatViewModel(
                         ChatAiEvent.Completed(
                             kind.toAiKind(),
                             if (cacheHit) ChatAiOutcome.CACHE_HIT else ChatAiOutcome.OK,
-                            durationMs = System.currentTimeMillis() - startedAt,
+                            durationMs = epochMillis() - startedAt,
                         )
                     )
                 },
@@ -464,7 +465,7 @@ class ChatViewModel(
                     if (e !is CancellationException) {
                         val error = (e as? ChatException)?.error
                             ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-                        trackFailure(kind, error, System.currentTimeMillis() - startedAt)
+                        trackFailure(kind, error, epochMillis() - startedAt)
                         updateThreadMessages(threadId) { list ->
                             // 已渲染部分丢弃，整条重试（中途断流语义）
                             list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }

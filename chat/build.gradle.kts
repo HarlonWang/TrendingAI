@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.icons.extended)
             implementation(libs.compose.components.resources)
+            implementation(libs.compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
 
             implementation(libs.ktor.client.core)
@@ -59,6 +60,8 @@ kotlin {
             implementation(libs.highlights)
 
             implementation(libs.room.runtime)
+            implementation(libs.okio)
+            implementation(libs.kotlinx.datetime)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
@@ -69,12 +72,12 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.exifinterface)
             implementation(libs.androidx.activity.compose)
-            implementation(libs.compose.uiToolingPreview)
 
             implementation(libs.commonmark)
             implementation(libs.commonmark.ext.gfm.tables)
         }
         iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
             implementation(libs.sqlite.bundled)
         }
         commonTest.dependencies {

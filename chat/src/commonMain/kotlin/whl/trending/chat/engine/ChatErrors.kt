@@ -1,15 +1,14 @@
 package whl.trending.chat.engine
 
 import io.ktor.client.plugins.HttpRequestTimeoutException
-import java.io.IOException
-import java.net.ConnectException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 
 /** 聊天失败异常，携带结构化 [ChatError]；引擎边界统一抛出，UI/VM 直接读 [error]。 */
 class ChatException(val error: ChatError) : Exception(error.detail)
+
+/** 传输层异常的平台归类（超时/断网各平台异常类型不同）；认不出返回 null。 */
+internal expect fun classifyTransportException(t: Throwable): ChatErrorCategory?
 
 /** 把 HTTP 状态码 / 传输异常归类为 [ChatError]。纯函数，便于单测。 */
 object ChatErrors {
@@ -42,13 +41,11 @@ object ChatErrors {
             error
         }
 
-    /** 传输/未知异常 → 分类。SocketTimeout 先于 IOException 判断（前者是后者子类）。 */
+    /** 传输/未知异常 → 分类。ktor 公共超时先判，平台细分交给 expect。 */
     fun forThrowable(t: Throwable): ChatError {
-        val category = when (t) {
-            is SocketTimeoutException, is HttpRequestTimeoutException -> ChatErrorCategory.TIMEOUT
-            is UnknownHostException, is ConnectException -> ChatErrorCategory.NETWORK
-            is IOException -> ChatErrorCategory.NETWORK
-            else -> ChatErrorCategory.UNKNOWN
+        val category = when {
+            t is HttpRequestTimeoutException -> ChatErrorCategory.TIMEOUT
+            else -> classifyTransportException(t) ?: ChatErrorCategory.UNKNOWN
         }
         return ChatError(category, detail = t.toString())
     }
