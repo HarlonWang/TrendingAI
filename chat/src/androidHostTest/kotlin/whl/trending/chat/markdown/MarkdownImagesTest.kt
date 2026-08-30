@@ -4,25 +4,13 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import org.commonmark.node.Node
-import org.commonmark.node.Text as CmText
 
 class MarkdownImagesTest {
 
-    private fun firstParagraph(markdown: String): Node = MarkdownParser.parse(markdown).firstChild!!
+    private fun firstParagraph(markdown: String): List<MdInline> =
+        assertIs<MdBlock.Paragraph>(parseMarkdown(markdown).blocks.first()).inline
 
-    /** 把 Text 片段的节点串回纯文本,便于断言。 */
-    private fun InlineSegment.Text.plainText(): String = buildString {
-        fun walk(node: Node) {
-            if (node is CmText) append(node.literal)
-            var child = node.firstChild
-            while (child != null) {
-                walk(child)
-                child = child.next
-            }
-        }
-        nodes.forEach { walk(it) }
-    }
+    private fun InlineSegment.Text.text(): String = nodes.plainText()
 
     @Test
     fun `plain paragraph yields single text segment`() {
@@ -30,7 +18,7 @@ class MarkdownImagesTest {
 
         assertEquals(1, segments.size)
         val text = assertIs<InlineSegment.Text>(segments[0])
-        assertEquals("hello world", text.plainText())
+        assertEquals("hello world", text.text())
     }
 
     @Test
@@ -45,9 +33,9 @@ class MarkdownImagesTest {
         val segments = splitByImages(firstParagraph("看截图 ![shot](https://example.com/a.png) 如上"))
 
         assertEquals(3, segments.size)
-        assertEquals("看截图 ", assertIs<InlineSegment.Text>(segments[0]).plainText())
+        assertEquals("看截图 ", assertIs<InlineSegment.Text>(segments[0]).text())
         assertEquals(InlineSegment.Image("https://example.com/a.png", "shot"), segments[1])
-        assertEquals(" 如上", assertIs<InlineSegment.Text>(segments[2]).plainText())
+        assertEquals(" 如上", assertIs<InlineSegment.Text>(segments[2]).text())
     }
 
     @Test
@@ -71,7 +59,7 @@ class MarkdownImagesTest {
 
         assertEquals(1, segments.size)
         val text = assertIs<InlineSegment.Text>(segments[0])
-        assertEquals("前缀 alt text 后缀", text.plainText())
+        assertEquals("前缀 alt text 后缀", text.text())
     }
 
     @Test
