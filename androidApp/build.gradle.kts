@@ -189,7 +189,7 @@ dependencies {
     // updater 仅 github / r2 两个独立分发渠道需要（play/fdroid 由各自商店管更新）
     "githubImplementation"(project(":androidLibrary:updater"))
     "r2Implementation"(project(":androidLibrary:updater"))
-    implementation(project(":androidLibrary:chat"))
+    implementation(project(":chat"))
     // 每日 Picks 本地通知：纯 AlarmManager 方案，不依赖 GMS/FCM，四渠道（含 F-Droid）通用
     implementation(project(":androidLibrary:notifier"))
     implementation(libs.androidx.lifecycle.process)

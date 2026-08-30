@@ -17,7 +17,7 @@ class FakeChatEngine(
     private val replies = listOf(
         SampleData.richMarkdown,
         "收到 👍 这是一段**纯文本 + `行内代码`**的简短回复，用来演示不同长度消息的排版。\n\n" +
-            "- 列表项一\n- 列表项二\n\n```bash\n# 也能渲染命令\n./gradlew :androidLibrary:chat:assembleDebug\n```",
+            "- 列表项一\n- 列表项二\n\n```bash\n# 也能渲染命令\n./gradlew :chat:assembleDebug\n```",
     )
     private var index = 0
 
