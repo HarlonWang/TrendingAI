@@ -97,7 +97,7 @@
 
 App 升级后首启弹的「新版本更新说明」来自 `shared/src/commonMain/composeResources/files/whatsnew.json`（随 APK 打包）。同一份内容也用于拼 GitHub Release 正文。它有两种生成模式，由**内容驱动的开关**决定，无需额外配置：
 
-- **自动（默认）**：仓库里 `whatsnew.json` 保持占位（`version: 0.0.0`、zh/en 空）。直接 `git tag <版本> && git push origin <版本>`，CI（`android_release.yml` 的 Generate What's New 步骤）自动调 AI（gpt-5.4）用 commit 记录生成并打包。
+- **自动（默认）**：仓库里 `whatsnew.json` 保持占位（`version: 0.0.0`、zh/en 空）。直接 `git tag <版本> && git push origin <版本>`，CI（`release.yml` 的 Generate What's New 步骤）自动调 AI（gpt-5.4）用 commit 记录生成并打包。
 - **手动**：`whatsnew.json` 的 `version` 恰等于本次 tag 且 zh/en 至少一个非空时，CI 检测到「本版已有人工内容」→ **跳过 AI，直接采用**。
 
 ### 手动模式：Claude Code 本地执行流程

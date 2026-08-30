@@ -1,5 +1,5 @@
 # Play 商品详情同步：fastlane/metadata 下的文案或截图变更 push 到 main 时自动同步到
-# Google Play。与发版（android_release.yml 的 Publish to Google Play 步骤）解耦——
+# Google Play。与发版（release.yml 的 Publish to Google Play 步骤）解耦——
 # 商店物料偶尔才改，改了即同步，不必等发版；发版侧则固定跳过 metadata/截图。
 #
 # 口径（见 memory/reference_fastlane_supply.md）：
