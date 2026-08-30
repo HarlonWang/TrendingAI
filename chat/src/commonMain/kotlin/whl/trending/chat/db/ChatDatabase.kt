@@ -1,6 +1,6 @@
 package whl.trending.chat.db
 
-import android.content.Context
+import androidx.room.ConstructedBy
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -9,8 +9,8 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
-import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -122,20 +122,14 @@ interface MessageDao {
 }
 
 @Database(entities = [ThreadEntity::class, MessageEntity::class], version = 1, exportSchema = true)
+@ConstructedBy(ChatDatabaseConstructor::class)
 abstract class ChatDatabase : RoomDatabase() {
     abstract fun threadDao(): ThreadDao
     abstract fun messageDao(): MessageDao
+}
 
-    companion object {
-        @Volatile private var instance: ChatDatabase? = null
-
-        fun get(context: Context): ChatDatabase =
-            instance ?: synchronized(this) {
-                instance ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    ChatDatabase::class.java,
-                    "chat.db",
-                ).build().also { instance = it }
-            }
-    }
+/** actual 由 Room KSP 生成（KMP 官方形态）。 */
+@Suppress("NO_ACTUAL_FOR_EXPECT", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+expect object ChatDatabaseConstructor : RoomDatabaseConstructor<ChatDatabase> {
+    override fun initialize(): ChatDatabase
 }

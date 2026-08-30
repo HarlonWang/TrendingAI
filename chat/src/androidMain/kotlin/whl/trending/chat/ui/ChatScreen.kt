@@ -53,7 +53,7 @@ import trendingai.chat.generated.resources.chat_assistant_title
 import trendingai.chat.generated.resources.chat_back
 import trendingai.chat.generated.resources.chat_history
 import trendingai.chat.generated.resources.chat_research_repo_prefill
-import whl.trending.chat.db.ChatDatabase
+import whl.trending.chat.db.chatDatabase
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.store.ChatStore
@@ -81,7 +81,7 @@ fun ChatScreen(
     val appContext = LocalContext.current.applicationContext
     val store = remember(persistent) {
         if (!persistent) null
-        else ChatStore(ChatDatabase.get(appContext), File(appContext.filesDir, "chat_images"))
+        else ChatStore(chatDatabase(appContext), File(appContext.filesDir, "chat_images"))
     }
     val viewModel: ChatViewModel = viewModel(key = "chat") {
         ChatViewModel(engine, initialContext, initialMessages, store)

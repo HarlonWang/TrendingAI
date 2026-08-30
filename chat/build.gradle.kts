@@ -48,6 +48,8 @@ kotlin {
 
             implementation(libs.coil.compose)
             implementation(libs.highlights)
+
+            implementation(libs.room.runtime)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
@@ -62,9 +64,9 @@ kotlin {
 
             implementation(libs.commonmark)
             implementation(libs.commonmark.ext.gfm.tables)
-
-            implementation(libs.room.runtime)
-            implementation(libs.room.ktx)
+        }
+        iosMain.dependencies {
+            implementation(libs.sqlite.bundled)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -87,4 +89,6 @@ room {
 
 dependencies {
     add("kspAndroid", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
 }
