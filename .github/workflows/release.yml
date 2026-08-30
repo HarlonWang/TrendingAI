@@ -204,6 +204,10 @@ jobs:
               lines.append("* No specific changes.")
               lines.append("")
 
+          lines.append("### 📱 iOS")
+          lines.append("iOS 安装需侧载（Sideload）：[中文指南](https://trendingai.cn/zh/app/ios/) · [Install Guide](https://trendingai.cn/app/ios/)")
+          lines.append("")
+
           with open("release_summary.md", "w") as f:
               f.write("\n".join(lines) + "\n")
           EOF
