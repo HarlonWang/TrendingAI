@@ -14,15 +14,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import whl.trending.ai.chat.ChatContext
-import whl.trending.ai.core.analytics.AiKind
-import whl.trending.ai.core.analytics.AiOutcome
-import whl.trending.ai.core.analytics.AppEvent
-import whl.trending.ai.core.analytics.track
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.model.ChatModelsResponse
-import whl.trending.ai.data.model.resolveDisplayedChatModel
-import whl.trending.ai.data.repository.ChatModelsProvider
+import whl.trending.chat.host.ChatAiEvent
+import whl.trending.chat.host.ChatAiKind
+import whl.trending.chat.host.ChatAiOutcome
+import whl.trending.chat.host.chatHost
+import whl.trending.chat.model.ChatModelsResponse
+import whl.trending.chat.model.resolveDisplayedChatModel
+import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
@@ -55,14 +53,14 @@ class ChatViewModel(
     initialMessages: List<ChatMessage> = emptyList(),
     private val store: ChatStore? = null,
     private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
-    private val track: (AppEvent) -> Unit = ::track,
+    private val track: (ChatAiEvent) -> Unit = { chatHost.onAiEvent(it) },
     private val selectedModelId: () -> String? = {
         // 留痕记「实际生效」而非「手选值」：未手选时手选值是空哨兵，实际用的是目录里的免费默认项
         runCatching {
             resolveDisplayedChatModel(
                 ChatModelsProvider.cachedOrEmpty(),
-                globalSettingsManager.currentChatModelChoice(),
-                globalSettingsManager.currentIsPro(),
+                chatHost.currentChatModelChoice(),
+                chatHost.currentIsPro(),
             )?.id
         }.getOrNull()
     },
@@ -233,7 +231,7 @@ class ChatViewModel(
     fun sendDetailSummary(promptText: String) {
         val context = activeContext
         if (_uiState.value.isSending || context?.externalId == null) return
-        track(AppEvent.AiRequested(AiKind.DETAIL_SUMMARY, from = "chat"))
+        track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "chat"))
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             val threadId = ensureThreadForSend(promptText)
@@ -279,7 +277,7 @@ class ChatViewModel(
             val resent = messagesByThread[threadId]?.lastOrNull { it.role == Role.USER }
             trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
         } else {
-            track(AppEvent.AiRequested(AiKind.DETAIL_SUMMARY, from = "retry"))
+            track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "retry"))
         }
         _uiState.update { it.copy(isSending = true) }
         launchRequest(threadId, message.kind, activeContext)
@@ -294,8 +292,8 @@ class ChatViewModel(
      */
     private fun trackChatSend(from: String, imageCount: Int) {
         track(
-            AppEvent.AiRequested(
-                AiKind.CHAT,
+            ChatAiEvent.Requested(
+                ChatAiKind.CHAT,
                 from = from,
                 imageCount = imageCount,
                 // 与后端 hasContext（context && context.title）等价：ChatContext.title 非空
@@ -431,9 +429,9 @@ class ChatViewModel(
                         store.persistAssistantMessage(threadId, full, kind, selectedModelId(), sources)
                     }
                     track(
-                        AppEvent.AiCompleted(
+                        ChatAiEvent.Completed(
                             kind.toAiKind(),
-                            if (cacheHit) AiOutcome.CACHE_HIT else AiOutcome.OK,
+                            if (cacheHit) ChatAiOutcome.CACHE_HIT else ChatAiOutcome.OK,
                             durationMs = System.currentTimeMillis() - startedAt,
                         )
                     )
@@ -470,7 +468,7 @@ class ChatViewModel(
     }
 
     private fun sendResearch(topic: String, from: String = "chat") {
-        track(AppEvent.AiRequested(AiKind.RESEARCH, from = from))
+        track(ChatAiEvent.Requested(ChatAiKind.RESEARCH, from = from))
         _uiState.update { it.copy(isSending = true) }
         viewModelScope.launch {
             val threadId = ensureThreadForSend(topic)
@@ -515,7 +513,7 @@ class ChatViewModel(
         val threadId = _currentThreadId.value
         val runId = message.researchRunId
         // 两条路都会走到一个终态 ai_completed（恢复轮询也一样），不补就落单
-        track(AppEvent.AiRequested(AiKind.RESEARCH, from = "retry"))
+        track(ChatAiEvent.Requested(ChatAiKind.RESEARCH, from = "retry"))
         if (runId != null) {
             updateThreadMessages(threadId) { list ->
                 list.map { if (it.id == message.id) it.copy(error = null, searching = true) else it }
@@ -566,7 +564,7 @@ class ChatViewModel(
                             // 永远满足恢复哨兵的空占位——每次开会话闪一次、清不掉
                             store?.deleteMessage(researchRowId(messageId))
                             val error = ChatError(ChatErrorCategory.SERVER, detail = "empty report")
-                            track(AppEvent.AiCompleted(AiKind.RESEARCH, AiOutcome.ERROR, reason = "empty_report"))
+                            track(ChatAiEvent.Completed(ChatAiKind.RESEARCH, ChatAiOutcome.ERROR, reason = "empty_report"))
                             updateThreadMessages(threadId) { list ->
                                 list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
                             }
@@ -577,7 +575,7 @@ class ChatViewModel(
                             updateThreadMessages(threadId) { list ->
                                 list.map { if (it.id == messageId) it.copy(content = report, searching = false, model = run.model) else it }
                             }
-                            track(AppEvent.AiCompleted(AiKind.RESEARCH, AiOutcome.OK))
+                            track(ChatAiEvent.Completed(ChatAiKind.RESEARCH, ChatAiOutcome.OK))
                         }
                         finishResearch(threadId, messageId)
                         return@launch
@@ -585,7 +583,7 @@ class ChatViewModel(
                     "failed" -> {
                         store?.deleteMessage(researchRowId(messageId))
                         val error = ChatError(ChatErrorCategory.SERVER, detail = run.error ?: "research failed")
-                        track(AppEvent.AiCompleted(AiKind.RESEARCH, AiOutcome.ERROR, reason = run.error ?: "unknown"))
+                        track(ChatAiEvent.Completed(ChatAiKind.RESEARCH, ChatAiOutcome.ERROR, reason = run.error ?: "unknown"))
                         updateThreadMessages(threadId) { list ->
                             list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
                         }
@@ -663,12 +661,12 @@ class ChatViewModel(
      */
     private fun trackFailure(kind: MessageKind, error: ChatError, durationMs: Long? = null) {
         track(
-            AppEvent.AiCompleted(
+            ChatAiEvent.Completed(
                 kind = kind.toAiKind(),
                 outcome = if (error.code == ChatError.CODE_STREAM_INTERRUPTED) {
-                    AiOutcome.INTERRUPTED
+                    ChatAiOutcome.INTERRUPTED
                 } else {
-                    AiOutcome.ERROR
+                    ChatAiOutcome.ERROR
                 },
                 durationMs = durationMs,
                 reason = error.code ?: error.category.name.lowercase(),
@@ -681,15 +679,15 @@ class ChatViewModel(
         )
     }
 
-    private fun MessageKind.toAiKind(): AiKind = when (this) {
-        MessageKind.CHAT -> AiKind.CHAT
-        MessageKind.DETAIL_SUMMARY -> AiKind.DETAIL_SUMMARY
-        MessageKind.DEEP_RESEARCH -> AiKind.RESEARCH
+    private fun MessageKind.toAiKind(): ChatAiKind = when (this) {
+        MessageKind.CHAT -> ChatAiKind.CHAT
+        MessageKind.DETAIL_SUMMARY -> ChatAiKind.DETAIL_SUMMARY
+        MessageKind.DEEP_RESEARCH -> ChatAiKind.RESEARCH
     }
 
     companion object {
         /** 单条消息图片数上限：服务端 app-config 下发（KV 单源），未拉到用与服务端一致的默认 */
-        fun maxImagesPerMessage(): Int = globalSettingsManager.chatImagesMaxCount()
+        fun maxImagesPerMessage(): Int = chatHost.imagesMaxCount()
 
         /** research 轮询节奏：快轮 8s×90（≈12 分钟）覆盖正常任务时长，慢轮 60s×110（≈110 分钟）
          *  盖过服务端 2h 超龄判死闸——每个任务都能等到服务端终态，不留僵尸占位 */

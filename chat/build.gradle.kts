@@ -49,8 +49,6 @@ kotlin {
             implementation(libs.highlights)
         }
         androidMain.dependencies {
-            implementation(project(":shared"))
-
             implementation(libs.ktor.client.okhttp)
 
             // Demo Activity 的 manifest 主题是 Theme.AppCompat.DayNight.NoActionBar。此前靠
@@ -66,6 +64,10 @@ kotlin {
 
             implementation(libs.room.runtime)
             implementation(libs.room.ktx)
+        }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
         }
         getByName("androidHostTest").dependencies {
             implementation(libs.kotlin.test)

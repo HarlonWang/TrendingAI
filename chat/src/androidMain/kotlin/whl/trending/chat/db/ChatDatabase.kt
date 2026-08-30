@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
  *
  * @param entryKey 入口键（`repo:{externalId}` / `general`）——「同一入口再次进入恢复最近会话」
  *   按此列查询（延续原 sessionKey 的体验，但跨进程存活）
- * @param contextJson 进入时的 [whl.trending.ai.chat.ChatContext] 序列化（通用入口为 null）；
+ * @param contextJson 进入时的 [whl.trending.chat.ChatContext] 序列化（通用入口为 null）；
  *   恢复历史会话后「一键解读」chip 与服务端 context 注入都依赖它——不存等于恢复的会话丢了灵魂
  * @param updatedAt 排序键：列表按最近活跃倒序
  */

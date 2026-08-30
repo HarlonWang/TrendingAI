@@ -29,14 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.model.FOLLOW_SERVER_DEFAULT
-import whl.trending.ai.data.model.ChatModelOption
-import whl.trending.ai.data.model.ChatModelsResponse
-import whl.trending.ai.data.model.catalogDefaultChatModel
-import whl.trending.ai.data.model.resolveDisplayedChatModel
-import whl.trending.ai.data.model.resolveEffectiveChatModel
-import whl.trending.ai.ui.common.TrendingDropdownMenu
+import whl.trending.chat.host.chatHost
+import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
+import whl.trending.chat.model.ChatModelOption
+import whl.trending.chat.model.ChatModelsResponse
+import whl.trending.chat.model.catalogDefaultChatModel
+import whl.trending.chat.model.resolveDisplayedChatModel
+import whl.trending.chat.model.resolveEffectiveChatModel
 import whl.trending.chat.R
 
 /**
@@ -70,9 +69,9 @@ internal fun ModelPicker(
     // 否则「点默认项记未手选」分支会静默失效，把用户的默认意图误写成钉住具体 id
     val catalogDefault = catalogDefaultChatModel(catalog) ?: return
 
-    val isPro by globalSettingsManager.isPro.collectAsState(initial = globalSettingsManager.currentIsPro())
-    val selectedId by globalSettingsManager.chatModelChoice
-        .collectAsState(initial = globalSettingsManager.currentChatModelChoice())
+    val isPro by chatHost.isPro.collectAsState(initial = chatHost.currentIsPro())
+    val selectedId by chatHost.chatModelChoice
+        .collectAsState(initial = chatHost.currentChatModelChoice())
     var expanded by remember { mutableStateOf(false) }
     // 点锁定项弹纯告知弹窗：说明这是 Pro 模型、默认模型仍可用，单按钮关闭，不外跳
     var unlockDialogModel by remember { mutableStateOf<ChatModelOption?>(null) }
@@ -95,7 +94,7 @@ internal fun ModelPicker(
     // 共用 resolveEffectiveChatModel——即使本组件未挂载，发送侧也会按同一规则兜底。
     LaunchedEffect(models, isPro) {
         if (selectedId != FOLLOW_SERVER_DEFAULT && resolveEffectiveChatModel(models, selectedId, isPro) == null) {
-            globalSettingsManager.followServerDefault()
+            chatHost.followServerDefault()
         }
     }
 
@@ -147,7 +146,7 @@ internal fun ModelPicker(
                 }
             },
         )
-        TrendingDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ChatDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             models.forEach { model ->
                 val locked = model.proOnly && !isPro
                 DropdownMenuItem(
@@ -169,8 +168,8 @@ internal fun ModelPicker(
                             // 选「默认项」记为跟随服务端默认而非钉住这个 id：否则后端换默认模型时，
                             // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
                             model.id == catalogDefault.id ->
-                                globalSettingsManager.followServerDefault()
-                            else -> globalSettingsManager.pinChatModel(model.id)
+                                chatHost.followServerDefault()
+                            else -> chatHost.pinChatModel(model.id)
                         }
                     },
                 )

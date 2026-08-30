@@ -18,10 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.ui.profile.ProBadge
+import whl.trending.chat.host.chatHost
 import whl.trending.chat.R
 
 /** 欢迎区的额度口径档位，与服务端 `resolveQuotaTier` 的三档同名同义。 */
@@ -35,21 +32,22 @@ internal enum class WelcomeTier { Anonymous, Free, Pro }
 fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
     // 档位判据取本地缓存而非 GET /api/quota：一行小字不值得打网络。失准窗口只有「订阅已到期
     // 且 app 未冷启」，下次冷启的 syncMe 即纠正（唯一日常写入点见 App.kt 根部 LaunchedEffect）
-    val isPro by globalSettingsManager.isPro.collectAsState(
+    val isPro by chatHost.isPro.collectAsState(
         // initial 必须是同步值：给 false 会让 Pro 用户先闪一帧免费档文案
-        initial = globalSettingsManager.currentIsPro(),
+        initial = chatHost.currentIsPro(),
     )
-    val authState by globalAuthManager.authState.collectAsState()
+    val loggedIn by chatHost.isLoggedIn.collectAsState(chatHost.isLoggedInNow())
     val tier = when {
         isPro -> WelcomeTier.Pro
-        authState == AuthState.LoggedIn -> WelcomeTier.Free
+        loggedIn -> WelcomeTier.Free
         else -> WelcomeTier.Anonymous
     }
     ChatWelcomeContent(
         hasContext = hasContext,
         tier = tier,
-        canSignIn = globalAuthManager.isSupported,
-        onSignIn = { globalAuthManager.signIn("chat_welcome") },
+        canSignIn = chatHost.canSignIn,
+        onSignIn = { chatHost.signIn("chat_welcome") },
+        proBadge = chatHost.proBadge,
         modifier = modifier,
     )
 }
@@ -60,6 +58,7 @@ internal fun ChatWelcomeContent(
     tier: WelcomeTier,
     canSignIn: Boolean,
     onSignIn: () -> Unit,
+    proBadge: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -76,8 +75,8 @@ internal fun ChatWelcomeContent(
             )
             Spacer(Modifier.height(16.dp))
         }
-        if (tier == WelcomeTier.Pro) {
-            ProBadge()
+        if (tier == WelcomeTier.Pro && proBadge != null) {
+            proBadge()
             Spacer(Modifier.height(8.dp))
         }
         Text(

@@ -1,19 +1,16 @@
-package whl.trending.ai.data.repository
+package whl.trending.chat.model
 
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.test.runTest
-import whl.trending.ai.data.model.ChatModelOption
-import whl.trending.ai.data.model.ChatModelsResponse
-import whl.trending.ai.data.remote.TrendingApi
 
-/** 可编程返回序列的 FakeModelsApi：按调用次序弹出预设响应，并计数。 */
-private class FakeModelsApi(private val responses: MutableList<ChatModelsResponse>) : TrendingApi() {
+/** 可编程返回序列的假拉取器：按调用次序弹出预设响应，并计数。 */
+private class FakeFetch(private val responses: MutableList<ChatModelsResponse>) {
     var fetchCount = 0
 
-    override suspend fun fetchChatModels(): ChatModelsResponse {
+    suspend fun fetch(): ChatModelsResponse {
         fetchCount++
         return responses.removeAt(0)
     }
@@ -32,15 +29,15 @@ class ChatModelsProviderTest {
     @AfterTest
     fun tearDown() = ChatModelsProvider.resetForTests()
 
-    private fun inject(vararg responses: ChatModelsResponse): FakeModelsApi =
-        FakeModelsApi(responses.toMutableList()).also { ChatModelsProvider.api = it }
+    private fun inject(vararg responses: ChatModelsResponse): FakeFetch =
+        FakeFetch(responses.toMutableList()).also { ChatModelsProvider.fetch = it::fetch }
 
     @Test
     fun complete_response_is_cached_and_not_refetched() = runTest {
-        val api = inject(complete)
+        val fake = inject(complete)
         assertEquals(complete, ChatModelsProvider.get())
         assertEquals(complete, ChatModelsProvider.get()) // 第二次命中缓存
-        assertEquals(1, api.fetchCount)
+        assertEquals(1, fake.fetchCount)
         assertEquals(complete, ChatModelsProvider.cachedOrEmpty())
     }
 
@@ -49,11 +46,11 @@ class ChatModelsProviderTest {
     @Test
     fun response_missing_default_is_served_once_but_not_cached() = runTest {
         val broken = ChatModelsResponse(models = listOf(free, pro), default = "")
-        val api = inject(broken, complete)
+        val fake = inject(broken, complete)
         assertEquals(broken, ChatModelsProvider.get())          // 当次可用
         assertEquals(ChatModelsResponse(), ChatModelsProvider.cachedOrEmpty()) // 未缓存
         assertEquals(complete, ChatModelsProvider.get())        // 重试拿到修复后的响应
-        assertEquals(2, api.fetchCount)
+        assertEquals(2, fake.fetchCount)
         assertEquals(complete, ChatModelsProvider.cachedOrEmpty()) // 这次才缓存
     }
 
@@ -69,9 +66,9 @@ class ChatModelsProviderTest {
     /** 既有语义回归：空目录（拉取失败降级）照旧不缓存、下次重试 */
     @Test
     fun empty_catalog_is_not_cached() = runTest {
-        val api = inject(ChatModelsResponse(), complete)
+        val fake = inject(ChatModelsResponse(), complete)
         assertEquals(ChatModelsResponse(), ChatModelsProvider.get())
         assertEquals(complete, ChatModelsProvider.get())
-        assertEquals(2, api.fetchCount)
+        assertEquals(2, fake.fetchCount)
     }
 }

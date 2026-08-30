@@ -11,8 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.globalAuthManager
+import whl.trending.chat.host.chatHost
 import whl.trending.chat.R
 import whl.trending.chat.model.ChatError
 
@@ -37,7 +36,7 @@ internal fun QuotaLimitCard(
     error: ChatError,
     onRetry: () -> Unit,
 ) {
-    val authState by globalAuthManager.authState.collectAsState()
+    val loggedIn by chatHost.isLoggedIn.collectAsState(chatHost.isLoggedInNow())
     val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
     val isLoginGate = error.code == ChatError.CODE_LOGIN_REQUIRED
@@ -55,7 +54,7 @@ internal fun QuotaLimitCard(
                         }
                     }
                     // 登录完成：与触顶卡的放行例外同构，点重试续上生成
-                    authState == AuthState.LoggedIn -> {
+                    loggedIn -> {
                         QuotaText(R.string.chat_detail_login_unlocked)
                         TextButton(onClick = onRetry) {
                             Text(stringResource(R.string.chat_retry))
@@ -63,9 +62,9 @@ internal fun QuotaLimitCard(
                     }
                     else -> {
                         QuotaText(R.string.chat_detail_login_message)
-                        if (globalAuthManager.isSupported) {
+                        if (chatHost.canSignIn) {
                             Button(onClick = {
-                                globalAuthManager.signIn("detail_summary_quota_card")
+                                chatHost.signIn("detail_summary_quota_card")
                             }) {
                                 Text(stringResource(R.string.chat_quota_login_cta))
                             }
@@ -81,7 +80,7 @@ internal fun QuotaLimitCard(
                 // 登录档触顶：与 Pro 触顶同为纯提示，不推销、不外跳
                 QuotaText(R.string.chat_quota_user_exceeded)
             }
-            authState == AuthState.LoggedIn -> {
+            loggedIn -> {
                 if (error.authDegraded) {
                     // 发请求时就自认已登录、却被按匿名档处理（token 刷新失败/被拒）：
                     // 如实提示登录态未生效，不给「已解锁、重发即可」的死循环误导
@@ -96,9 +95,9 @@ internal fun QuotaLimitCard(
             }
             else -> {
                 QuotaText(R.string.chat_quota_exceeded)
-                if (globalAuthManager.isSupported) {
+                if (chatHost.canSignIn) {
                     Button(onClick = {
-                        globalAuthManager.signIn("chat_quota_card")
+                        chatHost.signIn("chat_quota_card")
                     }) {
                         Text(stringResource(R.string.chat_quota_login_cta))
                     }

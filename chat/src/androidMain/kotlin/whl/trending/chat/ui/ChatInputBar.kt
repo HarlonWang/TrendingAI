@@ -66,9 +66,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import java.io.File
 import kotlinx.coroutines.launch
-import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.ui.common.TrendingDropdownMenu
+import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.R
 import whl.trending.chat.attach.ChatImages
@@ -113,7 +111,7 @@ fun ChatInputBar(
     LaunchedEffect(autoFocus) {
         if (autoFocus) inputFocusRequester.requestFocus()
     }
-    val authState by globalAuthManager.authState.collectAsState()
+    val loggedIn by chatHost.isLoggedIn.collectAsState(chatHost.isLoggedInNow())
 
     var menuExpanded by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
@@ -168,7 +166,7 @@ fun ChatInputBar(
             confirmButton = {
                 TextButton(onClick = {
                     showLoginDialog = false
-                    globalAuthManager.signIn("chat_image_dialog")
+                    chatHost.signIn("chat_image_dialog")
                 }) {
                     Text(stringResource(R.string.chat_image_login_confirm))
                 }
@@ -229,7 +227,7 @@ fun ChatInputBar(
                                 },
                             )
                         }
-                        TrendingDropdownMenu(
+                        ChatDropdownMenu(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
                         ) {
@@ -256,12 +254,12 @@ fun ChatInputBar(
                                     onToggleResearch()
                                 },
                             )
-                            if (globalAuthManager.isSupported) DropdownMenuItem(
+                            if (chatHost.canSignIn) DropdownMenuItem(
                                 text = { Text(stringResource(R.string.chat_attach_camera)) },
                                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
                                 onClick = {
                                     menuExpanded = false
-                                    if (authState !is AuthState.LoggedIn) {
+                                    if (!loggedIn) {
                                         showLoginDialog = true
                                         return@DropdownMenuItem
                                     }
@@ -275,12 +273,12 @@ fun ChatInputBar(
                                         }
                                 },
                             )
-                            if (globalAuthManager.isSupported) DropdownMenuItem(
+                            if (chatHost.canSignIn) DropdownMenuItem(
                                 text = { Text(stringResource(R.string.chat_attach_album)) },
                                 leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
                                 onClick = {
                                     menuExpanded = false
-                                    if (authState !is AuthState.LoggedIn) {
+                                    if (!loggedIn) {
                                         showLoginDialog = true
                                         return@DropdownMenuItem
                                     }

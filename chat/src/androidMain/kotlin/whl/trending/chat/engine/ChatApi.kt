@@ -21,22 +21,15 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readUTF8Line
 import java.io.File
-import java.util.Locale
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.chat.ChatContext
-import whl.trending.ai.data.local.AppLanguage
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.model.resolveEffectiveChatModel
-import whl.trending.ai.data.remote.installTrendingAuth
-import whl.trending.ai.data.remote.trackAuthTokenCache
-import whl.trending.ai.data.repository.ChatModelsProvider
+import whl.trending.chat.ChatContext
+import whl.trending.chat.host.chatHost
+import whl.trending.chat.model.ChatModelsProvider
+import whl.trending.chat.model.resolveEffectiveChatModel
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
@@ -50,7 +43,7 @@ private const val TAG = "ChatApi"
  * 正式聊天引擎：POST 到 api.trendingai.cn，后端转 ChatGPT，SSE 流式返回（`stream: true`）。
  *
  * - 透传 `X-Install-Id`（后端限流维度）
- * - 透传 `lang`（由 [AppLanguage] 解析，仅 zh 用中文，其余 en）
+ * - 透传 `lang`（宿主解析，仅 zh 用中文，其余 en）
  * - chat 与 detail-summary 共用同一 SSE 解析路径（[ChatSse]），缓存命中一次性推完也走同一格式
  * - 所有失败（HTTP 非 2xx / 传输异常 / 中途断流）统一归类为 [ChatException]，由 [ChatErrors] 分类
  */
@@ -141,8 +134,8 @@ class ChatApi(
             // OkHttp 引擎默认 readTimeout=10s；流式场景它约束的是「相邻数据块间隔」，放宽到 60s
             socketTimeoutMillis = 60_000
         }
-        installTrendingAuth()
-    }.trackAuthTokenCache()
+        chatHost.configureHttpAuth(this)
+    }.also { chatHost.registerAuthorizedClient(it) }
 
     override suspend fun send(
         history: List<ChatMessage>,
@@ -180,8 +173,8 @@ class ChatApi(
                     // encodeDefaults=false 省略，默认模型由服务端定（客户端不复述模型 id）
                     model = resolveEffectiveChatModel(
                         ChatModelsProvider.cachedOrEmpty().models,
-                        globalSettingsManager.currentChatModelChoice(),
-                        globalSettingsManager.currentIsPro(),
+                        chatHost.currentChatModelChoice(),
+                        chatHost.currentIsPro(),
                     ),
                     stream = true,
                     search = search,
@@ -222,10 +215,10 @@ class ChatApi(
         configure: HttpRequestBuilder.() -> Unit,
     ): ResearchRunResponse {
         try {
-            val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
+            val sentAsLoggedIn = chatHost.isLoggedInNow()
             val response = client.request("$baseUrl/$path") {
                 this.method = method
-                header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
+                header("X-Install-Id", chatHost.installId())
                 timeout { requestTimeoutMillis = 30_000 }
                 configure()
             }
@@ -258,9 +251,9 @@ class ChatApi(
     ): DetailSummaryResult {
         try {
             // 发送时的登录自认知：与 429 的 tier=anonymous 对照可识别「token 缺失/被拒被静默降级」
-            val sentAsLoggedIn = globalAuthManager.authState.value is AuthState.LoggedIn
+            val sentAsLoggedIn = chatHost.isLoggedInNow()
             return client.preparePost("$baseUrl/$path") {
-                header("X-Install-Id", globalSettingsManager.getOrCreateInstallId())
+                header("X-Install-Id", chatHost.installId())
                 contentType(ContentType.Application.Json)
                 timeout { requestTimeoutMillis = STREAM_REQUEST_TIMEOUT_MS }
                 configure()
@@ -334,10 +327,6 @@ class ChatApi(
         )
     }
 
-    /** 仅 [AppLanguage.CHINESE] 或跟随系统且系统为中文时用 zh，其余 en（与后端默认一致）。 */
-    private suspend fun resolveLang(): String {
-        val appLang = globalSettingsManager.appLanguage.first()
-        return appLang.isoCode
-            ?: if (Locale.getDefault().language == "zh") "zh" else "en"
-    }
+    /** 请求语言由宿主解析（app 语言设置 + 系统语言），仅 "zh"/"en" 两值（与后端默认一致）。 */
+    private suspend fun resolveLang(): String = chatHost.requestLang()
 }

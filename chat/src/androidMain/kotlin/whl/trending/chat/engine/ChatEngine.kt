@@ -1,6 +1,6 @@
 package whl.trending.chat.engine
 
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.chat.model.ChatMessage
 
 /** 一次详细解读请求的结果：全文 + 是否缓存命中（驱动 detail_summary_cache_hit 埋点）。 */

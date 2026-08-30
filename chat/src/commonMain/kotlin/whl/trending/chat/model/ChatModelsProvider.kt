@@ -1,21 +1,19 @@
-package whl.trending.ai.data.repository
+package whl.trending.chat.model
 
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import whl.trending.ai.data.model.ChatModelsResponse
-import whl.trending.ai.data.model.catalogDefaultChatModel
-import whl.trending.ai.data.remote.TrendingApi
+import whl.trending.chat.host.chatHost
 
 /**
  * 聊天模型目录的进程级缓存 + 预热：全进程只拉一次，启动时 [warmUp]——后端冷路径耗时数秒，
  * 各会话自拉会让模型选择器 chip 迟迟不出现。失败不缓存空结果，下次自动重试。
  */
 object ChatModelsProvider {
-    /** 测试注入口（FakeApi 覆写模式）；生产恒为真实 API。 */
-    internal var api: TrendingApi = TrendingApi()
+    /** 测试注入口；生产恒为宿主拉取。 */
+    internal var fetch: suspend () -> ChatModelsResponse = { chatHost.fetchChatModels() }
     private val mutex = Mutex()
 
     @Volatile
@@ -29,7 +27,7 @@ object ChatModelsProvider {
         cache?.let { return it }
         return mutex.withLock {
             cache?.let { return it }
-            val fetched = runCatching { api.fetchChatModels() }.getOrDefault(ChatModelsResponse())
+            val fetched = runCatching { fetch() }.getOrDefault(ChatModelsResponse())
             if (fetched.models.isNotEmpty() && catalogDefaultChatModel(fetched) != null) cache = fetched
             fetched
         }
@@ -38,7 +36,7 @@ object ChatModelsProvider {
     /** 测试用：清缓存并复位注入。 */
     internal fun resetForTests() {
         cache = null
-        api = TrendingApi()
+        fetch = { chatHost.fetchChatModels() }
     }
 
     /** 已缓存的目录（无网络副作用）；尚未拉到时为空目录。发送热路径用它，避免冷拉阻塞聊天请求。 */

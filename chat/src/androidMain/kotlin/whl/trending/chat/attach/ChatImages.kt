@@ -12,7 +12,7 @@ import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.UUID
-import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.chat.host.chatHost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -74,7 +74,7 @@ object ChatImages {
             val scaled = scaleDown(upright)
 
             // 阶梯走完仍超预算时用最低档结果兜底（1568px q50 实际到不了默认 280KB，防御性）
-            val budgetBytes = globalSettingsManager.chatImagesPerImageJpegKb() * 1024
+            val budgetBytes = chatHost.imagesPerImageJpegKb() * 1024
             var bytes: ByteArray? = null
             for (quality in QUALITY_LADDER) {
                 val buf = ByteArrayOutputStream()

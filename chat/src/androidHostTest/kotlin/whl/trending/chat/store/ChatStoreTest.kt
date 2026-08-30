@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.MessageKind

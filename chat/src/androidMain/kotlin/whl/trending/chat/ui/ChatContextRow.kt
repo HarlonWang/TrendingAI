@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import whl.trending.ai.data.model.ChatModelsResponse
+import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.R
 import whl.trending.chat.model.ChatMode
 

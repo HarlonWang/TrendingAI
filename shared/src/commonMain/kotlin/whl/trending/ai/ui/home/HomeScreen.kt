@@ -53,7 +53,7 @@ import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.trackScreenView
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.repository.ChatModelsProvider
+import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.TrendingScaffold

@@ -55,7 +55,7 @@ import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.unstar_success
 import trendingai.shared.generated.resources.view_on_github
 import whl.trending.ai.auth.RepoStarService
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind

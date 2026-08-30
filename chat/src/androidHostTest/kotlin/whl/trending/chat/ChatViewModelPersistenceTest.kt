@@ -15,12 +15,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.engine.DetailSummaryResult
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.model.ChatError
+import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
@@ -98,7 +99,7 @@ class ChatViewModelPersistenceTest {
 
     /** 构造并执行入口进入（Screen 的 enterEntry 时序在测试里显式驱动） */
     private fun vm(engine: ChatEngine, context: ChatContext? = null) =
-        ChatViewModel(engine, context, store = store, loadModels = { whl.trending.ai.data.model.ChatModelsResponse() }, track = {}, selectedModelId = { "gpt-5.5" })
+        ChatViewModel(engine, context, store = store, loadModels = { ChatModelsResponse() }, track = {}, selectedModelId = { "gpt-5.5" })
             .also { it.enterEntry(context) }
 
     @Test

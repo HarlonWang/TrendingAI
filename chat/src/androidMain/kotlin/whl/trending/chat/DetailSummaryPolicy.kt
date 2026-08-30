@@ -1,6 +1,6 @@
 package whl.trending.chat
 
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role

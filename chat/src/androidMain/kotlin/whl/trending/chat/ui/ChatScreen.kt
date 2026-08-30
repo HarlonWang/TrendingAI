@@ -40,9 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import whl.trending.ai.chat.ChatContext
-import whl.trending.ai.ui.common.TrendingScaffold
-import whl.trending.ai.ui.common.TrendingTopAppBar
+import whl.trending.chat.ChatContext
 import whl.trending.chat.ChatViewModel
 import whl.trending.chat.DetailSummaryPolicy
 import whl.trending.chat.R
@@ -140,9 +138,9 @@ fun ChatScreen(
             )
         },
     ) {
-        TrendingScaffold(
+        ChatScaffold(
             topBar = {
-                TrendingTopAppBar(
+                ChatTopAppBar(
                     title = {
                         Text(
                             text = initialContext?.title

@@ -21,7 +21,7 @@ README 详情页右下角当前有一个单独的 `FloatingActionButton`（`Auto
 共 4 处，最小侵入，不动导航图 / ViewModel / engine / 服务端。
 
 ### 1. `ChatContext` 新增意图字段
-文件：`androidLibrary/chat/.../chat/ChatIntegration.kt`（`ChatContext` data class）
+文件：`chat/.../chat/ChatContext.kt`（`ChatContext` data class）
 
 新增 `val autoDetailSummary: Boolean = false`。该字段随 `Chat(context)` 路由（`App.kt` 的 `data class Chat(val context: ChatContext?)`）自动流转到 chat 页，无需改导航图。默认 `false` 保证既有调用方行为不变。
 
@@ -35,7 +35,7 @@ README 详情页右下角当前有一个单独的 `FloatingActionButton`（`Auto
 - 若 `DetailSummaryPolicy` / `MIN_README_CHARS` 在 shared commonMain 不可直接引用（跨模块可见性问题），则在 ReadmeScreen 内用同一常量 `1500` 判定，并加注释指向 `DetailSummaryPolicy.MIN_README_CHARS` 保持同步。实现时先确认可见性。
 
 ### 3. `ChatScreen` 自动触发
-文件：`androidLibrary/chat/.../chat/ui/ChatScreen.kt`
+文件：`chat/.../chat/ui/ChatScreen.kt`
 
 新增一次性 `LaunchedEffect`：当 `initialContext?.autoDetailSummary == true` 且 `DetailSummaryPolicy.chipVisible(initialContext, state.messages)` 为真时，调用 `viewModel.sendDetailSummary(detailPrompt)`（`detailPrompt = stringResource(R.string.chat_action_detail_summary)`，与 chip 用同一串）。
 

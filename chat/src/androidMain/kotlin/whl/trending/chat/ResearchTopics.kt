@@ -1,6 +1,6 @@
 package whl.trending.chat
 
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 
 /**
  * research 主题的条目锚点拼装（纯函数）。

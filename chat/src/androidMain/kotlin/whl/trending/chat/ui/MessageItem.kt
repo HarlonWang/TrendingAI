@@ -35,7 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import java.io.File
-import whl.trending.ai.core.platform.shareText
+import androidx.compose.ui.platform.LocalContext
 import whl.trending.chat.R
 import whl.trending.chat.markdown.MarkdownText
 import whl.trending.chat.model.ChatError
@@ -210,8 +210,9 @@ private fun AssistantMessage(
                     text = message.content,
                     modifier = Modifier.size(32.dp),
                 )
+                val shareContext = LocalContext.current
                 IconButton(
-                    onClick = { shareText(message.content) },
+                    onClick = { shareText(shareContext, message.content) },
                     modifier = Modifier.size(32.dp),
                 ) {
                     Icon(

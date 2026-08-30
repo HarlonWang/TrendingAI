@@ -1,4 +1,4 @@
-package whl.trending.ai.data.model
+package whl.trending.chat.model
 
 import kotlinx.serialization.Serializable
 

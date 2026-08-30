@@ -2,7 +2,7 @@ package whl.trending.chat.store
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.db.MessageEntity
 import whl.trending.chat.db.ThreadEntity
@@ -204,7 +204,7 @@ class ChatStore(
     private data class StoredSource(val title: String, val url: String)
 
     /**
-     * ChatContext 的持久化镜像（shared 里的原类未标 @Serializable，此处 DTO 隔离序列化关注点）。
+     * ChatContext 的持久化镜像（原类未标 @Serializable，此处 DTO 隔离序列化关注点）。
      * autoDetailSummary 是一次性触发标记，不持久化。
      */
     @Serializable

@@ -1,7 +1,7 @@
 package whl.trending.chat.sample
 
 import kotlinx.coroutines.delay
-import whl.trending.ai.chat.ChatContext
+import whl.trending.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.DetailSummaryResult
 import whl.trending.chat.model.ChatMessage

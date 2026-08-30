@@ -8,6 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import whl.trending.chat.host.chatHost
+import whl.trending.chat.host.isChatHostInstalled
+import whl.trending.chat.sample.DemoChatHost
 import whl.trending.chat.sample.FakeChatEngine
 import whl.trending.chat.sample.SampleData
 import whl.trending.chat.ui.ChatScreen
@@ -22,6 +25,8 @@ import whl.trending.chat.ui.ChatScreen
 class ChatDemoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 独立启动（宿主 app 未接线）时用最小契约实现兜底；宿主进程内已接线则不覆盖
+        if (!isChatHostInstalled()) chatHost = DemoChatHost
         // adb 传 `--ez real true` 用真实 ChatApi 连生产联调；否则示例 Demo（假引擎）
         val real = intent.getBooleanExtra("real", false)
         setContent { DemoTheme { DemoContent(real = real, onBack = ::finish) } }
