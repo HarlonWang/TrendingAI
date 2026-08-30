@@ -48,7 +48,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import whl.trending.chat.ChatContext
-import whl.trending.ai.chat.globalChatScreen
+import whl.trending.chat.ui.ChatScreen
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
@@ -352,13 +352,7 @@ fun App() {
                             }
 
                             is Chat -> NavEntry(key) {
-                                val screen = globalChatScreen
-                                if (screen != null) {
-                                    screen(key.context) { backStack.safePop() }
-                                } else {
-                                    // 未注册（如 iOS）——入口本应隐藏，兜底直接返回
-                                    LaunchedEffect(Unit) { backStack.safePop() }
-                                }
+                                ChatScreen(initialContext = key.context, onBack = { backStack.safePop() })
                             }
                             }
                         }

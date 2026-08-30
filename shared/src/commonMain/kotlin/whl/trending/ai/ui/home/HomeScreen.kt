@@ -49,7 +49,6 @@ import trendingai.shared.generated.resources.icon_producthunt_dark
 import trendingai.shared.generated.resources.icon_producthunt_light
 import trendingai.shared.generated.resources.me_title
 import trendingai.shared.generated.resources.producthunt_title
-import whl.trending.ai.chat.globalChatScreen
 import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.trackScreenView
 import whl.trending.ai.data.local.globalSettingsManager
@@ -124,9 +123,7 @@ fun HomeScreen(
 
     // 预热聊天模型目录：让选择器 chip 在用户首次进入 chat 前就绪，避免冷首拉导致 chip 迟迟不出现。
     LaunchedEffect(Unit) {
-        if (globalChatScreen != null) {
-            ChatModelsProvider.warmUp(this)
-        }
+        ChatModelsProvider.warmUp(this)
     }
 
     // 页面浏览埋点的 tab 源（路由源在 App.kt）。Home 路由是容器不自报，三个 tab 才是页面。
@@ -361,7 +358,7 @@ fun HomeScreen(
                 items = barItems,
                 // 聊天未接入的平台（iOS）传 null，底栏不渲染 FAB、退化成纯胶囊
                 // Chat 是路由，screen_viewed 由路由源自动产生（from 自动是当前 tab），这里不埋点
-                onOpenChat = if (globalChatScreen != null) onNavigateToChat else null,
+                onOpenChat = onNavigateToChat,
                 // 定高与内容底部留白同源（contentBottomPadding 也按它算），两者不能各算各的。
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
                 modifier = Modifier
