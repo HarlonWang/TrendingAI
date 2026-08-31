@@ -160,6 +160,12 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     fun send() {
         error = null
         busy = true
+        // 打在发请求之前，与 GitHub 按钮「点了就记」对称：分母要含发码失败的人，
+        // 否则邮箱这条路只有分子、成功率与 GitHub 不可比
+        track(
+            AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "email", source = source),
+            Eventbase.currentFlow(),
+        )
         scope.launch {
             runCatching { client.sendCode(email.trim()) }
                 .onSuccess {
