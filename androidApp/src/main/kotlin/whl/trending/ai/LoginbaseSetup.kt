@@ -22,13 +22,13 @@ private var activityRef: WeakReference<Activity>? = null
 internal fun installLoginbase(activity: Activity) {
     initLoginbaseAuth(activity.applicationContext) // 幂等，重复调用复用既有单例
     activityRef = WeakReference(activity)
-    globalOAuthLauncher = { client, mode ->
+    globalOAuthLauncher = { client, mode, clientFlowId ->
         val host = activityRef?.get()
         if (host == null) {
             false
         } else {
             when (mode) {
-                OAuthMode.SIGN_IN -> client.signIn(host, OAuthProvider.GitHub)
+                OAuthMode.SIGN_IN -> client.signIn(host, OAuthProvider.GitHub, clientFlowId = clientFlowId)
                 OAuthMode.LINK -> client.link(host, OAuthProvider.GitHub)
             }
             true

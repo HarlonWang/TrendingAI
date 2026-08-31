@@ -1,5 +1,6 @@
 package whl.trending.ai.auth
 
+import wang.harlon.eventbase.Eventbase
 import wang.harlon.loginbase.AuthClient
 
 enum class OAuthMode { SIGN_IN, LINK }
@@ -12,7 +13,7 @@ enum class OAuthMode { SIGN_IN, LINK }
  * 所有依赖方模块的单测 manifest，直接依赖会让 shared/chat 的 test 任务构建失败。
  * iOS 不注入（globalAuthManager 是 Noop，此路径不可达）。
  */
-var globalOAuthLauncher: ((AuthClient, OAuthMode) -> Boolean)? = null
+var globalOAuthLauncher: ((AuthClient, OAuthMode, clientFlowId: String?) -> Boolean)? = null
 
 /**
  * OAuth 回跳结果的**重复消费闸**。
@@ -44,10 +45,12 @@ internal object OAuthResultGuard {
 
 internal fun launchGithubSignIn(client: AuthClient): Boolean {
     OAuthResultGuard.reset()
-    return globalOAuthLauncher?.invoke(client, OAuthMode.SIGN_IN) ?: false
+    // 与 auth_started(github) 同一个 flow id，服务端 auth_events 的 meta.clientFlowId
+    // 即可与本侧漏斗精确对齐
+    return globalOAuthLauncher?.invoke(client, OAuthMode.SIGN_IN, Eventbase.currentFlow()) ?: false
 }
 
 internal fun launchGithubLink(client: AuthClient): Boolean {
     OAuthResultGuard.reset()
-    return globalOAuthLauncher?.invoke(client, OAuthMode.LINK) ?: false
+    return globalOAuthLauncher?.invoke(client, OAuthMode.LINK, null) ?: false
 }
