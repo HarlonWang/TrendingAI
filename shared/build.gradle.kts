@@ -41,6 +41,10 @@ kotlin {
             implementation(libs.androidx.browser)
         }
         commonMain.dependencies {
+            // api 而非 implementation：ChatContext / ChatScreen 直接出现在 shared 的
+            // public API（globalChatScreen、各入口页），消费者要在编译期看得见
+            api(project(":chat"))
+
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
@@ -71,7 +75,7 @@ kotlin {
             // 消费者必须在编译期看得见它们。眼下 androidApp 是从 loginbase-kt-browser
             // 的 api(library) 间接拿到的，哪天那条依赖动了就会编译不过
             api(libs.loginbase.kt)
-            // api 而非 implementation：AppEvent 继承库里的 Event，chat/notifier 模块看得见才编得过
+            // api 而非 implementation：AppEvent 继承库里的 Event，notifier 模块看得见才编得过
             api(libs.eventbase.kt)
             implementation(libs.jetbrains.navigationevent.compose)
         }

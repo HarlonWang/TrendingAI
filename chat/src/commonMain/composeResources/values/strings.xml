@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_assistant_title">AI Assistant</string>
+    <string name="chat_back">Back</string>
+    <string name="chat_input_hint">Ask anything…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_error_message">Something went wrong. Please try again.</string>
+    <string name="chat_error_network">No network connection. Please check and try again.</string>
+    <string name="chat_error_timeout">The response timed out. Please try again.</string>
+    <string name="chat_error_server">The service is temporarily unavailable. Please try again later.</string>
+    <string name="chat_error_region_blocked">AI service isn&apos;t available from your current network region. Retrying won&apos;t help — we&apos;re working on it.</string>
+    <string name="chat_error_bad_request">This message can&apos;t be processed. Try rephrasing or starting a new chat.</string>
+    <string name="chat_error_content_too_long">The message is too long and exceeds the length limit.</string>
+    <string name="chat_error_images_too_large">The images are too large. Remove some or retake them.</string>
+    <string name="chat_error_quota_global">The service is busy today. Please come back tomorrow.</string>
+    <string name="chat_action_what_is_this">Introduce this project</string>
+    <string name="chat_action_what_is_this_prompt">Introduce this project, briefly explaining its purpose and core features.</string>
+    <string name="chat_action_what_can_you_do">What can you do</string>
+    <string name="chat_action_what_can_you_do_prompt">What can you do? Briefly introduce your capabilities and typical use cases.</string>
+    <string name="chat_retry">Retry</string>
+    <string name="chat_share">Share</string>
+    <string name="chat_copy">Copy</string>
+    <string name="chat_copied">Copied</string>
+    <string name="chat_quota_exceeded">You&apos;ve used up today&apos;s free quota. It resets tomorrow.</string>
+    <string name="chat_quota_login_cta">Sign in for more quota</string>
+    <string name="chat_quota_user_exceeded">You&apos;ve used up today&apos;s quota. It resets tomorrow.</string>
+    <string name="chat_quota_pro_exceeded">You&apos;ve been chatting a lot today — check back a bit later.</string>
+    <string name="chat_model_unlock_title">Pro-only model</string>
+    <string name="chat_model_unlock_message">%1$s is currently available to Pro only. You can keep using the default model.</string>
+    <string name="chat_model_unlock_dismiss">Got it</string>
+    <!-- 模型出处。刻意是事实陈述而非 "Powered by OpenAI" 那类品牌宣传语——后者读起来像背书。
+         措辞受 OpenAI 品牌指南约束：提及模型必须表述精确，且禁止 "Powered by ChatGPT"/
+         "Built with ChatGPT" 之类说法；改文案前先核对 openai.com/brand -->
+    <string name="chat_model_provider">Models provided via the OpenAI API</string>
+    <string name="chat_quota_unlocked">More quota unlocked — resend to continue.</string>
+    <string name="chat_quota_auth_degraded">Signed in, but this request was treated as signed out — check your network and retry, or sign out and sign in again.</string>
+    <string name="chat_error_auth_invalid">Your session has expired — sign out and sign in again to continue.</string>
+    <string name="chat_quota_notice">Limited free chats each day, resetting tomorrow.</string>
+    <string name="chat_quota_notice_user">A daily chat allowance, resetting tomorrow.</string>
+    <string name="chat_quota_notice_pro">Your Pro allowance is active, with all advanced models unlocked.</string>
+    <string name="chat_attach">Add image</string>
+    <string name="chat_attach_camera">Take photo</string>
+    <string name="chat_attach_album">Choose from album</string>
+    <string name="chat_image_login_title">Sign in to send images</string>
+    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in with GitHub to send photos and pictures.</string>
+    <string name="chat_image_login_confirm">Sign in</string>
+    <string name="chat_image_login_dismiss">Not now</string>
+    <string name="chat_image_processing_failed">Couldn&apos;t process the image. Please try another one.</string>
+    <string name="chat_image_remove">Remove image</string>
+    <string name="chat_user_image">Image</string>
+    <string name="chat_image_viewer_close">Close</string>
+    <string name="chat_error_images_require_login">Sign in to send images.</string>
+    <string name="chat_action_detail_summary">In-depth overview</string>
+    <string name="chat_detail_login_message">Sign in to generate an in-depth overview.</string>
+    <string name="chat_detail_login_unlocked">Signed in — tap retry to continue generating.</string>
+    <string name="chat_error_readme_too_short">This project&apos;s README is too short for an in-depth overview.</string>
+    <!-- 会话抽屉 -->
+    <string name="chat_history">Conversations</string>
+    <string name="chat_new_thread">New chat</string>
+    <string name="chat_thread_more">More</string>
+    <string name="chat_thread_rename">Rename</string>
+    <string name="chat_thread_delete">Delete</string>
+    <string name="chat_thread_delete_title">Delete this conversation?</string>
+    <string name="chat_thread_delete_text">Messages in this conversation will be permanently removed.</string>
+    <string name="chat_dialog_cancel">Cancel</string>
+    <string name="chat_dialog_confirm">OK</string>
+    <!-- P2 联网搜索 -->
+    <string name="chat_web_search">Web search</string>
+    <string name="chat_searching">Searching the web…</string>
+    <string name="chat_deep_research">Deep research</string>
+    <string name="chat_researching">Deep research in progress… this may take a few minutes</string>
+    <string name="chat_action_research_upsell">Deep research this project</string>
+    <string name="chat_research_repo_prefill">Research this project in depth: positioning and highlights, comparable alternatives, community feedback and adoption.</string>
+</resources>

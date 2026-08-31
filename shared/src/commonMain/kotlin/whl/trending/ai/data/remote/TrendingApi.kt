@@ -6,7 +6,7 @@ import whl.trending.ai.data.model.CheckoutResponse
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
-import whl.trending.ai.data.model.ChatModelsResponse
+import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.ai.data.model.DigestResponse
 import whl.trending.ai.data.model.HiringResponse
 import whl.trending.ai.data.model.MeResponse

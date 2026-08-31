@@ -14,10 +14,10 @@ import whl.trending.ai.core.ProCheckout
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.CheckoutStepKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.data.model.ChatModelOption
+import whl.trending.chat.model.ChatModelOption
 import whl.trending.ai.data.model.PricesResponse
 import whl.trending.ai.data.repository.BillingRepository
-import whl.trending.ai.data.repository.ChatModelsProvider
+import whl.trending.chat.model.ChatModelsProvider
 
 sealed interface SubscriptionEvent {
     /** 下单失败（创建交易没成功），UI 提示重试。已开出收银台的失败不在此列。 */

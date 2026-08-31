@@ -55,8 +55,7 @@ import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.unstar_success
 import trendingai.shared.generated.resources.view_on_github
 import whl.trending.ai.auth.RepoStarService
-import whl.trending.ai.chat.ChatContext
-import whl.trending.ai.chat.globalChatScreen
+import whl.trending.chat.ChatContext
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
@@ -210,7 +209,7 @@ fun ReadmeScreen(
             // 两条约束：
             // - 常驻展开态：WebView 滚动不进 nestedScroll 链，收不到收起信号
             // - README < 1500 字时整颗 FAB 不渲染（与 chat 内 chip 同规则），此时本页无 AI 入口
-            if (globalChatScreen != null && detailSummaryAvailable) {
+            if (detailSummaryAvailable) {
                 ExtendedFloatingActionButton(
                     // Chat 是路由，screen_viewed(from=readme) 由路由源自动产生，这里不埋点
                     onClick = { onNavigateToChat(buildDetailSummaryContext()) },
