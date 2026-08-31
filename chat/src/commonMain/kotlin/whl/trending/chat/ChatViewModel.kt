@@ -387,27 +387,6 @@ class ChatViewModel(
         val placeholderId = nextId()
         updateThreadMessages(threadId) { it + ChatMessage(placeholderId, Role.ASSISTANT, "", kind = kind) }
         val job = viewModelScope.launch {
-            // SSE 增量合帧：首块立即上屏（首 token 不等窗口），窗口期内的后续块合并，
-            // 窗口关闭时补刷余量——解析/重组频率与服务端吐块频率解耦（长文流式尾段
-            // 每块都全文重解析，不合帧会把主线程打满）。终局用引擎返回的全文覆盖，
-            // 覆盖前必须取消窗口并清缓冲，否则迟到的补刷会把尾块重复追加一次。
-            val deltaBuffer = StringBuilder()
-            var flushWindow: Job? = null
-            fun flushDeltas() {
-                if (deltaBuffer.isEmpty()) return
-                val chunk = deltaBuffer.toString()
-                deltaBuffer.clear()
-                appendDelta(threadId, placeholderId, chunk)
-            }
-            fun onDeltaCoalesced(delta: String) {
-                deltaBuffer.append(delta)
-                if (flushWindow?.isActive == true) return
-                flushDeltas()
-                flushWindow = viewModelScope.launch {
-                    delay(STREAM_FRAME_MS)
-                    flushDeltas()
-                }
-            }
             val result = runCatching {
                 when (kind) {
                     MessageKind.CHAT -> {
@@ -421,21 +400,21 @@ class ChatViewModel(
                         engine.send(
                             history,
                             context,
-                            onDelta = ::onDeltaCoalesced,
+                            onDelta = { delta -> appendDelta(threadId, placeholderId, delta) },
                             search = useSearch,
                             onSearch = { event -> applySearchEvent(threadId, placeholderId, event) },
                         )
                     }
                     MessageKind.DETAIL_SUMMARY -> {
-                        val detail = engine.sendDetailSummary(requireNotNull(context), ::onDeltaCoalesced)
+                        val detail = engine.sendDetailSummary(requireNotNull(context)) { delta ->
+                            appendDelta(threadId, placeholderId, delta)
+                        }
                         cacheHit = detail.cached
                         detail.content
                     }
                     MessageKind.DEEP_RESEARCH -> error("research 走 launchResearch，不进流式管线")
                 }
             }
-            flushWindow?.cancel()
-            deltaBuffer.clear()
             result.fold(
                 onSuccess = { full ->
                     var sources: List<SourceRef> = emptyList()
@@ -710,9 +689,6 @@ class ChatViewModel(
     companion object {
         /** 单条消息图片数上限：服务端 app-config 下发（KV 单源），未拉到用与服务端一致的默认 */
         fun maxImagesPerMessage(): Int = chatHost.imagesMaxCount()
-
-        /** 流式合帧窗口：人眼分辨不出 80ms 内的增量差，见 launchRequest 的合帧注释 */
-        private const val STREAM_FRAME_MS = 80L
 
         /** research 轮询节奏：快轮 8s×90（≈12 分钟）覆盖正常任务时长，慢轮 60s×110（≈110 分钟）
          *  盖过服务端 2h 超龄判死闸——每个任务都能等到服务端终态，不留僵尸占位 */
