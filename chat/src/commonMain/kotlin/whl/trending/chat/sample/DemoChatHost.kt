@@ -2,6 +2,7 @@ package whl.trending.chat.sample
 
 import io.ktor.client.HttpClientConfig
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.host.ChatHost
@@ -21,15 +22,15 @@ object DemoChatHost : ChatHost {
     override fun currentIsPro() = false
     override val isPro: Flow<Boolean> = flowOf(false)
 
-    private var modelChoice = FOLLOW_SERVER_DEFAULT
-    override val chatModelChoice: Flow<String> get() = flowOf(modelChoice)
-    override fun currentChatModelChoice() = modelChoice
+    private val modelChoice = MutableStateFlow(FOLLOW_SERVER_DEFAULT)
+    override val chatModelChoice: Flow<String> get() = modelChoice
+    override fun currentChatModelChoice() = modelChoice.value
     override fun pinChatModel(id: String) {
-        modelChoice = id
+        modelChoice.value = id
     }
 
     override fun followServerDefault() {
-        modelChoice = FOLLOW_SERVER_DEFAULT
+        modelChoice.value = FOLLOW_SERVER_DEFAULT
     }
 
     override fun imagesMaxCount() = 9
