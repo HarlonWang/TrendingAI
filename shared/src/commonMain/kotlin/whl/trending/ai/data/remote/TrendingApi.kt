@@ -232,9 +232,12 @@ open class TrendingApi {
      * 创建 Paddle 交易，返回收银台地址（后端 `api/billing.js`）。
      *
      * [plan] 必填且无默认值——协议层不替用户预选档位，「主推年付」只体现在 UI 的默认选中与角标上。
+     * [installId] 随交易进 Paddle custom_data，webhook 成单时原样回传：服务端补发的
+     * `checkout_step(completed)` 靠它落 install_id，否则订阅漏斗末端按 install 去重恒为 0。
      */
-    open suspend fun createCheckout(plan: String): CheckoutResponse {
+    open suspend fun createCheckout(plan: String, installId: String): CheckoutResponse {
         val response = client.post("$baseHost/api/billing/checkout") {
+            header("X-Install-Id", installId)
             contentType(ContentType.Application.Json)
             setBody(buildJsonObject { put("plan", plan) })
         }

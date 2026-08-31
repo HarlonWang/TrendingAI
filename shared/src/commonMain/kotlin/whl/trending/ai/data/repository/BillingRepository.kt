@@ -3,6 +3,7 @@ package whl.trending.ai.data.repository
 import kotlinx.coroutines.CancellationException
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.track
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.CheckoutResponse
 import whl.trending.ai.data.model.PaddleSubscription
 import whl.trending.ai.data.model.PortalResponse
@@ -33,7 +34,7 @@ open class BillingRepository(
 
     /** 创建交易并拿收银台地址。[plan] 取 `"annual"` / `"monthly"`，约束见 [TrendingApi.createCheckout]。 */
     open suspend fun createCheckout(plan: String): CheckoutResponse? = try {
-        api.createCheckout(plan)
+        api.createCheckout(plan, globalSettingsManager.getOrCreateInstallId())
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         track(AppEvent.ApiFailed("billing/checkout", statusOf(e)))
