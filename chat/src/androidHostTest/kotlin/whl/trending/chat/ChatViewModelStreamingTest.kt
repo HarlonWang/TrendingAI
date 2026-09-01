@@ -56,8 +56,9 @@ class ChatViewModelStreamingTest {
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
         ): String {
             chatCalls++
-            failWith?.let { throw ChatException(it) }
+            // 先吐块再抛错：失败用例覆盖的是「已渲染部分被丢弃」的半途断流路径
             chatChunks.forEach(onDelta)
+            failWith?.let { throw ChatException(it) }
             return chatChunks.joinToString("")
         }
     }
@@ -144,6 +145,10 @@ class ChatViewModelStreamingTest {
         val vm2 = vm(gated) { events2.add(it) }
         vm2.sendText("hi")
         advanceUntilIdle()
+        assertEquals(
+            listOf(ChatAiKind.CHAT),
+            events2.filterIsInstance<ChatAiEvent.Requested>().map { it.kind },
+        )
         assertEquals(
             listOf(ChatAiOutcome.ERROR to ChatError.CODE_QUOTA_DEVICE),
             events2.filterIsInstance<ChatAiEvent.Completed>().map { it.outcome to it.reason },
