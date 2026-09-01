@@ -6,6 +6,7 @@ import kotlin.native.Platform
 import platform.UIKit.UIViewController
 import wang.harlon.eventbase.Eventbase
 import wang.harlon.eventbase.init
+import whl.trending.ai.auth.initLoginbaseAuth
 import whl.trending.ai.chat.installTrendingChatHost
 import whl.trending.ai.core.analytics.analyticsConfig
 
@@ -18,5 +19,6 @@ fun MainViewController(): UIViewController {
     // 没有 BuildConfig 可读，用运行时的二进制类型；写死 false 会把调试流量算进生产读数
     Eventbase.init(analyticsConfig(isDebug = Platform.isDebugBinary))
     installTrendingChatHost()
+    initLoginbaseAuth()
     return ComposeUIViewController { App() }
 }

@@ -89,6 +89,7 @@ import trendingai.shared.generated.resources.sign_in
 import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.auth.isGithubOAuthSupported
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.local.globalSettingsManager
@@ -228,7 +229,7 @@ fun ProfileScreen(
                     item(key = "github_entry") {
                         GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
                     }
-                } else if (uiState.loggedIn && uiState.user?.githubUserId == null) {
+                } else if (uiState.loggedIn && uiState.user?.githubUserId == null && isGithubOAuthSupported) {
                     item(key = "link_github") {
                         LinkGithubCard(onClick = {
                             AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)

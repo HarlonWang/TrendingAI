@@ -1,5 +1,6 @@
 package whl.trending.ai.auth
 
+import io.ktor.client.engine.HttpClientEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,6 +18,7 @@ import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.AuthAction
 import whl.trending.ai.core.analytics.setAnalyticsUser
 import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.clearAuthTokenCache
 import whl.trending.ai.data.repository.globalFavoriteRepository
@@ -152,13 +154,26 @@ object LoginSheetBus {
 }
 
 /**
- * 进程级初始化，Android 在 MainActivity.onCreate 调用。传入的 TokenStore 必须同步 commit 落盘
+ * 进程级初始化，Android 在 MainActivity.onCreate、iOS 在 MainViewController 调用。传入的 TokenStore 必须同步 commit 落盘
  * （服务端「丢回执救活」的配套硬要求）——别改用 App 那份异步 apply 的 `Settings`，进程被杀会丢刚轮换的令牌。
+ *
+ * @param httpEngine 取 engine 的工厂而非 engine 本身：幂等分支要先返回，否则每次重复调用都会
+ *   白建一个持有原生会话对象的 engine 且无人 close。缺省 null = 让 ktor 自行发现。
  */
-fun initLoginbaseAuth(tokenStore: TokenStore): LoginbaseAuthManager {
+fun initLoginbaseAuth(
+    tokenStore: TokenStore,
+    httpEngine: () -> HttpClientEngine? = { null },
+): LoginbaseAuthManager {
     // 幂等：本函数会被 Activity 重建路径反复经过
     (globalAuthManager as? LoginbaseAuthManager)?.let { return it }
-    val manager = LoginbaseAuthManager(AuthClient(AUTH_BASE_URL, tokenStore))
+    val client = AuthClient(AUTH_BASE_URL, tokenStore) {
+        this.httpEngine = httpEngine()
+        // 邮件语言取 App 自己的语言开关，不走库的平台推断：Compose 的资源不进 iOS bundle 的
+        // .lproj，NSBundle.preferredLocalizations 因此恒为 en，界面中文的用户会收到英文验证码邮件
+        // （2026-09-01 实测）
+        localeProvider = { globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage() }
+    }
+    val manager = LoginbaseAuthManager(client)
     globalAuthManager = manager
     return manager
 }

@@ -64,6 +64,7 @@ import whl.trending.ai.auth.GithubAuthResult
 import whl.trending.ai.auth.LoginSheetBus
 import whl.trending.ai.auth.LoginbaseAuthManager
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.auth.isGithubOAuthSupported
 import whl.trending.ai.auth.launchGithubSignIn
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.AuthAction
@@ -121,6 +122,8 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var cooldown by remember { mutableStateOf(0) }
+    // 进程级注入，启动即定，不会在面板存活期间变化
+    val githubEnabled = remember { isGithubOAuthSupported }
 
     val genericError = stringResource(Res.string.login_generic_error)
     val emailInvalid = stringResource(Res.string.login_email_invalid)
@@ -309,7 +312,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
 
-            if (step == Step.EMAIL) {
+            if (step == Step.EMAIL && githubEnabled) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HorizontalDivider(modifier = Modifier.weight(1f))
                     Text(

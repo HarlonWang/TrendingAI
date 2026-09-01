@@ -135,7 +135,7 @@ fun TrendingScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    // GitHub 登录不被支持的平台（如 iOS NoopAuthManager）隐藏 star 入口
+    // 登录不被支持的平台隐藏 star 入口
     val starEnabled = remember { globalAuthManager.isSupported }
 
     val msgStarred = stringResource(Res.string.star_success)

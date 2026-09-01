@@ -11,9 +11,15 @@ enum class OAuthMode { SIGN_IN, LINK }
  * 浏览器环节归 loginbase-kt-browser（Android-only），**只由 androidApp 依赖并在
  * MainActivity 注入**——shared 不碰它：它的 manifest（含 placeholder）会合并进
  * 所有依赖方模块的单测 manifest，直接依赖会让 shared/chat 的 test 任务构建失败。
- * iOS 不注入（globalAuthManager 是 Noop，此路径不可达）。
+ * iOS 尚未注入，入口按 [isGithubOAuthSupported] 隐藏。
  */
 var globalOAuthLauncher: ((AuthClient, OAuthMode, clientFlowId: String?) -> Boolean)? = null
+
+/**
+ * GitHub 授权能否发起。**false 时相关入口必须隐藏**——留着就是必然失败的按钮，
+ * 还会往登录漏斗里灌只有 started、终态恒为 launch_failed 的假分母。
+ */
+val isGithubOAuthSupported: Boolean get() = globalOAuthLauncher != null
 
 /**
  * OAuth 回跳结果的**重复消费闸**。
