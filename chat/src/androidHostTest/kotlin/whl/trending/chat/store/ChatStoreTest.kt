@@ -190,9 +190,12 @@ class ChatStoreTest {
         assertEquals(ChatErrorCategory.TIMEOUT, errored.error?.category)
         assertEquals("run-1", errored.researchRunId)
 
+        now = 2000L
         store.resetResearchPlaceholder(id, placeholder.id, "run-1")
         assertEquals(listOf(PendingResearch(id, placeholder.id, "run-1")), store.pendingResearch())
         assertNull(store.loadMessages(id).last().error)
+        // 会话冒泡：reset 与其他写路径一样 touch 线程
+        assertEquals(2000L, db.threadDao().getById(id)!!.updatedAt)
     }
 
     @Test
@@ -222,6 +225,22 @@ class ChatStoreTest {
         assertFalse(storedFile.exists())
         assertNull(db.threadDao().getById(id))
         assertTrue(db.messageDao().messagesFor(id).isEmpty())
+    }
+
+    @Test
+    fun `deleteThread 不删 store 目录之外的文件（迁移失败回退的源路径）`() = runTest {
+        // 发送时源文件不存在 → copyIntoStore 跳过迁移、原路径入库（失败回退分支）
+        val outside = File(cacheDir, "keep.jpg").absolutePath
+        val id = store.createThread(null, firstMessageText = "看图")
+        val persisted = store.appendUserMessage(id, "看图", images = listOf(outside))
+        assertEquals(outside, persisted.images[0])
+
+        File(outside).writeBytes(byteArrayOf(1)) // 文件随后出现在 store 之外
+
+        store.deleteThread(id)
+
+        assertTrue(File(outside).exists()) // 只删 imagesDir 名下的文件
+        assertNull(db.threadDao().getById(id))
     }
 
     @Test

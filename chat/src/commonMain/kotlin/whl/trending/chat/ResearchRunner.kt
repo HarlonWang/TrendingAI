@@ -98,13 +98,19 @@ internal class ResearchRunner(
             delay(if (attempt < MAX_FAST_POLLS) FAST_POLL_MS else SLOW_POLL_MS)
             val run = try {
                 engine.pollResearch(runId)
-            } catch (e: ChatException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
                 // 瞬态（网络/超时/5xx）继续轮；永久错误（鉴权/配额/非法请求）终局呈现。
-                // runId 保留：任务可能仍在服务端跑完，重试可恢复轮询
-                if (e.error.category.retryable) return@repeat
-                track(failureEvent(MessageKind.DEEP_RESEARCH, e.error))
-                store.markResearchError(threadId, messageId, e.error, runId = runId)
-                applyToVisible(messageId) { it.copy(searching = false, error = e.error) }
+                // 非 ChatException（如不支持 research 的引擎抛 UnsupportedOperationException）
+                // 一律按永久错误收口——逃逸出 launch 就是崩溃。runId 保留：任务可能仍在
+                // 服务端跑完，重试可恢复轮询
+                if (e is ChatException && e.error.category.retryable) return@repeat
+                val error = (e as? ChatException)?.error
+                    ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                track(failureEvent(MessageKind.DEEP_RESEARCH, error))
+                store.markResearchError(threadId, messageId, error, runId = runId)
+                applyToVisible(messageId) { it.copy(searching = false, error = error) }
                 return
             }
             when (run.status) {

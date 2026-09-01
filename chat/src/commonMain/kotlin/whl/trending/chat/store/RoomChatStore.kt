@@ -61,11 +61,17 @@ class RoomChatStore(
     override suspend fun renameThread(threadId: Long, title: String) =
         db.threadDao().rename(threadId, title.trim().take(ChatStore.MAX_TITLE_LENGTH))
 
-    /** 删线程：先删图片文件（CASCADE 之后路径就找不回了），再删行 */
+    /** 删线程：先删图片文件（CASCADE 之后路径就找不回了），再删行。
+     *  只删 [imagesDir] 名下的文件——迁移失败的行留着源路径（copyIntoStore 的回退），
+     *  顺着删会伤及 store 之外的文件 */
     override suspend fun deleteThread(threadId: Long) {
+        val dir = imagesDir.toPath()
         db.messageDao().imagesJsonFor(threadId).forEach { raw ->
             runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull()
-                ?.forEach { path -> runCatching { FileSystem.SYSTEM.delete(path.toPath()) } }
+                ?.forEach { path ->
+                    val p = path.toPath()
+                    if (p.parent == dir) runCatching { FileSystem.SYSTEM.delete(p) }
+                }
         }
         db.threadDao().delete(threadId)
     }
@@ -170,6 +176,7 @@ class RoomChatStore(
             json.encodeToString(StoredSegments(researchRunId = runId)),
             null,
         )
+        db.threadDao().touch(threadId, clock())
     }
 
     override suspend fun deleteMessage(messageId: Long) = db.messageDao().deleteById(messageId)

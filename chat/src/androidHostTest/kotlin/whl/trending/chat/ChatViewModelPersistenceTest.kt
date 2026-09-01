@@ -625,6 +625,24 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
+    fun `恢复轮询撞上不支持 research 的引擎：不崩溃，占位转错误行（runId 保留）`() = runTest(dispatcher) {
+        // 库里躺着一条待恢复占位（上个版本/正式引擎留下的）
+        val threadId = store.createThread(null, "老任务")
+        store.appendResearchPlaceholder(threadId, runId = "run-old")
+
+        // GatedEngine 未覆写 pollResearch → 默认实现抛 UnsupportedOperationException；
+        // resumeAll 接手轮询后必须收口为错误终局而不是让异常逃逸出 launch
+        val v = vm(GatedEngine())
+        advanceUntilIdle()
+
+        assertTrue(v.uiState.value.messages.isEmpty()) // 没崩、也没打开那条会话
+        val row = store.loadMessages(threadId).last()
+        assertNotNull(row.error)
+        assertEquals("run-old", row.researchRunId)
+        assertTrue(store.pendingResearch().isEmpty()) // 不再反复恢复
+    }
+
+    @Test
     fun `空 assistant 行（research 错误条）不进后续 chat history`() = runTest(dispatcher) {
         val engine = ResearchEngine(failCreate = ChatError(ChatErrorCategory.SERVER))
         val v = vm(engine)
