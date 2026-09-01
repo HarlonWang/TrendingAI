@@ -25,7 +25,6 @@ import kotlinx.serialization.json.JsonElement
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.SYSTEM
-import whl.trending.chat.ChatContext
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.chat.model.resolveEffectiveChatModel
@@ -78,18 +77,10 @@ class ChatApi(
     internal data class ChatRequest(
         val messages: List<WireMessage>,
         val lang: String,
-        val context: WireContext? = null,
         val model: String? = null,
         val stream: Boolean,
         // P2 联网搜索开关：默认 false 时被 encodeDefaults=false 省略，旧服务端零感知
         val search: Boolean = false,
-    )
-
-    @Serializable
-    internal data class WireContext(
-        val title: String,
-        val summary: String? = null,
-        val sourceUrl: String? = null,
     )
 
     @Serializable
@@ -131,7 +122,6 @@ class ChatApi(
 
     override suspend fun send(
         history: List<ChatMessage>,
-        context: ChatContext?,
         onDelta: (String) -> Unit,
         search: Boolean,
         onSearch: (SearchEvent) -> Unit,
@@ -157,9 +147,6 @@ class ChatApi(
                         )
                     },
                     lang = lang,
-                    context = context?.let {
-                        WireContext(it.title, it.summary, it.sourceUrl)
-                    },
                     // 发送前按目录缓存解析实际生效模型（与选择器同一套判定），避免选择器未挂载时
                     // 把过期的 Pro 专属选择原样发出；未手选 / 选择失效解析为 null，此时字段被
                     // encodeDefaults=false 省略，默认模型由服务端定（客户端不复述模型 id）

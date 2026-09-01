@@ -51,7 +51,6 @@ import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.chat_suggest_what_can_you_do
 import trendingai.shared.generated.resources.chat_suggest_what_can_you_do_prompt
-import whl.trending.chat.ChatContext
 import whl.trending.chat.ui.ChatScreen
 import whl.trending.chat.ui.ChatSuggestion
 import whl.trending.ai.core.platform.openUrl
@@ -87,7 +86,7 @@ data object GithubProfile : Route { override val screen = Screen.GITHUB_PROFILE 
 data object ProfileFollowers : Route { override val screen = Screen.PROFILE_FOLLOWERS }
 data object ProfileFollowing : Route { override val screen = Screen.PROFILE_FOLLOWING }
 data object ProfileRepos : Route { override val screen = Screen.PROFILE_REPOS }
-data class Chat(val context: ChatContext?) : Route { override val screen = Screen.CHAT }
+data object Chat : Route { override val screen = Screen.CHAT }
 
 /**
  * HN 招聘月度专题。[month] 为 'YYYY-MM'，null = 最新一期（默认入口不带月份）。
@@ -185,7 +184,7 @@ fun App() {
                                         backStack.add(RepoDetail(owner, repo))
                                     },
                                     onNavigateToChat = {
-                                        backStack.add(Chat(null))
+                                        backStack.add(Chat)
                                     },
                                     onOpenUrl = { url ->
                                         openExternalUrl(url, "")
@@ -355,7 +354,6 @@ fun App() {
 
                             is Chat -> NavEntry(key) {
                                 ChatScreen(
-                                    initialContext = key.context,
                                     onBack = { backStack.safePop() },
                                     suggestions = listOf(
                                         ChatSuggestion(

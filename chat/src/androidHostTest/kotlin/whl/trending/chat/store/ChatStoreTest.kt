@@ -9,7 +9,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import whl.trending.chat.ChatContext
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
@@ -36,14 +35,6 @@ class ChatStoreTest {
     private var now = 1000L
     private lateinit var store: RoomChatStore
 
-    private val repoContext = ChatContext(
-        title = "octo/demo",
-        summary = "A demo repo",
-        sourceUrl = "https://github.com/octo/demo",
-        source = "github",
-        externalId = "octo/demo",
-    )
-
     @Before
     fun setup() {
         db = Room.inMemoryDatabaseBuilder(
@@ -68,16 +59,14 @@ class ChatStoreTest {
     // 建线与标题策略
 
     @Test
-    fun `repo 入口建线：标题取 context 标题，entryKey 为 repo 前缀`() = runTest {
-        val id = store.createThread(repoContext, firstMessageText = "介绍一下")
-        val thread = db.threadDao().getById(id)!!
-        assertEquals("octo/demo", thread.title)
-        assertEquals("repo:octo/demo", thread.entryKey)
+    fun `建线：标题取首条消息`() = runTest {
+        val id = store.createThread(firstMessageText = "介绍一下")
+        assertEquals("介绍一下", db.threadDao().getById(id)!!.title)
     }
 
     @Test
     fun `通用入口标题取首条消息，超长截断`() = runTest {
-        val id = store.createThread(null, firstMessageText = "这是一条非常非常非常非常非常非常长的首条消息内容")
+        val id = store.createThread(firstMessageText = "这是一条非常非常非常非常非常非常长的首条消息内容")
         val title = db.threadDao().getById(id)!!.title
         assertTrue(title.length <= ChatStore.MAX_TITLE_LENGTH)
         assertTrue(title.startsWith("这是一条"))
@@ -85,19 +74,8 @@ class ChatStoreTest {
 
     @Test
     fun `纯图消息无文本 → 默认标题`() = runTest {
-        val id = store.createThread(null, firstMessageText = "")
+        val id = store.createThread(firstMessageText = "")
         assertEquals(ChatStore.DEFAULT_TITLE, db.threadDao().getById(id)!!.title)
-    }
-
-    // context 往返
-
-    @Test
-    fun `contextJson 往返：恢复的会话还原 ChatContext 关键字段`() = runTest {
-        val id = store.createThread(repoContext, firstMessageText = "hi")
-        val restored = store.contextOf(id)!!
-        assertEquals("octo/demo", restored.title)
-        assertEquals("github", restored.source)
-        assertEquals("octo/demo", restored.externalId)
     }
 
     // 消息落库
@@ -105,7 +83,7 @@ class ChatStoreTest {
     @Test
     fun `appendUserMessage 把图片从 cache 拷入 filesDir 并回写新路径，id 即行 id`() = runTest {
         val cachePath = cacheImage("a.jpg")
-        val id = store.createThread(null, firstMessageText = "看图")
+        val id = store.createThread(firstMessageText = "看图")
         val persisted = store.appendUserMessage(id, "看图", images = listOf(cachePath))
 
         assertEquals(1, persisted.images.size)
@@ -121,7 +99,7 @@ class ChatStoreTest {
 
     @Test
     fun `loadMessages 完整还原 model 层字段（kind、model 与图片）`() = runTest {
-        val id = store.createThread(repoContext, firstMessageText = "研究")
+        val id = store.createThread(firstMessageText = "研究")
         store.appendUserMessage(id, "研究", kind = MessageKind.DEEP_RESEARCH)
         store.appendAssistantMessage(id, "回答内容", MessageKind.CHAT, model = "gpt-5.5")
 
@@ -136,7 +114,7 @@ class ChatStoreTest {
 
     @Test
     fun `存量行的已退役 kind（DETAIL_SUMMARY）回落 CHAT`() = runTest {
-        val id = store.createThread(null, firstMessageText = "老会话")
+        val id = store.createThread(firstMessageText = "老会话")
         db.messageDao().insert(
             whl.trending.chat.db.MessageEntity(
                 threadId = id, role = "assistant", content = "旧解读全文",
@@ -151,7 +129,7 @@ class ChatStoreTest {
 
     @Test
     fun `错误行落库往返：分类、机器码、tier、authDegraded 全还原`() = runTest {
-        val id = store.createThread(null, firstMessageText = "hi")
+        val id = store.createThread(firstMessageText = "hi")
         store.appendUserMessage(id, "hi")
         val error = ChatError(
             ChatErrorCategory.QUOTA,
@@ -173,7 +151,7 @@ class ChatStoreTest {
 
     @Test
     fun `research 占位进 pendingResearch，完成后退出`() = runTest {
-        val id = store.createThread(null, firstMessageText = "研究")
+        val id = store.createThread(firstMessageText = "研究")
         val placeholder = store.appendResearchPlaceholder(id, runId = "run-1")
 
         assertEquals(
@@ -191,7 +169,7 @@ class ChatStoreTest {
 
     @Test
     fun `markResearchError 后不再 pending；保留 runId 时 reset 可恢复占位形态`() = runTest {
-        val id = store.createThread(null, firstMessageText = "研究")
+        val id = store.createThread(firstMessageText = "研究")
         val placeholder = store.appendResearchPlaceholder(id, runId = "run-1")
 
         // runId 保留（轮询永久错误）：错误行不触发恢复轮询，但重试可续
@@ -211,7 +189,7 @@ class ChatStoreTest {
 
     @Test
     fun `markResearchError 判死（runId 置空）：错误行既不 pending 也无 runId`() = runTest {
-        val id = store.createThread(null, firstMessageText = "研究")
+        val id = store.createThread(firstMessageText = "研究")
         val placeholder = store.appendResearchPlaceholder(id, runId = "run-1")
         store.markResearchError(id, placeholder.id, ChatError(ChatErrorCategory.SERVER), runId = null)
 
@@ -226,7 +204,7 @@ class ChatStoreTest {
     @Test
     fun `deleteThread 先删图片文件再删行`() = runTest {
         val cachePath = cacheImage("b.jpg")
-        val id = store.createThread(null, firstMessageText = "看图")
+        val id = store.createThread(firstMessageText = "看图")
         val persisted = store.appendUserMessage(id, "看图", images = listOf(cachePath))
         val storedFile = File(persisted.images[0])
         assertTrue(storedFile.exists())
@@ -242,7 +220,7 @@ class ChatStoreTest {
     fun `deleteThread 不删 store 目录之外的文件（迁移失败回退的源路径）`() = runTest {
         // 发送时源文件不存在 → copyIntoStore 跳过迁移、原路径入库（失败回退分支）
         val outside = File(cacheDir, "keep.jpg").absolutePath
-        val id = store.createThread(null, firstMessageText = "看图")
+        val id = store.createThread(firstMessageText = "看图")
         val persisted = store.appendUserMessage(id, "看图", images = listOf(outside))
         assertEquals(outside, persisted.images[0])
 
@@ -256,7 +234,7 @@ class ChatStoreTest {
 
     @Test
     fun `deleteMessage 只删目标行`() = runTest {
-        val id = store.createThread(null, firstMessageText = "hi")
+        val id = store.createThread(firstMessageText = "hi")
         store.appendUserMessage(id, "hi")
         val error = store.appendErrorMessage(id, MessageKind.CHAT, ChatError(ChatErrorCategory.NETWORK))
 

@@ -36,8 +36,8 @@ class ChatDatabaseTest {
     @After
     fun teardown() = db.close()
 
-    private fun thread(entryKey: String = "general", updatedAt: Long = 0L, title: String = "t") =
-        ThreadEntity(title = title, entryKey = entryKey, contextJson = null, createdAt = updatedAt, updatedAt = updatedAt)
+    private fun thread(updatedAt: Long = 0L, title: String = "t") =
+        ThreadEntity(title = title, createdAt = updatedAt, updatedAt = updatedAt)
 
     private fun message(threadId: Long, content: String = "hi", role: String = "user") =
         MessageEntity(

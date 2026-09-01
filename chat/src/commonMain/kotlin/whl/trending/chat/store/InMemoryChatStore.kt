@@ -2,7 +2,6 @@ package whl.trending.chat.store
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import whl.trending.chat.ChatContext
 import whl.trending.chat.ThreadSummary
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatMessage
@@ -19,7 +18,6 @@ class InMemoryChatStore : ChatStore {
     private class Thread(
         val id: Long,
         var title: String,
-        val context: ChatContext?,
         var updatedAt: Long,
     )
 
@@ -32,15 +30,13 @@ class InMemoryChatStore : ChatStore {
 
     override fun threads(): Flow<List<ThreadSummary>> = threadsFlow
 
-    override suspend fun createThread(context: ChatContext?, firstMessageText: String): Long {
+    override suspend fun createThread(firstMessageText: String): Long {
         val id = ++nextThreadId
-        threads[id] = Thread(id, context?.title ?: ChatStore.titleFrom(firstMessageText), context, ++tick)
+        threads[id] = Thread(id, ChatStore.titleFrom(firstMessageText), ++tick)
         messagesByThread[id] = mutableListOf()
         publish()
         return id
     }
-
-    override suspend fun contextOf(threadId: Long): ChatContext? = threads[threadId]?.context
 
     override suspend fun loadMessages(threadId: Long): List<ChatMessage> =
         messagesByThread[threadId]?.toList() ?: emptyList()

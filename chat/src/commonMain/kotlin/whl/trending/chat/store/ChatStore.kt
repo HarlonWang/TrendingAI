@@ -1,7 +1,6 @@
 package whl.trending.chat.store
 
 import kotlinx.coroutines.flow.Flow
-import whl.trending.chat.ChatContext
 import whl.trending.chat.ThreadSummary
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatMessage
@@ -25,11 +24,8 @@ interface ChatStore {
 
     fun threads(): Flow<List<ThreadSummary>>
 
-    /** 总是新建（入口进入与抽屉「新会话」同语义：不复用历史） */
-    suspend fun createThread(context: ChatContext?, firstMessageText: String): Long
-
-    /** 会话的 ChatContext（解读 chip 与服务端 context 注入依赖）；通用入口/解析失败为 null */
-    suspend fun contextOf(threadId: Long): ChatContext?
+    /** 总是新建，标题取首条消息截断（不复用历史） */
+    suspend fun createThread(firstMessageText: String): Long
 
     suspend fun loadMessages(threadId: Long): List<ChatMessage>
 
@@ -84,11 +80,6 @@ interface ChatStore {
     companion object {
         const val MAX_TITLE_LENGTH = 20
         const val DEFAULT_TITLE = "新对话"
-        const val ENTRY_GENERAL = "general"
-
-        /** 入口键：repo 条目按 externalId 隔离，其余（含 HN/PH 无 externalId 的场景）归通用 */
-        fun entryKeyOf(context: ChatContext?): String =
-            context?.externalId?.let { "repo:$it" } ?: ENTRY_GENERAL
 
         internal fun titleFrom(text: String): String =
             text.trim().take(MAX_TITLE_LENGTH).ifBlank { DEFAULT_TITLE }

@@ -34,13 +34,6 @@ class ChatViewModelStreamingTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private val context = ChatContext(
-        title = "octo/demo",
-        sourceUrl = "https://github.com/octo/demo",
-        source = "github",
-        externalId = "octo/demo",
-    )
-
     /** 可编程假引擎：记录调用、按脚本流式吐块或抛错 */
     private class ScriptedEngine(
         var chatChunks: List<String> = listOf("你", "好"),
@@ -50,7 +43,6 @@ class ChatViewModelStreamingTest {
 
         override suspend fun send(
             history: List<ChatMessage>,
-            context: ChatContext?,
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
@@ -64,7 +56,7 @@ class ChatViewModelStreamingTest {
     }
 
     private fun vm(engine: ChatEngine, track: (ChatAiEvent) -> Unit = {}) =
-        ChatViewModel(engine, context, loadModels = { ChatModelsResponse() }, track = track)
+        ChatViewModel(engine, loadModels = { ChatModelsResponse() }, track = track)
 
     @Test
     fun `发送后流式定稿：assistant 消息内容为全文，isSending 复位`() = runTest(dispatcher) {

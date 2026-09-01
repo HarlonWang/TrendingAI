@@ -1,12 +1,15 @@
 package whl.trending.chat.db
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.DeleteColumn
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.Insert
+import androidx.room.migration.AutoMigrationSpec
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
@@ -16,17 +19,12 @@ import kotlinx.coroutines.flow.Flow
 /**
  * 会话线：一次对话的容器。
  *
- * @param entryKey 入口键（`repo:{externalId}` / `general`），留痕会话来自哪个入口
- * @param contextJson 进入时的 [whl.trending.chat.ChatContext] 序列化（通用入口为 null）；
- *   恢复历史会话后「一键解读」chip 与服务端 context 注入都依赖它——不存等于恢复的会话丢了灵魂
  * @param updatedAt 排序键：列表按最近活跃倒序
  */
-@Entity(tableName = "chat_threads", indices = [Index("entryKey")])
+@Entity(tableName = "chat_threads")
 data class ThreadEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
-    val entryKey: String,
-    val contextJson: String?,
     val createdAt: Long,
     val updatedAt: Long,
 )
@@ -113,7 +111,17 @@ interface MessageDao {
     suspend fun pendingResearchRows(kind: String): List<MessageEntity>
 }
 
-@Database(entities = [ThreadEntity::class, MessageEntity::class], version = 1, exportSchema = true)
+/** v1→v2：删除入口上下文机制的遗留列（entryKey/contextJson），Room 按 schemas/1.json 生成拷表迁移 */
+@DeleteColumn(tableName = "chat_threads", columnName = "entryKey")
+@DeleteColumn(tableName = "chat_threads", columnName = "contextJson")
+internal class DropEntryContextColumns : AutoMigrationSpec
+
+@Database(
+    entities = [ThreadEntity::class, MessageEntity::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2, spec = DropEntryContextColumns::class)],
+)
 @ConstructedBy(ChatDatabaseConstructor::class)
 abstract class ChatDatabase : RoomDatabase() {
     abstract fun threadDao(): ThreadDao

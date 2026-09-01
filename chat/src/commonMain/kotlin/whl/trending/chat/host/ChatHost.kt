@@ -18,7 +18,6 @@ sealed interface ChatAiEvent {
         val kind: ChatAiKind,
         val from: String,
         val imageCount: Int? = null,
-        val hasContext: Boolean? = null,
     ) : ChatAiEvent
 
     data class Completed(
