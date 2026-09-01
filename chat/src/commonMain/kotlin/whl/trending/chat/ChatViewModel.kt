@@ -191,7 +191,7 @@ class ChatViewModel(
     /** 抽屉「新会话」：总是全新开始，不复用任何历史 */
     fun startNewThread() = locked {
         cancelInFlight(persistInterrupted = true)
-        resetSession(clearInput = true)
+        resetSession()
     }
 
     fun renameThread(id: Long, title: String) = locked {
@@ -201,7 +201,7 @@ class ChatViewModel(
     fun deleteThread(id: Long) = locked {
         if (inFlight?.threadId == id) cancelInFlight(persistInterrupted = false)
         store.deleteThread(id)
-        if (_currentThreadId.value == id) resetSession(clearInput = true)
+        if (_currentThreadId.value == id) resetSession()
     }
 
     // 流式管线
@@ -310,15 +310,10 @@ class ChatViewModel(
         }
     }
 
-    private fun resetSession(clearInput: Boolean) {
+    private fun resetSession() {
         _currentThreadId.value = null
         _uiState.update {
-            it.copy(
-                messages = emptyList(),
-                isSending = false,
-                input = if (clearInput) "" else it.input,
-                pendingImages = emptyList(),
-            )
+            it.copy(messages = emptyList(), isSending = false, input = "", pendingImages = emptyList())
         }
     }
 
@@ -346,17 +341,17 @@ class ChatViewModel(
         }
     }
 
-    private fun applyToVisible(messageId: Long, transform: (ChatMessage) -> ChatMessage) {
+    /** 流式增量与搜索事件只落在占位上：单次原子更新，无锁也不会与串行操作交错出错态 */
+    private fun updatePlaceholder(transform: (ChatMessage) -> ChatMessage) {
         _uiState.update { s ->
-            s.copy(messages = s.messages.map { if (it.id == messageId) transform(it) else it })
+            s.copy(messages = s.messages.map { if (it.id == PLACEHOLDER_ID) transform(it) else it })
         }
     }
 
-    /** 流式增量与搜索事件只落在占位上：单次原子更新，无锁也不会与串行操作交错出错态 */
     private fun appendDelta(delta: String) =
-        applyToVisible(PLACEHOLDER_ID) { it.copy(content = it.content + delta) }
+        updatePlaceholder { it.copy(content = it.content + delta) }
 
-    private fun applySearchEvent(event: SearchEvent) = applyToVisible(PLACEHOLDER_ID) { m ->
+    private fun applySearchEvent(event: SearchEvent) = updatePlaceholder { m ->
         when (event) {
             is SearchEvent.Started -> m.copy(searching = true)
             is SearchEvent.Done -> m.copy(searching = false)
