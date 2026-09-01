@@ -19,7 +19,6 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -45,7 +44,6 @@ private const val TAG = "ChatApi"
  *
  * - 透传 `X-Install-Id`（后端限流维度）
  * - 透传 `lang`（宿主解析，仅 zh 用中文，其余 en）
- * - chat 与 detail-summary 共用同一 SSE 解析路径（[ChatSse]），缓存命中一次性推完也走同一格式
  * - 所有失败（HTTP 非 2xx / 传输异常 / 中途断流）统一归类为 [ChatException]，由 [ChatErrors] 分类
  */
 class ChatApi(
@@ -92,13 +90,6 @@ class ChatApi(
         val title: String,
         val summary: String? = null,
         val sourceUrl: String? = null,
-    )
-
-    @Serializable
-    private data class DetailSummaryRequest(
-        val source: String,
-        @SerialName("external_id") val externalId: String,
-        val lang: String,
     )
 
     @Serializable
@@ -181,18 +172,6 @@ class ChatApi(
                     search = search,
                 ),
             )
-        }.content
-    }
-
-    override suspend fun sendDetailSummary(
-        context: ChatContext,
-        onDelta: (String) -> Unit,
-    ): DetailSummaryResult {
-        val source = requireNotNull(context.source) { "detail summary requires context.source" }
-        val externalId = requireNotNull(context.externalId) { "detail summary requires context.externalId" }
-        val lang = resolveLang()
-        return executeStreaming(path = "detail-summary", onDelta = onDelta) {
-            setBody(DetailSummaryRequest(source = source, externalId = externalId, lang = lang))
         }
     }
 
@@ -240,7 +219,7 @@ class ChatApi(
     }
 
     /**
-     * 共用的流式执行路径：POST → 非 2xx 走 JSON 错误分类；2xx SSE 逐行解析 delta/done；
+     * 流式执行路径：POST → 非 2xx 走 JSON 错误分类；2xx SSE 逐行解析 delta/done；
      * 2xx 非 SSE（服务端降级非流式）整段作为一个 delta 兜底。
      * 流在 done 之前结束视为中途断流 → SERVER 可重试，已渲染部分由调用方丢弃。
      */
@@ -249,7 +228,7 @@ class ChatApi(
         onDelta: (String) -> Unit,
         onSearch: (SearchEvent) -> Unit = {},
         configure: HttpRequestBuilder.() -> Unit,
-    ): DetailSummaryResult {
+    ): String {
         try {
             // 发送时的登录自认知：与 429 的 tier=anonymous 对照可识别「token 缺失/被拒被静默降级」
             val sentAsLoggedIn = chatHost.isLoggedInNow()
@@ -266,33 +245,35 @@ class ChatApi(
                     // 服务端降级为非流式 JSON（spec 的 SSE 兜底路径）
                     val content = json.decodeFromString<ChatResponse>(response.bodyAsText()).content
                     onDelta(content)
-                    return@execute DetailSummaryResult(content, cached = false)
+                    return@execute content
                 }
                 val channel = response.bodyAsChannel()
                 val full = StringBuilder()
-                var done: ChatSse.Event.Done? = null
-                while (done == null) {
+                var done = false
+                while (!done) {
                     val line = channel.readUTF8Line() ?: break
                     when (val event = ChatSse.parseLine(line)) {
                         is ChatSse.Event.Delta -> {
                             full.append(event.text)
                             onDelta(event.text)
                         }
-                        is ChatSse.Event.Done -> done = event
+                        is ChatSse.Event.Done -> done = true
                         is ChatSse.Event.SearchStarted -> onSearch(SearchEvent.Started)
                         is ChatSse.Event.SearchDone -> onSearch(SearchEvent.Done(event.query))
                         is ChatSse.Event.Source -> onSearch(SearchEvent.Source(event.title, event.url))
                         null -> Unit
                     }
                 }
-                val finished = done ?: throw ChatException(
-                    ChatError(
-                        ChatErrorCategory.SERVER,
-                        code = ChatError.CODE_STREAM_INTERRUPTED,
-                        detail = "stream ended before done event",
-                    ),
-                )
-                DetailSummaryResult(full.toString(), finished.cached)
+                if (!done) {
+                    throw ChatException(
+                        ChatError(
+                            ChatErrorCategory.SERVER,
+                            code = ChatError.CODE_STREAM_INTERRUPTED,
+                            detail = "stream ended before done event",
+                        ),
+                    )
+                }
+                full.toString()
             }
         } catch (e: ChatException) {
             logFailure(path, e.error)

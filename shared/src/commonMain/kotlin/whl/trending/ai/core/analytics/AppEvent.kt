@@ -257,9 +257,9 @@ enum class ListFilter {
     ROLE_CATEGORY, REMOTE_KIND, MONTH,
 }
 
-enum class AiKind { CHAT, DETAIL_SUMMARY, RESEARCH }
+enum class AiKind { CHAT, RESEARCH }
 
-enum class AiOutcome { OK, ERROR, INTERRUPTED, CACHE_HIT }
+enum class AiOutcome { OK, ERROR, INTERRUPTED }
 
 enum class AuthAction { SIGN_IN, LINK }
 

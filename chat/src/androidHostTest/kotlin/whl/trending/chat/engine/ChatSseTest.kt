@@ -16,13 +16,13 @@ class ChatSseTest {
     @Test
     fun `done 事件解析为结束信号`() {
         val event = ChatSse.parseLine("""data: {"done":true}""")
-        assertEquals(ChatSse.Event.Done(cached = false), event)
+        assertEquals(ChatSse.Event.Done, event)
     }
 
     @Test
-    fun `done 事件携带 cached 元信息（缓存命中一次性推完）`() {
+    fun `done 事件带未知元信息照常收尾（向前兼容）`() {
         val event = ChatSse.parseLine("""data: {"done":true,"cached":true}""")
-        assertEquals(ChatSse.Event.Done(cached = true), event)
+        assertEquals(ChatSse.Event.Done, event)
     }
 
     @Test

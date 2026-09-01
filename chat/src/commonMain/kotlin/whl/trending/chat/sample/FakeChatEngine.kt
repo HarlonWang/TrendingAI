@@ -3,7 +3,6 @@ package whl.trending.chat.sample
 import kotlinx.coroutines.delay
 import whl.trending.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
-import whl.trending.chat.engine.DetailSummaryResult
 import whl.trending.chat.model.ChatMessage
 
 /**
@@ -37,14 +36,6 @@ class FakeChatEngine(
         val reply = replies[index % replies.size]
         index++
         return streamOut(reply, onDelta)
-    }
-
-    override suspend fun sendDetailSummary(
-        context: ChatContext,
-        onDelta: (String) -> Unit,
-    ): DetailSummaryResult {
-        val reply = "### 这是什么\n\n${context.title} 的模拟详细解读。\n\n" + SampleData.richMarkdown
-        return DetailSummaryResult(streamOut(reply, onDelta), cached = false)
     }
 
     /** 按小块模拟逐字输出 */

@@ -4,10 +4,11 @@ package whl.trending.chat.model
 enum class Role { USER, ASSISTANT }
 
 /**
- * 消息由哪条管线生成：驱动 chip 可见性与 retry 路由（解读失败重试回 detail 管线），渲染无差别。
- * 随消息持久化（kind 列存枚举名），新增值向后兼容、改名不兼容。
+ * 消息由哪条管线生成：驱动 retry 路由，渲染无差别。
+ * 随消息持久化（kind 列存枚举名），新增值向后兼容、改名不兼容；
+ * 历史值 DETAIL_SUMMARY（已退役的「一键解读」）由加载侧回落 CHAT。
  */
-enum class MessageKind { CHAT, DETAIL_SUMMARY, DEEP_RESEARCH }
+enum class MessageKind { CHAT, DEEP_RESEARCH }
 
 /**
  * 一条聊天消息。

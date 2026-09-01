@@ -41,17 +41,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import whl.trending.chat.ChatContext
 import whl.trending.chat.ChatViewModel
-import whl.trending.chat.DetailSummaryPolicy
 import trendingai.chat.generated.resources.Res
-import trendingai.chat.generated.resources.chat_action_detail_summary
-import trendingai.chat.generated.resources.chat_action_what_can_you_do
-import trendingai.chat.generated.resources.chat_action_what_can_you_do_prompt
-import trendingai.chat.generated.resources.chat_action_what_is_this
-import trendingai.chat.generated.resources.chat_action_what_is_this_prompt
 import trendingai.chat.generated.resources.chat_assistant_title
 import trendingai.chat.generated.resources.chat_back
 import trendingai.chat.generated.resources.chat_history
-import trendingai.chat.generated.resources.chat_research_repo_prefill
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.store.ChatStore
@@ -61,9 +54,12 @@ import whl.trending.chat.store.rememberDefaultChatStore
 /** 入口键，驱动「同一入口只 enterEntry 一次」 */
 private fun entryKeyOf(context: ChatContext?): String = ChatStore.entryKeyOf(context)
 
+/** 空会话欢迎态的建议动作：点击即以 [prompt] 发送一条普通消息（宿主按入口注入） */
+data class ChatSuggestion(val label: String, val prompt: String)
+
 /**
  * 全屏聊天页。通用入口传 [initialContext] = null；带上下文入口传具体条目。
- * 单 ViewModel（key 固定）+ 会话抽屉：进入时 [ChatViewModel.enterEntry] 恢复该入口最近会话（跨进程）。
+ * 单 ViewModel（key 固定）+ 会话抽屉：进入时 [ChatViewModel.enterEntry] 开新会话（同入口进程内续接）。
  *
  * @param engine 默认正式引擎 [ChatApi]；Demo 可注入 FakeChatEngine。
  * @param persistent Demo/预览可关（纯内存模式）
@@ -76,6 +72,7 @@ fun ChatScreen(
     engine: ChatEngine = ChatApi.shared,
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
     persistent: Boolean = true,
+    suggestions: List<ChatSuggestion> = emptyList(),
 ) {
     val store = if (persistent) rememberDefaultChatStore() else remember { InMemoryChatStore() }
     val viewModel: ChatViewModel = viewModel(key = "chat") {
@@ -96,28 +93,11 @@ fun ChatScreen(
         }
     }
 
-    // 「一键解读」入口：进入会话自动触发一次详细解读；chipVisible 判定天然幂等、防重复触发
-    val autoDetailPrompt = stringResource(Res.string.chat_action_detail_summary)
-    LaunchedEffect(entryKey) {
-        if (initialContext?.autoDetailSummary == true &&
-            DetailSummaryPolicy.chipVisible(initialContext, viewModel.uiState.value.messages)
-        ) {
-            viewModel.sendDetailSummary(autoDetailPrompt)
-        }
-    }
-
-    // 解读卡尾部「深度调研此项目」升级漏斗的调研主题（见下方 onResearchUpsell）
-    val researchPrefill = stringResource(Res.string.chat_research_repo_prefill)
-
     // AI 一开始回复就收起键盘；clearFocus 而非只 hide，避免「键盘没了但光标还在闪」
     val focusManager = LocalFocusManager.current
     LaunchedEffect(state.isSending) {
         if (state.isSending) focusManager.clearFocus()
     }
-
-    // 进页面自动聚焦唤起键盘；「一键解读」入口例外——它进来即发送、isSending 分支会立刻
-    // clearFocus，叠加就是键盘弹起又秒收的闪烁
-    val autoFocusInput = initialContext?.autoDetailSummary != true
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -178,41 +158,21 @@ fun ChatScreen(
                 val mode by viewModel.chatMode.collectAsState()
                 val catalog by viewModel.catalog.collectAsState()
                 Column {
-                    // 建议动作行：描边 = 建议、填充的「当前配置」行 = 已生效状态，靠样式分层
-                    val detailVisible = DetailSummaryPolicy.chipVisible(initialContext, state.messages)
-                    // 快捷问按入口选（label 资源 to prompt 资源）；messages 非空即隐藏，
-                    // 天然覆盖「发送后隐藏」与「恢复历史会话不再显示」
-                    val quickAction = when {
-                        initialContext == null ->
-                            Res.string.chat_action_what_can_you_do to Res.string.chat_action_what_can_you_do_prompt
-                        initialContext.sourceUrl != null ->
-                            Res.string.chat_action_what_is_this to Res.string.chat_action_what_is_this_prompt
-                        else -> null
-                    }
-                    val quickVisible = quickAction != null && state.messages.isEmpty()
-                    if (detailVisible || quickVisible) {
+                    // 建议动作行（描边 = 建议、填充的「当前配置」行 = 已生效状态，靠样式分层）：
+                    // 宿主按入口注入，仅空会话欢迎态展示——发送后与恢复历史会话都自然隐藏
+                    if (suggestions.isNotEmpty() && state.messages.isEmpty()) {
                         Row(
                             modifier = Modifier.fillMaxWidth()
                                 .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            if (detailVisible) {
-                                val detailPrompt = stringResource(Res.string.chat_action_detail_summary)
+                            suggestions.forEach { suggestion ->
                                 OutlinedButton(
-                                    onClick = { viewModel.sendDetailSummary(detailPrompt) },
+                                    onClick = { viewModel.sendText(suggestion.prompt) },
                                     enabled = !state.isSending,
                                 ) {
-                                    Text(detailPrompt)
-                                }
-                            }
-                            if (quickAction != null && quickVisible) {
-                                val prompt = stringResource(quickAction.second)
-                                OutlinedButton(
-                                    onClick = { viewModel.sendText(prompt) },
-                                    enabled = !state.isSending,
-                                ) {
-                                    Text(stringResource(quickAction.first))
+                                    Text(suggestion.label)
                                 }
                             }
                         }
@@ -239,7 +199,7 @@ fun ChatScreen(
                         onSend = viewModel::send,
                         onAddImage = viewModel::addPendingImage,
                         onRemoveImage = viewModel::removePendingImage,
-                        autoFocus = autoFocusInput,
+                        autoFocus = true,
                     )
                 }
             },
@@ -254,12 +214,10 @@ fun ChatScreen(
                 if (state.messages.isEmpty()) {
                     ChatWelcome(hasContext = initialContext != null)
                 } else {
-                    // topic 用预填调研主题而非按钮 CTA 文案：后端拿到的才是有内容的调研诉求
                     MessageList(
                         messages = state.messages,
                         isSending = state.isSending,
                         onRetry = viewModel::retry,
-                        onResearchUpsell = { viewModel.sendRepoResearch(researchPrefill) },
                     )
                 }
             }

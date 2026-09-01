@@ -42,7 +42,6 @@ class ChatStoreTest {
         sourceUrl = "https://github.com/octo/demo",
         source = "github",
         externalId = "octo/demo",
-        readmeLength = 2000,
     )
 
     @Before
@@ -99,9 +98,6 @@ class ChatStoreTest {
         assertEquals("octo/demo", restored.title)
         assertEquals("github", restored.source)
         assertEquals("octo/demo", restored.externalId)
-        assertEquals(2000, restored.readmeLength)
-        // autoDetailSummary 是一次性触发标记，不持久化
-        assertFalse(restored.autoDetailSummary)
     }
 
     // 消息落库
@@ -125,17 +121,32 @@ class ChatStoreTest {
 
     @Test
     fun `loadMessages 完整还原 model 层字段（kind、model 与图片）`() = runTest {
-        val id = store.createThread(repoContext, firstMessageText = "解读")
-        store.appendUserMessage(id, "解读", kind = MessageKind.DETAIL_SUMMARY)
-        store.appendAssistantMessage(id, "解读内容", MessageKind.DETAIL_SUMMARY, model = "gpt-5.5")
+        val id = store.createThread(repoContext, firstMessageText = "研究")
+        store.appendUserMessage(id, "研究", kind = MessageKind.DEEP_RESEARCH)
+        store.appendAssistantMessage(id, "回答内容", MessageKind.CHAT, model = "gpt-5.5")
 
         val loaded = store.loadMessages(id)
         assertEquals(2, loaded.size)
-        assertEquals(MessageKind.DETAIL_SUMMARY, loaded[0].kind)
+        assertEquals(MessageKind.DEEP_RESEARCH, loaded[0].kind)
         assertEquals(Role.ASSISTANT, loaded[1].role)
-        assertEquals("解读内容", loaded[1].content)
+        assertEquals("回答内容", loaded[1].content)
         assertEquals("gpt-5.5", loaded[1].model)
         assertTrue(loaded[1].id > loaded[0].id)
+    }
+
+    @Test
+    fun `存量行的已退役 kind（DETAIL_SUMMARY）回落 CHAT`() = runTest {
+        val id = store.createThread(null, firstMessageText = "老会话")
+        db.messageDao().insert(
+            whl.trending.chat.db.MessageEntity(
+                threadId = id, role = "assistant", content = "旧解读全文",
+                imagesJson = null, kind = "DETAIL_SUMMARY", model = null,
+                segmentsJson = null, createdAt = now,
+            ),
+        )
+        val loaded = store.loadMessages(id).last()
+        assertEquals(MessageKind.CHAT, loaded.kind)
+        assertEquals("旧解读全文", loaded.content)
     }
 
     @Test

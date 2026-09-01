@@ -13,10 +13,6 @@
     <string name="chat_error_content_too_long">消息内容过长，已超出长度上限。</string>
     <string name="chat_error_images_too_large">图片过大，请减少图片数量或重新拍摄。</string>
     <string name="chat_error_quota_global">服务今日繁忙，请明天再来。</string>
-    <string name="chat_action_what_is_this">介绍一下这个项目</string>
-    <string name="chat_action_what_is_this_prompt">介绍一下这个项目，简要说明它的用途和核心功能。</string>
-    <string name="chat_action_what_can_you_do">你可以做什么</string>
-    <string name="chat_action_what_can_you_do_prompt">你可以做什么？请简要介绍你的能力和适用场景。</string>
     <string name="chat_retry">重试</string>
     <string name="chat_share">分享</string>
     <string name="chat_copy">复制</string>
@@ -47,10 +43,8 @@
     <string name="chat_user_image">图片</string>
     <string name="chat_image_viewer_close">关闭</string>
     <string name="chat_error_images_require_login">发送图片需要先登录。</string>
-    <string name="chat_action_detail_summary">一键详细解读</string>
     <string name="chat_detail_login_message">生成详细解读需要登录。</string>
     <string name="chat_detail_login_unlocked">已登录，点击重试继续生成。</string>
-    <string name="chat_error_readme_too_short">这个项目的 README 太短，暂不支持详细解读。</string>
     <!-- 会话抽屉 -->
     <string name="chat_history">会话</string>
     <string name="chat_new_thread">新会话</string>
@@ -66,6 +60,4 @@
     <string name="chat_searching">正在搜索网络…</string>
     <string name="chat_deep_research">深入研究</string>
     <string name="chat_researching">深入研究中，约需几分钟…</string>
-    <string name="chat_action_research_upsell">深度调研此项目</string>
-    <string name="chat_research_repo_prefill">全面调研这个项目：技术定位与亮点、同类方案对比、社区口碑与采用情况</string>
 </resources>

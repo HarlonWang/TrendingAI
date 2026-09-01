@@ -13,8 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.TravelExplore
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +36,6 @@ import coil3.compose.AsyncImage
 import okio.Path.Companion.toPath
 import whl.trending.chat.core.logWarn
 import trendingai.chat.generated.resources.Res
-import trendingai.chat.generated.resources.chat_action_research_upsell
 import trendingai.chat.generated.resources.chat_error_auth_invalid
 import trendingai.chat.generated.resources.chat_error_bad_request
 import trendingai.chat.generated.resources.chat_error_content_too_long
@@ -47,7 +44,6 @@ import trendingai.chat.generated.resources.chat_error_images_too_large
 import trendingai.chat.generated.resources.chat_error_message
 import trendingai.chat.generated.resources.chat_error_network
 import trendingai.chat.generated.resources.chat_error_quota_global
-import trendingai.chat.generated.resources.chat_error_readme_too_short
 import trendingai.chat.generated.resources.chat_error_region_blocked
 import trendingai.chat.generated.resources.chat_error_server
 import trendingai.chat.generated.resources.chat_error_timeout
@@ -78,20 +74,16 @@ import whl.trending.chat.model.Role
  * - 用户：右侧气泡（primaryContainer）
  * - 助手：左侧全宽 Markdown 渲染（无气泡，贴近 Claude/ChatGPT 风格）
  * 均支持长按选中复制；助手出错时展示错误与重试按钮。
- *
- * @param onResearchUpsell 非 null 时在消息尾部挂「深度调研此项目」升级入口
- *   （仅解读消息会收到，可见性由 [whl.trending.chat.ResearchUpsellPolicy] 决定）
  */
 @Composable
 fun MessageItem(
     message: ChatMessage,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
-    onResearchUpsell: (() -> Unit)? = null,
 ) {
     when (message.role) {
         Role.USER -> UserMessage(message, modifier)
-        Role.ASSISTANT -> AssistantMessage(message, onRetry, modifier, onResearchUpsell)
+        Role.ASSISTANT -> AssistantMessage(message, onRetry, modifier)
     }
 }
 
@@ -171,7 +163,6 @@ private fun AssistantMessage(
     message: ChatMessage,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
-    onResearchUpsell: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         val error = message.error
@@ -243,20 +234,6 @@ private fun AssistantMessage(
                     )
                 }
             }
-            // 解读 → research 的升级漏斗：解读卡尾部一键发起对该项目的深度调研
-            if (onResearchUpsell != null) {
-                AssistChip(
-                    onClick = onResearchUpsell,
-                    label = { Text(stringResource(Res.string.chat_action_research_upsell)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.TravelExplore,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                )
-            }
         } else if (error.code == ChatError.CODE_QUOTA_DEVICE || error.code == ChatError.CODE_LOGIN_REQUIRED) {
             // 个人配额触顶 / 解读登录闸走专属卡片（登录 CTA / 纯提示），全局熔断仍走普通错误文案
             QuotaLimitCard(error = error, onRetry = onRetry)
@@ -279,7 +256,6 @@ private fun AssistantMessage(
 
 /** 选具体文案：优先服务端 [ChatError.code]，未知则回落到 [ChatError.category]。 */
 private fun errorMessageRes(error: ChatError): StringResource = when (error.code) {
-    "readme_too_short" -> Res.string.chat_error_readme_too_short
     "auth_invalid" -> Res.string.chat_error_auth_invalid
     "images_require_login" -> Res.string.chat_error_images_require_login
     "content_too_long" -> Res.string.chat_error_content_too_long

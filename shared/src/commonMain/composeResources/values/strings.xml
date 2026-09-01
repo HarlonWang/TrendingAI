@@ -124,7 +124,6 @@
     <string name="subscribe_error">Network error, please try again</string>
     <string name="view_on_github">View on GitHub</string>
     <string name="share_to_ai">Share</string>
-    <string name="readme_fab_detail_summary">In-depth read</string>
     <string name="share_ai_text_full">Please help me read and summarize this tech update:\n\nTitle: %1$s\n\nSummary: %2$s\n\nSource: %3$s</string>
     <string name="share_ai_text_brief">Please help me read and summarize this tech update:\n\nTitle: %1$s\n\nSource: %2$s</string>
     <string name="readme_no_content">No README found for this repository.</string>
@@ -132,6 +131,8 @@
     <string name="picks_title">Picks</string>
     <string name="home_title">Home</string>
     <string name="chat_title">AI Chat</string>
+    <string name="chat_suggest_what_can_you_do">What can you do</string>
+    <string name="chat_suggest_what_can_you_do_prompt">What can you do? Briefly introduce your capabilities and typical use cases.</string>
     <string name="me_title">Me</string>
     <string name="hackernews_title">Hacker News</string>
     <string name="producthunt_title">Product Hunt</string>

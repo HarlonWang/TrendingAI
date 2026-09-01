@@ -13,21 +13,17 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import whl.trending.chat.ChatContext
 import whl.trending.chat.host.ChatAiKind
 import whl.trending.chat.host.ChatAiOutcome
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
-import whl.trending.chat.engine.DetailSummaryResult
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.MessageKind
-import whl.trending.chat.model.Role
 
-/** ChatViewModel 流式渲染与 detail 管线路由。 */
+/** ChatViewModel 流式渲染、失败重试与埋点配对。 */
 class ChatViewModelStreamingTest {
 
     private val dispatcher = StandardTestDispatcher()
@@ -43,18 +39,14 @@ class ChatViewModelStreamingTest {
         sourceUrl = "https://github.com/octo/demo",
         source = "github",
         externalId = "octo/demo",
-        readmeLength = 5000,
     )
 
     /** 可编程假引擎：记录调用、按脚本流式吐块或抛错 */
     private class ScriptedEngine(
         var chatChunks: List<String> = listOf("你", "好"),
-        var detailChunks: List<String> = listOf("解", "读"),
-        var detailCached: Boolean = false,
         var failWith: ChatError? = null,
     ) : ChatEngine {
         var chatCalls = 0
-        var detailCalls = 0
 
         override suspend fun send(
             history: List<ChatMessage>,
@@ -67,16 +59,6 @@ class ChatViewModelStreamingTest {
             failWith?.let { throw ChatException(it) }
             chatChunks.forEach(onDelta)
             return chatChunks.joinToString("")
-        }
-
-        override suspend fun sendDetailSummary(
-            context: ChatContext,
-            onDelta: (String) -> Unit,
-        ): DetailSummaryResult {
-            detailCalls++
-            failWith?.let { throw ChatException(it) }
-            detailChunks.forEach(onDelta)
-            return DetailSummaryResult(detailChunks.joinToString(""), detailCached)
         }
     }
 
@@ -96,91 +78,74 @@ class ChatViewModelStreamingTest {
     }
 
     @Test
-    fun `解读发送：插入 chip 文案 user 消息 + DETAIL_SUMMARY assistant 消息`() = runTest(dispatcher) {
-        val engine = ScriptedEngine()
-        val viewModel = vm(engine)
-        viewModel.sendDetailSummary("一键详细解读")
-        advanceUntilIdle()
-        val messages = viewModel.uiState.value.messages
-        assertEquals(2, messages.size)
-        assertEquals(Role.USER, messages[0].role)
-        assertEquals("一键详细解读", messages[0].content)
-        assertEquals(MessageKind.DETAIL_SUMMARY, messages[1].kind)
-        assertEquals("解读", messages[1].content)
-        assertEquals(1, engine.detailCalls)
-        assertEquals(0, engine.chatCalls)
-    }
-
-    @Test
-    fun `失败时已渲染部分丢弃：content 清空、挂错误、kind 保留`() = runTest(dispatcher) {
+    fun `失败时已渲染部分丢弃：content 清空、挂错误条`() = runTest(dispatcher) {
         val engine = ScriptedEngine(failWith = ChatError(ChatErrorCategory.SERVER, code = "stream_interrupted"))
         val viewModel = vm(engine)
-        viewModel.sendDetailSummary("一键详细解读")
+        viewModel.sendText("hi")
         advanceUntilIdle()
         val failed = viewModel.uiState.value.messages.last()
         assertEquals("", failed.content)
         assertNotNull(failed.error)
-        assertEquals(MessageKind.DETAIL_SUMMARY, failed.kind)
     }
 
     @Test
-    fun `retry 按 kind 路由：解读失败重试走 detail 管线而非 chat`() = runTest(dispatcher) {
+    fun `重试：移除错误条并重打请求，成功后全文到位`() = runTest(dispatcher) {
         val engine = ScriptedEngine(failWith = ChatError(ChatErrorCategory.SERVER, code = "stream_interrupted"))
         val viewModel = vm(engine)
-        viewModel.sendDetailSummary("一键详细解读")
+        viewModel.sendText("hi")
         advanceUntilIdle()
         engine.failWith = null // 网络恢复
         viewModel.retry(viewModel.uiState.value.messages.last())
         advanceUntilIdle()
-        assertEquals(2, engine.detailCalls)
-        assertEquals(0, engine.chatCalls)
-        assertEquals("解读", viewModel.uiState.value.messages.last().content)
+        assertEquals(2, engine.chatCalls)
+        assertEquals("你好", viewModel.uiState.value.messages.last().content)
+        // 错误条已被成功回复替换，不残留
+        assertTrue(viewModel.uiState.value.messages.none { it.error != null })
     }
 
     @Test
-    fun `login_required 不可重试类别但享受放行例外（登录后 retry 续上）`() = runTest(dispatcher) {
+    fun `quota_device 不可重试类别但享受放行例外（登录后 retry 续上）`() = runTest(dispatcher) {
         val engine = ScriptedEngine(
             failWith = ChatError(
-                ChatErrorCategory.BAD_REQUEST, // 403 归类不可重试
-                code = ChatError.CODE_LOGIN_REQUIRED,
+                ChatErrorCategory.QUOTA, // 429 归类不可重试
+                code = ChatError.CODE_QUOTA_DEVICE,
                 tier = ChatError.TIER_ANONYMOUS,
             ),
         )
         val viewModel = vm(engine)
-        viewModel.sendDetailSummary("一键详细解读")
+        viewModel.sendText("hi")
         advanceUntilIdle()
-        engine.failWith = null // 模拟登录完成
+        engine.failWith = null // 模拟登录/次日额度恢复
         viewModel.retry(viewModel.uiState.value.messages.last())
         advanceUntilIdle()
-        assertEquals("解读", viewModel.uiState.value.messages.last().content)
-        assertEquals(2, engine.detailCalls)
+        assertEquals("你好", viewModel.uiState.value.messages.last().content)
+        assertEquals(2, engine.chatCalls)
     }
 
     @Test
-    fun `埋点：requested 与 completed 成对，命中缓存与登录闸各自的 outcome`() = runTest(dispatcher) {
+    fun `埋点：requested 与 completed 成对，失败带 reason`() = runTest(dispatcher) {
         val events = mutableListOf<ChatAiEvent>()
-        val engine = ScriptedEngine(detailCached = true)
-        val viewModel = vm(engine) { events.add(it) }
-        viewModel.sendDetailSummary("一键详细解读")
+        val viewModel = vm(ScriptedEngine()) { events.add(it) }
+        viewModel.sendText("hi")
         advanceUntilIdle()
         assertEquals(
-            listOf(ChatAiKind.DETAIL_SUMMARY),
+            listOf(ChatAiKind.CHAT),
             events.filterIsInstance<ChatAiEvent.Requested>().map { it.kind },
         )
         assertEquals(
-            listOf(ChatAiOutcome.CACHE_HIT),
+            listOf(ChatAiOutcome.OK),
             events.filterIsInstance<ChatAiEvent.Completed>().map { it.outcome },
         )
 
         val gated = ScriptedEngine(
-            failWith = ChatError(ChatErrorCategory.BAD_REQUEST, code = ChatError.CODE_LOGIN_REQUIRED),
+            failWith = ChatError(ChatErrorCategory.QUOTA, code = ChatError.CODE_QUOTA_DEVICE),
         )
         val events2 = mutableListOf<ChatAiEvent>()
         val vm2 = vm(gated) { events2.add(it) }
-        vm2.sendDetailSummary("一键详细解读")
+        vm2.sendText("hi")
         advanceUntilIdle()
         assertEquals(
-            listOf(ChatAiOutcome.ERROR to ChatError.CODE_LOGIN_REQUIRED),
+            listOf(ChatAiOutcome.ERROR to ChatError.CODE_QUOTA_DEVICE),
             events2.filterIsInstance<ChatAiEvent.Completed>().map { it.outcome to it.reason },
         )
     }

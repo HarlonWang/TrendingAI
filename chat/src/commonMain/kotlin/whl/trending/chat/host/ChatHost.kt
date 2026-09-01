@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.Flow
 import whl.trending.chat.model.ChatModelsResponse
 
 /** AI 请求种类，宿主负责映射到自己的埋点词汇。 */
-enum class ChatAiKind { CHAT, DETAIL_SUMMARY, RESEARCH }
+enum class ChatAiKind { CHAT, RESEARCH }
 
 /** AI 请求终态，与 [ChatAiKind] 配套。 */
-enum class ChatAiOutcome { OK, ERROR, INTERRUPTED, CACHE_HIT }
+enum class ChatAiOutcome { OK, ERROR, INTERRUPTED }
 
 /** SDK 上报给宿主的埋点事件；Requested 与 Completed 一次请求恰好各一条。 */
 sealed interface ChatAiEvent {

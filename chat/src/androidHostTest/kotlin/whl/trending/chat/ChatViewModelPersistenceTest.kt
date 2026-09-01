@@ -19,7 +19,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
-import whl.trending.chat.engine.DetailSummaryResult
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.host.ChatAiKind
@@ -51,7 +50,7 @@ class ChatViewModelPersistenceTest {
     private lateinit var store: RoomChatStore
 
     private val repoContext = ChatContext(
-        title = "octo/demo", source = "github", externalId = "octo/demo", readmeLength = 5000,
+        title = "octo/demo", source = "github", externalId = "octo/demo",
     )
 
     /** 可挂起的假引擎：release 前流不结束，模拟「切换会话时流仍在进行」 */
@@ -71,11 +70,6 @@ class ChatViewModelPersistenceTest {
             onDelta(reply)
             gate?.await()
             return reply
-        }
-
-        override suspend fun sendDetailSummary(context: ChatContext, onDelta: (String) -> Unit): DetailSummaryResult {
-            onDelta(reply)
-            return DetailSummaryResult(reply, cached = false)
         }
     }
 
@@ -286,8 +280,6 @@ class ChatViewModelPersistenceTest {
             onDelta(reply)
             return reply
         }
-        override suspend fun sendDetailSummary(context: ChatContext, onDelta: (String) -> Unit) =
-            DetailSummaryResult(reply, cached = false)
     }
 
     @Test
@@ -350,8 +342,6 @@ class ChatViewModelPersistenceTest {
             lastHistory = history
             return "n/a"
         }
-        override suspend fun sendDetailSummary(context: ChatContext, onDelta: (String) -> Unit) =
-            DetailSummaryResult("n/a", cached = false)
         override suspend fun createResearch(topic: String): String {
             failCreate?.let { throw ChatException(it) }
             created++
