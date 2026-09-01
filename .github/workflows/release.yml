@@ -319,9 +319,17 @@ jobs:
 
           # 收集待上传的文件（github 渠道 APK + play 渠道 AAB + version_code.txt）
           # assets 只放一个 APK，Obtainium 单 APK 时自动选中、不弹多选对话框
-          FILES=(androidApp/build/outputs/apk/github/release/*.apk version_code.txt)
+          # 附件名统一为 产品名-版本-平台。只在上传前拷贝改名，不改 gradle 的 archivesName——
+          # 构建输出路径被 scripts/release-smoke.sh 与 fastlane 引用，展示层的命名不该穿透到构建系统
+          APK_ASSET="TrendingAI-${VERSION_NAME}-android.apk"
+          cp "$APK_FOR_VERSION" "$APK_ASSET"
+          FILES=("$APK_ASSET" version_code.txt)
           for aab in androidApp/build/outputs/bundle/playRelease/*.aab; do
-            [ -f "$aab" ] && FILES+=("$aab")
+            if [ -f "$aab" ]; then
+              AAB_ASSET="TrendingAI-${VERSION_NAME}-play.aab"
+              cp "$aab" "$AAB_ASSET"
+              FILES+=("$AAB_ASSET")
+            fi
           done
           if [ -s diff-apk.txt ]; then
             FILES+=("diff-apk.txt")
@@ -517,7 +525,7 @@ jobs:
             build
 
           APP_DIR="$RUNNER_TEMP/ios-build/Build/Products/Release-iphoneos"
-          IPA_NAME="TrendingAI-${VERSION_NAME}.ipa"
+          IPA_NAME="TrendingAI-${VERSION_NAME}-ios.ipa"
           APP_PATH=$(find "$APP_DIR" -maxdepth 1 -name '*.app' | head -n 1)
           if [ -z "$APP_PATH" ]; then
             echo "❌ 构建产物目录中未找到 .app"
