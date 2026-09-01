@@ -13,7 +13,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import whl.trending.chat.host.ChatAiKind
 import whl.trending.chat.host.ChatAiOutcome
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.engine.ChatEngine
@@ -121,10 +120,7 @@ class ChatViewModelStreamingTest {
         val viewModel = vm(ScriptedEngine()) { events.add(it) }
         viewModel.sendText("hi")
         advanceUntilIdle()
-        assertEquals(
-            listOf(ChatAiKind.CHAT),
-            events.filterIsInstance<ChatAiEvent.Requested>().map { it.kind },
-        )
+        assertEquals(1, events.filterIsInstance<ChatAiEvent.Requested>().size)
         assertEquals(
             listOf(ChatAiOutcome.OK),
             events.filterIsInstance<ChatAiEvent.Completed>().map { it.outcome },
@@ -137,10 +133,7 @@ class ChatViewModelStreamingTest {
         val vm2 = vm(gated) { events2.add(it) }
         vm2.sendText("hi")
         advanceUntilIdle()
-        assertEquals(
-            listOf(ChatAiKind.CHAT),
-            events2.filterIsInstance<ChatAiEvent.Requested>().map { it.kind },
-        )
+        assertEquals(1, events2.filterIsInstance<ChatAiEvent.Requested>().size)
         assertEquals(
             listOf(ChatAiOutcome.ERROR to ChatError.CODE_QUOTA_DEVICE),
             events2.filterIsInstance<ChatAiEvent.Completed>().map { it.outcome to it.reason },

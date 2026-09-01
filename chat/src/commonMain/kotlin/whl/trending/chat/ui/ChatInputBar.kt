@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -65,7 +64,6 @@ import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_attach
 import trendingai.chat.generated.resources.chat_attach_album
 import trendingai.chat.generated.resources.chat_attach_camera
-import trendingai.chat.generated.resources.chat_deep_research
 import trendingai.chat.generated.resources.chat_image_login_confirm
 import trendingai.chat.generated.resources.chat_image_login_dismiss
 import trendingai.chat.generated.resources.chat_image_login_message
@@ -103,9 +101,7 @@ fun ChatInputBar(
     onRemoveImage: (String) -> Unit,
     modifier: Modifier = Modifier,
     searchActive: Boolean = false,
-    researchActive: Boolean = false,
     onToggleSearch: () -> Unit = {},
-    onToggleResearch: () -> Unit = {},
     autoFocus: Boolean = false,
 ) {
     // 进入页面自动聚焦输入框，键盘随焦点自动弹出（官方做法：focusRequester + 在组合外 requestFocus）
@@ -211,17 +207,6 @@ fun ChatInputBar(
                                 onClick = {
                                     menuExpanded = false
                                     onToggleSearch()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.chat_deep_research)) },
-                                leadingIcon = { Icon(Icons.Outlined.Science, contentDescription = null) },
-                                trailingIcon = {
-                                    if (researchActive) Icon(Icons.Filled.Check, contentDescription = null)
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onToggleResearch()
                                 },
                             )
                             if (chatHost.canSignIn && picker.canCapture) DropdownMenuItem(

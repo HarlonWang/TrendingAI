@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import whl.trending.chat.ThreadSummary
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
 import whl.trending.chat.model.SourceRef
 
@@ -56,45 +55,21 @@ class InMemoryChatStore : ChatStore {
         threadId: Long,
         text: String,
         images: List<String>,
-        kind: MessageKind,
-    ): ChatMessage = append(threadId, ChatMessage(0, Role.USER, text, images = images, kind = kind))
+    ): ChatMessage = append(threadId, ChatMessage(0, Role.USER, text, images = images))
 
     override suspend fun appendAssistantMessage(
         threadId: Long,
         content: String,
-        kind: MessageKind,
         model: String?,
         sources: List<SourceRef>,
-    ): ChatMessage = append(threadId, ChatMessage(0, Role.ASSISTANT, content, kind = kind, sources = sources, model = model))
+    ): ChatMessage = append(threadId, ChatMessage(0, Role.ASSISTANT, content, sources = sources, model = model))
 
-    override suspend fun appendErrorMessage(
-        threadId: Long,
-        kind: MessageKind,
-        error: ChatError,
-        researchRunId: String?,
-    ): ChatMessage = append(threadId, ChatMessage(0, Role.ASSISTANT, "", error = error, kind = kind, researchRunId = researchRunId))
-
-    override suspend fun appendResearchPlaceholder(threadId: Long, runId: String): ChatMessage =
-        append(threadId, ChatMessage(0, Role.ASSISTANT, "", kind = MessageKind.DEEP_RESEARCH, researchRunId = runId))
-
-    override suspend fun completeResearch(threadId: Long, messageId: Long, report: String, runId: String, model: String?) =
-        update(threadId, messageId) { it.copy(content = report, error = null, researchRunId = runId, model = model) }
-
-    override suspend fun markResearchError(threadId: Long, messageId: Long, error: ChatError, runId: String?) =
-        update(threadId, messageId) { it.copy(content = "", error = error, researchRunId = runId) }
-
-    override suspend fun resetResearchPlaceholder(threadId: Long, messageId: Long, runId: String) =
-        update(threadId, messageId) { it.copy(content = "", error = null, researchRunId = runId) }
+    override suspend fun appendErrorMessage(threadId: Long, error: ChatError): ChatMessage =
+        append(threadId, ChatMessage(0, Role.ASSISTANT, "", error = error))
 
     override suspend fun deleteMessage(messageId: Long) {
         messagesByThread.values.forEach { list -> list.removeAll { it.id == messageId } }
     }
-
-    override suspend fun pendingResearch(): List<PendingResearch> =
-        messagesByThread.flatMap { (threadId, list) ->
-            list.filter { it.kind == MessageKind.DEEP_RESEARCH && it.content.isBlank() && it.error == null }
-                .mapNotNull { m -> m.researchRunId?.let { PendingResearch(threadId, m.id, it) } }
-        }
 
     private fun append(threadId: Long, message: ChatMessage): ChatMessage {
         val stored = message.copy(id = ++nextMessageId, searching = false)
@@ -102,14 +77,6 @@ class InMemoryChatStore : ChatStore {
         threads[threadId]?.updatedAt = ++tick
         publish()
         return stored
-    }
-
-    private fun update(threadId: Long, messageId: Long, transform: (ChatMessage) -> ChatMessage) {
-        val list = messagesByThread[threadId] ?: return
-        val index = list.indexOfFirst { it.id == messageId }
-        if (index >= 0) list[index] = transform(list[index])
-        threads[threadId]?.updatedAt = ++tick
-        publish()
     }
 
     private fun publish() {

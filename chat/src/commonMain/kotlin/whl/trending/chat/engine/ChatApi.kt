@@ -7,13 +7,11 @@ import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.preparePost
-import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -87,18 +85,6 @@ class ChatApi(
     private data class ChatResponse(val content: String)
 
     @Serializable
-    private data class ResearchCreateRequest(val topic: String, val lang: String)
-
-    @Serializable
-    private data class ResearchRunResponse(
-        val id: String,
-        val status: String,
-        val report: String? = null,
-        val error: String? = null,
-        val model: String? = null,
-    )
-
-    @Serializable
     private data class ErrorResponse(
         val error: String? = null,
         val code: String? = null,
@@ -159,49 +145,6 @@ class ChatApi(
                     search = search,
                 ),
             )
-        }
-    }
-
-    override suspend fun createResearch(topic: String): String {
-        val lang = resolveLang()
-        return researchJson(HttpMethod.Post, "research") {
-            contentType(ContentType.Application.Json)
-            setBody(ResearchCreateRequest(topic = topic, lang = lang))
-        }.id
-    }
-
-    override suspend fun pollResearch(id: String): whl.trending.chat.model.ResearchRun {
-        val r = researchJson(HttpMethod.Get, "research/$id") {}
-        return whl.trending.chat.model.ResearchRun(r.id, r.status, r.report, r.error, r.model)
-    }
-
-    /** research 的非流式 JSON 路径：错误分类与流式路径同一套（含 login_required/quota 语义） */
-    private suspend fun researchJson(
-        method: HttpMethod,
-        path: String,
-        configure: HttpRequestBuilder.() -> Unit,
-    ): ResearchRunResponse {
-        try {
-            val sentAsLoggedIn = chatHost.isLoggedInNow()
-            val response = client.request("$baseUrl/$path") {
-                this.method = method
-                header("X-Install-Id", chatHost.installId())
-                timeout { requestTimeoutMillis = 30_000 }
-                configure()
-            }
-            if (response.status != HttpStatusCode.OK) {
-                throw toChatException(response, sentAsLoggedIn)
-            }
-            return json.decodeFromString<ResearchRunResponse>(response.bodyAsText())
-        } catch (e: ChatException) {
-            logFailure(path, e.error)
-            throw e
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            val error = ChatErrors.forThrowable(e)
-            logFailure(path, error)
-            throw ChatException(error)
         }
     }
 

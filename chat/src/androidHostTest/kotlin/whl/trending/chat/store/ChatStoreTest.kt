@@ -12,7 +12,6 @@ import org.robolectric.annotation.Config
 import whl.trending.chat.db.ChatDatabase
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
-import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
 import java.io.File
 import kotlin.test.assertEquals
@@ -22,7 +21,7 @@ import kotlin.test.assertTrue
 
 /**
  * Room 持久化层行为：建线与标题策略 / context 往返 / 图片迁移 filesDir /
- * 错误行落库往返 / research 占位与 pendingResearch 哨兵 / 删除先删文件。
+ * 错误行落库往返 / 删除先删文件。
  * sdk 钉 35：同 ChatDatabaseTest（Robolectric 4.16.x + 测试 JVM 17 的上限）
  */
 @RunWith(RobolectricTestRunner::class)
@@ -98,14 +97,13 @@ class ChatStoreTest {
     }
 
     @Test
-    fun `loadMessages 完整还原 model 层字段（kind、model 与图片）`() = runTest {
-        val id = store.createThread(firstMessageText = "研究")
-        store.appendUserMessage(id, "研究", kind = MessageKind.DEEP_RESEARCH)
-        store.appendAssistantMessage(id, "回答内容", MessageKind.CHAT, model = "gpt-5.5")
+    fun `loadMessages 完整还原 model 层字段`() = runTest {
+        val id = store.createThread(firstMessageText = "提问")
+        store.appendUserMessage(id, "提问")
+        store.appendAssistantMessage(id, "回答内容", model = "gpt-5.5")
 
         val loaded = store.loadMessages(id)
         assertEquals(2, loaded.size)
-        assertEquals(MessageKind.DEEP_RESEARCH, loaded[0].kind)
         assertEquals(Role.ASSISTANT, loaded[1].role)
         assertEquals("回答内容", loaded[1].content)
         assertEquals("gpt-5.5", loaded[1].model)
@@ -113,18 +111,16 @@ class ChatStoreTest {
     }
 
     @Test
-    fun `存量行的已退役 kind（DETAIL_SUMMARY）回落 CHAT`() = runTest {
+    fun `存量残留的空 assistant 行（已下线的 research 占位）不外发`() = runTest {
         val id = store.createThread(firstMessageText = "老会话")
+        store.appendUserMessage(id, "老提问")
         db.messageDao().insert(
             whl.trending.chat.db.MessageEntity(
-                threadId = id, role = "assistant", content = "旧解读全文",
-                imagesJson = null, kind = "DETAIL_SUMMARY", model = null,
-                segmentsJson = null, createdAt = now,
+                threadId = id, role = "assistant", content = "",
+                imagesJson = null, model = null, segmentsJson = null, createdAt = now,
             ),
         )
-        val loaded = store.loadMessages(id).last()
-        assertEquals(MessageKind.CHAT, loaded.kind)
-        assertEquals("旧解读全文", loaded.content)
+        assertEquals(listOf("老提问"), store.loadMessages(id).map { it.content })
     }
 
     @Test
@@ -139,64 +135,11 @@ class ChatStoreTest {
             tier = ChatError.TIER_ANONYMOUS,
             authDegraded = true,
         )
-        store.appendErrorMessage(id, MessageKind.CHAT, error)
+        store.appendErrorMessage(id, error)
 
         val loaded = store.loadMessages(id).last()
         assertEquals("", loaded.content)
         assertEquals(error, loaded.error)
-        assertEquals(MessageKind.CHAT, loaded.kind)
-    }
-
-    // research 占位与恢复哨兵
-
-    @Test
-    fun `research 占位进 pendingResearch，完成后退出`() = runTest {
-        val id = store.createThread(firstMessageText = "研究")
-        val placeholder = store.appendResearchPlaceholder(id, runId = "run-1")
-
-        assertEquals(
-            listOf(PendingResearch(id, placeholder.id, "run-1")),
-            store.pendingResearch(),
-        )
-
-        store.completeResearch(id, placeholder.id, "# 报告", "run-1", model = "gpt-5.5")
-        assertTrue(store.pendingResearch().isEmpty())
-        val loaded = store.loadMessages(id).last()
-        assertEquals("# 报告", loaded.content)
-        assertEquals("run-1", loaded.researchRunId)
-        assertEquals("gpt-5.5", loaded.model)
-    }
-
-    @Test
-    fun `markResearchError 后不再 pending；保留 runId 时 reset 可恢复占位形态`() = runTest {
-        val id = store.createThread(firstMessageText = "研究")
-        val placeholder = store.appendResearchPlaceholder(id, runId = "run-1")
-
-        // runId 保留（轮询永久错误）：错误行不触发恢复轮询，但重试可续
-        store.markResearchError(id, placeholder.id, ChatError(ChatErrorCategory.TIMEOUT), runId = "run-1")
-        assertTrue(store.pendingResearch().isEmpty())
-        val errored = store.loadMessages(id).last()
-        assertEquals(ChatErrorCategory.TIMEOUT, errored.error?.category)
-        assertEquals("run-1", errored.researchRunId)
-
-        now = 2000L
-        store.resetResearchPlaceholder(id, placeholder.id, "run-1")
-        assertEquals(listOf(PendingResearch(id, placeholder.id, "run-1")), store.pendingResearch())
-        assertNull(store.loadMessages(id).last().error)
-        // 会话冒泡：reset 与其他写路径一样 touch 线程
-        assertEquals(2000L, db.threadDao().getById(id)!!.updatedAt)
-    }
-
-    @Test
-    fun `markResearchError 判死（runId 置空）：错误行既不 pending 也无 runId`() = runTest {
-        val id = store.createThread(firstMessageText = "研究")
-        val placeholder = store.appendResearchPlaceholder(id, runId = "run-1")
-        store.markResearchError(id, placeholder.id, ChatError(ChatErrorCategory.SERVER), runId = null)
-
-        assertTrue(store.pendingResearch().isEmpty())
-        val loaded = store.loadMessages(id).last()
-        assertNull(loaded.researchRunId)
-        assertEquals(ChatErrorCategory.SERVER, loaded.error?.category)
     }
 
     // 删除
@@ -236,7 +179,7 @@ class ChatStoreTest {
     fun `deleteMessage 只删目标行`() = runTest {
         val id = store.createThread(firstMessageText = "hi")
         store.appendUserMessage(id, "hi")
-        val error = store.appendErrorMessage(id, MessageKind.CHAT, ChatError(ChatErrorCategory.NETWORK))
+        val error = store.appendErrorMessage(id, ChatError(ChatErrorCategory.NETWORK))
 
         store.deleteMessage(error.id)
 

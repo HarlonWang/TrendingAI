@@ -4,11 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import whl.trending.chat.ThreadSummary
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.SourceRef
-
-/** 跨进程恢复轮询的载体：库里「空内容 + runId + 无 error」的 research 占位行 */
-data class PendingResearch(val threadId: Long, val messageId: Long, val runId: String)
 
 /**
  * 会话持久化契约。消息 id 全局唯一且由 store 分配（Room 实现即行 id）——
@@ -17,8 +13,7 @@ data class PendingResearch(val threadId: Long, val messageId: Long, val runId: S
  * 落库策略（EchoFlow 经验的裁剪版，见 ai-chat/chat-改造评估方案-v2.md P1）：
  * - 懒建：进入 chat 不落库，首条消息发出时才建 thread；
  * - user 消息即发即落；assistant 成功终局落一次（流式过程零写库）；
- * - error 也落库（重启后错误条仍可见可重试，且 id 空间保持单一）；
- * - research 占位行提交成功即落（跨进程恢复轮询的载体）。
+ * - error 也落库（重启后错误条仍可见可重试，且 id 空间保持单一）。
  */
 interface ChatStore {
 
@@ -38,44 +33,20 @@ interface ChatStore {
         threadId: Long,
         text: String,
         images: List<String> = emptyList(),
-        kind: MessageKind = MessageKind.CHAT,
     ): ChatMessage
 
     suspend fun appendAssistantMessage(
         threadId: Long,
         content: String,
-        kind: MessageKind,
         model: String?,
         sources: List<SourceRef> = emptyList(),
     ): ChatMessage
 
-    /** 失败终局落一条错误行；research 提交失败时无 runId */
-    suspend fun appendErrorMessage(
-        threadId: Long,
-        kind: MessageKind,
-        error: ChatError,
-        researchRunId: String? = null,
-    ): ChatMessage
-
-    /** research 占位（空内容 + runId） */
-    suspend fun appendResearchPlaceholder(threadId: Long, runId: String): ChatMessage
-
-    /** research 终局：占位行升级为报告全文（保留 runId 供追溯；model 为生成模型留痕） */
-    suspend fun completeResearch(threadId: Long, messageId: Long, report: String, runId: String, model: String?)
-
-    /**
-     * research 失败写回占位行。[runId] 非空表示任务在服务端仍可续（重试恢复轮询、
-     * 不重复扣费）；null 表示终局死亡（服务端已退款），行不再触发恢复轮询。
-     */
-    suspend fun markResearchError(threadId: Long, messageId: Long, error: ChatError, runId: String?)
-
-    /** 重试续轮前清掉错误标记，行回到占位形态 */
-    suspend fun resetResearchPlaceholder(threadId: Long, messageId: Long, runId: String)
+    /** 失败终局落一条错误行 */
+    suspend fun appendErrorMessage(threadId: Long, error: ChatError): ChatMessage
 
     /** 重试重新提交前移除错误行 */
     suspend fun deleteMessage(messageId: Long)
-
-    suspend fun pendingResearch(): List<PendingResearch>
 
     companion object {
         const val MAX_TITLE_LENGTH = 20

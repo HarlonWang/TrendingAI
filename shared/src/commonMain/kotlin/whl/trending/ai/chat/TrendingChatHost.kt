@@ -18,7 +18,6 @@ import whl.trending.ai.data.remote.installTrendingAuth
 import whl.trending.ai.data.remote.trackAuthTokenCache
 import whl.trending.ai.ui.profile.ProBadge
 import whl.trending.chat.host.ChatAiEvent
-import whl.trending.chat.host.ChatAiKind
 import whl.trending.chat.host.ChatAiOutcome
 import whl.trending.chat.host.ChatHost
 import whl.trending.chat.host.chatHost
@@ -64,12 +63,12 @@ private object TrendingChatHost : ChatHost {
     override fun onAiEvent(event: ChatAiEvent) = track(
         when (event) {
             is ChatAiEvent.Requested -> AppEvent.AiRequested(
-                kind = event.kind.toAiKind(),
+                kind = AiKind.CHAT,
                 from = event.from,
                 imageCount = event.imageCount,
             )
             is ChatAiEvent.Completed -> AppEvent.AiCompleted(
-                kind = event.kind.toAiKind(),
+                kind = AiKind.CHAT,
                 outcome = when (event.outcome) {
                     ChatAiOutcome.OK -> AiOutcome.OK
                     ChatAiOutcome.ERROR -> AiOutcome.ERROR
@@ -81,11 +80,6 @@ private object TrendingChatHost : ChatHost {
             )
         },
     )
-
-    private fun ChatAiKind.toAiKind(): AiKind = when (this) {
-        ChatAiKind.CHAT -> AiKind.CHAT
-        ChatAiKind.RESEARCH -> AiKind.RESEARCH
-    }
 
     override val proBadge: (@androidx.compose.runtime.Composable () -> Unit) = { ProBadge() }
 }
