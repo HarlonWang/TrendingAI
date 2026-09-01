@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import whl.trending.chat.ResearchUpsellPolicy
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
 
@@ -27,13 +26,8 @@ fun MessageList(
     isSending: Boolean,
     onRetry: (ChatMessage) -> Unit,
     modifier: Modifier = Modifier,
-    onResearchUpsell: (() -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
-    // 「深度调研此项目」升级入口挂载点（发送中不挂，防连点重复扣费）
-    val upsellId = if (onResearchUpsell != null && !isSending) {
-        ResearchUpsellPolicy.upsellMessageId(messages)
-    } else null
 
     // 仅离散事件（发送/回复到达/typing 项增删）时滚回底部；流式增量期间 size 不变、不触发
     LaunchedEffect(messages.size, isSending) {
@@ -60,7 +54,6 @@ fun MessageList(
             MessageItem(
                 message = message,
                 onRetry = { onRetry(message) },
-                onResearchUpsell = onResearchUpsell.takeIf { message.id == upsellId },
             )
         }
     }

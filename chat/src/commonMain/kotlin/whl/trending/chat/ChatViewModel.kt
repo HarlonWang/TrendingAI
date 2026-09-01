@@ -174,25 +174,8 @@ class ChatViewModel(
         queueChat(text, images, from = "input")
     }
 
-    /** 发送一段指定文本（如快捷按钮的预设问题），不依赖输入框；发送中或空白则忽略。 */
+    /** 发送一段指定文本（如建议动作的预设问题），不依赖输入框；发送中或空白则忽略。 */
     fun sendText(text: String) = queueChat(text, emptyList(), from = "quick_reply")
-
-    /**
-     * 「一键详细解读」：插入一条 user 消息（chip 文案），走 detail 管线流式生成解读。
-     * 可见性由 [DetailSummaryPolicy] 保证（GitHub 条目 + README 达标 + 尚无成功解读）。
-     */
-    fun sendDetailSummary(promptText: String) {
-        if (_uiState.value.isSending || activeContext?.externalId == null) return
-        locked {
-            val context = activeContext
-            if (_uiState.value.isSending || context?.externalId == null) return@locked
-            track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "chat"))
-            _uiState.update { it.copy(isSending = true) }
-            val threadId = ensureThread(promptText)
-            appendVisible(store.appendUserMessage(threadId, promptText, kind = MessageKind.DETAIL_SUMMARY))
-            startStream(threadId, MessageKind.DETAIL_SUMMARY, context)
-        }
-    }
 
     private fun queueChat(text: String, images: List<String>, from: String) {
         if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
@@ -227,16 +210,12 @@ class ChatViewModel(
             val threadId = _currentThreadId.value ?: return@locked
             store.deleteMessage(message.id)
             removeVisible(message.id)
-            // 重试必然重打一次请求，两种 kind 都要补 ai_requested——不补则终局的
-            // ai_completed 落单，成对关系一破，「请求数」这个分母就再也不准
-            if (message.kind == MessageKind.CHAT) {
-                val resent = _uiState.value.messages.lastOrNull { it.role == Role.USER }
-                trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
-            } else {
-                track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "retry"))
-            }
+            // 重试必然重打一次请求，要补 ai_requested——不补则终局的 ai_completed 落单，
+            // 成对关系一破，「请求数」这个分母就再也不准
+            val resent = _uiState.value.messages.lastOrNull { it.role == Role.USER }
+            trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
             _uiState.update { it.copy(isSending = true) }
-            startStream(threadId, message.kind, activeContext)
+            startStream(threadId, MessageKind.CHAT, activeContext)
         }
     }
 
@@ -285,12 +264,6 @@ class ChatViewModel(
     }
 
     // Deep Research（P3）
-
-    /** 解读卡尾部「深度调研此项目」升级入口：按 research 管线直发，不依赖模式开关 */
-    fun sendRepoResearch(promptText: String) {
-        if (_uiState.value.isSending || activeContext == null) return
-        queueResearch(promptText, from = "detail_summary_upsell")
-    }
 
     private fun queueResearch(topic: String, from: String = "chat") = locked {
         if (_uiState.value.isSending) return@locked
@@ -342,35 +315,25 @@ class ChatViewModel(
             it.copy(messages = it.messages + ChatMessage(PLACEHOLDER_ID, Role.ASSISTANT, "", kind = kind))
         }
         val job = viewModelScope.launch {
-            var cacheHit = false
             val result = runCatching {
-                when (kind) {
-                    MessageKind.CHAT -> {
-                        // 空 assistant 行（错误条 / research 占位）不进 history：对模型无信息量，
-                        // 且上游可能拒空 content
-                        val history = _uiState.value.messages.filterNot {
-                            it.id == PLACEHOLDER_ID || (it.role == Role.ASSISTANT && it.content.isBlank())
-                        }
-                        engine.send(
-                            history,
-                            context,
-                            onDelta = { appendDelta(it) },
-                            search = _chatMode.value == ChatMode.WebSearch,
-                            onSearch = { applySearchEvent(it) },
-                        )
-                    }
-                    MessageKind.DETAIL_SUMMARY -> {
-                        val detail = engine.sendDetailSummary(requireNotNull(context)) { appendDelta(it) }
-                        cacheHit = detail.cached
-                        detail.content
-                    }
-                    MessageKind.DEEP_RESEARCH -> error("research 走 ResearchRunner，不进流式管线")
+                check(kind == MessageKind.CHAT) { "research 走 ResearchRunner，不进流式管线" }
+                // 空 assistant 行（错误条 / research 占位）不进 history：对模型无信息量，
+                // 且上游可能拒空 content
+                val history = _uiState.value.messages.filterNot {
+                    it.id == PLACEHOLDER_ID || (it.role == Role.ASSISTANT && it.content.isBlank())
                 }
+                engine.send(
+                    history,
+                    context,
+                    onDelta = { appendDelta(it) },
+                    search = _chatMode.value == ChatMode.WebSearch,
+                    onSearch = { applySearchEvent(it) },
+                )
             }
             // 取消不是失败：runCatching 连 CancellationException 一起吞，必须重抛——
             // 终局收口交给取消方（cancelInFlight），这里再进锁会与它互等
             result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
-            stateLock.withLock { finishStream(threadId, kind, result, startedAt, cacheHit) }
+            stateLock.withLock { finishStream(threadId, kind, result, startedAt) }
         }
         inFlight = InFlightSend(threadId, kind, startedAt, job)
     }
@@ -380,7 +343,6 @@ class ChatViewModel(
         kind: MessageKind,
         result: Result<String>,
         startedAt: Long,
-        cacheHit: Boolean,
     ) {
         inFlight = null
         result.fold(
@@ -399,7 +361,7 @@ class ChatViewModel(
                 track(
                     ChatAiEvent.Completed(
                         kind.toAiKind(),
-                        if (cacheHit) ChatAiOutcome.CACHE_HIT else ChatAiOutcome.OK,
+                        ChatAiOutcome.OK,
                         durationMs = epochMillis() - startedAt,
                     ),
                 )

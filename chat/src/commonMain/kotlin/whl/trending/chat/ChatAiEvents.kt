@@ -8,7 +8,6 @@ import whl.trending.chat.model.MessageKind
 
 internal fun MessageKind.toAiKind(): ChatAiKind = when (this) {
     MessageKind.CHAT -> ChatAiKind.CHAT
-    MessageKind.DETAIL_SUMMARY -> ChatAiKind.DETAIL_SUMMARY
     MessageKind.DEEP_RESEARCH -> ChatAiKind.RESEARCH
 }
 

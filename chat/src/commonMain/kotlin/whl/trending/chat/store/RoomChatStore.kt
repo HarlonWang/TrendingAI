@@ -264,7 +264,7 @@ class RoomChatStore(
 
     /**
      * ChatContext 的持久化镜像（原类未标 @Serializable，此处 DTO 隔离序列化关注点）。
-     * autoDetailSummary 是一次性触发标记，不持久化。
+     * 旧行可能含已退役字段（如 readmeLength），ignoreUnknownKeys 直接丢弃。
      */
     @Serializable
     private data class StoredContext(
@@ -273,17 +273,16 @@ class RoomChatStore(
         val sourceUrl: String? = null,
         val source: String? = null,
         val externalId: String? = null,
-        val readmeLength: Int? = null,
     ) {
         fun toContext() = ChatContext(
             title = title, summary = summary, sourceUrl = sourceUrl,
-            source = source, externalId = externalId, readmeLength = readmeLength,
+            source = source, externalId = externalId,
         )
 
         companion object {
             fun from(c: ChatContext) = StoredContext(
                 title = c.title, summary = c.summary, sourceUrl = c.sourceUrl,
-                source = c.source, externalId = c.externalId, readmeLength = c.readmeLength,
+                source = c.source, externalId = c.externalId,
             )
         }
     }

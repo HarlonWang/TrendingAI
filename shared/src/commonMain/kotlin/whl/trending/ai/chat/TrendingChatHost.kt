@@ -75,7 +75,6 @@ private object TrendingChatHost : ChatHost {
                     ChatAiOutcome.OK -> AiOutcome.OK
                     ChatAiOutcome.ERROR -> AiOutcome.ERROR
                     ChatAiOutcome.INTERRUPTED -> AiOutcome.INTERRUPTED
-                    ChatAiOutcome.CACHE_HIT -> AiOutcome.CACHE_HIT
                 },
                 durationMs = event.durationMs,
                 reason = event.reason,
@@ -86,7 +85,6 @@ private object TrendingChatHost : ChatHost {
 
     private fun ChatAiKind.toAiKind(): AiKind = when (this) {
         ChatAiKind.CHAT -> AiKind.CHAT
-        ChatAiKind.DETAIL_SUMMARY -> AiKind.DETAIL_SUMMARY
         ChatAiKind.RESEARCH -> AiKind.RESEARCH
     }
 

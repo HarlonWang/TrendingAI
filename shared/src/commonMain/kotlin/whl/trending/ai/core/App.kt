@@ -47,8 +47,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import org.jetbrains.compose.resources.stringResource
+import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.chat_suggest_what_can_you_do
+import trendingai.shared.generated.resources.chat_suggest_what_can_you_do_prompt
 import whl.trending.chat.ChatContext
 import whl.trending.chat.ui.ChatScreen
+import whl.trending.chat.ui.ChatSuggestion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
@@ -327,9 +332,6 @@ fun App() {
                                     owner = key.owner,
                                     repo = key.repo,
                                     onBack = { backStack.safePop() },
-                                    onNavigateToChat = { context ->
-                                        backStack.add(Chat(context))
-                                    }
                                 )
                             }
 
@@ -352,7 +354,16 @@ fun App() {
                             }
 
                             is Chat -> NavEntry(key) {
-                                ChatScreen(initialContext = key.context, onBack = { backStack.safePop() })
+                                ChatScreen(
+                                    initialContext = key.context,
+                                    onBack = { backStack.safePop() },
+                                    suggestions = listOf(
+                                        ChatSuggestion(
+                                            label = stringResource(Res.string.chat_suggest_what_can_you_do),
+                                            prompt = stringResource(Res.string.chat_suggest_what_can_you_do_prompt),
+                                        ),
+                                    ),
+                                )
                             }
                             }
                         }

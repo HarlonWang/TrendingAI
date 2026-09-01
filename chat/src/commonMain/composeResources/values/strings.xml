@@ -13,10 +13,6 @@
     <string name="chat_error_content_too_long">The message is too long and exceeds the length limit.</string>
     <string name="chat_error_images_too_large">The images are too large. Remove some or retake them.</string>
     <string name="chat_error_quota_global">The service is busy today. Please come back tomorrow.</string>
-    <string name="chat_action_what_is_this">Introduce this project</string>
-    <string name="chat_action_what_is_this_prompt">Introduce this project, briefly explaining its purpose and core features.</string>
-    <string name="chat_action_what_can_you_do">What can you do</string>
-    <string name="chat_action_what_can_you_do_prompt">What can you do? Briefly introduce your capabilities and typical use cases.</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_share">Share</string>
     <string name="chat_copy">Copy</string>
@@ -50,10 +46,8 @@
     <string name="chat_user_image">Image</string>
     <string name="chat_image_viewer_close">Close</string>
     <string name="chat_error_images_require_login">Sign in to send images.</string>
-    <string name="chat_action_detail_summary">In-depth overview</string>
-    <string name="chat_detail_login_message">Sign in to generate an in-depth overview.</string>
-    <string name="chat_detail_login_unlocked">Signed in — tap retry to continue generating.</string>
-    <string name="chat_error_readme_too_short">This project&apos;s README is too short for an in-depth overview.</string>
+    <string name="chat_login_gate_message">Sign in to use this feature.</string>
+    <string name="chat_login_gate_unlocked">Signed in — tap retry to continue.</string>
     <!-- 会话抽屉 -->
     <string name="chat_history">Conversations</string>
     <string name="chat_new_thread">New chat</string>
@@ -69,6 +63,4 @@
     <string name="chat_searching">Searching the web…</string>
     <string name="chat_deep_research">Deep research</string>
     <string name="chat_researching">Deep research in progress… this may take a few minutes</string>
-    <string name="chat_action_research_upsell">Deep research this project</string>
-    <string name="chat_research_repo_prefill">Research this project in depth: positioning and highlights, comparable alternatives, community feedback and adoption.</string>
 </resources>
