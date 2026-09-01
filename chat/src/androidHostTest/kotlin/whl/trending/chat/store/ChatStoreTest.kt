@@ -59,11 +59,9 @@ class ChatStoreTest {
     // 建线与标题策略
 
     @Test
-    fun `建线：标题取首条消息，entryKey 恒写 general（遗留列）`() = runTest {
+    fun `建线：标题取首条消息`() = runTest {
         val id = store.createThread(firstMessageText = "介绍一下")
-        val thread = db.threadDao().getById(id)!!
-        assertEquals("介绍一下", thread.title)
-        assertEquals(ChatStore.ENTRY_GENERAL, thread.entryKey)
+        assertEquals("介绍一下", db.threadDao().getById(id)!!.title)
     }
 
     @Test

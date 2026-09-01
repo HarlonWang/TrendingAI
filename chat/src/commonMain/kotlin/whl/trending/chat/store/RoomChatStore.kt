@@ -41,8 +41,6 @@ class RoomChatStore(
         return db.threadDao().insert(
             ThreadEntity(
                 title = ChatStore.titleFrom(firstMessageText),
-                entryKey = ChatStore.ENTRY_GENERAL,
-                contextJson = null,
                 createdAt = now,
                 updatedAt = now,
             ),

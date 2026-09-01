@@ -81,9 +81,6 @@ interface ChatStore {
         const val MAX_TITLE_LENGTH = 20
         const val DEFAULT_TITLE = "新对话"
 
-        /** entryKey 列的当前唯一取值：入口上下文机制已下线，列保留兼容存量（老行可能是 repo:*） */
-        const val ENTRY_GENERAL = "general"
-
         internal fun titleFrom(text: String): String =
             text.trim().take(MAX_TITLE_LENGTH).ifBlank { DEFAULT_TITLE }
     }
