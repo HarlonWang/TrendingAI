@@ -90,10 +90,9 @@ sealed class AppEvent(
         val kind: AiKind,
         val from: String,
         val imageCount: Int? = null,
-        val hasContext: Boolean? = null,
     ) : AppEvent(
         "ai_requested",
-        mapOf("kind" to kind, "from" to from, "image_count" to imageCount, "has_context" to hasContext),
+        mapOf("kind" to kind, "from" to from, "image_count" to imageCount),
     )
 
     /** 与 [AiRequested] 成对，一次请求恰好一条：漏斗的分母分子都在这两个事件里。 */

@@ -7,7 +7,6 @@ import kotlinx.serialization.json.Json
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.SYSTEM
-import whl.trending.chat.ChatContext
 import whl.trending.chat.ThreadSummary
 import whl.trending.chat.core.epochMillis
 import whl.trending.chat.db.ChatDatabase
@@ -37,23 +36,18 @@ class RoomChatStore(
     override fun threads(): Flow<List<ThreadSummary>> =
         db.threadDao().observeAll().map { list -> list.map { ThreadSummary(it.id, it.title, it.updatedAt) } }
 
-    override suspend fun createThread(context: ChatContext?, firstMessageText: String): Long {
+    override suspend fun createThread(firstMessageText: String): Long {
         val now = clock()
         return db.threadDao().insert(
             ThreadEntity(
-                title = context?.title ?: ChatStore.titleFrom(firstMessageText),
-                entryKey = ChatStore.entryKeyOf(context),
-                contextJson = context?.let { json.encodeToString(StoredContext.from(it)) },
+                title = ChatStore.titleFrom(firstMessageText),
+                entryKey = ChatStore.ENTRY_GENERAL,
+                contextJson = null,
                 createdAt = now,
                 updatedAt = now,
             ),
         )
     }
-
-    override suspend fun contextOf(threadId: Long): ChatContext? =
-        db.threadDao().getById(threadId)?.contextJson?.let { raw ->
-            runCatching { json.decodeFromString<StoredContext>(raw).toContext() }.getOrNull()
-        }
 
     override suspend fun loadMessages(threadId: Long): List<ChatMessage> =
         db.messageDao().messagesFor(threadId).map { it.toModel() }
@@ -258,31 +252,6 @@ class RoomChatStore(
             fun from(e: ChatError) = StoredError(
                 category = e.category.name, code = e.code, httpStatus = e.httpStatus,
                 detail = e.detail, tier = e.tier, authDegraded = e.authDegraded,
-            )
-        }
-    }
-
-    /**
-     * ChatContext 的持久化镜像（原类未标 @Serializable，此处 DTO 隔离序列化关注点）。
-     * 旧行可能含已退役字段（如 readmeLength），ignoreUnknownKeys 直接丢弃。
-     */
-    @Serializable
-    private data class StoredContext(
-        val title: String,
-        val summary: String? = null,
-        val sourceUrl: String? = null,
-        val source: String? = null,
-        val externalId: String? = null,
-    ) {
-        fun toContext() = ChatContext(
-            title = title, summary = summary, sourceUrl = sourceUrl,
-            source = source, externalId = externalId,
-        )
-
-        companion object {
-            fun from(c: ChatContext) = StoredContext(
-                title = c.title, summary = c.summary, sourceUrl = c.sourceUrl,
-                source = c.source, externalId = c.externalId,
             )
         }
     }

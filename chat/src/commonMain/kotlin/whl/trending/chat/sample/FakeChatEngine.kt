@@ -1,7 +1,6 @@
 package whl.trending.chat.sample
 
 import kotlinx.coroutines.delay
-import whl.trending.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.model.ChatMessage
 
@@ -22,7 +21,6 @@ class FakeChatEngine(
 
     override suspend fun send(
         history: List<ChatMessage>,
-        context: ChatContext?,
         onDelta: (String) -> Unit,
         search: Boolean,
         onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,

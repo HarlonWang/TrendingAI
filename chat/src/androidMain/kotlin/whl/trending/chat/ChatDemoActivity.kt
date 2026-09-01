@@ -46,10 +46,9 @@ private fun DemoTheme(content: @Composable () -> Unit) {
 private fun DemoContent(real: Boolean, onBack: () -> Unit) {
     if (real) {
         // 真实引擎（ChatScreen 默认即 ChatApi），空会话连生产
-        ChatScreen(initialContext = null, onBack = onBack)
+        ChatScreen(onBack = onBack)
     } else {
         ChatScreen(
-            initialContext = null,
             onBack = onBack,
             engine = androidx.compose.runtime.remember { FakeChatEngine() },
             initialMessages = SampleData.messages,

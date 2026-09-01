@@ -41,24 +41,23 @@ data class ThreadSummary(val id: Long, val title: String, val updatedAt: Long)
 /**
  * 聊天 ViewModel。并发模型是理解一切的钥匙：
  *
- * - **所有状态变更串行化**：会改 [uiState]/[currentThreadId]/[activeContext] 的操作一律经
+ * - **所有状态变更串行化**：会改 [uiState]/[currentThreadId] 的操作一律经
  *   [locked] 排队，同一时刻只有一个在跑，挂起点之间不会被别的操作交错。
  * - **单一真相源**：内存里只保留当前会话的消息（[uiState].messages 即真相），历史归 store；
  *   消息 id 就是 store 行 id（全局唯一），唯一的例外是流式占位（固定 [PLACEHOLDER_ID]，
  *   终局时被落库行替换）。
- * - **切走即取消**：在途流只属于当前会话（切会话/新会话/换入口都会取消它，已渲染部分
+ * - **切走即取消**：在途流只属于当前会话（切会话/新会话都会取消它，已渲染部分
  *   落为可重试的中断错误行）。因此任何时刻至多一条在途流（[inFlight]）。
  *   Deep Research 例外——任务是服务端资产，独立于会话切换（见 [ResearchRunner]）。
  *
- * 会话语义：入口进入总是新会话（历史进抽屉），仅同入口的进程内再进入续接现场——
- * 本 VM 挂 Activity 作用域（`viewModel(key="chat")`），返回首页再进来不该重置刚才的对话。
+ * 会话语义：VM 挂 Activity 作用域（`viewModel(key="chat")`），进程内再次进入续接现场
+ * （返回首页查个东西再进来不重置）；新会话只经抽屉「新会话」或进程重启产生。
  *
  * @param store 持久化层；默认内存实现（Demo/预览），正式宿主注入 Room 实现
  * @param selectedModelId 应答模型记录用（展示「哪个模型答的」）；默认读全局设置的用户选择
  */
 class ChatViewModel(
     private val engine: ChatEngine,
-    initialContext: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
     private val store: ChatStore = InMemoryChatStore(),
     private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
@@ -101,9 +100,6 @@ class ChatViewModel(
         _chatMode.value = if (_chatMode.value == mode) ChatMode.Normal else mode
     }
 
-    /** 当前会话的 ChatContext（解读 chip / 服务端 context 注入）；随切换/重置而变 */
-    private var activeContext: ChatContext? = initialContext
-
     private val stateLock = Mutex()
 
     private class InFlightSend(val threadId: Long, val kind: MessageKind, val startedAt: Long, val job: Job)
@@ -116,29 +112,13 @@ class ChatViewModel(
         viewModelScope.launch {
             _catalog.value = runCatching { loadModels() }.getOrDefault(ChatModelsResponse())
         }
-        // 落在 init 而非 enterEntry：Activity 被系统重建时 Screen 侧的 enteredKey
-        // （rememberSaveable）已恢复、enterEntry 不会再调，而那恰恰是最需要恢复的场景
+        // 跨进程恢复 research 轮询：落在 init 即 VM 诞生时，与「进入了哪个会话」无关
         locked { research.resumeAll() }
     }
 
     /** 状态变更的唯一入口：viewModelScope（主线程）+ [stateLock] 串行执行 */
     private fun locked(block: suspend () -> Unit) {
         viewModelScope.launch { stateLock.withLock { block() } }
-    }
-
-    /**
-     * 入口进入（Screen 每个新入口调用一次）。总是新会话（对齐 ChatGPT / Gemini / Grok：
-     * 对话是一次性任务单元，历史进抽屉、不进现场），唯一例外是**同入口的进程内续接**：
-     * VM 挂 Activity 作用域，返回首页查个东西再进来，现场还在就不重置。
-     */
-    fun enterEntry(context: ChatContext?) = locked {
-        val sameEntry = ChatStore.entryKeyOf(context) == ChatStore.entryKeyOf(activeContext)
-        if (sameEntry && (_currentThreadId.value != null || _uiState.value.messages.isNotEmpty())) {
-            activeContext = context
-            return@locked
-        }
-        cancelInFlight(persistInterrupted = true)
-        resetSession(context, clearInput = false)
     }
 
     fun updateInput(text: String) {
@@ -189,7 +169,7 @@ class ChatViewModel(
             _uiState.update { it.copy(isSending = true) }
             val threadId = ensureThread(text)
             appendVisible(store.appendUserMessage(threadId, text, images))
-            startStream(threadId, MessageKind.CHAT, activeContext)
+            startStream(threadId, MessageKind.CHAT)
         }
     }
 
@@ -215,7 +195,7 @@ class ChatViewModel(
             val resent = _uiState.value.messages.lastOrNull { it.role == Role.USER }
             trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
             _uiState.update { it.copy(isSending = true) }
-            startStream(threadId, MessageKind.CHAT, activeContext)
+            startStream(threadId, MessageKind.CHAT)
         }
     }
 
@@ -232,8 +212,6 @@ class ChatViewModel(
                 ChatAiKind.CHAT,
                 from = from,
                 imageCount = imageCount,
-                // 与后端 hasContext（context && context.title）等价：ChatContext.title 非空
-                hasContext = activeContext != null,
             ),
         )
     }
@@ -249,7 +227,7 @@ class ChatViewModel(
     /** 抽屉「新会话」：总是全新开始（通用入口），不复用任何历史 */
     fun startNewThread() = locked {
         cancelInFlight(persistInterrupted = true)
-        resetSession(context = null, clearInput = true)
+        resetSession(clearInput = true)
     }
 
     fun renameThread(id: Long, title: String) = locked {
@@ -260,7 +238,7 @@ class ChatViewModel(
         if (inFlight?.threadId == id) cancelInFlight(persistInterrupted = false)
         research.cancelForThread(id)
         store.deleteThread(id)
-        if (_currentThreadId.value == id) resetSession(context = null, clearInput = true)
+        if (_currentThreadId.value == id) resetSession(clearInput = true)
     }
 
     // Deep Research（P3）
@@ -272,7 +250,7 @@ class ChatViewModel(
         val threadId = ensureThread(topic)
         appendVisible(store.appendUserMessage(threadId, topic, kind = MessageKind.DEEP_RESEARCH))
         // 条目会话附上标题/链接锚点（发送与重试都传原文、各自重拼，保证同构）
-        appendVisible(research.submit(threadId, ResearchTopics.compose(topic, activeContext)))
+        appendVisible(research.submit(threadId, topic))
         // 提交落定即解锁输入：轮询可能持续小时级，期间会话仍可正常对话
         _uiState.update { it.copy(isSending = false) }
     }
@@ -298,7 +276,7 @@ class ChatViewModel(
         store.deleteMessage(message.id)
         removeVisible(message.id)
         _uiState.update { it.copy(isSending = true) }
-        appendVisible(research.submit(threadId, ResearchTopics.compose(topic, activeContext)))
+        appendVisible(research.submit(threadId, topic))
         _uiState.update { it.copy(isSending = false) }
     }
 
@@ -309,7 +287,7 @@ class ChatViewModel(
      * 终局在 [stateLock] 内收口——成功以全文落库并替换占位，失败落错误行（整条重试）。
      * 流协程只在占位上做原子更新，不碰其他状态，取消它无需回滚。
      */
-    private fun startStream(threadId: Long, kind: MessageKind, context: ChatContext?) {
+    private fun startStream(threadId: Long, kind: MessageKind) {
         val startedAt = epochMillis()
         _uiState.update {
             it.copy(messages = it.messages + ChatMessage(PLACEHOLDER_ID, Role.ASSISTANT, "", kind = kind))
@@ -324,7 +302,6 @@ class ChatViewModel(
                 }
                 engine.send(
                     history,
-                    context,
                     onDelta = { appendDelta(it) },
                     search = _chatMode.value == ChatMode.WebSearch,
                     onSearch = { applySearchEvent(it) },
@@ -417,15 +394,13 @@ class ChatViewModel(
             ) it.copy(searching = true) else it
         }
         _currentThreadId.value = id
-        activeContext = store.contextOf(id)
         _uiState.update {
             it.copy(messages = messages, isSending = false, pendingImages = emptyList())
         }
         messages.filter { it.searching }.forEach { research.startPolling(id, it.id, it.researchRunId!!) }
     }
 
-    private fun resetSession(context: ChatContext?, clearInput: Boolean) {
-        activeContext = context
+    private fun resetSession(clearInput: Boolean) {
         _currentThreadId.value = null
         _uiState.update {
             it.copy(
@@ -440,7 +415,7 @@ class ChatViewModel(
     /** 首条消息才建线（懒建）；当前线已存在则直接复用 */
     private suspend fun ensureThread(firstMessageText: String): Long {
         _currentThreadId.value?.let { return it }
-        val id = store.createThread(activeContext, firstMessageText)
+        val id = store.createThread(firstMessageText)
         _currentThreadId.value = id
         return id
     }

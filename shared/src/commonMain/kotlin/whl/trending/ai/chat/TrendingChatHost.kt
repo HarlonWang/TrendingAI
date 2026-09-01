@@ -67,7 +67,6 @@ private object TrendingChatHost : ChatHost {
                 kind = event.kind.toAiKind(),
                 from = event.from,
                 imageCount = event.imageCount,
-                hasContext = event.hasContext,
             )
             is ChatAiEvent.Completed -> AppEvent.AiCompleted(
                 kind = event.kind.toAiKind(),

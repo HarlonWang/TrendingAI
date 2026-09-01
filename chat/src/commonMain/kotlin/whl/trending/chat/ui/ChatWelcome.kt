@@ -30,12 +30,9 @@ import trendingai.chat.generated.resources.chat_quota_notice_user
 /** 欢迎区的额度口径档位，与服务端 `resolveQuotaTier` 的三档同名同义。 */
 internal enum class WelcomeTier { Anonymous, Free, Pro }
 
-/**
- * 空状态欢迎区，尚无任何对话时显示。上下文解读入口（[hasContext] = true）的标题与快捷问
- * 已在别处呈现，只保留额度说明一行。
- */
+/** 空状态欢迎区，尚无任何对话时显示。 */
 @Composable
-fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
+fun ChatWelcome(modifier: Modifier = Modifier) {
     // 档位判据取本地缓存而非 GET /api/quota：一行小字不值得打网络。失准窗口只有「订阅已到期
     // 且 app 未冷启」，下次冷启的 syncMe 即纠正（唯一日常写入点见 App.kt 根部 LaunchedEffect）
     val isPro by chatHost.isPro.collectAsState(
@@ -49,7 +46,6 @@ fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
         else -> WelcomeTier.Anonymous
     }
     ChatWelcomeContent(
-        hasContext = hasContext,
         tier = tier,
         canSignIn = chatHost.canSignIn,
         onSignIn = { chatHost.signIn("chat_welcome") },
@@ -60,7 +56,6 @@ fun ChatWelcome(hasContext: Boolean, modifier: Modifier = Modifier) {
 
 @Composable
 internal fun ChatWelcomeContent(
-    hasContext: Boolean,
     tier: WelcomeTier,
     canSignIn: Boolean,
     onSignIn: () -> Unit,
@@ -72,15 +67,13 @@ internal fun ChatWelcomeContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        if (!hasContext) {
-            Text(text = "✨", style = MaterialTheme.typography.headlineLarge)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(Res.string.chat_assistant_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
+        Text(text = "✨", style = MaterialTheme.typography.headlineLarge)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(Res.string.chat_assistant_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(16.dp))
         if (tier == WelcomeTier.Pro && proBadge != null) {
             proBadge()
             Spacer(Modifier.height(8.dp))
@@ -119,7 +112,7 @@ internal fun ChatWelcomeContent(
 @Composable
 private fun ChatWelcomeAnonymousPreview() {
     MaterialTheme {
-        ChatWelcomeContent(hasContext = false, tier = WelcomeTier.Anonymous, canSignIn = true, onSignIn = {})
+        ChatWelcomeContent(tier = WelcomeTier.Anonymous, canSignIn = true, onSignIn = {})
     }
 }
 
@@ -127,7 +120,7 @@ private fun ChatWelcomeAnonymousPreview() {
 @Composable
 private fun ChatWelcomeFreePreview() {
     MaterialTheme {
-        ChatWelcomeContent(hasContext = false, tier = WelcomeTier.Free, canSignIn = true, onSignIn = {})
+        ChatWelcomeContent(tier = WelcomeTier.Free, canSignIn = true, onSignIn = {})
     }
 }
 
@@ -135,7 +128,7 @@ private fun ChatWelcomeFreePreview() {
 @Composable
 private fun ChatWelcomeProPreview() {
     MaterialTheme {
-        ChatWelcomeContent(hasContext = false, tier = WelcomeTier.Pro, canSignIn = true, onSignIn = {})
+        ChatWelcomeContent(tier = WelcomeTier.Pro, canSignIn = true, onSignIn = {})
     }
 }
 
@@ -143,6 +136,6 @@ private fun ChatWelcomeProPreview() {
 @Composable
 private fun ChatWelcomeContextPreview() {
     MaterialTheme {
-        ChatWelcomeContent(hasContext = true, tier = WelcomeTier.Free, canSignIn = true, onSignIn = {})
+        ChatWelcomeContent(tier = WelcomeTier.Free, canSignIn = true, onSignIn = {})
     }
 }

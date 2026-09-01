@@ -25,11 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -39,7 +36,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import whl.trending.chat.ChatContext
 import whl.trending.chat.ChatViewModel
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_assistant_title
@@ -47,19 +43,15 @@ import trendingai.chat.generated.resources.chat_back
 import trendingai.chat.generated.resources.chat_history
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
-import whl.trending.chat.store.ChatStore
 import whl.trending.chat.store.InMemoryChatStore
 import whl.trending.chat.store.rememberDefaultChatStore
 
-/** 入口键，驱动「同一入口只 enterEntry 一次」 */
-private fun entryKeyOf(context: ChatContext?): String = ChatStore.entryKeyOf(context)
-
-/** 空会话欢迎态的建议动作：点击即以 [prompt] 发送一条普通消息（宿主按入口注入） */
+/** 空会话欢迎态的建议动作：点击即以 [prompt] 发送一条普通消息（宿主注入） */
 data class ChatSuggestion(val label: String, val prompt: String)
 
 /**
- * 全屏聊天页。通用入口传 [initialContext] = null；带上下文入口传具体条目。
- * 单 ViewModel（key 固定）+ 会话抽屉：进入时 [ChatViewModel.enterEntry] 开新会话（同入口进程内续接）。
+ * 全屏聊天页。单 ViewModel（key 固定）+ 会话抽屉：VM 挂 Activity 作用域，
+ * 进程内再次进入续接现场，新会话经抽屉「新会话」产生。
  *
  * @param engine 默认正式引擎 [ChatApi]；Demo 可注入 FakeChatEngine。
  * @param persistent Demo/预览可关（纯内存模式）
@@ -67,7 +59,6 @@ data class ChatSuggestion(val label: String, val prompt: String)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    initialContext: ChatContext?,
     onBack: () -> Unit,
     engine: ChatEngine = ChatApi.shared,
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
@@ -76,22 +67,11 @@ fun ChatScreen(
 ) {
     val store = if (persistent) rememberDefaultChatStore() else remember { InMemoryChatStore() }
     val viewModel: ChatViewModel = viewModel(key = "chat") {
-        ChatViewModel(engine, initialContext, initialMessages, store)
+        ChatViewModel(engine, initialMessages, store)
     }
     val state by viewModel.uiState.collectAsState()
     val threads by viewModel.threads.collectAsState()
     val currentThreadId by viewModel.currentThreadId.collectAsState()
-
-    val entryKey = entryKeyOf(initialContext)
-    // 每个屏实例对每个入口只 enter 一次：配置变更（rememberSaveable）不重进，
-    // 避免抽屉切走后旋转屏幕又被拽回入口会话
-    var enteredKey by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(entryKey) {
-        if (enteredKey != entryKey) {
-            viewModel.enterEntry(initialContext)
-            enteredKey = entryKey
-        }
-    }
 
     // AI 一开始回复就收起键盘；clearFocus 而非只 hide，避免「键盘没了但光标还在闪」
     val focusManager = LocalFocusManager.current
@@ -127,8 +107,7 @@ fun ChatScreen(
                 ChatTopAppBar(
                     title = {
                         Text(
-                            text = initialContext?.title
-                                ?: stringResource(Res.string.chat_assistant_title),
+                            text = stringResource(Res.string.chat_assistant_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -212,7 +191,7 @@ fun ChatScreen(
                     .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
             ) {
                 if (state.messages.isEmpty()) {
-                    ChatWelcome(hasContext = initialContext != null)
+                    ChatWelcome()
                 } else {
                     MessageList(
                         messages = state.messages,

@@ -16,9 +16,8 @@ import kotlinx.coroutines.flow.Flow
 /**
  * 会话线：一次对话的容器。
  *
- * @param entryKey 入口键（`repo:{externalId}` / `general`），留痕会话来自哪个入口
- * @param contextJson 进入时的 [whl.trending.chat.ChatContext] 序列化（通用入口为 null）；
- *   恢复历史会话后「一键解读」chip 与服务端 context 注入都依赖它——不存等于恢复的会话丢了灵魂
+ * @param entryKey 历史入口键列（现恒写 `general`；存量行可能是 `repo:*`），保留兼容
+ * @param contextJson 已下线的入口上下文机制的遗留列（现恒写 null；存量行可能有值），保留兼容
  * @param updatedAt 排序键：列表按最近活跃倒序
  */
 @Entity(tableName = "chat_threads", indices = [Index("entryKey")])
