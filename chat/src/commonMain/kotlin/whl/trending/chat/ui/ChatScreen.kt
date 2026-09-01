@@ -55,6 +55,7 @@ import trendingai.chat.generated.resources.chat_research_repo_prefill
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.store.ChatStore
+import whl.trending.chat.store.InMemoryChatStore
 import whl.trending.chat.store.rememberDefaultChatStore
 
 /** 入口键，驱动「同一入口只 enterEntry 一次」 */
@@ -76,7 +77,7 @@ fun ChatScreen(
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
     persistent: Boolean = true,
 ) {
-    val store = if (persistent) rememberDefaultChatStore() else null
+    val store = if (persistent) rememberDefaultChatStore() else remember { InMemoryChatStore() }
     val viewModel: ChatViewModel = viewModel(key = "chat") {
         ChatViewModel(engine, initialContext, initialMessages, store)
     }
@@ -162,7 +163,7 @@ fun ChatScreen(
                     },
                     actions = {
                         // 会话抽屉入口（纯内存模式无历史可言，隐藏）
-                        if (store != null) {
+                        if (persistent) {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(
                                     imageVector = Icons.Filled.Menu,

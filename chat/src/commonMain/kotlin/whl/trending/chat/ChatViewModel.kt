@@ -4,55 +4,63 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import whl.trending.chat.core.epochMillis
+import whl.trending.chat.engine.ChatEngine
+import whl.trending.chat.engine.ChatException
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.host.ChatAiKind
 import whl.trending.chat.host.ChatAiOutcome
 import whl.trending.chat.host.chatHost
-import whl.trending.chat.model.ChatModelsResponse
-import whl.trending.chat.model.resolveDisplayedChatModel
-import whl.trending.chat.model.ChatModelsProvider
-import whl.trending.chat.engine.ChatEngine
-import whl.trending.chat.engine.ChatException
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.ChatMode
+import whl.trending.chat.model.ChatModelsProvider
+import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
 import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.SourceRef
+import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.store.ChatStore
+import whl.trending.chat.store.InMemoryChatStore
 
 /** 抽屉里的一条会话概要 */
 data class ThreadSummary(val id: Long, val title: String, val updatedAt: Long)
 
 /**
- * 聊天 ViewModel：单实例 + currentThreadId 状态（P1 起，多会话由 [ChatStore] 支撑）。
- * 流式渲染不变（发送先追加空 assistant 占位，delta 到达增量更新）；落库为终局一次写。
+ * 聊天 ViewModel。并发模型是理解一切的钥匙：
  *
- * 会话切换语义：流按 threadId 分键（[streams]/[messagesByThread]）——切走后后台继续
- * 完成并落库（服务端已在计费，取消才是浪费），切回可见全文；uiState 只镜像当前线。
+ * - **所有状态变更串行化**：会改 [uiState]/[currentThreadId]/[activeContext] 的操作一律经
+ *   [locked] 排队，同一时刻只有一个在跑，挂起点之间不会被别的操作交错。
+ * - **单一真相源**：内存里只保留当前会话的消息（[uiState].messages 即真相），历史归 store；
+ *   消息 id 就是 store 行 id（全局唯一），唯一的例外是流式占位（固定 [PLACEHOLDER_ID]，
+ *   终局时被落库行替换）。
+ * - **切走即取消**：在途流只属于当前会话（切会话/新会话/换入口都会取消它，已渲染部分
+ *   落为可重试的中断错误行）。因此任何时刻至多一条在途流（[inFlight]）。
+ *   Deep Research 例外——任务是服务端资产，独立于会话切换（见 [ResearchRunner]）。
  *
- * @param store 持久化层；null = 纯内存模式（Demo/预览与旧行为完全一致）
+ * 会话语义：入口进入总是新会话（历史进抽屉），仅同入口的进程内再进入续接现场——
+ * 本 VM 挂 Activity 作用域（`viewModel(key="chat")`），返回首页再进来不该重置刚才的对话。
+ *
+ * @param store 持久化层；默认内存实现（Demo/预览），正式宿主注入 Room 实现
  * @param selectedModelId 应答模型记录用（展示「哪个模型答的」）；默认读全局设置的用户选择
  */
 class ChatViewModel(
     private val engine: ChatEngine,
     initialContext: ChatContext? = null,
     initialMessages: List<ChatMessage> = emptyList(),
-    private val store: ChatStore? = null,
+    private val store: ChatStore = InMemoryChatStore(),
     private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
     private val track: (ChatAiEvent) -> Unit = { chatHost.onAiEvent(it) },
     private val selectedModelId: () -> String? = {
@@ -74,11 +82,9 @@ class ChatViewModel(
     private val _catalog = MutableStateFlow(ChatModelsResponse())
     val catalog: StateFlow<ChatModelsResponse> = _catalog.asStateFlow()
 
-    /** 会话列表（抽屉数据源）；纯内存模式恒为空 */
+    /** 会话列表（抽屉数据源） */
     val threads: StateFlow<List<ThreadSummary>> =
-        (store?.threads()?.map { list -> list.map { ThreadSummary(it.id, it.title, it.updatedAt) } }
-            ?: flowOf(emptyList()))
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        store.threads().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _currentThreadId = MutableStateFlow<Long?>(null)
     val currentThreadId: StateFlow<Long?> = _currentThreadId.asStateFlow()
@@ -95,99 +101,45 @@ class ChatViewModel(
         _chatMode.value = if (_chatMode.value == mode) ChatMode.Normal else mode
     }
 
-    /** 当前会话的 ChatContext（解读 chip / 服务端 context 注入）；随切换/恢复而变 */
+    /** 当前会话的 ChatContext（解读 chip / 服务端 context 注入）；随切换/重置而变 */
     private var activeContext: ChatContext? = initialContext
 
-    // 每线消息缓冲（真相源，uiState.messages 只是当前线的镜像）；null 键 = 尚未落库的新会话
-    private val messagesByThread = mutableMapOf<Long?, List<ChatMessage>>(null to initialMessages)
+    private val stateLock = Mutex()
 
-    // 每线在途流（切走后后台继续）
-    private val streams = mutableMapOf<Long?, Job>()
+    private class InFlightSend(val threadId: Long, val kind: MessageKind, val startedAt: Long, val job: Job)
 
-    // research 轮询任务，按占位消息 id 分键——不与 streams（threadId 键）共用一张表：
-    // 两者都是从 1 起的自增序列，键空间重叠会互相顶掉 / 误取消 / 误判 isSending
-    private val researchJobs = mutableMapOf<Long, Job>()
+    private var inFlight: InFlightSend? = null
 
-    // research 占位行：缓冲内消息 id → Room 行 id。error 消息占内存 id 但不落库，两套自增
-    // 序列会错位；Room id 直接混进缓冲会与已有消息重号（LazyColumn 按 id 作 key 时崩溃）
-    private val researchRowIds = mutableMapOf<Long, Long>()
+    private val research = ResearchRunner(viewModelScope, engine, store, track, ::applyToVisible)
 
     init {
         viewModelScope.launch {
             _catalog.value = runCatching { loadModels() }.getOrDefault(ChatModelsResponse())
         }
-        viewModelScope.launch { resumeAllPendingResearch() }
+        // 落在 init 而非 enterEntry：Activity 被系统重建时 Screen 侧的 enteredKey
+        // （rememberSaveable）已恢复、enterEntry 不会再调，而那恰恰是最需要恢复的场景
+        locked { research.resumeAll() }
+    }
+
+    /** 状态变更的唯一入口：viewModelScope（主线程）+ [stateLock] 串行执行 */
+    private fun locked(block: suspend () -> Unit) {
+        viewModelScope.launch { stateLock.withLock { block() } }
     }
 
     /**
-     * 入口进入（Screen 每个新入口调用一次）。
-     *
-     * **通用入口默认新会话**（对齐 ChatGPT / Gemini / Grok）：对话是一次性任务单元，
-     * 历史进抽屉、不进现场。此前「永远续同一条 general 会话」的代价是——不相关的话题
-     * 堆进同一上下文窗口（最近 12 条 / 16k 字符会被上一话题连同 4000 字解读占满，答非
-     * 所问），抽屉里长期只有一条会话（多会话功能形同虚设），欢迎区与快捷问因 messages
-     * 非空而永久消失。线上 95% 的对话都走通用入口，这条路径的收益最大。
-     *
-     * 「新会话」的边界是**进程**，不是页面：本 VM 挂在 Activity 作用域（`viewModel(key="chat")`
-     * 的 owner 是 Activity，退出 chat 页不销毁），所以返回首页查个东西再进来，[_currentThreadId]
-     * 还指着刚才那条会话——此时保持现状即可，不必重新开一条。进程被杀后 VM 随之消失，
-     * 下次进来自然是新会话，无需任何额外标记或时间窗口。
-     *
-     * **条目入口（`repo:*`）仍恢复**：回到同一个项目继续追问是真实需求，且会话里已有的
-     * 解读全文可以复用，不必重新生成。
-     *
-     * 纯内存模式只切 context，不动 initialMessages（该模式下不建线，续接分支恒不触发）。
+     * 入口进入（Screen 每个新入口调用一次）。总是新会话（对齐 ChatGPT / Gemini / Grok：
+     * 对话是一次性任务单元，历史进抽屉、不进现场），唯一例外是**同入口的进程内续接**：
+     * VM 挂 Activity 作用域，返回首页查个东西再进来，现场还在就不重置。
      */
-    fun enterEntry(context: ChatContext?) {
-        viewModelScope.launch {
-            val isGeneralEntry = ChatStore.entryKeyOf(context) == ChatStore.ENTRY_GENERAL
-            // 进程内续接。两点讲究：
-            // 1. 判断必须在 activeContext 被覆盖之前——它此刻的值代表「上次停在哪」；
-            //    停在 repo 会话时走通用入口，应当开新会话而非把那条续过来。
-            // 2. 「上次是不是通用会话」与 isGeneralEntry 走同一个 entryKeyOf，避免两处口径不一：
-            //    entryKeyOf 把「有 title 但无 externalId」的 context（HN/PH 场景）也算 general，
-            //    裸写 activeContext == null 会把它判成非通用，将来给 HN/PH 加入口就会分歧。
-            val wasOnGeneralThread = ChatStore.entryKeyOf(activeContext) == ChatStore.ENTRY_GENERAL &&
-                _currentThreadId.value != null
-            if (isGeneralEntry && wasOnGeneralThread) return@launch
+    fun enterEntry(context: ChatContext?) = locked {
+        val sameEntry = ChatStore.entryKeyOf(context) == ChatStore.entryKeyOf(activeContext)
+        if (sameEntry && (_currentThreadId.value != null || _uiState.value.messages.isNotEmpty())) {
             activeContext = context
-            val s = store ?: return@launch
-            val id = if (isGeneralEntry) null else s.resolveLatestThread(context)
-            if (id != null) {
-                openThread(id, fallbackContext = context)
-            } else {
-                _currentThreadId.value = null
-                messagesByThread[null] = emptyList()
-                _uiState.update {
-                    it.copy(messages = emptyList(), isSending = false, pendingImages = emptyList())
-                }
-            }
+            return@locked
         }
+        cancelInFlight(persistInterrupted = true)
+        resetSession(context, clearInput = false)
     }
-
-    /**
-     * 跨进程恢复**所有**未完成的 research 轮询，不依赖「进入时恢复了哪个会话」。
-     *
-     * 通用入口不再恢复会话之后，那条挂着任务的会话不会被打开——恢复若仍挂在
-     * [openThread] 上，后台被杀再回来就没人接这个已扣费的任务了（服务端跑完也没人
-     * 写回）。轮询照常落库，用户从抽屉切过去就能看到完整报告。
-     *
-     * 落在 init 而非 [enterEntry]：Activity 被系统重建时 Screen 侧的 `enteredKey`
-     * （rememberSaveable）已恢复、`enterEntry` 不会再调，而那恰恰是最需要恢复的场景。
-     * 此刻尚无当前线，所以不区分——随后 [openThread] 对当前线补 searching 转圈标记，
-     * 它重复发起的轮询由 [researchJobs] 的在途判定拦下。
-     */
-    private suspend fun resumeAllPendingResearch() {
-        val s = store ?: return
-        s.threadsWithPendingResearch().forEach { threadId ->
-            val messages = messagesByThread[threadId]
-                ?: s.loadMessages(threadId).also { messagesByThread[threadId] = it }
-            resumeResearchIfAny(threadId, messages)
-        }
-    }
-
-    private var idSeq = initialMessages.maxOfOrNull { it.id } ?: 0L
-    private fun nextId(): Long = ++idSeq
 
     fun updateInput(text: String) {
         _uiState.update { it.copy(input = text) }
@@ -214,47 +166,47 @@ class ChatViewModel(
         if (_chatMode.value == ChatMode.DeepResearch) {
             if (text.isBlank()) return
             _uiState.update { it.copy(input = "") }
-            sendResearch(text)
+            queueResearch(text)
             return
         }
         val images = state.pendingImages
         _uiState.update { it.copy(input = "", pendingImages = emptyList()) }
-        sendMessage(text, images, from = "input")
+        queueChat(text, images, from = "input")
     }
 
     /** 发送一段指定文本（如快捷按钮的预设问题），不依赖输入框；发送中或空白则忽略。 */
-    fun sendText(text: String) = sendMessage(text, emptyList(), from = "quick_reply")
+    fun sendText(text: String) = queueChat(text, emptyList(), from = "quick_reply")
 
     /**
      * 「一键详细解读」：插入一条 user 消息（chip 文案），走 detail 管线流式生成解读。
      * 可见性由 [DetailSummaryPolicy] 保证（GitHub 条目 + README 达标 + 尚无成功解读）。
      */
     fun sendDetailSummary(promptText: String) {
-        val context = activeContext
-        if (_uiState.value.isSending || context?.externalId == null) return
-        track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "chat"))
-        _uiState.update { it.copy(isSending = true) }
-        viewModelScope.launch {
-            val threadId = ensureThreadForSend(promptText)
-            val userMessage = ChatMessage(nextId(), Role.USER, promptText, kind = MessageKind.DETAIL_SUMMARY)
-            appendAndPersistUser(threadId, userMessage)
-            launchRequest(threadId, MessageKind.DETAIL_SUMMARY, context)
+        if (_uiState.value.isSending || activeContext?.externalId == null) return
+        locked {
+            val context = activeContext
+            if (_uiState.value.isSending || context?.externalId == null) return@locked
+            track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "chat"))
+            _uiState.update { it.copy(isSending = true) }
+            val threadId = ensureThread(promptText)
+            appendVisible(store.appendUserMessage(threadId, promptText, kind = MessageKind.DETAIL_SUMMARY))
+            startStream(threadId, MessageKind.DETAIL_SUMMARY, context)
         }
     }
 
-    private fun sendMessage(text: String, images: List<String>, from: String) {
+    private fun queueChat(text: String, images: List<String>, from: String) {
         if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
         if (_chatMode.value == ChatMode.DeepResearch) {
-            sendResearch(text)
+            queueResearch(text, from)
             return
         }
-        trackChatSend(from, images.size)
-        _uiState.update { it.copy(isSending = true) }
-        viewModelScope.launch {
-            val threadId = ensureThreadForSend(text)
-            val userMessage = ChatMessage(nextId(), Role.USER, text, images = images)
-            appendAndPersistUser(threadId, userMessage)
-            launchRequest(threadId, MessageKind.CHAT, activeContext)
+        locked {
+            if (_uiState.value.isSending) return@locked
+            trackChatSend(from, images.size)
+            _uiState.update { it.copy(isSending = true) }
+            val threadId = ensureThread(text)
+            appendVisible(store.appendUserMessage(threadId, text, images))
+            startStream(threadId, MessageKind.CHAT, activeContext)
         }
     }
 
@@ -265,23 +217,27 @@ class ChatViewModel(
         val passthrough = error.code == ChatError.CODE_QUOTA_DEVICE ||
             error.code == ChatError.CODE_LOGIN_REQUIRED
         if (!error.category.retryable && !passthrough) return
-        if (message.kind == MessageKind.DEEP_RESEARCH) {
-            // research 不进流式管线（launchRequest 对该 kind 直接 error()），单独路由
-            retryResearch(message)
-            return
+        locked {
+            // 错误条仍须在场（防连点与过期引用）
+            if (_uiState.value.isSending || _uiState.value.messages.none { it.id == message.id }) return@locked
+            if (message.kind == MessageKind.DEEP_RESEARCH) {
+                retryResearch(message)
+                return@locked
+            }
+            val threadId = _currentThreadId.value ?: return@locked
+            store.deleteMessage(message.id)
+            removeVisible(message.id)
+            // 重试必然重打一次请求，两种 kind 都要补 ai_requested——不补则终局的
+            // ai_completed 落单，成对关系一破，「请求数」这个分母就再也不准
+            if (message.kind == MessageKind.CHAT) {
+                val resent = _uiState.value.messages.lastOrNull { it.role == Role.USER }
+                trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
+            } else {
+                track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "retry"))
+            }
+            _uiState.update { it.copy(isSending = true) }
+            startStream(threadId, message.kind, activeContext)
         }
-        val threadId = _currentThreadId.value
-        updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
-        // 重试必然重打一次请求，两种 kind 都要补 ai_requested——不补则 launchRequest 的
-        // ai_completed 落单，成对关系一破，「请求数」这个分母就再也不准
-        if (message.kind == MessageKind.CHAT) {
-            val resent = messagesByThread[threadId]?.lastOrNull { it.role == Role.USER }
-            trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
-        } else {
-            track(ChatAiEvent.Requested(ChatAiKind.DETAIL_SUMMARY, from = "retry"))
-        }
-        _uiState.update { it.copy(isSending = true) }
-        launchRequest(threadId, message.kind, activeContext)
     }
 
     /**
@@ -305,159 +261,27 @@ class ChatViewModel(
 
     // 会话管理（抽屉）
 
-    fun switchThread(id: Long) {
-        if (id == _currentThreadId.value) return
-        viewModelScope.launch { openThread(id) }
+    fun switchThread(id: Long) = locked {
+        if (id == _currentThreadId.value) return@locked
+        cancelInFlight(persistInterrupted = true)
+        openThread(id)
     }
 
     /** 抽屉「新会话」：总是全新开始（通用入口），不复用任何历史 */
-    fun startNewThread() {
-        _currentThreadId.value = null
-        activeContext = null
-        messagesByThread[null] = emptyList()
-        _uiState.update {
-            it.copy(messages = emptyList(), isSending = false, input = "", pendingImages = emptyList())
-        }
+    fun startNewThread() = locked {
+        cancelInFlight(persistInterrupted = true)
+        resetSession(context = null, clearInput = true)
     }
 
-    fun renameThread(id: Long, title: String) {
-        viewModelScope.launch { store?.renameThread(id, title) }
+    fun renameThread(id: Long, title: String) = locked {
+        store.renameThread(id, title)
     }
 
-    fun deleteThread(id: Long) {
-        viewModelScope.launch {
-            // 在途流一并取消：线程行将消失，终局落库会撞外键；research 轮询同理
-            streams.remove(id)?.cancel()
-            messagesByThread[id]?.forEach { researchJobs.remove(it.id)?.cancel() }
-            messagesByThread.remove(id)
-            store?.deleteThread(id)
-            if (_currentThreadId.value == id) startNewThread()
-        }
-    }
-
-    // 内部
-
-    private suspend fun openThread(id: Long, fallbackContext: ChatContext? = null) {
-        val s = store ?: return
-        val messages = messagesByThread[id] ?: s.loadMessages(id).also { messagesByThread[id] = it }
-        idSeq = maxOf(idSeq, messages.maxOfOrNull { it.id } ?: 0L)
-        _currentThreadId.value = id
-        activeContext = s.contextOf(id) ?: fallbackContext
-        _uiState.update {
-            it.copy(
-                messages = messages,
-                isSending = streams[id]?.isActive == true,
-                pendingImages = emptyList(),
-            )
-        }
-        resumeResearchIfAny(id, messages)
-    }
-
-    /** 首条消息才建线（懒建）；当前线已存在则直接复用。内存模式恒为 null 键。 */
-    private suspend fun ensureThreadForSend(firstMessageText: String): Long? {
-        val s = store ?: return _currentThreadId.value
-        _currentThreadId.value?.let { return it }
-        val id = s.createThread(activeContext, firstMessageText)
-        // 未落库缓冲迁移到新线名下
-        messagesByThread[id] = messagesByThread.remove(null) ?: emptyList()
-        _currentThreadId.value = id
-        return id
-    }
-
-    private suspend fun appendAndPersistUser(threadId: Long?, message: ChatMessage) {
-        updateThreadMessages(threadId) { it + message }
-        if (store != null && threadId != null) {
-            val persisted = store.persistUserMessage(threadId, message)
-            if (persisted.images != message.images) {
-                // 图片已迁入 filesDir：回写新路径（cache 路径随时可能被系统清理）
-                updateThreadMessages(threadId) { list ->
-                    list.map { if (it.id == message.id) it.copy(images = persisted.images) else it }
-                }
-            }
-        }
-    }
-
-    /**
-     * 统一请求路径：先追加空 assistant 占位消息，delta 到达时增量更新其 content；
-     * 成功以全文定稿并终局落库，失败清空已渲染部分（整条重试）并挂上分类错误（不落库）。
-     */
-    private fun launchRequest(threadId: Long?, kind: MessageKind, context: ChatContext?) {
-        val startedAt = epochMillis()
-        var cacheHit = false
-        val placeholderId = nextId()
-        updateThreadMessages(threadId) { it + ChatMessage(placeholderId, Role.ASSISTANT, "", kind = kind) }
-        val job = viewModelScope.launch {
-            val result = runCatching {
-                when (kind) {
-                    MessageKind.CHAT -> {
-                        // 空 assistant 行（research 占位 / 错误条）不进 history：对模型无信息量，
-                        // 且上游可能拒空 content
-                        val history = (messagesByThread[threadId] ?: emptyList())
-                            .filterNot {
-                                it.id == placeholderId || (it.role == Role.ASSISTANT && it.content.isBlank())
-                            }
-                        val useSearch = _chatMode.value == ChatMode.WebSearch
-                        engine.send(
-                            history,
-                            context,
-                            onDelta = { delta -> appendDelta(threadId, placeholderId, delta) },
-                            search = useSearch,
-                            onSearch = { event -> applySearchEvent(threadId, placeholderId, event) },
-                        )
-                    }
-                    MessageKind.DETAIL_SUMMARY -> {
-                        val detail = engine.sendDetailSummary(requireNotNull(context)) { delta ->
-                            appendDelta(threadId, placeholderId, delta)
-                        }
-                        cacheHit = detail.cached
-                        detail.content
-                    }
-                    MessageKind.DEEP_RESEARCH -> error("research 走 launchResearch，不进流式管线")
-                }
-            }
-            result.fold(
-                onSuccess = { full ->
-                    var sources: List<SourceRef> = emptyList()
-                    updateThreadMessages(threadId) { list ->
-                        list.map {
-                            if (it.id == placeholderId) {
-                                sources = it.sources
-                                it.copy(content = full, searching = false)
-                            } else it
-                        }
-                    }
-                    if (store != null && threadId != null) {
-                        store.persistAssistantMessage(threadId, full, kind, selectedModelId(), sources)
-                    }
-                    track(
-                        ChatAiEvent.Completed(
-                            kind.toAiKind(),
-                            if (cacheHit) ChatAiOutcome.CACHE_HIT else ChatAiOutcome.OK,
-                            durationMs = epochMillis() - startedAt,
-                        )
-                    )
-                },
-                onFailure = { e ->
-                    // 取消不是失败。runCatching 连 CancellationException 一起吞，不排除的话
-                    // 「流还在跑时退出聊天页」与「删除会话」每次都会记一条 reason=unknown 的
-                    // 假失败终态，而它与真失败在数据里完全同形、事后分不开
-                    if (e !is CancellationException) {
-                        val error = (e as? ChatException)?.error
-                            ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-                        trackFailure(kind, error, epochMillis() - startedAt)
-                        updateThreadMessages(threadId) { list ->
-                            // 已渲染部分丢弃，整条重试（中途断流语义）
-                            list.map { if (it.id == placeholderId) it.copy(content = "", error = error, searching = false) else it }
-                        }
-                    }
-                },
-            )
-            streams.remove(threadId)
-            if (threadId == _currentThreadId.value) {
-                _uiState.update { it.copy(isSending = false) }
-            }
-        }
-        streams[threadId] = job
+    fun deleteThread(id: Long) = locked {
+        if (inFlight?.threadId == id) cancelInFlight(persistInterrupted = false)
+        research.cancelForThread(id)
+        store.deleteThread(id)
+        if (_currentThreadId.value == id) resetSession(context = null, clearInput = true)
     }
 
     // Deep Research（P3）
@@ -465,236 +289,240 @@ class ChatViewModel(
     /** 解读卡尾部「深度调研此项目」升级入口：按 research 管线直发，不依赖模式开关 */
     fun sendRepoResearch(promptText: String) {
         if (_uiState.value.isSending || activeContext == null) return
-        sendResearch(promptText, from = "detail_summary_upsell")
+        queueResearch(promptText, from = "detail_summary_upsell")
     }
 
-    private fun sendResearch(topic: String, from: String = "chat") {
+    private fun queueResearch(topic: String, from: String = "chat") = locked {
+        if (_uiState.value.isSending) return@locked
         track(ChatAiEvent.Requested(ChatAiKind.RESEARCH, from = from))
         _uiState.update { it.copy(isSending = true) }
-        viewModelScope.launch {
-            val threadId = ensureThreadForSend(topic)
-            appendAndPersistUser(threadId, ChatMessage(nextId(), Role.USER, topic, kind = MessageKind.DEEP_RESEARCH))
-            startResearch(threadId, topic)
-        }
-    }
-
-    /** 提交 research 任务并启动轮询；提交失败挂错误条（重试经 [retryResearch] 重新提交） */
-    private suspend fun startResearch(threadId: Long?, topic: String) {
-        val runId = try {
-            // 条目会话附上标题/链接锚点（拼装收口在此：发送与重试都传原文，各自重拼保证同构）
-            engine.createResearch(ResearchTopics.compose(topic, activeContext))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            // 不只 catch ChatException：Demo/预览引擎的默认实现抛 UnsupportedOperationException，逃逸即崩
-            val error = (e as? ChatException)?.error
-                ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
-            trackFailure(MessageKind.DEEP_RESEARCH, error)
-            updateThreadMessages(threadId) {
-                it + ChatMessage(nextId(), Role.ASSISTANT, "", error = error, kind = MessageKind.DEEP_RESEARCH)
-            }
-            if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
-            return
-        }
-        // 占位行即恢复载体：提交成功立即落库。缓冲内一律用内存 id，Room 行 id 另记映射
-        // 供终局写库（见 researchRowIds 的重号说明）
-        val messageId = nextId()
-        if (store != null && threadId != null) {
-            researchRowIds[messageId] = store.persistResearchPlaceholder(threadId, runId)
-        }
-        updateThreadMessages(threadId) {
-            it + ChatMessage(messageId, Role.ASSISTANT, "", kind = MessageKind.DEEP_RESEARCH, searching = true, researchRunId = runId)
-        }
-        launchResearchPolling(threadId, messageId, runId)
+        val threadId = ensureThread(topic)
+        appendVisible(store.appendUserMessage(threadId, topic, kind = MessageKind.DEEP_RESEARCH))
+        // 条目会话附上标题/链接锚点（发送与重试都传原文、各自重拼，保证同构）
+        appendVisible(research.submit(threadId, ResearchTopics.compose(topic, activeContext)))
+        // 提交落定即解锁输入：轮询可能持续小时级，期间会话仍可正常对话
+        _uiState.update { it.copy(isSending = false) }
     }
 
     /** research 错误条的重试：任务已在服务端存在则恢复轮询同一 runId（绝不重复建任务——
-     *  会重复扣费）；任务未建立（提交失败 / 已判死删行）则取相邻提问重新提交 */
-    private fun retryResearch(message: ChatMessage) {
-        val threadId = _currentThreadId.value
+     *  会重复扣费）；任务未建立（提交失败 / 空报告判死）则取相邻提问重新提交 */
+    private suspend fun retryResearch(message: ChatMessage) {
+        val threadId = _currentThreadId.value ?: return
         val runId = message.researchRunId
-        // 两条路都会走到一个终态 ai_completed（恢复轮询也一样），不补就落单
-        track(ChatAiEvent.Requested(ChatAiKind.RESEARCH, from = "retry"))
         if (runId != null) {
-            updateThreadMessages(threadId) { list ->
-                list.map { if (it.id == message.id) it.copy(error = null, searching = true) else it }
-            }
-            _uiState.update { it.copy(isSending = true) }
-            launchResearchPolling(threadId, message.id, runId)
+            track(ChatAiEvent.Requested(ChatAiKind.RESEARCH, from = "retry"))
+            store.resetResearchPlaceholder(threadId, message.id, runId)
+            applyToVisible(message.id) { it.copy(error = null, searching = true) }
+            research.startPolling(threadId, message.id, runId)
             return
         }
-        val messages = messagesByThread[threadId] ?: emptyList()
+        val messages = _uiState.value.messages
         val index = messages.indexOfFirst { it.id == message.id }
         val topic = messages.take(index.coerceAtLeast(0))
             .lastOrNull { it.role == Role.USER && it.kind == MessageKind.DEEP_RESEARCH }
             ?.content ?: return
-        updateThreadMessages(threadId) { list -> list.filterNot { it.id == message.id } }
+        track(ChatAiEvent.Requested(ChatAiKind.RESEARCH, from = "retry"))
+        store.deleteMessage(message.id)
+        removeVisible(message.id)
         _uiState.update { it.copy(isSending = true) }
-        viewModelScope.launch { startResearch(threadId, topic) }
+        appendVisible(research.submit(threadId, ResearchTopics.compose(topic, activeContext)))
+        _uiState.update { it.copy(isSending = false) }
     }
 
+    // 流式管线
+
     /**
-     * 轮询任务：快轮 8s 覆盖正常时长，转慢轮 60s 直到盖过服务端 2h 超龄判死闸——服务端
-     * 保证死任务终会转 failed，客户端跟到那个终态为止，不留「静默停轮永远转圈」的僵尸态。
-     * 绝对上限仍无终态（异常情况）→ 呈现可重试错误，runId 保留（重试恢复轮询，不重复扣费）。
+     * 统一请求路径：先追加流式占位（[PLACEHOLDER_ID]），delta 到达时增量更新其 content；
+     * 终局在 [stateLock] 内收口——成功以全文落库并替换占位，失败落错误行（整条重试）。
+     * 流协程只在占位上做原子更新，不碰其他状态，取消它无需回滚。
      */
-    private fun launchResearchPolling(threadId: Long?, messageId: Long, runId: String) {
-        if (researchJobs[messageId]?.isActive == true) return
+    private fun startStream(threadId: Long, kind: MessageKind, context: ChatContext?) {
+        val startedAt = epochMillis()
+        _uiState.update {
+            it.copy(messages = it.messages + ChatMessage(PLACEHOLDER_ID, Role.ASSISTANT, "", kind = kind))
+        }
         val job = viewModelScope.launch {
-            repeat(MAX_RESEARCH_POLLS + MAX_RESEARCH_SLOW_POLLS) { attempt ->
-                delay(if (attempt < MAX_RESEARCH_POLLS) RESEARCH_POLL_MS else RESEARCH_SLOW_POLL_MS)
-                val run = try {
-                    engine.pollResearch(runId)
-                } catch (e: ChatException) {
-                    // 瞬态（网络/超时/5xx）继续轮；永久错误（鉴权/配额/非法请求）终局呈现——
-                    // 否则用户只看到转圈直到静默停轮（Sourcery 审查确认的 bug）。
-                    // 占位行不删：任务可能仍在服务端跑完，重登后重试/重开会话可恢复
-                    if (e.error.category.retryable) return@repeat
-                    trackFailure(MessageKind.DEEP_RESEARCH, e.error)
-                    updateThreadMessages(threadId) { list ->
-                        list.map { if (it.id == messageId) it.copy(searching = false, error = e.error) else it }
-                    }
-                    finishResearch(threadId, messageId)
-                    return@launch
-                }
-                when (run.status) {
-                    "completed" -> {
-                        val report = run.report.orEmpty()
-                        if (report.isBlank()) {
-                            // 空报告视同失败（服务端已按失败退款）：直接写回空串会留下一个
-                            // 永远满足恢复哨兵的空占位——每次开会话闪一次、清不掉
-                            store?.deleteMessage(researchRowId(messageId))
-                            val error = ChatError(ChatErrorCategory.SERVER, detail = "empty report")
-                            track(ChatAiEvent.Completed(ChatAiKind.RESEARCH, ChatAiOutcome.ERROR, reason = "empty_report"))
-                            updateThreadMessages(threadId) { list ->
-                                list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
-                            }
-                        } else {
-                            if (store != null && threadId != null) {
-                                store.completeResearchMessage(threadId, researchRowId(messageId), report, runId, run.model)
-                            }
-                            updateThreadMessages(threadId) { list ->
-                                list.map { if (it.id == messageId) it.copy(content = report, searching = false, model = run.model) else it }
-                            }
-                            track(ChatAiEvent.Completed(ChatAiKind.RESEARCH, ChatAiOutcome.OK))
+            var cacheHit = false
+            val result = runCatching {
+                when (kind) {
+                    MessageKind.CHAT -> {
+                        // 空 assistant 行（错误条 / research 占位）不进 history：对模型无信息量，
+                        // 且上游可能拒空 content
+                        val history = _uiState.value.messages.filterNot {
+                            it.id == PLACEHOLDER_ID || (it.role == Role.ASSISTANT && it.content.isBlank())
                         }
-                        finishResearch(threadId, messageId)
-                        return@launch
+                        engine.send(
+                            history,
+                            context,
+                            onDelta = { appendDelta(it) },
+                            search = _chatMode.value == ChatMode.WebSearch,
+                            onSearch = { applySearchEvent(it) },
+                        )
                     }
-                    "failed" -> {
-                        store?.deleteMessage(researchRowId(messageId))
-                        val error = ChatError(ChatErrorCategory.SERVER, detail = run.error ?: "research failed")
-                        track(ChatAiEvent.Completed(ChatAiKind.RESEARCH, ChatAiOutcome.ERROR, reason = run.error ?: "unknown"))
-                        updateThreadMessages(threadId) { list ->
-                            list.map { if (it.id == messageId) it.copy(searching = false, error = error, researchRunId = null) else it }
-                        }
-                        finishResearch(threadId, messageId)
-                        return@launch
+                    MessageKind.DETAIL_SUMMARY -> {
+                        val detail = engine.sendDetailSummary(requireNotNull(context)) { appendDelta(it) }
+                        cacheHit = detail.cached
+                        detail.content
                     }
-                    else -> Unit // running：继续
+                    MessageKind.DEEP_RESEARCH -> error("research 走 ResearchRunner，不进流式管线")
                 }
             }
-            // 绝对上限：已超过服务端判死闸仍无终态，属异常。呈现可重试错误（runId 保留 →
-            // 重试恢复轮询同一任务；库中占位行保留 → 跨进程仍可恢复），不再无限转圈
-            val error = ChatError(ChatErrorCategory.TIMEOUT, detail = "research polling exhausted")
-            trackFailure(MessageKind.DEEP_RESEARCH, error)
-            updateThreadMessages(threadId) { list ->
-                list.map { if (it.id == messageId) it.copy(searching = false, error = error) else it }
-            }
-            finishResearch(threadId, messageId)
+            // 取消不是失败：runCatching 连 CancellationException 一起吞，必须重抛——
+            // 终局收口交给取消方（cancelInFlight），这里再进锁会与它互等
+            result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+            stateLock.withLock { finishStream(threadId, kind, result, startedAt, cacheHit) }
         }
-        researchJobs[messageId] = job
+        inFlight = InFlightSend(threadId, kind, startedAt, job)
     }
 
-    /** 占位行的 Room 行 id：同会话建的走映射，重启后从库载入的消息 id 本身就是行 id */
-    private fun researchRowId(messageId: Long): Long = researchRowIds[messageId] ?: messageId
-
-    private fun finishResearch(threadId: Long?, messageId: Long) {
-        researchJobs.remove(messageId)
-        if (threadId == _currentThreadId.value) _uiState.update { it.copy(isSending = false) }
-    }
-
-    /** 恢复：打开会话时发现「空内容 + runId」的 research 占位 → 续轮询 */
-    private fun resumeResearchIfAny(threadId: Long?, messages: List<ChatMessage>) {
-        messages.filter { it.kind == MessageKind.DEEP_RESEARCH && it.content.isBlank() && it.researchRunId != null && it.error == null }
-            .forEach { placeholder ->
-                updateThreadMessages(threadId) { list ->
-                    list.map { if (it.id == placeholder.id) it.copy(searching = true) else it }
+    private suspend fun finishStream(
+        threadId: Long,
+        kind: MessageKind,
+        result: Result<String>,
+        startedAt: Long,
+        cacheHit: Boolean,
+    ) {
+        inFlight = null
+        result.fold(
+            onSuccess = { full ->
+                if (full.isBlank()) {
+                    // 空回复（如内容过滤拒答）：不落库也不留幽灵气泡
+                    removeVisible(PLACEHOLDER_ID)
+                } else {
+                    val sources = _uiState.value.messages
+                        .firstOrNull { it.id == PLACEHOLDER_ID }?.sources.orEmpty()
+                    replaceVisible(
+                        PLACEHOLDER_ID,
+                        store.appendAssistantMessage(threadId, full, kind, selectedModelId(), sources),
+                    )
                 }
-                launchResearchPolling(threadId, placeholder.id, placeholder.researchRunId!!)
-            }
-    }
-
-    /** 搜索事件落到占位消息：searching 瞬态 + sources 累积（服务端已按 url 去重，客户端再防御一层） */
-    private fun applySearchEvent(threadId: Long?, messageId: Long, event: SearchEvent) {
-        updateThreadMessages(threadId) { list ->
-            list.map { m ->
-                if (m.id != messageId) m
-                else when (event) {
-                    is SearchEvent.Started -> m.copy(searching = true)
-                    is SearchEvent.Done -> m.copy(searching = false)
-                    is SearchEvent.Source ->
-                        m.copy(sources = (m.sources + SourceRef(event.title, event.url)).distinctBy { it.url })
-                }
-            }
-        }
-    }
-
-    private fun appendDelta(threadId: Long?, messageId: Long, delta: String) {
-        updateThreadMessages(threadId) { list ->
-            list.map { if (it.id == messageId) it.copy(content = it.content + delta) else it }
-        }
-    }
-
-    /** 所有消息变更的唯一入口：写缓冲，且仅当该线是当前线时镜像进 uiState */
-    private fun updateThreadMessages(threadId: Long?, transform: (List<ChatMessage>) -> List<ChatMessage>) {
-        val updated = transform(messagesByThread[threadId] ?: emptyList())
-        messagesByThread[threadId] = updated
-        if (threadId == _currentThreadId.value) {
-            _uiState.update { it.copy(messages = updated) }
-        }
+                track(
+                    ChatAiEvent.Completed(
+                        kind.toAiKind(),
+                        if (cacheHit) ChatAiOutcome.CACHE_HIT else ChatAiOutcome.OK,
+                        durationMs = epochMillis() - startedAt,
+                    ),
+                )
+            },
+            onFailure = { e ->
+                val error = (e as? ChatException)?.error
+                    ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
+                track(failureEvent(kind, error, epochMillis() - startedAt))
+                // 已渲染部分丢弃，整条重试（中途断流语义）
+                replaceVisible(PLACEHOLDER_ID, store.appendErrorMessage(threadId, kind, error))
+            },
+        )
+        _uiState.update { it.copy(isSending = false) }
     }
 
     /**
-     * 每次失败恰好一条 ai_completed，与 ai_requested 成对。配额触顶（付费意愿漏斗第一级）
-     * 与匿名解读登录闸（登录转化信号）都靠 `reason` 区分，不再各开一个事件。
-     * 在 VM 记而不是 UI 记：重组会重复上报。
+     * 取消在途流（持锁调用）。[persistInterrupted]：会话还在（切换/重置）时落一条可重试的
+     * 中断错误行，用户切回能看到「回复被打断」而非凭空少一条；线程将删时不落。
+     * 无论哪种都补 ai_completed(interrupted)——取消也是终态，不补则与 ai_requested 失配。
      */
-    private fun trackFailure(kind: MessageKind, error: ChatError, durationMs: Long? = null) {
+    private suspend fun cancelInFlight(persistInterrupted: Boolean) {
+        val flight = inFlight ?: return
+        inFlight = null
+        // 流协程若正等本锁，cancel 会把它从锁等待中打断，不会互等
+        flight.job.cancel()
+        flight.job.join()
+        removeVisible(PLACEHOLDER_ID)
+        _uiState.update { it.copy(isSending = false) }
         track(
             ChatAiEvent.Completed(
-                kind = kind.toAiKind(),
-                outcome = if (error.code == ChatError.CODE_STREAM_INTERRUPTED) {
-                    ChatAiOutcome.INTERRUPTED
-                } else {
-                    ChatAiOutcome.ERROR
-                },
-                durationMs = durationMs,
-                reason = error.code ?: error.category.name.lowercase(),
-                tier = if (error.code == ChatError.CODE_QUOTA_DEVICE) {
-                    error.tier ?: ChatError.TIER_ANONYMOUS
-                } else {
-                    null
-                },
-            )
+                flight.kind.toAiKind(),
+                ChatAiOutcome.INTERRUPTED,
+                durationMs = epochMillis() - flight.startedAt,
+                reason = "canceled",
+            ),
         )
+        if (persistInterrupted) {
+            val error = ChatError(
+                ChatErrorCategory.SERVER,
+                code = ChatError.CODE_STREAM_INTERRUPTED,
+                detail = "canceled: session switched away",
+            )
+            store.appendErrorMessage(flight.threadId, flight.kind, error)
+        }
     }
 
-    private fun MessageKind.toAiKind(): ChatAiKind = when (this) {
-        MessageKind.CHAT -> ChatAiKind.CHAT
-        MessageKind.DETAIL_SUMMARY -> ChatAiKind.DETAIL_SUMMARY
-        MessageKind.DEEP_RESEARCH -> ChatAiKind.RESEARCH
+    // 会话状态（持锁调用）
+
+    private suspend fun openThread(id: Long) {
+        val messages = store.loadMessages(id).map {
+            if (it.kind == MessageKind.DEEP_RESEARCH && it.content.isBlank() &&
+                it.researchRunId != null && it.error == null
+            ) it.copy(searching = true) else it
+        }
+        _currentThreadId.value = id
+        activeContext = store.contextOf(id)
+        _uiState.update {
+            it.copy(messages = messages, isSending = false, pendingImages = emptyList())
+        }
+        messages.filter { it.searching }.forEach { research.startPolling(id, it.id, it.researchRunId!!) }
+    }
+
+    private fun resetSession(context: ChatContext?, clearInput: Boolean) {
+        activeContext = context
+        _currentThreadId.value = null
+        _uiState.update {
+            it.copy(
+                messages = emptyList(),
+                isSending = false,
+                input = if (clearInput) "" else it.input,
+                pendingImages = emptyList(),
+            )
+        }
+    }
+
+    /** 首条消息才建线（懒建）；当前线已存在则直接复用 */
+    private suspend fun ensureThread(firstMessageText: String): Long {
+        _currentThreadId.value?.let { return it }
+        val id = store.createThread(activeContext, firstMessageText)
+        _currentThreadId.value = id
+        return id
+    }
+
+    // 可见列表的原子更新（消息 id 全局唯一，按 id 定位即可，无需 threadId）
+
+    private fun appendVisible(message: ChatMessage) {
+        _uiState.update { it.copy(messages = it.messages + message) }
+    }
+
+    private fun removeVisible(messageId: Long) {
+        _uiState.update { s -> s.copy(messages = s.messages.filterNot { it.id == messageId }) }
+    }
+
+    private fun replaceVisible(messageId: Long, replacement: ChatMessage) {
+        _uiState.update { s ->
+            s.copy(messages = s.messages.map { if (it.id == messageId) replacement else it })
+        }
+    }
+
+    private fun applyToVisible(messageId: Long, transform: (ChatMessage) -> ChatMessage) {
+        _uiState.update { s ->
+            s.copy(messages = s.messages.map { if (it.id == messageId) transform(it) else it })
+        }
+    }
+
+    /** 流式增量与搜索事件只落在占位上：单次原子更新，无锁也不会与串行操作交错出错态 */
+    private fun appendDelta(delta: String) =
+        applyToVisible(PLACEHOLDER_ID) { it.copy(content = it.content + delta) }
+
+    private fun applySearchEvent(event: SearchEvent) = applyToVisible(PLACEHOLDER_ID) { m ->
+        when (event) {
+            is SearchEvent.Started -> m.copy(searching = true)
+            is SearchEvent.Done -> m.copy(searching = false)
+            is SearchEvent.Source ->
+                m.copy(sources = (m.sources + SourceRef(event.title, event.url)).distinctBy { it.url })
+        }
     }
 
     companion object {
         /** 单条消息图片数上限：服务端 app-config 下发（KV 单源），未拉到用与服务端一致的默认 */
         fun maxImagesPerMessage(): Int = chatHost.imagesMaxCount()
 
-        /** research 轮询节奏：快轮 8s×90（≈12 分钟）覆盖正常任务时长，慢轮 60s×110（≈110 分钟）
-         *  盖过服务端 2h 超龄判死闸——每个任务都能等到服务端终态，不留僵尸占位 */
-        private const val RESEARCH_POLL_MS = 8_000L
-        private const val MAX_RESEARCH_POLLS = 90
-        private const val RESEARCH_SLOW_POLL_MS = 60_000L
-        private const val MAX_RESEARCH_SLOW_POLLS = 110
+        /** 流式占位的保留 id：store 行 id 恒为正，负值永不与真实消息撞号 */
+        private const val PLACEHOLDER_ID = -1L
     }
 }

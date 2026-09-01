@@ -10,6 +10,6 @@ import whl.trending.chat.db.chatDatabase
 internal actual fun rememberDefaultChatStore(): ChatStore {
     val appContext = LocalContext.current.applicationContext
     return remember {
-        ChatStore(chatDatabase(appContext), File(appContext.filesDir, "chat_images").absolutePath)
+        RoomChatStore(chatDatabase(appContext), File(appContext.filesDir, "chat_images").absolutePath)
     }
 }

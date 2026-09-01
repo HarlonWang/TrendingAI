@@ -16,8 +16,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * 会话线：一次对话的容器。
  *
- * @param entryKey 入口键（`repo:{externalId}` / `general`）——「同一入口再次进入恢复最近会话」
- *   按此列查询（延续原 sessionKey 的体验，但跨进程存活）
+ * @param entryKey 入口键（`repo:{externalId}` / `general`），留痕会话来自哪个入口
  * @param contextJson 进入时的 [whl.trending.chat.ChatContext] 序列化（通用入口为 null）；
  *   恢复历史会话后「一键解读」chip 与服务端 context 注入都依赖它——不存等于恢复的会话丢了灵魂
  * @param updatedAt 排序键：列表按最近活跃倒序
@@ -33,13 +32,13 @@ data class ThreadEntity(
 )
 
 /**
- * 持久化消息。error 消息不落库（失败是瞬态 UI 状态，可重试；重启后无意义），
- * 流式过程零写库——user 消息即发即落，assistant 仅在成功终局落一次。
+ * 持久化消息。流式过程零写库——user 消息即发即落，assistant 在终局落一次
+ * （成功为全文，失败为错误行：content 空、错误详情进 segmentsJson）。
  *
  * @param imagesJson 用户附图的本地路径列表（JSON）；持久化文件在 filesDir/chat_images，
  *   删线程时先删文件再删行（CASCADE 之后路径就找不回了）
  * @param model 应答模型 id（用户在选择器里选的；展示「哪个模型答的」用）
- * @param segmentsJson P2 预留：富内容时间线信封（JSON，含 v 版本字段），本期恒 null
+ * @param segmentsJson 富内容信封（JSON，含 v 版本字段）：搜索来源 / research runId / 错误终局
  */
 @Entity(
     tableName = "chat_messages",
@@ -76,10 +75,6 @@ interface ThreadDao {
     @Query("SELECT * FROM chat_threads WHERE id = :id")
     suspend fun getById(id: Long): ThreadEntity?
 
-    /** 入口恢复语义：该入口最近活跃的会话线 */
-    @Query("SELECT * FROM chat_threads WHERE entryKey = :entryKey ORDER BY updatedAt DESC LIMIT 1")
-    suspend fun latestByEntry(entryKey: String): ThreadEntity?
-
     @Query("UPDATE chat_threads SET title = :title WHERE id = :id")
     suspend fun rename(id: Long, title: String)
 
@@ -111,14 +106,11 @@ interface MessageDao {
     suspend fun deleteById(id: Long)
 
     /**
-     * 仍有未完成 research 占位（空内容）的会话 id。
-     *
-     * 恢复轮询不能只覆盖「当前打开的会话」：通用入口进入即新会话，之前那条挂着任务的
-     * 会话不会被打开，任务就没人接了。runId 存在 segmentsJson 里，SQL 侧只筛到「空内容
-     * 的 research 行」，由 [whl.trending.chat.ChatViewModel] 再按 runId 过滤。
+     * 空内容的 research 行（占位或错误终局，runId/error 在 segmentsJson 里，
+     * 由 [RoomChatStore.pendingResearch] 解码后过滤出真正待恢复的占位）。
      */
-    @Query("SELECT DISTINCT threadId FROM chat_messages WHERE kind = :kind AND content = ''")
-    suspend fun threadsWithPendingResearch(kind: String): List<Long>
+    @Query("SELECT * FROM chat_messages WHERE kind = :kind AND content = ''")
+    suspend fun pendingResearchRows(kind: String): List<MessageEntity>
 }
 
 @Database(entities = [ThreadEntity::class, MessageEntity::class], version = 1, exportSchema = true)

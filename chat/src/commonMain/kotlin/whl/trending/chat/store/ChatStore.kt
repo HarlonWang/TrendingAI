@@ -1,252 +1,96 @@
 package whl.trending.chat.store
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.flow.Flow
 import whl.trending.chat.ChatContext
-import whl.trending.chat.db.ChatDatabase
-import whl.trending.chat.db.MessageEntity
-import whl.trending.chat.db.ThreadEntity
+import whl.trending.chat.ThreadSummary
+import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.MessageKind
-import whl.trending.chat.model.Role
 import whl.trending.chat.model.SourceRef
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import okio.FileSystem
-import okio.Path.Companion.toPath
-import okio.SYSTEM
-import whl.trending.chat.core.epochMillis
+
+/** 跨进程恢复轮询的载体：库里「空内容 + runId + 无 error」的 research 占位行 */
+data class PendingResearch(val threadId: Long, val messageId: Long, val runId: String)
 
 /**
- * 会话持久化层。落库策略（EchoFlow 经验的裁剪版，见 ai-chat/chat-改造评估方案-v2.md P1）：
- * - 懒建：进入 chat 不落库，首条消息发出时才建 thread；
- * - 终局一次写：流式过程零写库，user 消息即发即落，assistant 仅成功终局落一次，
- *   error 消息不落（瞬态可重试，重启后无意义）；
- * - 图片落库时从 cacheDir 拷入 [imagesDir]（filesDir 下，系统不清理），删线程先删文件再删行。
+ * 会话持久化契约。消息 id 全局唯一且由 store 分配（Room 实现即行 id）——
+ * VM 侧不再维护第二套 id 序列，所有 append* 方法返回带最终 id 的消息。
  *
- * @param clock 时间注入点（测试替身）；updatedAt 排序与懒建时间戳共用
+ * 落库策略（EchoFlow 经验的裁剪版，见 ai-chat/chat-改造评估方案-v2.md P1）：
+ * - 懒建：进入 chat 不落库，首条消息发出时才建 thread；
+ * - user 消息即发即落；assistant 成功终局落一次（流式过程零写库）；
+ * - error 也落库（重启后错误条仍可见可重试，且 id 空间保持单一）；
+ * - research 占位行提交成功即落（跨进程恢复轮询的载体）。
  */
-class ChatStore(
-    private val db: ChatDatabase,
-    private val imagesDir: String,
-    private val clock: () -> Long = { epochMillis() },
-) {
+interface ChatStore {
 
-    /** 入口恢复语义：该入口最近活跃的会话 id；无历史返回 null（UI 呈现空态，不落库） */
-    suspend fun resolveLatestThread(context: ChatContext?): Long? =
-        db.threadDao().latestByEntry(entryKeyOf(context))?.id
+    fun threads(): Flow<List<ThreadSummary>>
 
-    /**
-     * 懒建或复用：同入口已有会话直接复用最近的，否则以首条消息建线。
-     * 标题优先取 context 标题（repo 名可读性最好），通用入口取首条消息截断。
-     */
-    suspend fun ensureThread(context: ChatContext?, firstMessageText: String): Long {
-        db.threadDao().latestByEntry(entryKeyOf(context))?.let { return it.id }
-        return createThread(context, firstMessageText)
-    }
+    /** 总是新建（入口进入与抽屉「新会话」同语义：不复用历史） */
+    suspend fun createThread(context: ChatContext?, firstMessageText: String): Long
 
-    /** 总是新建（抽屉「新会话」语义）——入口复用由 [resolveLatestThread] 在进入时单独承担 */
-    suspend fun createThread(context: ChatContext?, firstMessageText: String): Long {
-        val now = clock()
-        return db.threadDao().insert(
-            ThreadEntity(
-                title = context?.title ?: titleFrom(firstMessageText),
-                entryKey = entryKeyOf(context),
-                contextJson = context?.let { json.encodeToString(StoredContext.from(it)) },
-                createdAt = now,
-                updatedAt = now,
-            ),
-        )
-    }
+    /** 会话的 ChatContext（解读 chip 与服务端 context 注入依赖）；通用入口/解析失败为 null */
+    suspend fun contextOf(threadId: Long): ChatContext?
 
-    /** 恢复会话的 ChatContext（解读 chip 与服务端 context 注入依赖）；通用入口/解析失败为 null */
-    suspend fun contextOf(threadId: Long): ChatContext? =
-        db.threadDao().getById(threadId)?.contextJson?.let { raw ->
-            runCatching { json.decodeFromString<StoredContext>(raw).toContext() }.getOrNull()
-        }
+    suspend fun loadMessages(threadId: Long): List<ChatMessage>
 
-    /** user 消息即发即落；图片从 cacheDir 拷入 filesDir 并回写新路径（cache 可被系统清理） */
-    suspend fun persistUserMessage(threadId: Long, message: ChatMessage): ChatMessage {
-        val persistedImages = message.images.map { copyIntoStore(it) }
-        val stored = message.copy(images = persistedImages)
-        db.messageDao().insert(stored.toEntity(threadId, clock()))
-        db.threadDao().touch(threadId, clock())
-        return stored
-    }
+    suspend fun renameThread(threadId: Long, title: String)
 
-    /** assistant 仅成功终局落一次；空内容（如内容过滤拒答）不落空行 */
-    suspend fun persistAssistantMessage(
+    suspend fun deleteThread(threadId: Long)
+
+    /** user 消息落库；图片迁入持久目录后路径可能改写，以返回值为准 */
+    suspend fun appendUserMessage(
+        threadId: Long,
+        text: String,
+        images: List<String> = emptyList(),
+        kind: MessageKind = MessageKind.CHAT,
+    ): ChatMessage
+
+    suspend fun appendAssistantMessage(
         threadId: Long,
         content: String,
         kind: MessageKind,
         model: String?,
         sources: List<SourceRef> = emptyList(),
-    ) {
-        if (content.isBlank()) return
-        db.messageDao().insert(
-            MessageEntity(
-                threadId = threadId,
-                role = ROLE_ASSISTANT,
-                content = content,
-                imagesJson = null,
-                kind = kind.name,
-                model = model,
-                segmentsJson = sources.takeIf { it.isNotEmpty() }
-                    ?.let { json.encodeToString(StoredSegments(sources = it.map { s -> StoredSource(s.title, s.url) })) },
-                createdAt = clock(),
-            ),
-        )
-        db.threadDao().touch(threadId, clock())
-    }
+    ): ChatMessage
 
-    suspend fun loadMessages(threadId: Long): List<ChatMessage> =
-        db.messageDao().messagesFor(threadId).map { it.toModel() }
+    /** 失败终局落一条错误行；research 提交失败时无 runId */
+    suspend fun appendErrorMessage(
+        threadId: Long,
+        kind: MessageKind,
+        error: ChatError,
+        researchRunId: String? = null,
+    ): ChatMessage
 
-    /**
-     * Deep Research 占位行：提交成功即落库（content 空 + runId），是跨进程恢复轮询的
-     * 载体——进程死亡后重进，「空内容 + runId」的行触发续轮询，5 credits 不白花。
-     */
-    suspend fun persistResearchPlaceholder(threadId: Long, runId: String): Long {
-        val id = db.messageDao().insert(
-            MessageEntity(
-                threadId = threadId, role = ROLE_ASSISTANT, content = "",
-                imagesJson = null, kind = MessageKind.DEEP_RESEARCH.name, model = null,
-                segmentsJson = json.encodeToString(StoredSegments(researchRunId = runId)),
-                createdAt = clock(),
-            ),
-        )
-        db.threadDao().touch(threadId, clock())
-        return id
-    }
+    /** research 占位（空内容 + runId） */
+    suspend fun appendResearchPlaceholder(threadId: Long, runId: String): ChatMessage
 
     /** research 终局：占位行升级为报告全文（保留 runId 供追溯；model 为生成模型留痕） */
-    suspend fun completeResearchMessage(threadId: Long, messageId: Long, report: String, runId: String, model: String? = null) {
-        db.messageDao().updateContent(
-            messageId, report,
-            json.encodeToString(StoredSegments(researchRunId = runId)),
-            model,
-        )
-        db.threadDao().touch(threadId, clock())
-    }
-
-    /** research 失败：删占位行（服务端已退款；留着会让重启误续轮询死任务） */
-    suspend fun deleteMessage(messageId: Long) = db.messageDao().deleteById(messageId)
-
-    /** 仍挂着未完成 research 的会话 id（跨进程恢复轮询用，与「当前打开哪个会话」无关） */
-    suspend fun threadsWithPendingResearch(): List<Long> =
-        db.messageDao().threadsWithPendingResearch(MessageKind.DEEP_RESEARCH.name)
-
-    suspend fun renameThread(threadId: Long, title: String) =
-        db.threadDao().rename(threadId, title.trim().take(MAX_TITLE_LENGTH))
-
-    /** 删线程：先删图片文件（CASCADE 之后路径就找不回了），再删行 */
-    suspend fun deleteThread(threadId: Long) {
-        db.messageDao().imagesJsonFor(threadId).forEach { raw ->
-            runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull()
-                ?.forEach { path -> runCatching { FileSystem.SYSTEM.delete(path.toPath()) } }
-        }
-        db.threadDao().delete(threadId)
-    }
-
-    fun threads() = db.threadDao().observeAll()
-
-    // 内部
-
-    @OptIn(ExperimentalUuidApi::class)
-    private fun copyIntoStore(sourcePath: String): String {
-        val fs = FileSystem.SYSTEM
-        val source = sourcePath.toPath()
-        val dir = imagesDir.toPath()
-        if (!fs.exists(source) || source.parent == dir) return sourcePath
-        // 保留源扩展名（当前附件层恒产 JPEG，此处是对未来透传原图的加固；无扩展名回退 jpg）
-        val extension = source.name.substringAfterLast('.', "").takeIf { it.isNotBlank() } ?: "jpg"
-        val target = dir / "${Uuid.random()}.$extension"
-        return runCatching {
-            fs.createDirectories(dir)
-            fs.copy(source, target)
-            target.toString()
-        }.getOrDefault(sourcePath) // 拷贝失败退回原路径：宁可将来图裂，不阻塞发送
-    }
-
-    private fun titleFrom(text: String): String =
-        text.trim().take(MAX_TITLE_LENGTH).ifBlank { DEFAULT_TITLE }
-
-    private fun MessageEntity.toModel(): ChatMessage {
-        // segments 信封热路径只解码一次（Sourcery 建议）
-        val segments = segmentsJson?.let { raw ->
-            runCatching { json.decodeFromString<StoredSegments>(raw) }.getOrNull()
-        }
-        return ChatMessage(
-            id = id,
-            role = if (role == ROLE_USER) Role.USER else Role.ASSISTANT,
-            content = content,
-            images = imagesJson?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
-                ?: emptyList(),
-            kind = runCatching { MessageKind.valueOf(kind) }.getOrDefault(MessageKind.CHAT),
-            sources = segments?.sources?.map { SourceRef(it.title, it.url) } ?: emptyList(),
-            researchRunId = segments?.researchRunId,
-            model = model,
-        )
-    }
-
-    private fun ChatMessage.toEntity(threadId: Long, now: Long) = MessageEntity(
-        threadId = threadId,
-        role = if (role == Role.USER) ROLE_USER else ROLE_ASSISTANT,
-        content = content,
-        imagesJson = images.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it) },
-        kind = kind.name,
-        model = null,
-        segmentsJson = null,
-        createdAt = now,
-    )
+    suspend fun completeResearch(threadId: Long, messageId: Long, report: String, runId: String, model: String?)
 
     /**
-     * segmentsJson 信封 v1（P2）：目前只承载搜索来源；v 字段为演进留位，
-     * 反序列化 ignoreUnknownKeys 保证老版本读新数据不崩（EchoFlow 教训的版本化版）
+     * research 失败写回占位行。[runId] 非空表示任务在服务端仍可续（重试恢复轮询、
+     * 不重复扣费）；null 表示终局死亡（服务端已退款），行不再触发恢复轮询。
      */
-    @Serializable
-    private data class StoredSegments(val v: Int = 1, val sources: List<StoredSource> = emptyList(), val researchRunId: String? = null)
+    suspend fun markResearchError(threadId: Long, messageId: Long, error: ChatError, runId: String?)
 
-    @Serializable
-    private data class StoredSource(val title: String, val url: String)
+    /** 重试续轮前清掉错误标记，行回到占位形态 */
+    suspend fun resetResearchPlaceholder(threadId: Long, messageId: Long, runId: String)
 
-    /**
-     * ChatContext 的持久化镜像（原类未标 @Serializable，此处 DTO 隔离序列化关注点）。
-     * autoDetailSummary 是一次性触发标记，不持久化。
-     */
-    @Serializable
-    private data class StoredContext(
-        val title: String,
-        val summary: String? = null,
-        val sourceUrl: String? = null,
-        val source: String? = null,
-        val externalId: String? = null,
-        val readmeLength: Int? = null,
-    ) {
-        fun toContext() = ChatContext(
-            title = title, summary = summary, sourceUrl = sourceUrl,
-            source = source, externalId = externalId, readmeLength = readmeLength,
-        )
+    /** 重试重新提交前移除错误行 */
+    suspend fun deleteMessage(messageId: Long)
 
-        companion object {
-            fun from(c: ChatContext) = StoredContext(
-                title = c.title, summary = c.summary, sourceUrl = c.sourceUrl,
-                source = c.source, externalId = c.externalId, readmeLength = c.readmeLength,
-            )
-        }
-    }
+    suspend fun pendingResearch(): List<PendingResearch>
 
     companion object {
         const val MAX_TITLE_LENGTH = 20
         const val DEFAULT_TITLE = "新对话"
         const val ENTRY_GENERAL = "general"
-        private const val ROLE_USER = "user"
-        private const val ROLE_ASSISTANT = "assistant"
-
-        private val json = Json { ignoreUnknownKeys = true }
 
         /** 入口键：repo 条目按 externalId 隔离，其余（含 HN/PH 无 externalId 的场景）归通用 */
         fun entryKeyOf(context: ChatContext?): String =
             context?.externalId?.let { "repo:$it" } ?: ENTRY_GENERAL
+
+        internal fun titleFrom(text: String): String =
+            text.trim().take(MAX_TITLE_LENGTH).ifBlank { DEFAULT_TITLE }
     }
 }

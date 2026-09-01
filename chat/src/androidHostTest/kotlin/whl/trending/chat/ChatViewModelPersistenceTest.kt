@@ -1,8 +1,10 @@
 package whl.trending.chat
 
+import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -15,17 +17,19 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import whl.trending.chat.ChatContext
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
 import whl.trending.chat.engine.DetailSummaryResult
 import whl.trending.chat.db.ChatDatabase
+import whl.trending.chat.host.ChatAiEvent
+import whl.trending.chat.host.ChatAiKind
+import whl.trending.chat.host.ChatAiOutcome
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
-import whl.trending.chat.store.ChatStore
+import whl.trending.chat.store.RoomChatStore
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -33,8 +37,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * VM × 持久化联动：懒建落库 / 终局一次写 / 入口恢复 / 会话切换 / 后台流完成落库。
- * 真 ChatStore + 内存 Room（Robolectric，sdk 钉 35 同前）；引擎为可编程假实现。
+ * VM × 持久化联动：懒建落库 / 终局一次写（成功全文、失败错误行）/ 会话切换取消在途流 /
+ * 入口即新会话 / research 占位与跨进程恢复。
+ * 真 RoomChatStore + 内存 Room（Robolectric，sdk 钉 35 同前）；引擎为可编程假实现。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -43,7 +48,7 @@ class ChatViewModelPersistenceTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var db: ChatDatabase
     private lateinit var imagesDir: File
-    private lateinit var store: ChatStore
+    private lateinit var store: RoomChatStore
 
     private val repoContext = ChatContext(
         title = "octo/demo", source = "github", externalId = "octo/demo", readmeLength = 5000,
@@ -87,7 +92,7 @@ class ChatViewModelPersistenceTest {
             .allowMainThreadQueries()
             .build()
         imagesDir = File.createTempFile("imgs", null).apply { delete(); mkdirs() }
-        store = ChatStore(db, imagesDir.absolutePath, clock = { 1000L })
+        store = RoomChatStore(db, imagesDir.absolutePath, clock = { 1000L })
     }
 
     @After
@@ -98,9 +103,12 @@ class ChatViewModelPersistenceTest {
     }
 
     /** 构造并执行入口进入（Screen 的 enterEntry 时序在测试里显式驱动） */
-    private fun vm(engine: ChatEngine, context: ChatContext? = null) =
-        ChatViewModel(engine, context, store = store, loadModels = { ChatModelsResponse() }, track = {}, selectedModelId = { "gpt-5.5" })
-            .also { it.enterEntry(context) }
+    private fun vm(
+        engine: ChatEngine,
+        context: ChatContext? = null,
+        track: (ChatAiEvent) -> Unit = {},
+    ) = ChatViewModel(engine, context, store = store, loadModels = { ChatModelsResponse() }, track = track, selectedModelId = { "gpt-5.5" })
+        .also { it.enterEntry(context) }
 
     @Test
     fun `首条发送懒建线程，user 与 assistant 终局各落一行，model 记录在案`() = runTest(dispatcher) {
@@ -120,33 +128,40 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
-    fun `失败回复不落库，user 消息保留`() = runTest(dispatcher) {
+    fun `失败回复落错误行：重启后仍可见可重试`() = runTest(dispatcher) {
         val v = vm(GatedEngine(failWith = ChatError(ChatErrorCategory.NETWORK)))
         advanceUntilIdle()
         v.updateInput("hi")
         v.send()
         advanceUntilIdle()
 
-        val threads = store.threads().first()
-        val rows = db.messageDao().messagesFor(threads[0].id)
-        assertEquals(listOf("user"), rows.map { it.role })
         // UI 上错误条可见可重试
         assertNotNull(v.uiState.value.messages.last().error)
+
+        // 落库往返：错误行随会话持久化
+        val threads = store.threads().first()
+        val loaded = store.loadMessages(threads[0].id)
+        assertEquals(listOf(Role.USER, Role.ASSISTANT), loaded.map { it.role })
+        assertEquals(ChatErrorCategory.NETWORK, loaded.last().error?.category)
     }
 
     @Test
-    fun `入口恢复：同 repo 再次构造 VM 载入历史消息`() = runTest(dispatcher) {
+    fun `repo 入口不恢复历史：再次进入是新会话，历史在抽屉可切回`() = runTest(dispatcher) {
         val first = vm(GatedEngine(reply = "答一"), repoContext)
         advanceUntilIdle()
         first.updateInput("问一")
         first.send()
         advanceUntilIdle()
+        val threadId = store.threads().first()[0].id
 
         val second = vm(GatedEngine(), repoContext)
         advanceUntilIdle()
-        val restored = second.uiState.value.messages
-        assertEquals(listOf("问一", "答一"), restored.map { it.content })
-        assertEquals(listOf(Role.USER, Role.ASSISTANT), restored.map { it.role })
+        assertTrue(second.uiState.value.messages.isEmpty())
+        assertNull(second.currentThreadId.value)
+
+        second.switchThread(threadId)
+        advanceUntilIdle()
+        assertEquals(listOf("问一", "答一"), second.uiState.value.messages.map { it.content })
     }
 
     @Test
@@ -158,6 +173,7 @@ class ChatViewModelPersistenceTest {
         advanceUntilIdle()
 
         v.startNewThread()
+        advanceUntilIdle()
         assertTrue(v.uiState.value.messages.isEmpty())
         v.updateInput("第二线")
         v.send()
@@ -167,7 +183,7 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
-    fun `switchThread 载入目标线程消息与 id 续位`() = runTest(dispatcher) {
+    fun `switchThread 载入目标线程消息与 context`() = runTest(dispatcher) {
         val v = vm(GatedEngine(reply = "答A"), repoContext)
         advanceUntilIdle()
         v.updateInput("问A")
@@ -176,6 +192,7 @@ class ChatViewModelPersistenceTest {
         val threadA = store.threads().first()[0].id
 
         v.startNewThread()
+        advanceUntilIdle()
         v.updateInput("问B")
         v.send()
         advanceUntilIdle()
@@ -186,31 +203,48 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
-    fun `切换会话时后台流继续完成并落库，切回可见全文`() = runTest(dispatcher) {
+    fun `切换会话取消在途流：原会话落中断错误行，切回可重试`() = runTest(dispatcher) {
         val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
         val v = vm(GatedEngine(reply = "慢答案", gate = gate), repoContext)
         advanceUntilIdle()
         v.updateInput("慢问题")
         v.send()
-        advanceUntilIdle() // 流启动，卡在 gate
+        testScheduler.runCurrent() // 流启动，卡在 gate
         val threadA = store.threads().first()[0].id
         assertTrue(v.uiState.value.isSending)
 
-        v.startNewThread() // 切走：A 的流在后台继续
+        v.startNewThread() // 切走：在途流取消，已渲染部分丢弃
+        advanceUntilIdle()
         assertEquals(false, v.uiState.value.isSending)
 
-        gate.complete(Unit)
-        advanceUntilIdle()
+        // A 落了中断错误行（user + 错误 assistant），没有幽灵全文
+        val rows = store.loadMessages(threadA)
+        assertEquals(listOf(Role.USER, Role.ASSISTANT), rows.map { it.role })
+        assertEquals(ChatError.CODE_STREAM_INTERRUPTED, rows.last().error?.code)
 
-        // A 已终局落库
-        val rows = db.messageDao().messagesFor(threadA)
-        assertEquals(listOf("user", "assistant"), rows.map { it.role })
-        assertEquals("慢答案", rows[1].content)
-
-        // 切回 A 看到全文
+        // 切回 A 看到可重试的中断条
         v.switchThread(threadA)
         advanceUntilIdle()
-        assertEquals("慢答案", v.uiState.value.messages.last().content)
+        assertNotNull(v.uiState.value.messages.last().error)
+        assertTrue(v.uiState.value.messages.last().error!!.category.retryable)
+    }
+
+    @Test
+    fun `取消在途流补 interrupted 终态：与 requested 成对`() = runTest(dispatcher) {
+        val events = mutableListOf<ChatAiEvent>()
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val v = vm(GatedEngine(gate = gate), track = { events.add(it) })
+        advanceUntilIdle()
+        v.updateInput("hi")
+        v.send()
+        testScheduler.runCurrent()
+
+        v.startNewThread()
+        advanceUntilIdle()
+
+        assertEquals(1, events.filterIsInstance<ChatAiEvent.Requested>().size)
+        val completed = events.filterIsInstance<ChatAiEvent.Completed>()
+        assertEquals(listOf(ChatAiOutcome.INTERRUPTED to "canceled"), completed.map { it.outcome to it.reason })
     }
 
     @Test
@@ -234,6 +268,7 @@ class ChatViewModelPersistenceTest {
     /** 带搜索事件的假引擎 */
     private class SearchEngine(var reply: String = "答案") : ChatEngine {
         var lastSearchFlag = false
+        var lastHistory: List<ChatMessage>? = null
         override suspend fun send(
             history: List<ChatMessage>,
             context: ChatContext?,
@@ -242,6 +277,7 @@ class ChatViewModelPersistenceTest {
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
         ): String {
             lastSearchFlag = search
+            lastHistory = history
             if (search) {
                 onSearch(whl.trending.chat.model.SearchEvent.Started)
                 onSearch(whl.trending.chat.model.SearchEvent.Done("q"))
@@ -355,7 +391,7 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
-    fun `research 失败→删占位行→错误条可见`() = runTest(dispatcher) {
+    fun `research 失败→占位行转错误行落库（runId 置空，不再触发恢复轮询）`() = runTest(dispatcher) {
         val engine = ResearchEngine(mutableListOf(
             whl.trending.chat.model.ResearchRun("run-77", "failed", null, "failed"),
         ))
@@ -368,13 +404,15 @@ class ChatViewModelPersistenceTest {
 
         assertNotNull(v.uiState.value.messages.last().error)
         val threadId = store.threads().first()[0].id
-        val rows = db.messageDao().messagesFor(threadId)
-        // 占位行已删，只剩 user 消息
-        assertEquals(listOf("user"), rows.map { it.role })
+        val loaded = store.loadMessages(threadId)
+        assertEquals(listOf(Role.USER, Role.ASSISTANT), loaded.map { it.role })
+        assertNotNull(loaded.last().error)
+        assertNull(loaded.last().researchRunId)
+        assertTrue(store.pendingResearch().isEmpty())
     }
 
     @Test
-    fun `重开会话发现未完成占位→恢复轮询直至完成`() = runTest(dispatcher) {
+    fun `进程死亡后重启：resumeAll 接手未完成任务，落库不依赖会话被打开`() = runTest(dispatcher) {
         val engine = ResearchEngine(mutableListOf(
             whl.trending.chat.model.ResearchRun("run-77", "running", null, null),
         ))
@@ -383,12 +421,12 @@ class ChatViewModelPersistenceTest {
         v.toggleDeepResearch()
         v.updateInput("长任务")
         v.send()
-        // 只让创建完成、不推进轮询到终局：先切走再回来模拟重开
-        advanceUntilIdle()
+        testScheduler.runCurrent() // 提交完成、占位已落库；轮询首拍（8s）未到
 
         val threadId = store.threads().first()[0].id
+        v.viewModelScope.cancel() // 模拟进程死亡：轮询随 VM 一起消失
 
-        // 新 VM（模拟进程重启）：通用入口进来是**新会话**，那条挂着任务的会话并不会被打开——
+        // 新 VM（进程重启）：通用入口进来是**新会话**，那条挂着任务的会话并不会被打开——
         // 恢复轮询因此不能挂在会话恢复上，否则这 10 credits 的任务永远没人接。
         // 任务照常跑完落库，用户从抽屉切过去就能看到完整报告。
         val engine2 = ResearchEngine(mutableListOf(
@@ -399,6 +437,26 @@ class ChatViewModelPersistenceTest {
 
         assertTrue(v2.uiState.value.messages.isEmpty())
         assertEquals("迟到的报告", db.messageDao().messagesFor(threadId).last().content)
+    }
+
+    @Test
+    fun `research 轮询不阻塞发送：任务在途时仍可正常对话`() = runTest(dispatcher) {
+        val engine = ResearchEngine(mutableListOf(
+            whl.trending.chat.model.ResearchRun("run-77", "running", null, null),
+        ))
+        val v = vm(engine)
+        advanceUntilIdle()
+        v.toggleDeepResearch()
+        v.updateInput("长任务")
+        v.send()
+        testScheduler.runCurrent()
+        assertEquals(false, v.uiState.value.isSending) // 提交落定即解锁
+
+        v.toggleDeepResearch() // 回 Normal
+        v.updateInput("顺便问个问题")
+        v.send()
+        testScheduler.runCurrent()
+        assertNotNull(engine.lastHistory) // chat 请求真的发出去了
     }
 
     @Test
@@ -458,7 +516,7 @@ class ChatViewModelPersistenceTest {
     }
 
     @Test
-    fun `research 空报告视同失败：删占位行、错误可重试、不留恢复哨兵`() = runTest(dispatcher) {
+    fun `research 空报告视同失败：错误可重试、runId 置空不留恢复哨兵`() = runTest(dispatcher) {
         val engine = ResearchEngine(mutableListOf(
             whl.trending.chat.model.ResearchRun("run-77", "completed", "", null),
         ))
@@ -472,14 +530,12 @@ class ChatViewModelPersistenceTest {
         val last = v.uiState.value.messages.last()
         assertNotNull(last.error)
         assertEquals(null, last.researchRunId)
-        // 占位行已删：库里只剩 user，重开会话不会再触发恢复轮询
-        val threadId = store.threads().first()[0].id
-        assertEquals(listOf("user"), db.messageDao().messagesFor(threadId).map { it.role })
+        // 错误行落库但 runId 已清：重启不会再触发恢复轮询
+        assertTrue(store.pendingResearch().isEmpty())
     }
 
     @Test
-    fun `error 条占过内存 id 后，research 占位 id 不与已有消息重号`() = runTest(dispatcher) {
-        // 第一次提交失败：error 条占用内存 id 但不落库 → Room 自增从此落后于内存序列
+    fun `消息 id 全局唯一：错误行与后续占位不重号`() = runTest(dispatcher) {
         val engine = ResearchEngine(
             statuses = mutableListOf(whl.trending.chat.model.ResearchRun("run-77", "completed", "# 报告", null)),
             failCreate = ChatError(ChatErrorCategory.SERVER),
@@ -525,7 +581,7 @@ class ChatViewModelPersistenceTest {
 
         assertEquals(1, engine.created)
         assertEquals("# 报告", v.uiState.value.messages.last().content)
-        // user 提问只有一条，未被重试复制
+        // user 提问只有一条，未被重试复制；错误行已被替换
         val threadId = store.threads().first()[0].id
         assertEquals(listOf("user", "assistant"), db.messageDao().messagesFor(threadId).map { it.role })
     }
