@@ -139,13 +139,15 @@ class ChatViewModel(
 
     private fun queueChat(text: String, images: List<String>, from: String) {
         if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
+        // 发送被接受那一刻捕获搜索开关：排队与流启动之间用户再切开关不影响本条
+        val search = _searchEnabled.value
         locked {
             if (_uiState.value.isSending) return@locked
             trackChatSend(from, images.size)
             _uiState.update { it.copy(isSending = true) }
             val threadId = ensureThread(text)
             appendVisible(store.appendUserMessage(threadId, text, images))
-            startStream(threadId)
+            startStream(threadId, search)
         }
     }
 
@@ -165,7 +167,7 @@ class ChatViewModel(
             val resent = _uiState.value.messages.lastOrNull { it.role == Role.USER }
             trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
             _uiState.update { it.copy(isSending = true) }
-            startStream(threadId)
+            startStream(threadId, _searchEnabled.value)
         }
     }
 
@@ -211,7 +213,7 @@ class ChatViewModel(
      * 终局在 [stateLock] 内收口——成功以全文落库并替换占位，失败落错误行（整条重试）。
      * 流协程只在占位上做原子更新，不碰其他状态，取消它无需回滚。
      */
-    private fun startStream(threadId: Long) {
+    private fun startStream(threadId: Long, search: Boolean) {
         val startedAt = epochMillis()
         _uiState.update {
             it.copy(messages = it.messages + ChatMessage(PLACEHOLDER_ID, Role.ASSISTANT, ""))
@@ -225,7 +227,7 @@ class ChatViewModel(
                 engine.send(
                     history,
                     onDelta = { appendDelta(it) },
-                    search = _searchEnabled.value,
+                    search = search,
                     onSearch = { applySearchEvent(it) },
                 )
             }
