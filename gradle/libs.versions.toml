@@ -28,8 +28,8 @@ kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.8.0"
 kotlinx-coroutines = "1.11.0"
 composeIcons = "1.7.3"
-coil = "3.5.0"
-material-kolor = "5.0.0"
+coil = "3.6.0"
+material-kolor = "5.0.1"
 commonmark = "0.30.0"
 highlights = "1.1.0"
 kmp-webview = "0.1.11"
@@ -42,9 +42,9 @@ eventbase-kt = "0.2.0"
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
 room = "2.8.4"
 # Room KMP 的 iOS 驱动；版本随 room 的 androidx.sqlite 依赖走
-sqlite = "2.6.1"
+sqlite = "2.7.0"
 # chat 的跨平台文件操作；版本对齐 coil 传递的 okio
-okio = "3.17.0"
+okio = "3.18.1"
 # KSP2 起版本线与 Kotlin 解耦（不再是 kotlin-x.y.z 配对命名）
 ksp = "2.3.10"
 robolectric = "4.16.1"
