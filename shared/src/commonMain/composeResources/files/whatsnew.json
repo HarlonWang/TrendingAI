@@ -1,9 +1,15 @@
 {
-  "version": "1.4.2",
+  "version": "1.5.0",
   "zh": [
-    "修复若干已知问题，提升稳定性"
+    "招聘页重做：支持按职能筛选和关键词搜索，卡片更清爽",
+    "AI 对话单次最多可发 9 张图片，超出限制时会明确提示",
+    "网络异常提示更友好，重试按钮不再被挤出屏幕",
+    "「一键解读」与「深度研究」暂时下线，后续以新形式回归"
   ],
   "en": [
-    "Fixed several known issues and improved stability"
+    "Jobs page redesigned: filter by role, search by keyword, cleaner cards",
+    "Send up to 9 images per AI chat message, with a clear message when the limit is exceeded",
+    "Friendlier network error messages, and the retry button stays on screen",
+    "One-tap summary and Deep Research are retired for now; they will return in a new form"
   ]
 }

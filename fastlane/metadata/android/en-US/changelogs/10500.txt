@@ -1,0 +1,4 @@
+• Jobs page redesigned: filter by role, search by keyword, cleaner cards
+• Send up to 9 images per AI chat message, with a clear message when the limit is exceeded
+• Friendlier network error messages, and the retry button stays on screen
+• One-tap summary and Deep Research are retired for now; they will return in a new form
