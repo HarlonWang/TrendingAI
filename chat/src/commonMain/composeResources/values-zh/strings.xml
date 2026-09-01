@@ -43,8 +43,6 @@
     <string name="chat_user_image">图片</string>
     <string name="chat_image_viewer_close">关闭</string>
     <string name="chat_error_images_require_login">发送图片需要先登录。</string>
-    <string name="chat_login_gate_message">此功能需要登录后使用。</string>
-    <string name="chat_login_gate_unlocked">已登录，点击重试继续。</string>
     <!-- 会话抽屉 -->
     <string name="chat_history">会话</string>
     <string name="chat_new_thread">新会话</string>
@@ -58,6 +56,4 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">联网搜索</string>
     <string name="chat_searching">正在搜索网络…</string>
-    <string name="chat_deep_research">深入研究</string>
-    <string name="chat_researching">深入研究中，约需几分钟…</string>
 </resources>

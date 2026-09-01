@@ -6,22 +6,17 @@ import io.ktor.client.HttpClientConfig
 import kotlinx.coroutines.flow.Flow
 import whl.trending.chat.model.ChatModelsResponse
 
-/** AI 请求种类，宿主负责映射到自己的埋点词汇。 */
-enum class ChatAiKind { CHAT, RESEARCH }
-
-/** AI 请求终态，与 [ChatAiKind] 配套。 */
+/** AI 请求终态。 */
 enum class ChatAiOutcome { OK, ERROR, INTERRUPTED }
 
 /** SDK 上报给宿主的埋点事件；Requested 与 Completed 一次请求恰好各一条。 */
 sealed interface ChatAiEvent {
     data class Requested(
-        val kind: ChatAiKind,
         val from: String,
         val imageCount: Int? = null,
     ) : ChatAiEvent
 
     data class Completed(
-        val kind: ChatAiKind,
         val outcome: ChatAiOutcome,
         val durationMs: Long? = null,
         val reason: String? = null,

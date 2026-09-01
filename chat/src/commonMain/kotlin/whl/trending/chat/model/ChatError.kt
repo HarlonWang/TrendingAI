@@ -41,10 +41,6 @@ data class ChatError(
         /** 个人配额触顶的机器码（服务端 chat.js quotaError）；重试放行与专属卡片选择都以它为判据 */
         const val CODE_QUOTA_DEVICE = "quota_device"
 
-        /** 详细解读登录闸的机器码（服务端 detail-summary，403）：匿名点未缓存条目 → 登录卡转化，
-         *  登录成功后与 quota_device 同样享受 retry 放行例外 */
-        const val CODE_LOGIN_REQUIRED = "login_required"
-
         /** 流在 done 事件之前断了（见 engine/ChatApi）：埋点据此把「中断」与「真错误」分开 */
         const val CODE_STREAM_INTERRUPTED = "stream_interrupted"
 

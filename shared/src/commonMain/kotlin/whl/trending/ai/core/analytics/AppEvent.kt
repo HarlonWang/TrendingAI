@@ -8,7 +8,7 @@ import wang.harlon.eventbase.Event
  *
  * `app_opened` / `app_backgrounded` 不在这里：由 eventbase-kt 按自己的会话口径自动上报。
  *
- * 枚举值经库的 props 归一化输出为小写名（`DEEP_RESEARCH` → `deep_research`），
+ * 枚举值经库的 props 归一化输出为小写名（`CACHE_MISS` → `cache_miss` 这样的规则），
  * 值域因此也有编译期保护，不只是键名。null 属性在归一化时丢弃，无需调用点判空。
  */
 sealed class AppEvent(
@@ -256,7 +256,7 @@ enum class ListFilter {
     ROLE_CATEGORY, REMOTE_KIND, MONTH,
 }
 
-enum class AiKind { CHAT, RESEARCH }
+enum class AiKind { CHAT }
 
 enum class AiOutcome { OK, ERROR, INTERRUPTED }
 

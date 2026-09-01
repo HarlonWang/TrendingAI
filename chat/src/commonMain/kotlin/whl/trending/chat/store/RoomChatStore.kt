@@ -15,7 +15,6 @@ import whl.trending.chat.db.ThreadEntity
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
-import whl.trending.chat.model.MessageKind
 import whl.trending.chat.model.Role
 import whl.trending.chat.model.SourceRef
 import kotlin.uuid.ExperimentalUuidApi
@@ -23,7 +22,7 @@ import kotlin.uuid.Uuid
 
 /**
  * Room 实现。图片落库时从 cacheDir 拷入 [imagesDir]（filesDir 下，系统不清理），
- * 删线程先删文件再删行。error 与 research 状态存 segmentsJson 信封，不改表结构。
+ * 删线程先删文件再删行。error 与搜索来源存 segmentsJson 信封，不改表结构。
  *
  * @param clock 时间注入点（测试替身）；updatedAt 排序与懒建时间戳共用
  */
@@ -47,8 +46,10 @@ class RoomChatStore(
         )
     }
 
+    /** 空内容且无错误的 assistant 行不外发：已下线的 research 占位可能残留库中 */
     override suspend fun loadMessages(threadId: Long): List<ChatMessage> =
         db.messageDao().messagesFor(threadId).map { it.toModel() }
+            .filter { it.role == Role.USER || it.content.isNotBlank() || it.error != null }
 
     override suspend fun renameThread(threadId: Long, title: String) =
         db.threadDao().rename(threadId, title.trim().take(ChatStore.MAX_TITLE_LENGTH))
@@ -72,7 +73,6 @@ class RoomChatStore(
         threadId: Long,
         text: String,
         images: List<String>,
-        kind: MessageKind,
     ): ChatMessage {
         val persistedImages = images.map { copyIntoStore(it) }
         val id = db.messageDao().insert(
@@ -81,20 +81,18 @@ class RoomChatStore(
                 role = ROLE_USER,
                 content = text,
                 imagesJson = persistedImages.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it) },
-                kind = kind.name,
                 model = null,
                 segmentsJson = null,
                 createdAt = clock(),
             ),
         )
         db.threadDao().touch(threadId, clock())
-        return ChatMessage(id = id, role = Role.USER, content = text, images = persistedImages, kind = kind)
+        return ChatMessage(id = id, role = Role.USER, content = text, images = persistedImages)
     }
 
     override suspend fun appendAssistantMessage(
         threadId: Long,
         content: String,
-        kind: MessageKind,
         model: String?,
         sources: List<SourceRef>,
     ): ChatMessage {
@@ -103,82 +101,28 @@ class RoomChatStore(
         val id = db.messageDao().insert(
             MessageEntity(
                 threadId = threadId, role = ROLE_ASSISTANT, content = content,
-                imagesJson = null, kind = kind.name, model = model,
+                imagesJson = null, model = model,
                 segmentsJson = segments, createdAt = clock(),
             ),
         )
         db.threadDao().touch(threadId, clock())
-        return ChatMessage(id = id, role = Role.ASSISTANT, content = content, kind = kind, sources = sources, model = model)
+        return ChatMessage(id = id, role = Role.ASSISTANT, content = content, sources = sources, model = model)
     }
 
-    override suspend fun appendErrorMessage(
-        threadId: Long,
-        kind: MessageKind,
-        error: ChatError,
-        researchRunId: String?,
-    ): ChatMessage {
+    override suspend fun appendErrorMessage(threadId: Long, error: ChatError): ChatMessage {
         val id = db.messageDao().insert(
             MessageEntity(
                 threadId = threadId, role = ROLE_ASSISTANT, content = "",
-                imagesJson = null, kind = kind.name, model = null,
-                segmentsJson = json.encodeToString(
-                    StoredSegments(researchRunId = researchRunId, error = StoredError.from(error)),
-                ),
+                imagesJson = null, model = null,
+                segmentsJson = json.encodeToString(StoredSegments(error = StoredError.from(error))),
                 createdAt = clock(),
             ),
         )
         db.threadDao().touch(threadId, clock())
-        return ChatMessage(id = id, role = Role.ASSISTANT, content = "", error = error, kind = kind, researchRunId = researchRunId)
-    }
-
-    override suspend fun appendResearchPlaceholder(threadId: Long, runId: String): ChatMessage {
-        val id = db.messageDao().insert(
-            MessageEntity(
-                threadId = threadId, role = ROLE_ASSISTANT, content = "",
-                imagesJson = null, kind = MessageKind.DEEP_RESEARCH.name, model = null,
-                segmentsJson = json.encodeToString(StoredSegments(researchRunId = runId)),
-                createdAt = clock(),
-            ),
-        )
-        db.threadDao().touch(threadId, clock())
-        return ChatMessage(id = id, role = Role.ASSISTANT, content = "", kind = MessageKind.DEEP_RESEARCH, researchRunId = runId)
-    }
-
-    override suspend fun completeResearch(threadId: Long, messageId: Long, report: String, runId: String, model: String?) {
-        db.messageDao().updateContent(
-            messageId, report,
-            json.encodeToString(StoredSegments(researchRunId = runId)),
-            model,
-        )
-        db.threadDao().touch(threadId, clock())
-    }
-
-    override suspend fun markResearchError(threadId: Long, messageId: Long, error: ChatError, runId: String?) {
-        db.messageDao().updateContent(
-            messageId, "",
-            json.encodeToString(StoredSegments(researchRunId = runId, error = StoredError.from(error))),
-            null,
-        )
-        db.threadDao().touch(threadId, clock())
-    }
-
-    override suspend fun resetResearchPlaceholder(threadId: Long, messageId: Long, runId: String) {
-        db.messageDao().updateContent(
-            messageId, "",
-            json.encodeToString(StoredSegments(researchRunId = runId)),
-            null,
-        )
-        db.threadDao().touch(threadId, clock())
+        return ChatMessage(id = id, role = Role.ASSISTANT, content = "", error = error)
     }
 
     override suspend fun deleteMessage(messageId: Long) = db.messageDao().deleteById(messageId)
-
-    override suspend fun pendingResearch(): List<PendingResearch> =
-        db.messageDao().pendingResearchRows(MessageKind.DEEP_RESEARCH.name).mapNotNull { row ->
-            val segments = row.segmentsJson?.let { decodeSegments(it) } ?: return@mapNotNull null
-            if (segments.error != null) return@mapNotNull null
-            segments.researchRunId?.let { PendingResearch(row.threadId, row.id, it) }
-        }
 
     // 内部
 
@@ -210,22 +154,20 @@ class RoomChatStore(
             images = imagesJson?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
                 ?: emptyList(),
             error = segments?.error?.toError(),
-            kind = runCatching { MessageKind.valueOf(kind) }.getOrDefault(MessageKind.CHAT),
             sources = segments?.sources?.map { SourceRef(it.title, it.url) } ?: emptyList(),
-            researchRunId = segments?.researchRunId,
             model = model,
         )
     }
 
     /**
-     * segmentsJson 信封 v1：搜索来源 / research runId / 错误终局共用；v 字段为演进留位，
-     * 反序列化 ignoreUnknownKeys 保证老版本读新数据不崩（EchoFlow 教训的版本化版）
+     * segmentsJson 信封 v1：搜索来源 / 错误终局共用；v 字段为演进留位，
+     * 反序列化 ignoreUnknownKeys 保证老版本读新数据不崩（EchoFlow 教训的版本化版）。
+     * 旧行可能含已退役字段（如 researchRunId），同样被直接丢弃。
      */
     @Serializable
     private data class StoredSegments(
         val v: Int = 1,
         val sources: List<StoredSource> = emptyList(),
-        val researchRunId: String? = null,
         val error: StoredError? = null,
     )
 

@@ -134,7 +134,7 @@ fun ChatScreen(
                 )
             },
             bottomBar = {
-                val mode by viewModel.chatMode.collectAsState()
+                val searchActive by viewModel.searchEnabled.collectAsState()
                 val catalog by viewModel.catalog.collectAsState()
                 Column {
                     // 建议动作行（描边 = 建议、填充的「当前配置」行 = 已生效状态，靠样式分层）：
@@ -159,21 +159,16 @@ fun ChatScreen(
                     // 当前配置行：回答「下一条消息以什么配置发出去」
                     ChatContextRow(
                         catalog = catalog,
-                        mode = mode,
+                        searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
-                        onToggleResearch = viewModel::toggleDeepResearch,
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
                     ChatInputBar(
                         input = state.input,
-                        // research 仅支持文本：只有图片没文字时发送会被 VM 忽略，按钮同步禁用（不静默）
-                        canSend = state.canSend &&
-                            (mode != whl.trending.chat.model.ChatMode.DeepResearch || state.input.isNotBlank()),
+                        canSend = state.canSend,
                         pendingImages = state.pendingImages,
-                        searchActive = mode == whl.trending.chat.model.ChatMode.WebSearch,
-                        researchActive = mode == whl.trending.chat.model.ChatMode.DeepResearch,
+                        searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
-                        onToggleResearch = viewModel::toggleDeepResearch,
                         onInputChange = viewModel::updateInput,
                         onSend = viewModel::send,
                         onAddImage = viewModel::addPendingImage,

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "366ada2b340de4c517ea2e26e05c3673",
+    "identityHash": "972c0d192f5509b4fc6f60caf44b252f",
     "entities": [
       {
         "tableName": "chat_threads",
@@ -42,7 +42,7 @@
       },
       {
         "tableName": "chat_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `threadId` INTEGER NOT NULL, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `imagesJson` TEXT, `kind` TEXT NOT NULL, `model` TEXT, `segmentsJson` TEXT, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`threadId`) REFERENCES `chat_threads`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `threadId` INTEGER NOT NULL, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `imagesJson` TEXT, `model` TEXT, `segmentsJson` TEXT, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`threadId`) REFERENCES `chat_threads`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -72,12 +72,6 @@
             "fieldPath": "imagesJson",
             "columnName": "imagesJson",
             "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "kind",
-            "columnName": "kind",
-            "affinity": "TEXT",
-            "notNull": true
           },
           {
             "fieldPath": "model",
@@ -130,7 +124,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '366ada2b340de4c517ea2e26e05c3673')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '972c0d192f5509b4fc6f60caf44b252f')"
     ]
   }
 }

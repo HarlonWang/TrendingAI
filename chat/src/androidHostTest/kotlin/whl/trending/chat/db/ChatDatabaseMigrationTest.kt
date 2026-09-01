@@ -81,10 +81,14 @@ class ChatDatabaseMigrationTest {
 
         // 列确实删了（拷表迁移的产物）
         SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { raw ->
-            val columns = raw.rawQuery("PRAGMA table_info(chat_threads)", null).use { c ->
+            fun columnsOf(table: String) = raw.rawQuery("PRAGMA table_info($table)", null).use { c ->
                 generateSequence { if (c.moveToNext()) c.getString(c.getColumnIndexOrThrow("name")) else null }.toList()
             }
-            assertEquals(listOf("id", "title", "createdAt", "updatedAt"), columns)
+            assertEquals(listOf("id", "title", "createdAt", "updatedAt"), columnsOf("chat_threads"))
+            assertEquals(
+                listOf("id", "threadId", "role", "content", "imagesJson", "model", "segmentsJson", "createdAt"),
+                columnsOf("chat_messages"),
+            )
         }
         file.delete()
     }

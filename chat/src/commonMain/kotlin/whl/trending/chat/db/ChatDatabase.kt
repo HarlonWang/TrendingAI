@@ -36,7 +36,7 @@ data class ThreadEntity(
  * @param imagesJson 用户附图的本地路径列表（JSON）；持久化文件在 filesDir/chat_images，
  *   删线程时先删文件再删行（CASCADE 之后路径就找不回了）
  * @param model 应答模型 id（用户在选择器里选的；展示「哪个模型答的」用）
- * @param segmentsJson 富内容信封（JSON，含 v 版本字段）：搜索来源 / research runId / 错误终局
+ * @param segmentsJson 富内容信封（JSON，含 v 版本字段）：搜索来源 / 错误终局
  */
 @Entity(
     tableName = "chat_messages",
@@ -56,7 +56,6 @@ data class MessageEntity(
     val role: String,
     val content: String,
     val imagesJson: String?,
-    val kind: String,
     val model: String?,
     val segmentsJson: String?,
     val createdAt: Long,
@@ -96,31 +95,23 @@ interface MessageDao {
     @Query("SELECT imagesJson FROM chat_messages WHERE threadId = :threadId AND imagesJson IS NOT NULL")
     suspend fun imagesJsonFor(threadId: Long): List<String>
 
-    /** research 占位 → 终局报告（P3：占位行是跨进程恢复轮询的载体）；model 为生成模型留痕 */
-    @Query("UPDATE chat_messages SET content = :content, segmentsJson = :segmentsJson, model = :model WHERE id = :id")
-    suspend fun updateContent(id: Long, content: String, segmentsJson: String?, model: String?)
-
     @Query("DELETE FROM chat_messages WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    /**
-     * 空内容的 research 行（占位或错误终局，runId/error 在 segmentsJson 里，
-     * 由 [RoomChatStore.pendingResearch] 解码后过滤出真正待恢复的占位）。
-     */
-    @Query("SELECT * FROM chat_messages WHERE kind = :kind AND content = ''")
-    suspend fun pendingResearchRows(kind: String): List<MessageEntity>
 }
 
-/** v1→v2：删除入口上下文机制的遗留列（entryKey/contextJson），Room 按 schemas/1.json 生成拷表迁移 */
+/** v1→v2：删除已下线机制的遗留列（入口上下文的 entryKey/contextJson、管线标记 kind），
+ *  Room 按 schemas/1.json 生成拷表迁移。v2 未发过版，本次修订合并了 kind 的删除。 */
 @DeleteColumn(tableName = "chat_threads", columnName = "entryKey")
 @DeleteColumn(tableName = "chat_threads", columnName = "contextJson")
-internal class DropEntryContextColumns : AutoMigrationSpec
+@DeleteColumn(tableName = "chat_messages", columnName = "kind")
+internal class DropLegacyColumns : AutoMigrationSpec
 
 @Database(
     entities = [ThreadEntity::class, MessageEntity::class],
     version = 2,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2, spec = DropEntryContextColumns::class)],
+    autoMigrations = [AutoMigration(from = 1, to = 2, spec = DropLegacyColumns::class)],
 )
 @ConstructedBy(ChatDatabaseConstructor::class)
 abstract class ChatDatabase : RoomDatabase() {

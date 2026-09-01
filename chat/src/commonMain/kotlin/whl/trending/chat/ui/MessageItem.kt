@@ -48,7 +48,6 @@ import trendingai.chat.generated.resources.chat_error_region_blocked
 import trendingai.chat.generated.resources.chat_error_server
 import trendingai.chat.generated.resources.chat_error_timeout
 import trendingai.chat.generated.resources.chat_quota_exceeded
-import trendingai.chat.generated.resources.chat_researching
 import trendingai.chat.generated.resources.chat_retry
 import trendingai.chat.generated.resources.chat_searching
 import trendingai.chat.generated.resources.chat_share
@@ -174,10 +173,7 @@ private fun AssistantMessage(
                     LoadingIndicator(modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = stringResource(
-                            if (message.kind == whl.trending.chat.model.MessageKind.DEEP_RESEARCH) Res.string.chat_researching
-                            else Res.string.chat_searching,
-                        ),
+                        text = stringResource(Res.string.chat_searching),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -197,25 +193,6 @@ private fun AssistantMessage(
             if (message.sources.isNotEmpty()) {
                 SourcesRow(message.sources)
             }
-            // research 报告标注生成模型（服务端随报告返回；模式下无选择器，这里给足透明度）。
-            // 胶囊底色 + 上间距把它从 Markdown 正文里区分出来（裸灰字会融进报告结尾）；
-            // 老数据 model 为空则不显示
-            if (message.kind == whl.trending.chat.model.MessageKind.DEEP_RESEARCH &&
-                !message.model.isNullOrBlank() && message.content.isNotBlank()
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.padding(top = 8.dp),
-                ) {
-                    Text(
-                        text = message.model.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    )
-                }
-            }
             Row {
                 CopyIconButton(
                     text = message.content,
@@ -234,8 +211,8 @@ private fun AssistantMessage(
                     )
                 }
             }
-        } else if (error.code == ChatError.CODE_QUOTA_DEVICE || error.code == ChatError.CODE_LOGIN_REQUIRED) {
-            // 个人配额触顶 / 解读登录闸走专属卡片（登录 CTA / 纯提示），全局熔断仍走普通错误文案
+        } else if (error.code == ChatError.CODE_QUOTA_DEVICE) {
+            // 个人配额触顶走专属卡片（登录 CTA / 纯提示），全局熔断仍走普通错误文案
             QuotaLimitCard(error = error, onRetry = onRetry)
         } else {
             Text(

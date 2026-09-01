@@ -14,8 +14,6 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.StringResource
 import whl.trending.chat.host.chatHost
 import trendingai.chat.generated.resources.Res
-import trendingai.chat.generated.resources.chat_login_gate_message
-import trendingai.chat.generated.resources.chat_login_gate_unlocked
 import trendingai.chat.generated.resources.chat_quota_auth_degraded
 import trendingai.chat.generated.resources.chat_quota_exceeded
 import trendingai.chat.generated.resources.chat_quota_login_cta
@@ -26,13 +24,10 @@ import trendingai.chat.generated.resources.chat_retry
 import whl.trending.chat.model.ChatError
 
 /**
- * 个人配额触顶卡片（`quota_device`）与登录闸卡片（`login_required`，现仅 research 产生），
- * 按档位分形态：
+ * 个人配额触顶卡片（`quota_device`），按档位分形态：
  * - 匿名触顶：登录 CTA（转化点）
  * - 匿名触顶后完成登录：提示已解锁，给重试按钮直接续聊
  * - 登录触顶：纯提示，无 CTA
- * - 登录闸（匿名发起需登录的能力）：复用匿名触顶卡形态，文案换「需登录」口径；
- *   登录成功后与触顶卡同样给重试按钮续上
  *
  * 全局熔断（`quota_global`）不走本卡片，仍是普通错误文案——语义上与个人额度承诺切开。
  *
@@ -50,39 +45,9 @@ internal fun QuotaLimitCard(
     val loggedIn by chatHost.isLoggedIn.collectAsState(chatHost.isLoggedInNow())
     val isProTier = error.tier == ChatError.TIER_PRO
     val isUserTier = error.tier == ChatError.TIER_USER
-    val isLoginGate = error.code == ChatError.CODE_LOGIN_REQUIRED
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
-            isLoginGate -> {
-                when {
-                    // 发请求时自认已登录、却被按匿名档处理（Logto 故障降级）：如实提示登录态未生效，
-                    // 不给「已登录、重试即可」的死循环误导——authDegraded 就是为此而生，此分支必须消费它
-                    error.authDegraded -> {
-                        QuotaText(Res.string.chat_quota_auth_degraded)
-                        TextButton(onClick = onRetry) {
-                            Text(stringResource(Res.string.chat_retry))
-                        }
-                    }
-                    // 登录完成：与触顶卡的放行例外同构，点重试续上
-                    loggedIn -> {
-                        QuotaText(Res.string.chat_login_gate_unlocked)
-                        TextButton(onClick = onRetry) {
-                            Text(stringResource(Res.string.chat_retry))
-                        }
-                    }
-                    else -> {
-                        QuotaText(Res.string.chat_login_gate_message)
-                        if (chatHost.canSignIn) {
-                            Button(onClick = {
-                                chatHost.signIn("chat_login_gate_card")
-                            }) {
-                                Text(stringResource(Res.string.chat_quota_login_cta))
-                            }
-                        }
-                    }
-                }
-            }
             isProTier -> {
                 // Pro 触顶（极罕见）：不透数字的软着陆，无 CTA（已是 Pro，明日恢复）
                 QuotaText(Res.string.chat_quota_pro_exceeded)

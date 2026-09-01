@@ -46,8 +46,6 @@
     <string name="chat_user_image">Image</string>
     <string name="chat_image_viewer_close">Close</string>
     <string name="chat_error_images_require_login">Sign in to send images.</string>
-    <string name="chat_login_gate_message">Sign in to use this feature.</string>
-    <string name="chat_login_gate_unlocked">Signed in — tap retry to continue.</string>
     <!-- 会话抽屉 -->
     <string name="chat_history">Conversations</string>
     <string name="chat_new_thread">New chat</string>
@@ -61,6 +59,4 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">Web search</string>
     <string name="chat_searching">Searching the web…</string>
-    <string name="chat_deep_research">Deep research</string>
-    <string name="chat_researching">Deep research in progress… this may take a few minutes</string>
 </resources>
