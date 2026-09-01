@@ -15,7 +15,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * schema 特征测试：钉住表结构契约（入口恢复查询 / 排序 / 级联删除 / 字段往返）。
+ * schema 特征测试：钉住表结构契约（research 恢复查询 / 排序 / 级联删除 / 字段往返）。
  * Robolectric 内存库，行为即真实 SQLite。
  * sdk 钉 35：Robolectric 4.16.x 不支持 37，SDK 36 沙箱又要求 Java 21（测试 JVM 为 17）
  */
@@ -46,13 +46,17 @@ class ChatDatabaseTest {
         )
 
     @Test
-    fun `入口恢复：latestByEntry 返回该入口最近活跃的会话`() = runTest {
-        db.threadDao().insert(thread(entryKey = "repo:octo/demo", updatedAt = 100))
-        val newer = db.threadDao().insert(thread(entryKey = "repo:octo/demo", updatedAt = 200))
-        db.threadDao().insert(thread(entryKey = "general", updatedAt = 300))
+    fun `pendingResearchRows 只取空内容的 research 行`() = runTest {
+        val t = db.threadDao().insert(thread())
+        db.messageDao().insert(message(t)) // user 行不入
+        val pending = db.messageDao().insert(
+            message(t, role = "assistant", content = "").copy(kind = "DEEP_RESEARCH"),
+        )
+        db.messageDao().insert(
+            message(t, role = "assistant", content = "# 报告").copy(kind = "DEEP_RESEARCH"),
+        )
 
-        val latest = db.threadDao().latestByEntry("repo:octo/demo")
-        assertEquals(newer, latest?.id)
+        assertEquals(listOf(pending), db.messageDao().pendingResearchRows("DEEP_RESEARCH").map { it.id })
     }
 
     @Test

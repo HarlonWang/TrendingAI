@@ -10,7 +10,7 @@ import whl.trending.chat.db.chatDatabase
 
 @Composable
 internal actual fun rememberDefaultChatStore(): ChatStore =
-    remember { ChatStore(chatDatabase(), documentsPath() + "/chat_images") }
+    remember { RoomChatStore(chatDatabase(), documentsPath() + "/chat_images") }
 
 @OptIn(ExperimentalForeignApi::class)
 private fun documentsPath(): String {
