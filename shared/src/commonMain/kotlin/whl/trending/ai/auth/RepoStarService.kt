@@ -13,7 +13,7 @@ class RepoStarService(
     private val tokenProvider: GithubTokenProvider = GithubTokenProvider.shared,
     private val authManager: () -> AuthManager = { globalAuthManager },
 ) {
-    enum class Result { STARRED, UNSTARRED, NEED_LOGIN, FAILED }
+    enum class Result { STARRED, UNSTARRED, NEED_LOGIN, NEED_GITHUB_LINK, FAILED }
 
     /** 查询是否已 star；无 token（未登录/取不到）或查询失败时返回 null，UI 据此显示未点亮且不报错。 */
     suspend fun isStarred(owner: String, repo: String): Boolean? {
@@ -31,11 +31,12 @@ class RepoStarService(
     suspend fun unstar(owner: String, repo: String): Result = run(owner, repo, star = false)
 
     private suspend fun run(owner: String, repo: String, star: Boolean): Result {
-        val token = tokenProvider.get()
-        if (token == null) {
-            // 未登录 → 引导登录；已登录却取不到 token（Vault/网络问题）→ 普通失败
-            return if (authManager().authState.value is AuthState.LoggedIn) Result.FAILED
-            else Result.NEED_LOGIN
+        val loggedIn = authManager().authState.value is AuthState.LoggedIn
+        val token = when (val lookup = tokenProvider.lookup()) {
+            is GithubTokenLookup.Available -> lookup.token
+            // 已登录但服务端明确没存 token（纯邮箱账号 / vault 被清空）→ 引导去关联；网络问题 → 普通失败
+            GithubTokenLookup.Missing -> return if (loggedIn) Result.NEED_GITHUB_LINK else Result.NEED_LOGIN
+            GithubTokenLookup.Failed -> return if (loggedIn) Result.FAILED else Result.NEED_LOGIN
         }
         return try {
             if (star) githubApi.starRepo(token, owner, repo)

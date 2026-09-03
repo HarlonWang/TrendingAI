@@ -14,6 +14,7 @@ import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.FollowingInfo
 import whl.trending.ai.auth.FollowingProvider
+import whl.trending.ai.auth.GithubTokenLookup
 import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.auth.globalAuthManager
@@ -61,6 +62,8 @@ data class ProfileUiState(
     val feedEndReached: Boolean = false,
     /** feed 不可用（无 GitHub token / 请求失败），与整页 isError 区分 */
     val feedUnavailable: Boolean = false,
+    /** 账号已关联 GitHub 但服务端明确没存 token（vault 被清空过）：入口卡换成重新关联引导 */
+    val githubTokenMissing: Boolean = false,
     /** true = 精选档（默认），false = 全部档 */
     val highlightsOnly: Boolean = true,
 ) {
@@ -249,12 +252,23 @@ class ProfileViewModel(
     }
 
     private suspend fun loadGithubData(user: MeUser) {
-        val githubToken = tokenProvider.get()
         val login = user.githubLogin
-        if (githubToken == null || login == null) {
+        val githubToken = when (val lookup = tokenProvider.lookup()) {
+            is GithubTokenLookup.Available -> lookup.token
+            GithubTokenLookup.Missing -> {
+                _uiState.value = _uiState.value.copy(feedUnavailable = true, githubTokenMissing = login != null)
+                return
+            }
+            GithubTokenLookup.Failed -> {
+                _uiState.value = _uiState.value.copy(feedUnavailable = true)
+                return
+            }
+        }
+        if (login == null) {
             _uiState.value = _uiState.value.copy(feedUnavailable = true)
             return
         }
+        _uiState.value = _uiState.value.copy(githubTokenMissing = false)
         try {
             val githubUser = githubApi.fetchUser(githubToken)
             _uiState.value = _uiState.value.copy(githubUser = githubUser)
@@ -429,6 +443,7 @@ class ProfileViewModel(
             feedItems = emptyList(),
             feedEndReached = false,
             feedUnavailable = false,
+            githubTokenMissing = false,
             contributions = null,
         )
         persistSnapshot()

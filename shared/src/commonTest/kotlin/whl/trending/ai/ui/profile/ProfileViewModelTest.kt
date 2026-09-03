@@ -25,6 +25,7 @@ import kotlin.test.assertTrue
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.FollowingProvider
+import whl.trending.ai.auth.GithubTokenLookup
 import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.data.local.FakeCacheFileStore
@@ -77,7 +78,17 @@ class ProfileViewModelTest {
     }
 
     private class FakeTokenProvider : GithubTokenProvider() {
-        override suspend fun get(): String? = "gh-token"
+        override suspend fun lookup(): GithubTokenLookup = GithubTokenLookup.Available("gh-token")
+    }
+
+    /** 服务端明确 404：已关联但 vault 为空 */
+    private class MissingTokenProvider : GithubTokenProvider() {
+        override suspend fun lookup(): GithubTokenLookup = GithubTokenLookup.Missing
+    }
+
+    /** 请求失败：有没有 token 未知 */
+    private class FailedTokenProvider : GithubTokenProvider() {
+        override suspend fun lookup(): GithubTokenLookup = GithubTokenLookup.Failed
     }
 
     private class FakeFollowingProvider : FollowingProvider() {
@@ -99,10 +110,11 @@ class ProfileViewModelTest {
         auth: FakeAuthManager = FakeAuthManager(),
         repository: UserRepository = FakeUserRepository(),
         settingsManager: SettingsManager = settings(),
+        tokenProvider: GithubTokenProvider = FakeTokenProvider(),
     ) = ProfileViewModel(
         repository = repository,
         githubApi = FakeGithubApi(),
-        tokenProvider = FakeTokenProvider(),
+        tokenProvider = tokenProvider,
         followingProvider = FakeFollowingProvider(),
         ownRepoEventsProvider = FakeOwnRepoEventsProvider(),
         authManager = { auth },
@@ -122,6 +134,33 @@ class ProfileViewModelTest {
     @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun serverSaysNoTokenFlagsRelink() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val vm = viewModel(cache(), tokenProvider = MissingTokenProvider())
+        vm.load()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.loggedIn)
+        assertTrue(state.githubTokenMissing)
+        assertTrue(state.feedUnavailable)
+        assertNull(state.githubUser)
+    }
+
+    @Test
+    fun tokenLookupFailureDoesNotFlagRelink() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val vm = viewModel(cache(), tokenProvider = FailedTokenProvider())
+        vm.load()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.loggedIn)
+        assertFalse(state.githubTokenMissing)
+        assertTrue(state.feedUnavailable)
     }
 
     @Test
