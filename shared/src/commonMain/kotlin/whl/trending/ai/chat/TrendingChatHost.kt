@@ -3,7 +3,9 @@ package whl.trending.ai.chat
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
@@ -33,7 +35,11 @@ private object TrendingChatHost : ChatHost {
 
     override val canSignIn: Boolean get() = globalAuthManager.isSupported
     override fun isLoggedInNow() = globalAuthManager.authState.value is AuthState.LoggedIn
-    override val isLoggedIn: Flow<Boolean> = globalAuthManager.authState.map { it is AuthState.LoggedIn }
+    // 收集时才解析 globalAuthManager：本对象在 Application / MainViewController 起点就装好，
+    // 那时登录实现还没注入，初始化期求值会把 Noop 的 LoggedOut 永久钉死
+    override val isLoggedIn: Flow<Boolean> = flow {
+        emitAll(globalAuthManager.authState.map { it is AuthState.LoggedIn })
+    }
     override fun signIn(source: String) = globalAuthManager.signIn(source)
 
     override fun currentIsPro() = globalSettingsManager.currentIsPro()
