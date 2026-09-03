@@ -7,7 +7,6 @@ import platform.UIKit.UIViewController
 import wang.harlon.eventbase.Eventbase
 import wang.harlon.eventbase.init
 import whl.trending.ai.auth.initLoginbaseAuth
-import whl.trending.ai.auth.installIosOAuthLauncher
 import whl.trending.ai.chat.installTrendingChatHost
 import whl.trending.ai.core.analytics.analyticsConfig
 
@@ -21,6 +20,5 @@ fun MainViewController(): UIViewController {
     Eventbase.init(analyticsConfig(isDebug = Platform.isDebugBinary))
     installTrendingChatHost()
     initLoginbaseAuth()
-    installIosOAuthLauncher()
     return ComposeUIViewController { App() }
 }

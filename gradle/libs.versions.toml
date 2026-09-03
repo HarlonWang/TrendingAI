@@ -35,7 +35,7 @@ highlights = "1.1.0"
 kmp-webview = "0.1.11"
 # CI 只认这个版本；本机可经 composite build 改吃本地源码（见 settings.gradle.kts 的双轨说明）。
 # 改了 loginbase-kt 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
-loginbase-kt = "0.2.0"
+loginbase-kt = "0.3.0"
 # 与 loginbase-kt 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
 eventbase-kt = "0.2.0"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode

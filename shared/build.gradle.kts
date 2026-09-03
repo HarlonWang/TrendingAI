@@ -81,6 +81,9 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            // GitHub 授权的 iOS 承载（ASWebAuthenticationSession）。Android 侧那个同名 artifact
+            // 因 manifest 合并只能由 androidApp 依赖，iOS 没有 manifest，直接在这里接
+            implementation(libs.loginbase.kt.browser)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
