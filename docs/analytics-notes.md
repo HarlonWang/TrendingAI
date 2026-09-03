@@ -468,3 +468,21 @@ Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量）�
 
 - 按 `value` 分组的**人数与次数不可跨取值相加**（同一个人点两个职能会被算两次）；
 - 服务端 facets 里该维各项之和大于当期岗位总数，这是正确行为，不是重复计数 bug。
+
+## ⚠️ iOS 的 GitHub 登录取消率天然虚高，读数必须按 `platform` 分开（2026-09-03 实现，尚未发版）
+
+iOS 的 GitHub 授权由 `ASWebAuthenticationSession` 承载（loginbase-kt 0.3.0 的 `:browser` iOS 实现）。
+它在打开授权页**之前**必弹一个系统确认框：「"TrendingAI"想要使用"trendingai.cn"登录」，只有「取消」「继续」
+两个按钮，App 无法关闭或定制。用户在这一步点取消，系统回 `ASWebAuthenticationSessionErrorCodeCanceledLogin`，
+库映射为 `OAuthOutcome.Cancelled`，App 记 `auth_finished(outcome=canceled, method=github)`——
+与 Android 用户在 GitHub 授权页上主动放弃记的是**同一个事件、同一个取值**。
+
+Android 的 Custom Tab 没有这层系统框，`canceled` 只来自用户看到 GitHub 页面后的放弃。所以：
+
+- **`auth_finished(method=github)` 的 `canceled` 占比不能跨平台合并**，混算会把 iOS 那层「还没看到 GitHub 页就退出」的系统框取消摊进 Android 的分母，两边都失真。看板按 `platform` 分组，iOS 单独一条基线。
+- iOS 的取消里**分不出「系统框取消」与「授权页取消」**：两者到 App 都是同一个错误码，埋点没有也无法加维度区分。iOS 的「主动放弃 GitHub 授权」真值不可得，只有上界。
+- `account_link_canceled(method=github)` 是同一机制，同样按平台分。
+- 首次登录与再次登录都弹这个框（它不随授权记忆消失），所以新老用户在 iOS 上的取消率没有 Android 那种「老用户直接过」的差异，别拿 Android 的新老对比套 iOS。
+
+反过来的一条：iOS 用户一旦通过系统框，GitHub 授权页在共享 cookie 的会话里多半直接回跳，
+`auth_started → auth_finished(success)` 的耗时会明显短于 Android。比较登录时长也要分平台。
