@@ -327,6 +327,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                     onClick = {
                         error = null
                         busy = true
+                        LoginSheetBus.beginGithubAttempt()
                         track(
                             AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "github", source = source),
                             Eventbase.currentFlow(),

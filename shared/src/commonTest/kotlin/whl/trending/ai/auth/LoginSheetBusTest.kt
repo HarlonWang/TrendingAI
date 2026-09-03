@@ -25,6 +25,18 @@ class LoginSheetBusTest {
     fun tearDown() = LoginSheetBus.clear()
 
     @Test
+    fun `同一面板内再次发起授权前结果先归零——连续两次取消第二次也观察得到`() {
+        LoginSheetBus.request("account_hub")
+        LoginSheetBus.reportGithubResult(GithubAuthResult.CANCELED)
+
+        LoginSheetBus.beginGithubAttempt()
+        assertNull(LoginSheetBus.githubResult.value, "新一次授权开始时不该还挂着上一次的结果")
+
+        LoginSheetBus.reportGithubResult(GithubAuthResult.CANCELED)
+        assertEquals(GithubAuthResult.CANCELED, LoginSheetBus.githubResult.value)
+    }
+
+    @Test
     fun `新的登录请求清掉上一轮遗留的失败`() {
         LoginSheetBus.reportGithubResult(GithubAuthResult.FAILED)
 

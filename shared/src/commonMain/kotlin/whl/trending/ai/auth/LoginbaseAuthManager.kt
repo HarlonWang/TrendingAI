@@ -147,6 +147,14 @@ object LoginSheetBus {
         _githubResult.value = result
     }
 
+    /**
+     * 每次点 GitHub 按钮前调用。结果是 StateFlow，同一面板内连着两次同样的结果（取消→再取消）
+     * 第二次不会发射，面板的等待态就永远解不开。
+     */
+    fun beginGithubAttempt() {
+        _githubResult.value = null
+    }
+
     fun clear() {
         _request.value = null
         _githubResult.value = null
