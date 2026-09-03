@@ -156,6 +156,7 @@
     <string name="unstar_success">已取消 Star</string>
     <string name="star_failed">操作失败，请重试</string>
     <string name="star_need_login">登录后即可 Star 该仓库</string>
+    <string name="star_need_github_link">关联 GitHub 后即可 Star，请到「我的」页操作</string>
     <string name="favorites_delete_confirm">确定从收藏中移除？</string>
     <string name="theme_color">主题色</string>
     <string name="app_icon">应用图标</string>
@@ -237,6 +238,8 @@
     <string name="account_upgrade_hint">解锁更高额度与全部高阶模型</string>
     <string name="account_link_github">关联 GitHub</string>
     <string name="account_link_github_desc">解锁 star、关注等 GitHub 功能</string>
+    <string name="account_relink_github">重新关联 GitHub</string>
+    <string name="account_relink_github_desc">GitHub 授权已失效，重新关联后恢复主页、动态与 Star</string>
     <string name="account_link_required_title">需要先关联 GitHub</string>
     <string name="account_link_required_message">Pro 权益通过 GitHub Sponsors 发放，需要你的账户关联 GitHub。你当前用邮箱登录，直接赞助不会自动生效。</string>
     <string name="account_link_sponsor_anyway">仍要前往赞助</string>

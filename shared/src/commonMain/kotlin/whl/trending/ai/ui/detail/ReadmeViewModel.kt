@@ -74,6 +74,7 @@ class ReadmeViewModel(
                 RepoStarService.Result.UNSTARRED ->
                     _uiState.update { it.copy(isStarred = false, isStarLoading = false) }
                 RepoStarService.Result.NEED_LOGIN,
+                RepoStarService.Result.NEED_GITHUB_LINK,
                 RepoStarService.Result.FAILED ->
                     _uiState.update { it.copy(isStarLoading = false) }
             }

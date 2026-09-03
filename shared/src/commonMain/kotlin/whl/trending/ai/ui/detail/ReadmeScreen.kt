@@ -47,6 +47,7 @@ import trendingai.shared.generated.resources.retry
 import trendingai.shared.generated.resources.share_to_ai
 import trendingai.shared.generated.resources.sign_in
 import trendingai.shared.generated.resources.star_failed
+import trendingai.shared.generated.resources.star_need_github_link
 import trendingai.shared.generated.resources.star_need_login
 import trendingai.shared.generated.resources.star_success
 import trendingai.shared.generated.resources.unstar_success
@@ -91,6 +92,7 @@ fun ReadmeScreen(
     val msgUnstarred = stringResource(Res.string.unstar_success)
     val msgFailed = stringResource(Res.string.star_failed)
     val msgNeedLogin = stringResource(Res.string.star_need_login)
+    val msgNeedGithubLink = stringResource(Res.string.star_need_github_link)
     val actionLogin = stringResource(Res.string.sign_in)
     LaunchedEffect(Unit) {
         viewModel.starEvents.collect { result ->
@@ -98,6 +100,7 @@ fun ReadmeScreen(
                 RepoStarService.Result.STARRED -> snackbarHostState.showSnackbar(msgStarred)
                 RepoStarService.Result.UNSTARRED -> snackbarHostState.showSnackbar(msgUnstarred)
                 RepoStarService.Result.FAILED -> snackbarHostState.showSnackbar(msgFailed)
+                RepoStarService.Result.NEED_GITHUB_LINK -> snackbarHostState.showSnackbar(msgNeedGithubLink)
                 RepoStarService.Result.NEED_LOGIN -> {
                     val action = snackbarHostState.showSnackbar(
                         message = msgNeedLogin,

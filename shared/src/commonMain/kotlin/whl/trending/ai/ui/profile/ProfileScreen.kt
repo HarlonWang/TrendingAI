@@ -65,6 +65,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
 import trendingai.shared.generated.resources.account_link_github
+import trendingai.shared.generated.resources.account_relink_github
+import trendingai.shared.generated.resources.account_relink_github_desc
 import trendingai.shared.generated.resources.account_link_github_desc
 import trendingai.shared.generated.resources.account_plan_title
 import trendingai.shared.generated.resources.account_pro_active
@@ -224,16 +226,30 @@ fun ProfileScreen(
                 }
 
                 // 两处条件刻意不对称：githubUserId 是「是否已关联」的权威，githubLogin 才是能展示的名字；
-                // 中间态（有 id 无 login）两块都不显示，好过显示「关联 GitHub」或 @null
+                // 中间态（有 id 无 login）两块都不显示，好过显示「关联 GitHub」或 @null。
+                // 已关联但服务端没存 token 时入口卡换成重新关联：主页/动态/star 全会失败，
+                // 而恢复 token 的唯一手段就是再走一次关联
                 if (uiState.user?.githubLogin != null) {
-                    item(key = "github_entry") {
-                        GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
+                    if (uiState.githubTokenMissing && isGithubOAuthSupported) {
+                        item(key = "relink_github") {
+                            LinkGithubCard(
+                                title = stringResource(Res.string.account_relink_github),
+                                description = stringResource(Res.string.account_relink_github_desc),
+                                onClick = { AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT) },
+                            )
+                        }
+                    } else {
+                        item(key = "github_entry") {
+                            GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
+                        }
                     }
                 } else if (uiState.loggedIn && uiState.user?.githubUserId == null && isGithubOAuthSupported) {
                     item(key = "link_github") {
-                        LinkGithubCard(onClick = {
-                            AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT)
-                        })
+                        LinkGithubCard(
+                            title = stringResource(Res.string.account_link_github),
+                            description = stringResource(Res.string.account_link_github_desc),
+                            onClick = { AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT) },
+                        )
                     }
                 }
             }
@@ -544,16 +560,16 @@ private fun TierPillFree() {
  * 占据它的位置——一个账户在这里要么是「已连接的 GitHub」，要么是「去连接」。
  */
 @Composable
-private fun LinkGithubCard(onClick: () -> Unit) {
+private fun LinkGithubCard(title: String, description: String, onClick: () -> Unit) {
     SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         settingsItem(
             leading = {
                 Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(40.dp))
             },
-            title = { Text(stringResource(Res.string.account_link_github)) },
+            title = { Text(title) },
             description = {
                 Text(
-                    stringResource(Res.string.account_link_github_desc),
+                    description,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
