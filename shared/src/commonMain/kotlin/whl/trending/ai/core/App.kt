@@ -60,6 +60,7 @@ import whl.trending.ai.ui.auth.LoginSheetHost
 import whl.trending.ai.ui.subscription.SubscriptionScreen
 import whl.trending.ai.ui.common.OAuthOutcomeHost
 import whl.trending.ai.ui.common.CheckoutResultHost
+import whl.trending.ai.ui.common.ProReconcileHost
 import whl.trending.ai.ui.common.SponsorLinkHost
 import whl.trending.ai.ui.common.WhatsNewHost
 
@@ -153,6 +154,7 @@ fun App() {
                     LoginSheetHost()
                     SponsorLinkHost()
                     CheckoutResultHost()
+                    ProReconcileHost()
                     OAuthOutcomeHost()
                     // 页面浏览埋点的路由源，全 app 就这一处；tab 源在 HomeScreen
                     TrackRouteScreenViews(backStack)

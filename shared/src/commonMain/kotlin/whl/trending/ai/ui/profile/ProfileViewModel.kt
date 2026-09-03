@@ -143,7 +143,6 @@ class ProfileViewModel(
         }
 
         // 关联 GitHub 成功：身份变了但登录态没变，authState 不会发射，只能靠这个信号。
-        // MainActivity 在 ON_RESUME 里已用 fresh 请求刷过服务端缓存，这里普通重载即可拿到新身份。
         viewModelScope.launch {
             AccountLink.linked.collect {
                 hasLoaded = false
