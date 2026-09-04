@@ -57,6 +57,7 @@ import trendingai.shared.generated.resources.login_signup_hint
 import trendingai.shared.generated.resources.login_title
 import trendingai.shared.generated.resources.login_too_many_attempts
 import trendingai.shared.generated.resources.login_too_many_requests
+import trendingai.shared.generated.resources.login_too_many_requests_minutes
 import wang.harlon.eventbase.Eventbase
 import wang.harlon.loginbase.AuthError
 import wang.harlon.loginbase.LoginbaseException
@@ -131,6 +132,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     val codeExpired = stringResource(Res.string.login_code_expired)
     val tooManyAttempts = stringResource(Res.string.login_too_many_attempts)
     val tooManyRequestsTemplate = stringResource(Res.string.login_too_many_requests)
+    val tooManyRequestsMinutesTemplate = stringResource(Res.string.login_too_many_requests_minutes)
     val oauthFailed = stringResource(Res.string.login_oauth_failed)
 
     // 服务端给的冷却秒数倒计时，不写死 60
@@ -147,8 +149,12 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         e.error == AuthError.INVALID_CODE -> codeInvalid
         e.error == AuthError.CODE_EXPIRED -> codeExpired
         e.error == AuthError.TOO_MANY_ATTEMPTS -> tooManyAttempts
-        e.error == AuthError.TOO_MANY_REQUESTS ->
-            tooManyRequestsTemplate.replace("%d", (e.retryAfterSeconds ?: 60).toString())
+        e.error == AuthError.TOO_MANY_REQUESTS -> {
+            // 向上取整：宁可让用户多等几秒，也不能按提示重试时窗口还差几秒没过
+            val secs = e.retryAfterSeconds ?: 60
+            if (secs >= 60) tooManyRequestsMinutesTemplate.replace("%d", ((secs + 59) / 60).toString())
+            else tooManyRequestsTemplate.replace("%d", secs.toString())
+        }
         else -> genericError
     }
 
