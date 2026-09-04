@@ -38,7 +38,7 @@
     <string name="chat_attach_camera">Take photo</string>
     <string name="chat_attach_album">Choose from album</string>
     <string name="chat_image_login_title">Sign in to send images</string>
-    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in with GitHub to send photos and pictures.</string>
+    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in to send photos and pictures.</string>
     <string name="chat_image_login_confirm">Sign in</string>
     <string name="chat_image_login_dismiss">Not now</string>
     <string name="chat_image_processing_failed">Couldn&apos;t process the image. Please try another one.</string>

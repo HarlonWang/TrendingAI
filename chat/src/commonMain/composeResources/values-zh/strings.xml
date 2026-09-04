@@ -35,7 +35,7 @@
     <string name="chat_attach_camera">拍照</string>
     <string name="chat_attach_album">从相册选择</string>
     <string name="chat_image_login_title">登录后可发送图片</string>
-    <string name="chat_image_login_message">图片理解功能对登录用户开放，使用 GitHub 登录即可发送照片和图片。</string>
+    <string name="chat_image_login_message">图片理解功能对登录用户开放，登录后即可发送照片和图片。</string>
     <string name="chat_image_login_confirm">登录</string>
     <string name="chat_image_login_dismiss">暂不</string>
     <string name="chat_image_processing_failed">图片处理失败，请换一张试试。</string>
