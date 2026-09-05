@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 data class AppConfigResponse(
     @SerialName("min_version") val minVersion: String? = null,
     @SerialName("chat_images") val chatImages: ChatImagesRemoteConfig? = null,
+    @SerialName("chat_voice") val chatVoice: ChatVoiceRemoteConfig? = null,
 )
 
 /** chat 图片参数（服务端 KV 单源下发，与服务端校验闸同值；见后端 lib/chat-images.js） */
@@ -18,4 +19,10 @@ data class AppConfigResponse(
 data class ChatImagesRemoteConfig(
     @SerialName("max_count") val maxCount: Int? = null,
     @SerialName("per_image_jpeg_kb") val perImageJpegKb: Int? = null,
+)
+
+/** chat 语音录入参数（服务端 KV 单源下发，与服务端校验闸同值；见后端 lib/chat-voice.js） */
+@Serializable
+data class ChatVoiceRemoteConfig(
+    @SerialName("max_duration_ms") val maxDurationMs: Int? = null,
 )

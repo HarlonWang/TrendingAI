@@ -18,6 +18,7 @@ suspend fun refreshAppConfig(): AppConfigResponse? =
             config.chatImages?.maxCount,
             config.chatImages?.perImageJpegKb,
         )
+        globalSettingsManager.setChatVoiceConfig(config.chatVoice?.maxDurationMs)
         config
     } catch (e: CancellationException) {
         throw e

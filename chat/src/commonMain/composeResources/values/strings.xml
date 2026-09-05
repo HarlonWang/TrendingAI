@@ -59,4 +59,15 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">Web search</string>
     <string name="chat_searching">Searching the web…</string>
+    <string name="chat_voice_mic">Voice input</string>
+    <string name="chat_voice_release_send">Release to send · Slide up to cancel</string>
+    <string name="chat_voice_release_cancel">Release to cancel</string>
+    <string name="chat_voice_transcribing">Transcribing…</string>
+    <string name="chat_voice_empty">Didn&apos;t catch that. Please try again.</string>
+    <string name="chat_voice_failed">Voice recognition failed. Please try again.</string>
+    <string name="chat_voice_pro_title">Pro feature</string>
+    <string name="chat_voice_pro_message">Voice input is currently available to Pro only. Typing works as usual.</string>
+    <string name="chat_voice_permission_title">Microphone access needed</string>
+    <string name="chat_voice_permission_message">Allow microphone access in system settings to use voice input.</string>
+    <string name="chat_voice_permission_settings">Open settings</string>
 </resources>

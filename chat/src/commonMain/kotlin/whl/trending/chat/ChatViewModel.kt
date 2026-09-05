@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -16,8 +19,10 @@ import kotlinx.coroutines.sync.withLock
 import whl.trending.chat.core.epochMillis
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.ChatException
+import whl.trending.chat.engine.VoiceTranscriber
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.host.ChatAiOutcome
+import whl.trending.chat.host.ChatVoiceOutcome
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
@@ -31,9 +36,15 @@ import whl.trending.chat.model.SourceRef
 import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.store.ChatStore
 import whl.trending.chat.store.InMemoryChatStore
+import okio.FileSystem
+import okio.Path.Companion.toPath
+import okio.SYSTEM
 
 /** 抽屉里的一条会话概要 */
 data class ThreadSummary(val id: Long, val title: String, val updatedAt: Long)
+
+/** 语音录入需要就地反馈的结果（成功即发送，无需通知）。 */
+enum class VoiceNotice { EMPTY, FAILED, PRO_REQUIRED }
 
 /**
  * 聊天 ViewModel。并发模型是理解一切的钥匙：
@@ -51,11 +62,13 @@ data class ThreadSummary(val id: Long, val title: String, val updatedAt: Long)
  *
  * @param store 持久化层；默认内存实现（Demo/预览），正式宿主注入 Room 实现
  * @param selectedModelId 应答模型记录用（展示「哪个模型答的」）；默认读全局设置的用户选择
+ * @param transcriber 语音转写；null 时语音入口不可用（Demo）
  */
 class ChatViewModel(
     private val engine: ChatEngine,
     initialMessages: List<ChatMessage> = emptyList(),
     private val store: ChatStore = InMemoryChatStore(),
+    private val transcriber: VoiceTranscriber? = null,
     private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
     private val track: (ChatAiEvent) -> Unit = { chatHost.onAiEvent(it) },
     private val selectedModelId: () -> String? = {
@@ -91,6 +104,11 @@ class ChatViewModel(
     fun toggleWebSearch() {
         _searchEnabled.value = !_searchEnabled.value
     }
+
+    val voiceAvailable: Boolean get() = transcriber != null
+
+    private val _voiceNotices = MutableSharedFlow<VoiceNotice>(extraBufferCapacity = 1)
+    val voiceNotices: SharedFlow<VoiceNotice> = _voiceNotices.asSharedFlow()
 
     private val stateLock = Mutex()
 
@@ -137,6 +155,43 @@ class ChatViewModel(
     /** 发送一段指定文本（如建议动作的预设问题），不依赖输入框；发送中或空白则忽略。 */
     fun sendText(text: String) = queueChat(text, emptyList(), from = "quick_reply")
 
+    /**
+     * 语音录入：转写成文本后直接发送（听写不进输入框）。音频用完即删，失败也删。
+     * 转写在途期间 [ChatUiState.isTranscribing] 为真，输入区据此禁发与显示等待态。
+     */
+    fun sendVoice(recording: whl.trending.chat.attach.VoiceRecording) {
+        val transcriber = transcriber ?: return
+        if (_uiState.value.isSending || _uiState.value.isTranscribing) return
+        _uiState.update { it.copy(isTranscribing = true) }
+        viewModelScope.launch {
+            val outcome = try {
+                val text = transcriber.transcribe(recording.path, recording.durationMs).text.trim()
+                if (text.isEmpty()) {
+                    _voiceNotices.tryEmit(VoiceNotice.EMPTY)
+                    ChatVoiceOutcome.EMPTY
+                } else {
+                    _uiState.update { it.copy(isTranscribing = false) }
+                    queueChat(text, emptyList(), from = "voice")
+                    ChatVoiceOutcome.SENT
+                }
+            } catch (e: ChatException) {
+                _voiceNotices.tryEmit(
+                    if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) VoiceNotice.PRO_REQUIRED else VoiceNotice.FAILED,
+                )
+                ChatVoiceOutcome.ERROR
+            } finally {
+                _uiState.update { it.copy(isTranscribing = false) }
+                runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
+            }
+            reportVoiceOutcome(outcome, recording.durationMs)
+        }
+    }
+
+    /** 转写前就结束的语音结果（取消 / 太短 / 权限 / Pro 闸）由 UI 上报；转写后的由 [sendVoice] 上报。 */
+    fun reportVoiceOutcome(outcome: ChatVoiceOutcome, durationMs: Long? = null) {
+        track(ChatAiEvent.VoiceInput(outcome = outcome, durationMs = durationMs))
+    }
+
     private fun queueChat(text: String, images: List<String>, from: String) {
         if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
         // 发送被接受那一刻捕获搜索开关：排队与流启动之间用户再切开关不影响本条
@@ -176,7 +231,7 @@ class ChatViewModel(
      * 被限流 / 上游报错的请求同样留痕，所以这里也在发出前记，两侧行数可直接对账，
      * 残差只剩上报丢失一项。
      *
-     * [from]：`input`（输入框）/ `quick_reply`（建议动作）/ `retry`（重试）。
+     * [from]：`input`（输入框）/ `quick_reply`（建议动作）/ `retry`（重试）/ `voice`（语音转写）。
      */
     private fun trackChatSend(from: String, imageCount: Int) {
         track(ChatAiEvent.Requested(from = from, imageCount = imageCount))

@@ -9,6 +9,9 @@ import whl.trending.chat.model.ChatModelsResponse
 /** AI 请求终态。 */
 enum class ChatAiOutcome { OK, ERROR, INTERRUPTED }
 
+/** 语音录入的终态（转写前漏斗）；一次按住恰好一条。 */
+enum class ChatVoiceOutcome { SENT, CANCELLED, TOO_SHORT, EMPTY, ERROR, PERMISSION_DENIED, PRO_GATE }
+
 /** SDK 上报给宿主的埋点事件；Requested 与 Completed 一次请求恰好各一条。 */
 sealed interface ChatAiEvent {
     data class Requested(
@@ -21,6 +24,12 @@ sealed interface ChatAiEvent {
         val durationMs: Long? = null,
         val reason: String? = null,
         val tier: String? = null,
+    ) : ChatAiEvent
+
+    /** 语音录入结果；转写成功后的发送另走 [Requested]（from = "voice"），不重复计。 */
+    data class VoiceInput(
+        val outcome: ChatVoiceOutcome,
+        val durationMs: Long? = null,
     ) : ChatAiEvent
 }
 
@@ -64,6 +73,9 @@ interface ChatHost {
 
     /** 单图压缩预算（KB）。 */
     fun imagesPerImageJpegKb(): Int
+
+    /** 单次语音录入时长上限（毫秒），与服务端校验闸同源。 */
+    fun voiceMaxDurationMs(): Int = 60_000
 
     /** 安装标识，随请求头 `X-Install-Id` 透传（服务端限流维度）。 */
     fun installId(): String
