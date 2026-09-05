@@ -1,0 +1,3 @@
+• iOS: sign in with an email code or GitHub authorization
+• Fixed the AI chat still showing a signed-out state after a successful sign-in
+• Profile now prompts you to re-link GitHub when the authorization has expired

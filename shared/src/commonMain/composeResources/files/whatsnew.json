@@ -1,15 +1,13 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "zh": [
-    "招聘页重做：支持按职能筛选和关键词搜索，卡片更清爽",
-    "AI 对话单次最多可发 9 张图片，超出限制时会明确提示",
-    "网络异常提示更友好，重试按钮不再被挤出屏幕",
-    "「一键解读」与「深度研究」暂时下线，后续以新形式回归"
+    "iOS 版新增邮箱验证码登录和 GitHub 授权登录",
+    "修复登录成功后 AI 对话仍显示为未登录状态的问题",
+    "GitHub 授权失效时，「我的」页会引导重新关联"
   ],
   "en": [
-    "Jobs page redesigned: filter by role, search by keyword, cleaner cards",
-    "Send up to 9 images per AI chat message, with a clear message when the limit is exceeded",
-    "Friendlier network error messages, and the retry button stays on screen",
-    "One-tap summary and Deep Research are retired for now; they will return in a new form"
+    "iOS: sign in with an email code or GitHub authorization",
+    "Fixed the AI chat still showing a signed-out state after a successful sign-in",
+    "Profile now prompts you to re-link GitHub when the authorization has expired"
   ]
 }
