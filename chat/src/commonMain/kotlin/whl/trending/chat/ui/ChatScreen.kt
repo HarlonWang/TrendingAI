@@ -171,7 +171,7 @@ fun ChatScreen(
                             suggestions.forEach { suggestion ->
                                 OutlinedButton(
                                     onClick = { viewModel.sendText(suggestion.prompt) },
-                                    enabled = !state.isSending,
+                                    enabled = !state.isBusy,
                                 ) {
                                     Text(suggestion.label)
                                 }

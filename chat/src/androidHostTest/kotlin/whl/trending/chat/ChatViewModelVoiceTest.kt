@@ -7,6 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -142,6 +143,36 @@ class ChatViewModelVoiceTest {
         viewModel.sendVoice(VoiceRecording(tempAudio().absolutePath, 2000))
         advanceUntilIdle()
         assertEquals(1, transcriber.calls.size)
+    }
+
+    @Test
+    fun `转写在途：建议动作与重试的发送被门禁拒绝，转写文本随后照常发出`() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val transcriber = object : VoiceTranscriber {
+            override suspend fun transcribe(path: String, durationMs: Long): Transcription {
+                gate.await()
+                return Transcription("语音内容")
+            }
+        }
+        val engine = EchoEngine()
+        val events = mutableListOf<ChatAiEvent>()
+        val viewModel = vm(engine, transcriber, events)
+        viewModel.sendVoice(VoiceRecording(tempAudio().absolutePath, 3000))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isBusy)
+
+        viewModel.sendText("chip")
+        advanceUntilIdle()
+        assertTrue(engine.sent.isEmpty())
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(listOf("语音内容"), engine.sent)
+        assertEquals(listOf("voice"), events.filterIsInstance<ChatAiEvent.Requested>().map { it.from })
+        assertEquals(
+            listOf(ChatVoiceOutcome.SENT),
+            events.filterIsInstance<ChatAiEvent.VoiceInput>().map { it.outcome },
+        )
     }
 
     @Test

@@ -157,37 +157,46 @@ class ChatViewModel(
 
     /**
      * 语音录入：转写成文本后直接发送（听写不进输入框）。音频用完即删，失败也删。
-     * 转写在途期间 [ChatUiState.isTranscribing] 为真，输入区据此禁发与显示等待态。
+     * 转写在途期间 [ChatUiState.isTranscribing] 为真：所有其他发送入口在 [enqueueChat] 里被拒，
+     * 转写文本因此不会撞上别的发送而丢失；UI 的禁用只是观感层。
      */
     fun sendVoice(recording: whl.trending.chat.attach.VoiceRecording) {
         val transcriber = transcriber ?: return
         if (_uiState.value.isSending || _uiState.value.isTranscribing) return
         _uiState.update { it.copy(isTranscribing = true) }
         viewModelScope.launch {
-            val outcome = try {
-                val text = transcriber.transcribe(recording.path, recording.durationMs).text.trim()
-                if (text.isEmpty()) {
-                    _voiceNotices.tryEmit(VoiceNotice.EMPTY)
-                    ChatVoiceOutcome.EMPTY
-                } else {
-                    _uiState.update { it.copy(isTranscribing = false) }
-                    queueChat(text, emptyList(), from = "voice")
-                    ChatVoiceOutcome.SENT
-                }
+            val text = try {
+                transcriber.transcribe(recording.path, recording.durationMs).text.trim()
             } catch (e: ChatException) {
+                runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
                 // 服务端 Pro 闸（本地 Pro 态过期未同步时才会到这）与转写故障在漏斗里要分得开
-                if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) {
+                val outcome = if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) {
                     _voiceNotices.tryEmit(VoiceNotice.PRO_REQUIRED)
                     ChatVoiceOutcome.PRO_GATE
                 } else {
                     _voiceNotices.tryEmit(VoiceNotice.FAILED)
                     ChatVoiceOutcome.ERROR
                 }
-            } finally {
                 _uiState.update { it.copy(isTranscribing = false) }
-                runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
+                reportVoiceOutcome(outcome, recording.durationMs)
+                return@launch
             }
-            reportVoiceOutcome(outcome, recording.durationMs)
+            runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
+            stateLock.withLock {
+                val outcome = when {
+                    text.isEmpty() -> {
+                        _voiceNotices.tryEmit(VoiceNotice.EMPTY)
+                        ChatVoiceOutcome.EMPTY
+                    }
+                    enqueueChat(text, emptyList(), from = "voice", fromVoice = true) -> ChatVoiceOutcome.SENT
+                    else -> {
+                        _voiceNotices.tryEmit(VoiceNotice.FAILED)
+                        ChatVoiceOutcome.ERROR
+                    }
+                }
+                _uiState.update { it.copy(isTranscribing = false) }
+                reportVoiceOutcome(outcome, recording.durationMs)
+            }
         }
     }
 
@@ -197,17 +206,26 @@ class ChatViewModel(
     }
 
     private fun queueChat(text: String, images: List<String>, from: String) {
-        if (_uiState.value.isSending || (text.isBlank() && images.isEmpty())) return
+        if (_uiState.value.isBusy || (text.isBlank() && images.isEmpty())) return
+        locked { enqueueChat(text, images, from) }
+    }
+
+    /**
+     * 发送的唯一门禁，须在 [stateLock] 内调用；返回是否接受。
+     * 转写在途拒绝一切非语音发送（[fromVoice]），否则转写文本会在这里被 isSending 挡掉而丢失。
+     */
+    private suspend fun enqueueChat(text: String, images: List<String>, from: String, fromVoice: Boolean = false): Boolean {
+        val state = _uiState.value
+        if (state.isSending || (state.isTranscribing && !fromVoice)) return false
+        if (text.isBlank() && images.isEmpty()) return false
         // 发送被接受那一刻捕获搜索开关：排队与流启动之间用户再切开关不影响本条
         val search = _searchEnabled.value
-        locked {
-            if (_uiState.value.isSending) return@locked
-            trackChatSend(from, images.size)
-            _uiState.update { it.copy(isSending = true) }
-            val threadId = ensureThread(text)
-            appendVisible(store.appendUserMessage(threadId, text, images))
-            startStream(threadId, search)
-        }
+        trackChatSend(from, images.size)
+        _uiState.update { it.copy(isSending = true) }
+        val threadId = ensureThread(text)
+        appendVisible(store.appendUserMessage(threadId, text, images))
+        startStream(threadId, search)
+        return true
     }
 
     /** 对可重试的失败消息重试：移除该错误条，重打一次请求。
@@ -216,8 +234,8 @@ class ChatViewModel(
         val error = message.error ?: return
         if (!error.category.retryable && error.code != ChatError.CODE_QUOTA_DEVICE) return
         locked {
-            // 错误条仍须在场（防连点与过期引用）
-            if (_uiState.value.isSending || _uiState.value.messages.none { it.id == message.id }) return@locked
+            // 错误条仍须在场（防连点与过期引用）；转写在途同样不放行，理由见 enqueueChat
+            if (_uiState.value.isBusy || _uiState.value.messages.none { it.id == message.id }) return@locked
             val threadId = _currentThreadId.value ?: return@locked
             store.deleteMessage(message.id)
             removeVisible(message.id)

@@ -16,5 +16,8 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val isTranscribing: Boolean = false,
 ) {
-    val canSend: Boolean get() = (input.isNotBlank() || pendingImages.isNotEmpty()) && !isSending && !isTranscribing
+    /** 发送位被占用（回复在途或转写在途）：所有发送入口按此禁用，真正的门禁在 ViewModel */
+    val isBusy: Boolean get() = isSending || isTranscribing
+
+    val canSend: Boolean get() = (input.isNotBlank() || pendingImages.isNotEmpty()) && !isBusy
 }
