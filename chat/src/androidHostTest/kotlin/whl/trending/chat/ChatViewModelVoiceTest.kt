@@ -111,7 +111,8 @@ class ChatViewModelVoiceTest {
     @Test
     fun `转写失败：提示 FAILED，isTranscribing 复位；403 Pro 闸提示 PRO_REQUIRED`() = runTest(dispatcher) {
         val transcriber = ScriptedTranscriber(failWith = ChatError(ChatErrorCategory.SERVER, code = "upstream_error"))
-        val viewModel = vm(EchoEngine(), transcriber)
+        val events = mutableListOf<ChatAiEvent>()
+        val viewModel = vm(EchoEngine(), transcriber, events)
         val notices = mutableListOf<VoiceNotice>()
         val collector = launch { viewModel.voiceNotices.collect { notices += it } }
 
@@ -124,6 +125,10 @@ class ChatViewModelVoiceTest {
 
         assertEquals(listOf(VoiceNotice.FAILED, VoiceNotice.PRO_REQUIRED), notices)
         assertFalse(viewModel.uiState.value.isTranscribing)
+        assertEquals(
+            listOf(ChatVoiceOutcome.ERROR, ChatVoiceOutcome.PRO_GATE),
+            events.filterIsInstance<ChatAiEvent.VoiceInput>().map { it.outcome },
+        )
     }
 
     @Test

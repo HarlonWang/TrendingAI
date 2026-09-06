@@ -68,13 +68,13 @@ private class AndroidVoiceRecorder(
     override val isAvailable: Boolean =
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)
 
-    override fun start(): Boolean {
-        if (recorder != null) return false
+    override fun start(): VoiceStart {
+        if (recorder != null) return VoiceStart.FAILED
         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         if (!granted) {
             requestPermission()
-            return false
+            return VoiceStart.PERMISSION_PENDING
         }
         val target = File(File(context.cacheDir, DIR).apply { mkdirs() }, "${UUID.randomUUID()}.m4a")
         @Suppress("DEPRECATION")
@@ -99,12 +99,12 @@ private class AndroidVoiceRecorder(
             logWarn(TAG, "start failed", e)
             mr.release()
             target.delete()
-            return false
+            return VoiceStart.FAILED
         }
         recorder = mr
         file = target
         startedAt = SystemClock.elapsedRealtime()
-        return true
+        return VoiceStart.STARTED
     }
 
     override fun stop(): VoiceRecording? {

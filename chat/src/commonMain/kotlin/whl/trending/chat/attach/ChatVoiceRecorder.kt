@@ -5,6 +5,9 @@ import androidx.compose.runtime.Composable
 /** 一段录好的语音：本地 m4a 路径 + 时长。 */
 data class VoiceRecording(val path: String, val durationMs: Long)
 
+/** [ChatVoiceRecorder.start] 的结果：权限未授予时已发起申请（用户需再按一次）；FAILED 是录音器本身起不来。 */
+enum class VoiceStart { STARTED, PERMISSION_PENDING, FAILED }
+
 /**
  * 语音录入的平台缝：按住录音、松手取件。产出为 AAC m4a（单声道 16kHz 低码率），
  * 权限申请与被拒反馈由各平台在 [start] 内自行处理。
@@ -13,8 +16,7 @@ interface ChatVoiceRecorder {
     /** 平台是否有录音能力；false 时 UI 不渲染麦克风。 */
     val isAvailable: Boolean
 
-    /** 开始录音；返回 false 表示本次未开始（权限未授予时会发起申请，用户需再按一次）。 */
-    fun start(): Boolean
+    fun start(): VoiceStart
 
     /** 结束并取件；不足最短时长或写文件失败返回 null（文件已清理）。 */
     fun stop(): VoiceRecording?

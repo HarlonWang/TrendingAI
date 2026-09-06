@@ -175,10 +175,14 @@ class ChatViewModel(
                     ChatVoiceOutcome.SENT
                 }
             } catch (e: ChatException) {
-                _voiceNotices.tryEmit(
-                    if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) VoiceNotice.PRO_REQUIRED else VoiceNotice.FAILED,
-                )
-                ChatVoiceOutcome.ERROR
+                // 服务端 Pro 闸（本地 Pro 态过期未同步时才会到这）与转写故障在漏斗里要分得开
+                if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) {
+                    _voiceNotices.tryEmit(VoiceNotice.PRO_REQUIRED)
+                    ChatVoiceOutcome.PRO_GATE
+                } else {
+                    _voiceNotices.tryEmit(VoiceNotice.FAILED)
+                    ChatVoiceOutcome.ERROR
+                }
             } finally {
                 _uiState.update { it.copy(isTranscribing = false) }
                 runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }

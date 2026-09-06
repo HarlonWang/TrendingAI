@@ -164,9 +164,9 @@ class ChatApi(
      * 流在 done 之前结束视为中途断流 → SERVER 可重试，已渲染部分由调用方丢弃。
      */
     override suspend fun transcribe(path: String, durationMs: Long): Transcription {
-        val bytes = FileSystem.SYSTEM.read(path.toPath()) { readByteArray() }
         val lang = resolveLang()
         try {
+            val bytes = FileSystem.SYSTEM.read(path.toPath()) { readByteArray() }
             val sentAsLoggedIn = chatHost.isLoggedInNow()
             val response = client.post("$baseUrl/chat/transcribe") {
                 header("X-Install-Id", chatHost.installId())

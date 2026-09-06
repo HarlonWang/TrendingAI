@@ -41,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.collectAsState
@@ -67,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import okio.Path.Companion.toPath
 import whl.trending.chat.attach.VoiceRecording
+import whl.trending.chat.attach.VoiceStart
 import whl.trending.chat.attach.rememberChatImagePicker
 import whl.trending.chat.attach.rememberChatVoiceRecorder
 import whl.trending.chat.host.ChatVoiceOutcome
@@ -84,6 +86,7 @@ import trendingai.chat.generated.resources.chat_image_remove
 import trendingai.chat.generated.resources.chat_input_hint
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_send
+import trendingai.chat.generated.resources.chat_voice_failed
 import trendingai.chat.generated.resources.chat_voice_mic
 import trendingai.chat.generated.resources.chat_voice_permission_message
 import trendingai.chat.generated.resources.chat_voice_permission_settings
@@ -179,8 +182,14 @@ fun ChatInputBar(
             onVoiceOutcome(ChatVoiceOutcome.PERMISSION_DENIED, null)
         },
     )
+    // 录音中离开页面（返回键、Activity 重建）：手势协程随组合一起没了，录音器得跟着停
+    DisposableEffect(recorder) {
+        onDispose { recorder.cancel() }
+    }
     val showMic = voiceEnabled && recorder.isAvailable && input.isBlank() && pendingImages.isEmpty()
     val haptic = LocalHapticFeedback.current
+    val showNotice = rememberShowNotice()
+    val voiceFailedText = stringResource(Res.string.chat_voice_failed)
 
     if (showProDialog) {
         AlertDialog(
@@ -378,7 +387,15 @@ fun ChatInputBar(
                                     onVoiceOutcome(ChatVoiceOutcome.PRO_GATE, null)
                                     return@awaitEachGesture
                                 }
-                                if (!recorder.start()) return@awaitEachGesture
+                                when (recorder.start()) {
+                                    VoiceStart.PERMISSION_PENDING -> return@awaitEachGesture
+                                    VoiceStart.FAILED -> {
+                                        showNotice(voiceFailedText)
+                                        onVoiceOutcome(ChatVoiceOutcome.ERROR, null)
+                                        return@awaitEachGesture
+                                    }
+                                    VoiceStart.STARTED -> Unit
+                                }
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 recordingStartedAt = epochNow()
                                 inCancelZone = false

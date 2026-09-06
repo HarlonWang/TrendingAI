@@ -13,7 +13,7 @@ actual fun rememberChatVoiceRecorder(
 ): ChatVoiceRecorder = remember {
     object : ChatVoiceRecorder {
         override val isAvailable = false
-        override fun start() = false
+        override fun start() = VoiceStart.FAILED
         override fun stop(): VoiceRecording? = null
         override fun cancel() {}
         override fun openPermissionSettings() {}
