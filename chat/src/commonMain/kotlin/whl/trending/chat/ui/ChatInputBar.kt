@@ -184,7 +184,10 @@ fun ChatInputBar(
     )
     // 录音中离开页面（返回键、Activity 重建）：手势协程随组合一起没了，录音器得跟着停
     DisposableEffect(recorder) {
-        onDispose { recorder.cancel() }
+        onDispose {
+            recorder.cancel()
+            recordingStartedAt = 0L
+        }
     }
     val showMic = voiceEnabled && recorder.isAvailable && input.isBlank() && pendingImages.isEmpty()
     val haptic = LocalHapticFeedback.current
@@ -377,7 +380,7 @@ fun ChatInputBar(
                         active = recordingStartedAt > 0L,
                         cancelZone = inCancelZone,
                         loading = isTranscribing,
-                        modifier = Modifier.pointerInput(isPro, isTranscribing) {
+                        modifier = Modifier.pointerInput(isPro, isTranscribing, recorder) {
                             awaitEachGesture {
                                 val down = awaitFirstDown()
                                 down.consume()

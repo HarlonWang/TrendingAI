@@ -164,40 +164,55 @@ class ChatViewModel(
         val transcriber = transcriber ?: return
         if (_uiState.value.isSending || _uiState.value.isTranscribing) return
         _uiState.update { it.copy(isTranscribing = true) }
-        viewModelScope.launch {
-            val text = try {
-                transcriber.transcribe(recording.path, recording.durationMs).text.trim()
-            } catch (e: ChatException) {
-                runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
-                // 服务端 Pro 闸（本地 Pro 态过期未同步时才会到这）与转写故障在漏斗里要分得开
-                val outcome = if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) {
-                    _voiceNotices.tryEmit(VoiceNotice.PRO_REQUIRED)
-                    ChatVoiceOutcome.PRO_GATE
-                } else {
-                    _voiceNotices.tryEmit(VoiceNotice.FAILED)
-                    ChatVoiceOutcome.ERROR
-                }
-                _uiState.update { it.copy(isTranscribing = false) }
-                reportVoiceOutcome(outcome, recording.durationMs)
-                return@launch
-            }
-            runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
-            stateLock.withLock {
-                val outcome = when {
-                    text.isEmpty() -> {
-                        _voiceNotices.tryEmit(VoiceNotice.EMPTY)
-                        ChatVoiceOutcome.EMPTY
-                    }
-                    enqueueChat(text, emptyList(), from = "voice", fromVoice = true) -> ChatVoiceOutcome.SENT
-                    else -> {
+        transcribeJob = viewModelScope.launch {
+            var outcome: ChatVoiceOutcome? = null
+            try {
+                val text = try {
+                    transcriber.transcribe(recording.path, recording.durationMs).text.trim()
+                } catch (e: ChatException) {
+                    // 服务端 Pro 闸（本地 Pro 态过期未同步时才会到这）与转写故障在漏斗里要分得开
+                    outcome = if (e.error.code == ChatError.CODE_VOICE_REQUIRES_PRO) {
+                        _voiceNotices.tryEmit(VoiceNotice.PRO_REQUIRED)
+                        ChatVoiceOutcome.PRO_GATE
+                    } else {
                         _voiceNotices.tryEmit(VoiceNotice.FAILED)
                         ChatVoiceOutcome.ERROR
                     }
+                    return@launch
                 }
+                stateLock.withLock {
+                    outcome = when {
+                        text.isEmpty() -> {
+                            _voiceNotices.tryEmit(VoiceNotice.EMPTY)
+                            ChatVoiceOutcome.EMPTY
+                        }
+                        enqueueChat(text, emptyList(), from = "voice", fromVoice = true) -> ChatVoiceOutcome.SENT
+                        else -> {
+                            _voiceNotices.tryEmit(VoiceNotice.FAILED)
+                            ChatVoiceOutcome.ERROR
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                outcome = ChatVoiceOutcome.CANCELLED
+                throw e
+            } finally {
+                runCatching { FileSystem.SYSTEM.delete(recording.path.toPath()) }
                 _uiState.update { it.copy(isTranscribing = false) }
-                reportVoiceOutcome(outcome, recording.durationMs)
+                transcribeJob = null
+                outcome?.let { reportVoiceOutcome(it, recording.durationMs) }
             }
         }
+    }
+
+    private var transcribeJob: Job? = null
+
+    /** 切走即取消：转写属于发起它的会话，切换/重置/删除当前会话时与在途流同一处理（持锁调用）。 */
+    private suspend fun cancelTranscription() {
+        val job = transcribeJob ?: return
+        transcribeJob = null
+        job.cancel()
+        job.join()
     }
 
     /** 转写前就结束的语音结果（取消 / 太短 / 权限 / Pro 闸）由 UI 上报；转写后的由 [sendVoice] 上报。 */
@@ -264,12 +279,14 @@ class ChatViewModel(
     fun switchThread(id: Long) = locked {
         if (id == _currentThreadId.value) return@locked
         cancelInFlight(persistInterrupted = true)
+        cancelTranscription()
         openThread(id)
     }
 
     /** 抽屉「新会话」：总是全新开始，不复用任何历史 */
     fun startNewThread() = locked {
         cancelInFlight(persistInterrupted = true)
+        cancelTranscription()
         resetSession()
     }
 
@@ -279,6 +296,7 @@ class ChatViewModel(
 
     fun deleteThread(id: Long) = locked {
         if (inFlight?.threadId == id) cancelInFlight(persistInterrupted = false)
+        if (_currentThreadId.value == id) cancelTranscription()
         store.deleteThread(id)
         if (_currentThreadId.value == id) resetSession()
     }

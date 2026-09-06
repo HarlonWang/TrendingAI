@@ -176,6 +176,36 @@ class ChatViewModelVoiceTest {
     }
 
     @Test
+    fun `转写在途切走会话：转写被取消，不发送、删音频、记 CANCELLED`() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val transcriber = object : VoiceTranscriber {
+            override suspend fun transcribe(path: String, durationMs: Long): Transcription {
+                gate.await()
+                return Transcription("语音内容")
+            }
+        }
+        val engine = EchoEngine()
+        val events = mutableListOf<ChatAiEvent>()
+        val viewModel = vm(engine, transcriber, events)
+        val audio = tempAudio()
+        viewModel.sendVoice(VoiceRecording(audio.absolutePath, 3000))
+        advanceUntilIdle()
+
+        viewModel.startNewThread()
+        advanceUntilIdle()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(engine.sent.isEmpty())
+        assertFalse(audio.exists())
+        assertFalse(viewModel.uiState.value.isTranscribing)
+        assertEquals(
+            listOf(ChatVoiceOutcome.CANCELLED),
+            events.filterIsInstance<ChatAiEvent.VoiceInput>().map { it.outcome },
+        )
+    }
+
+    @Test
     fun `未注入转写器：voiceAvailable 为假，sendVoice 无副作用`() = runTest(dispatcher) {
         val engine = EchoEngine()
         val viewModel = vm(engine, transcriber = null)
