@@ -112,7 +112,9 @@ private class IosVoiceRecorder(
         val rec = AVAudioRecorder(NSURL.fileURLWithPath(target), settings, null)
         if (!rec.prepareToRecord() || !rec.record()) {
             logWarn(TAG, "record start failed")
+            rec.stop()
             deactivateSession()
+            runCatching { FileSystem.SYSTEM.delete(target.toPath()) }
             return VoiceStart.FAILED
         }
         recorder = rec
