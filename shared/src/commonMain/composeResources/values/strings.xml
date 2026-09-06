@@ -48,8 +48,8 @@
     <string name="filter_new_only">New only</string>
     <string name="no_new_repos">No new repos today</string>
     <string name="new_only_hint">First appeared on the GitHub daily (all languages) list within 24 hours</string>
-    <string name="default_home_tab">Default home tab</string>
-    <string name="default_home_tab_desc">Which tab the app opens to at launch</string>
+    <string name="default_home_tab">Default home page</string>
+    <string name="default_home_tab_desc">Which page the app opens to at launch</string>
     <string name="immersive_browsing">Immersive browsing</string>
     <string name="immersive_browsing_desc">Scroll down to tuck the bars away for full-screen reading, scroll up to bring them back</string>
     <string name="daily_picks_notification">Daily Picks reminder</string>

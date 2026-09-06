@@ -15,8 +15,8 @@ import trendingai.shared.generated.resources.picks_title
 import whl.trending.ai.core.analytics.Screen
 
 /**
- * 底栏一级 tab。[Chat] 是入口而非落点：点它推全屏聊天页、底栏选中态留在原 tab，
- * 永不成为 selectedTab 取值，也不进「默认首页」可选项。
+ * 底栏一级 tab。[Chat] 是入口而非 tab：点它推全屏聊天页、底栏选中态留在原 tab，
+ * 永不成为 selectedTab 取值。它能当「默认首页」选，语义是冷启动把聊天页压在 [Home] 之上。
  */
 enum class HomeTab {
     Home, Picks, Chat, Me;
@@ -35,12 +35,15 @@ enum class HomeTab {
         fun fromNameOrDefault(name: String): HomeTab =
             entries.firstOrNull { it.name == name } ?: Home
 
-        /** 可作为冷启动落点的 tab：[Chat] 只是入口，选它没有「停在那一页」的语义 */
-        val defaultCandidates: List<HomeTab> get() = entries.filter { it != Chat }
+        /** 「默认首页」可选项，含 [Chat]（启动落点是聊天页，底下垫 [Home]） */
+        val defaultCandidates: List<HomeTab> get() = entries
 
-        /** 按「默认首页」设置解析落点：在 [fromNameOrDefault] 基础上把 [Chat] 也视为非法 */
+        /** 按「默认首页」设置解析底栏选中 tab：[Chat] 不是 tab，垫底的是 [Home] */
         fun defaultFromName(name: String): HomeTab =
             fromNameOrDefault(name).takeIf { it != Chat } ?: Home
+
+        /** 「默认首页」设置是否要求冷启动直接进聊天页 */
+        fun launchesChat(name: String): Boolean = fromNameOrDefault(name) == Chat
     }
 }
 
