@@ -3,6 +3,7 @@ package whl.trending.ai.ui.home
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class HomeTabTest {
 
@@ -45,16 +46,23 @@ class HomeTabTest {
     }
 
     @Test
-    fun defaultCandidates_excludes_chat() {
-        assertFalse(HomeTab.Chat in HomeTab.defaultCandidates)
-        assertEquals(listOf(HomeTab.Home, HomeTab.Picks, HomeTab.Me), HomeTab.defaultCandidates)
+    fun defaultCandidates_includes_chat_in_bar_order() {
+        assertEquals(listOf(HomeTab.Home, HomeTab.Picks, HomeTab.Chat, HomeTab.Me), HomeTab.defaultCandidates)
     }
 
     @Test
-    fun defaultFromName_treats_chat_as_invalid() {
-        // Chat 只是入口：即便被写进设置也不能当落点
+    fun defaultFromName_puts_home_under_chat() {
+        // Chat 不是 tab：默认首页选它时聊天页压在 Home 之上，底栏选中的仍是 Home
         assertEquals(HomeTab.Home, HomeTab.defaultFromName(HomeTab.Chat.name))
         assertEquals(HomeTab.Me, HomeTab.defaultFromName(HomeTab.Me.name))
+    }
+
+    @Test
+    fun launchesChat_only_for_stored_chat() {
+        assertTrue(HomeTab.launchesChat(HomeTab.Chat.name))
+        assertFalse(HomeTab.launchesChat(HomeTab.Home.name))
+        assertFalse(HomeTab.launchesChat("chat"))
+        assertFalse(HomeTab.launchesChat(""))
     }
 }
 

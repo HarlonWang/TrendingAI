@@ -505,7 +505,6 @@ private fun homeTabOptionText(tab: HomeTab): String = when (tab) {
     HomeTab.Home -> stringResource(Res.string.home_title)
     HomeTab.Picks -> stringResource(Res.string.picks_title)
     HomeTab.Me -> stringResource(Res.string.me_title)
-    // Chat 不在 defaultCandidates 里，选项列表不会渲染它；穷尽 when 用
     HomeTab.Chat -> stringResource(Res.string.chat_title)
 }
 

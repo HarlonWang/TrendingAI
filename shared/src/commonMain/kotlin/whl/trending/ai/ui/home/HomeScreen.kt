@@ -52,7 +52,6 @@ import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.trackScreenView
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.TrendingScaffold
@@ -77,8 +76,8 @@ import whl.trending.ai.ui.trending.TrendingViewModel
  *
  * tab / 子源的状态与切换逻辑都在 [HomeViewModel]；本函数只负责按状态摆布局。
  *
- * AI 对话是入口不是落点：点 FAB 直接推全屏聊天页，不占 tab 选中态（缘由见
- * [HomeFloatingBar] 的 KDoc；[HomeTab.Chat] 仅为深链等历史路径保留）。
+ * AI 对话是入口不是 tab：点 FAB 直接推全屏聊天页，不占 tab 选中态（缘由见
+ * [HomeFloatingBar] 的 KDoc；作为「默认首页」时由 App.kt 在冷启动压栈）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,11 +119,6 @@ fun HomeScreen(
     // syncMe（建档 + 头像/GitHub 身份/isPro 缓存）不在此触发——已随收藏同步一起挂在 App 根部
     // （见 App.kt）：登录常发生在「我的」tab，Home 的 LaunchedEffect 彼时仍在，但登录也可能
     // 发生在被推到栈顶的子页，挂这里会漏掉那条路径（isPro 不回写，Pro 用户被当免费档）。
-
-    // 预热聊天模型目录：让选择器 chip 在用户首次进入 chat 前就绪，避免冷首拉导致 chip 迟迟不出现。
-    LaunchedEffect(Unit) {
-        ChatModelsProvider.warmUp(this)
-    }
 
     // 页面浏览埋点的 tab 源（路由源在 App.kt）。Home 路由是容器不自报，三个 tab 才是页面。
     // key 是 tab，故切 tab 报一条；从二级页返回时本 entry 重新组合、这里重跑，返回也计一次浏览。

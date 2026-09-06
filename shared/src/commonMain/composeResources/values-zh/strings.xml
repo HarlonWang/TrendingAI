@@ -49,7 +49,7 @@
     <string name="no_new_repos">今日暂无新上榜项目</string>
     <string name="new_only_hint">24 小时内首次登上 GitHub 日榜（全语言）的新项目</string>
     <string name="default_home_tab">默认首页</string>
-    <string name="default_home_tab_desc">启动时进入的标签页</string>
+    <string name="default_home_tab_desc">启动时进入的页面</string>
     <string name="immersive_browsing">沉浸式浏览</string>
     <string name="immersive_browsing_desc">向下滑动收起顶栏与底栏、向上滑动恢复 · 内容占满全屏</string>
     <string name="daily_picks_notification">每日精选提醒</string>

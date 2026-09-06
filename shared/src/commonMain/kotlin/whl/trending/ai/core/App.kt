@@ -5,7 +5,11 @@ import whl.trending.ai.core.analytics.TrackRouteScreenViews
 import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.home.HomeScreen
+import whl.trending.ai.ui.home.HomeTab
+import whl.trending.ai.ui.home.HomeTabRequest
+import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.ai.ui.profile.GithubProfileScreen
 import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
@@ -108,7 +112,15 @@ internal fun MutableList<Route>.safePop() {
 
 @Composable
 fun App() {
-    val backStack = remember { mutableStateListOf<Route>(Home) }
+    // 「默认首页」选了 AI 对话：冷启动把聊天页压在 Home 之上。通知深链（open_tab=picks）在
+    // 组合前已置位，此时不压——否则聊天页会盖住深链要去的 Picks。
+    val backStack = remember {
+        mutableStateListOf<Route>(Home).apply {
+            if (HomeTab.launchesChat(globalSettingsManager.currentDefaultHomeTab()) &&
+                HomeTabRequest.pending.value == null
+            ) add(Chat)
+        }
+    }
 
     // 收藏云同步 + 身份/Pro 态同步（syncMe）触发：放在 App 根部而非 HomeScreen——登录常发生在
     // 账户页（Home 已被覆盖、其 LaunchedEffect 已随 NavEntry 销毁），只挂 HomeScreen 会导致
@@ -123,6 +135,12 @@ fun App() {
             globalFavoriteRepository.requestSync()
             userRepository.syncMe()
         }
+    }
+
+    // 预热聊天模型目录，让选择器 chip 首次进 chat 前就绪。挂根部而非 HomeScreen：默认首页为
+    // AI 对话时 Home 被盖在栈底不组合，挂那里预热不会跑。
+    LaunchedEffect(Unit) {
+        ChatModelsProvider.warmUp(this)
     }
 
     // 外链统一出口：默认走系统浏览器（Custom Tabs / SFSafariViewController），
