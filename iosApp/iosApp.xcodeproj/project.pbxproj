@@ -307,6 +307,7 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo to send to the AI assistant.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Voice input for the AI assistant: hold the microphone to talk, release to send.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -340,6 +341,7 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo to send to the AI assistant.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Voice input for the AI assistant: hold the microphone to talk, release to send.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
