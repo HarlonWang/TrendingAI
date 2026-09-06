@@ -33,6 +33,7 @@ import platform.UIKit.UIImagePickerControllerOriginalImage
 import platform.UIKit.UIImagePickerControllerSourceType
 import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIGraphicsImageRenderer
+import platform.UIKit.UIGraphicsImageRendererFormat
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
 import platform.darwin.NSObject
@@ -159,7 +160,9 @@ private fun compressToStore(image: UIImage): String? {
     val scale = minOf(1.0, MAX_EDGE / maxOf(width, height))
     val targetW = (width * scale).coerceAtLeast(1.0)
     val targetH = (height * scale).coerceAtLeast(1.0)
-    val renderer = UIGraphicsImageRenderer(size = CGSizeMake(targetW, targetH))
+    // format 不指定时 scale 取主屏倍率，3x 机型会把 1568 点渲成 4704 像素
+    val format = UIGraphicsImageRendererFormat.defaultFormat().apply { this.scale = 1.0 }
+    val renderer = UIGraphicsImageRenderer(size = CGSizeMake(targetW, targetH), format = format)
     val normalized = renderer.imageWithActions { _ ->
         image.drawInRect(CGRectMake(0.0, 0.0, targetW, targetH))
     }
