@@ -41,8 +41,14 @@ import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_assistant_title
 import trendingai.chat.generated.resources.chat_back
 import trendingai.chat.generated.resources.chat_history
+import whl.trending.chat.VoiceNotice
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
+import whl.trending.chat.engine.VoiceTranscriber
+import whl.trending.chat.host.chatHost
+import trendingai.chat.generated.resources.chat_voice_empty
+import trendingai.chat.generated.resources.chat_voice_failed
+import trendingai.chat.generated.resources.chat_voice_pro_message
 import whl.trending.chat.store.InMemoryChatStore
 import whl.trending.chat.store.rememberDefaultChatStore
 
@@ -64,12 +70,28 @@ fun ChatScreen(
     initialMessages: List<whl.trending.chat.model.ChatMessage> = emptyList(),
     persistent: Boolean = true,
     suggestions: List<ChatSuggestion> = emptyList(),
+    transcriber: VoiceTranscriber? = ChatApi.sharedTranscriber,
 ) {
     val store = if (persistent) rememberDefaultChatStore() else remember { InMemoryChatStore() }
     val viewModel: ChatViewModel = viewModel(key = "chat") {
-        ChatViewModel(engine, initialMessages, store)
+        ChatViewModel(engine, initialMessages, store, transcriber = transcriber)
     }
     val state by viewModel.uiState.collectAsState()
+    val showNotice = rememberShowNotice()
+    val voiceEmptyText = stringResource(Res.string.chat_voice_empty)
+    val voiceFailedText = stringResource(Res.string.chat_voice_failed)
+    val voiceProText = stringResource(Res.string.chat_voice_pro_message)
+    LaunchedEffect(viewModel) {
+        viewModel.voiceNotices.collect { notice ->
+            showNotice(
+                when (notice) {
+                    VoiceNotice.EMPTY -> voiceEmptyText
+                    VoiceNotice.FAILED -> voiceFailedText
+                    VoiceNotice.PRO_REQUIRED -> voiceProText
+                },
+            )
+        }
+    }
     val threads by viewModel.threads.collectAsState()
     val currentThreadId by viewModel.currentThreadId.collectAsState()
 
@@ -149,7 +171,7 @@ fun ChatScreen(
                             suggestions.forEach { suggestion ->
                                 OutlinedButton(
                                     onClick = { viewModel.sendText(suggestion.prompt) },
-                                    enabled = !state.isSending,
+                                    enabled = !state.isBusy,
                                 ) {
                                     Text(suggestion.label)
                                 }
@@ -174,6 +196,11 @@ fun ChatScreen(
                         onAddImage = viewModel::addPendingImage,
                         onRemoveImage = viewModel::removePendingImage,
                         autoFocus = true,
+                        voiceEnabled = viewModel.voiceAvailable,
+                        isTranscribing = state.isTranscribing,
+                        voiceMaxDurationMs = chatHost.voiceMaxDurationMs(),
+                        onVoiceRecorded = viewModel::sendVoice,
+                        onVoiceOutcome = viewModel::reportVoiceOutcome,
                     )
                 }
             },

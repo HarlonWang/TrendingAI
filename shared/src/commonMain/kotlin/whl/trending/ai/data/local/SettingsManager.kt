@@ -153,6 +153,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val MIN_VERSION_KEY = "prefs_min_version"
     private val CHAT_IMAGES_MAX_KEY = "prefs_chat_images_max"
     private val CHAT_IMAGES_PER_KB_KEY = "prefs_chat_images_per_kb"
+    private val CHAT_VOICE_MAX_MS_KEY = "prefs_chat_voice_max_ms"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
@@ -382,6 +383,14 @@ class SettingsManager(private val settings: ObservableSettings) {
     fun setChatImagesConfig(maxCount: Int?, perImageJpegKb: Int?) {
         if (maxCount != null) settings.putInt(CHAT_IMAGES_MAX_KEY, maxCount)
         if (perImageJpegKb != null) settings.putInt(CHAT_IMAGES_PER_KB_KEY, perImageJpegKb)
+    }
+
+    /** 单次语音录入时长上限（毫秒），服务端单源见后端 lib/chat-voice.js */
+    fun chatVoiceMaxDurationMs(): Int =
+        settings.getInt(CHAT_VOICE_MAX_MS_KEY, 60_000).takeIf { it > 0 } ?: 60_000
+
+    fun setChatVoiceConfig(maxDurationMs: Int?) {
+        if (maxDurationMs != null) settings.putInt(CHAT_VOICE_MAX_MS_KEY, maxDurationMs)
     }
 
     /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */

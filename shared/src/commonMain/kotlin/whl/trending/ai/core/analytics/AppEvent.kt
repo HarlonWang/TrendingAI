@@ -95,6 +95,10 @@ sealed class AppEvent(
         mapOf("kind" to kind, "from" to from, "image_count" to imageCount),
     )
 
+    /** 语音录入转写前的漏斗，一次按住恰好一条；转写成功后的发送另走 [AiRequested]（from = voice）。 */
+    data class VoiceInput(val outcome: VoiceInputOutcome, val durationMs: Long? = null) :
+        AppEvent("voice_input", mapOf("outcome" to outcome, "duration_ms" to durationMs))
+
     /** 与 [AiRequested] 成对，一次请求恰好一条：漏斗的分母分子都在这两个事件里。 */
     data class AiCompleted(
         val kind: AiKind,
@@ -259,6 +263,8 @@ enum class ListFilter {
 enum class AiKind { CHAT }
 
 enum class AiOutcome { OK, ERROR, INTERRUPTED }
+
+enum class VoiceInputOutcome { SENT, CANCELLED, TOO_SHORT, EMPTY, ERROR, PERMISSION_DENIED, PRO_GATE }
 
 enum class AuthAction { SIGN_IN, LINK }
 

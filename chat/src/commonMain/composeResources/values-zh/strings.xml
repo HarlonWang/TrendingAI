@@ -56,4 +56,15 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">联网搜索</string>
     <string name="chat_searching">正在搜索网络…</string>
+    <string name="chat_voice_mic">语音输入</string>
+    <string name="chat_voice_release_send">松开发送 · 上滑取消</string>
+    <string name="chat_voice_release_cancel">松开取消</string>
+    <string name="chat_voice_transcribing">正在识别…</string>
+    <string name="chat_voice_empty">没有听清，请重试</string>
+    <string name="chat_voice_failed">语音识别失败，请重试</string>
+    <string name="chat_voice_pro_title">Pro 专属功能</string>
+    <string name="chat_voice_pro_message">语音输入目前仅对 Pro 开放，可继续使用文字输入。</string>
+    <string name="chat_voice_permission_title">需要麦克风权限</string>
+    <string name="chat_voice_permission_message">请在系统设置中允许使用麦克风，以使用语音输入。</string>
+    <string name="chat_voice_permission_settings">去设置</string>
 </resources>

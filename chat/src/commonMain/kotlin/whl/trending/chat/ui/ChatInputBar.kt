@@ -1,5 +1,7 @@
 package whl.trending.chat.ui
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.TravelExplore
@@ -38,7 +41,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,13 +56,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import okio.Path.Companion.toPath
+import whl.trending.chat.attach.VoiceRecording
+import whl.trending.chat.attach.VoiceStart
 import whl.trending.chat.attach.rememberChatImagePicker
+import whl.trending.chat.attach.rememberChatVoiceRecorder
+import whl.trending.chat.host.ChatVoiceOutcome
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
 import trendingai.chat.generated.resources.Res
@@ -70,7 +84,18 @@ import trendingai.chat.generated.resources.chat_image_login_message
 import trendingai.chat.generated.resources.chat_image_login_title
 import trendingai.chat.generated.resources.chat_image_remove
 import trendingai.chat.generated.resources.chat_input_hint
+import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_send
+import trendingai.chat.generated.resources.chat_voice_failed
+import trendingai.chat.generated.resources.chat_voice_mic
+import trendingai.chat.generated.resources.chat_voice_permission_message
+import trendingai.chat.generated.resources.chat_voice_permission_settings
+import trendingai.chat.generated.resources.chat_voice_permission_title
+import trendingai.chat.generated.resources.chat_voice_pro_message
+import trendingai.chat.generated.resources.chat_voice_pro_title
+import trendingai.chat.generated.resources.chat_voice_release_cancel
+import trendingai.chat.generated.resources.chat_voice_release_send
+import trendingai.chat.generated.resources.chat_voice_transcribing
 import trendingai.chat.generated.resources.chat_user_image
 import trendingai.chat.generated.resources.chat_web_search
 
@@ -88,6 +113,15 @@ import trendingai.chat.generated.resources.chat_web_search
  *
  * 图片理解仅对登录用户开放：未登录点「+」弹登录引导（服务端另有 403 真闸）。
  * 选图走系统契约（Photo Picker / TakePicture），Android 13+ 全程零运行时权限。
+ *
+ * 语音录入：输入框为空时右侧主按钮是麦克风（有文字即变回发送键，不加第三个图标）。
+ * 按住说话、松手即发、上滑取消；转写成文本后直接发送，不经输入框。仅 Pro 可用，
+ * 非 Pro 按下弹纯告知弹窗（与锁定模型同一处理，不外跳）。
+ *
+ * @param voiceEnabled 宿主是否注入了转写能力；false 时永远显示发送键
+ * @param isTranscribing 转写在途：麦克风位显示 loading，输入框占位改为「正在识别」
+ * @param onVoiceRecorded 一段合格的录音就绪（松手或触顶）
+ * @param onVoiceOutcome 转写前就结束的语音结果（取消 / 太短 / 权限 / Pro 闸），供埋点
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -103,6 +137,11 @@ fun ChatInputBar(
     searchActive: Boolean = false,
     onToggleSearch: () -> Unit = {},
     autoFocus: Boolean = false,
+    voiceEnabled: Boolean = false,
+    isTranscribing: Boolean = false,
+    voiceMaxDurationMs: Int = 60_000,
+    onVoiceRecorded: (VoiceRecording) -> Unit = {},
+    onVoiceOutcome: (ChatVoiceOutcome, Long?) -> Unit = { _, _ -> },
 ) {
     // 进入页面自动聚焦输入框，键盘随焦点自动弹出（官方做法：focusRequester + 在组合外 requestFocus）
     val inputFocusRequester = remember { FocusRequester() }
@@ -123,6 +162,70 @@ fun ChatInputBar(
         onProcessingChange = { processingCount += it },
         onImageReady = onAddImage,
     )
+
+    val isPro by chatHost.isPro.collectAsState(chatHost.currentIsPro())
+    var showProDialog by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    // 录音中：startedAt > 0；inCancelZone 随手指上滑切换
+    var recordingStartedAt by remember { mutableLongStateOf(0L) }
+    var inCancelZone by remember { mutableStateOf(false) }
+    val recorder = rememberChatVoiceRecorder(
+        maxDurationMs = voiceMaxDurationMs,
+        minDurationMs = MIN_VOICE_DURATION_MS,
+        onAutoStop = { recording ->
+            // 手指仍按着：先收掉录音态，后续抬手在手势里被 startedAt==0 挡掉
+            recordingStartedAt = 0L
+            onVoiceRecorded(recording)
+        },
+        onPermissionDenied = {
+            showPermissionDialog = true
+            onVoiceOutcome(ChatVoiceOutcome.PERMISSION_DENIED, null)
+        },
+    )
+    // 录音中离开页面（返回键、Activity 重建）：手势协程随组合一起没了，录音器得跟着停
+    DisposableEffect(recorder) {
+        onDispose {
+            recorder.cancel()
+            recordingStartedAt = 0L
+        }
+    }
+    val showMic = voiceEnabled && recorder.isAvailable && input.isBlank() && pendingImages.isEmpty()
+    val haptic = LocalHapticFeedback.current
+    val showNotice = rememberShowNotice()
+    val voiceFailedText = stringResource(Res.string.chat_voice_failed)
+
+    if (showProDialog) {
+        AlertDialog(
+            onDismissRequest = { showProDialog = false },
+            title = { Text(stringResource(Res.string.chat_voice_pro_title)) },
+            text = { Text(stringResource(Res.string.chat_voice_pro_message)) },
+            confirmButton = {
+                TextButton(onClick = { showProDialog = false }) {
+                    Text(stringResource(Res.string.chat_model_unlock_dismiss))
+                }
+            },
+        )
+    }
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text(stringResource(Res.string.chat_voice_permission_title)) },
+            text = { Text(stringResource(Res.string.chat_voice_permission_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionDialog = false
+                    recorder.openPermissionSettings()
+                }) {
+                    Text(stringResource(Res.string.chat_voice_permission_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text(stringResource(Res.string.chat_image_login_dismiss))
+                }
+            },
+        )
+    }
 
     if (showLoginDialog) {
         AlertDialog(
@@ -174,6 +277,13 @@ fun ChatInputBar(
                 modifier = Modifier.padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (recordingStartedAt > 0L) {
+                    RecordingStatus(
+                        startedAt = recordingStartedAt,
+                        inCancelZone = inCancelZone,
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                    )
+                } else {
                 // + 菜单常开：搜索 toggle 对匿名可用；图片两项在点击时才做登录闸
                 run {
                     Box {
@@ -241,7 +351,14 @@ fun ChatInputBar(
                     onValueChange = onInputChange,
                     // focusRequester 必须声明在可聚焦项之前才会关联（官方文档「焦点修饰符的优先级」）
                     modifier = Modifier.focusRequester(inputFocusRequester).weight(1f),
-                    placeholder = { Text(stringResource(Res.string.chat_input_hint)) },
+                    enabled = !isTranscribing,
+                    placeholder = {
+                        Text(
+                            stringResource(
+                                if (isTranscribing) Res.string.chat_voice_transcribing else Res.string.chat_input_hint,
+                            ),
+                        )
+                    },
                     textStyle = MaterialTheme.typography.bodyLarge,
                     // 容器与指示线全部透明：外层胶囊已经是这块区域的视觉容器，
                     // 再叠一层 TextField 自己的底色/下划线就成了「框中框」
@@ -255,6 +372,62 @@ fun ChatInputBar(
                     ),
                     maxLines = 5,
                 )
+                }
+                if (showMic || recordingStartedAt > 0L) {
+                    val cancelThresholdPx = with(LocalDensity.current) { CANCEL_SLIDE_THRESHOLD.toPx() }
+                    // 按住/上滑/抬手自行处理：FilledIconButton 的 onClick 表达不了「按下开始、抬手结束」
+                    MicButton(
+                        active = recordingStartedAt > 0L,
+                        cancelZone = inCancelZone,
+                        loading = isTranscribing,
+                        modifier = Modifier.pointerInput(isPro, isTranscribing, recorder) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown()
+                                down.consume()
+                                if (isTranscribing) return@awaitEachGesture
+                                if (!isPro) {
+                                    showProDialog = true
+                                    onVoiceOutcome(ChatVoiceOutcome.PRO_GATE, null)
+                                    return@awaitEachGesture
+                                }
+                                when (recorder.start()) {
+                                    VoiceStart.PERMISSION_PENDING -> return@awaitEachGesture
+                                    VoiceStart.FAILED -> {
+                                        showNotice(voiceFailedText)
+                                        onVoiceOutcome(ChatVoiceOutcome.ERROR, null)
+                                        return@awaitEachGesture
+                                    }
+                                    VoiceStart.STARTED -> Unit
+                                }
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                recordingStartedAt = epochNow()
+                                inCancelZone = false
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id }
+                                    if (change == null || !change.pressed) {
+                                        // 触顶自动停止已取件时 startedAt 归零，这里的抬手不再重复取件
+                                        if (recordingStartedAt > 0L) {
+                                            val elapsed = epochNow() - recordingStartedAt
+                                            recordingStartedAt = 0L
+                                            if (change == null || inCancelZone) {
+                                                recorder.cancel()
+                                                onVoiceOutcome(ChatVoiceOutcome.CANCELLED, elapsed)
+                                            } else {
+                                                val recording = recorder.stop()
+                                                if (recording != null) onVoiceRecorded(recording)
+                                                else onVoiceOutcome(ChatVoiceOutcome.TOO_SHORT, elapsed)
+                                            }
+                                        }
+                                        break
+                                    }
+                                    inCancelZone = change.position.y < -cancelThresholdPx
+                                    change.consume()
+                                }
+                            }
+                        },
+                    )
+                } else {
                 FilledIconButton(
                     onClick = onSend,
                     enabled = canSend,
@@ -272,8 +445,85 @@ fun ChatInputBar(
                         modifier = Modifier.size(20.dp),
                     )
                 }
+                }
             }
         }
+    }
+}
+
+private const val MIN_VOICE_DURATION_MS = 1_000
+private val CANCEL_SLIDE_THRESHOLD = 80.dp
+
+private fun epochNow(): Long = whl.trending.chat.core.epochMillis()
+
+/** 麦克风主按钮：与发送键同位同尺寸；录音中放大一档、进入取消区换 error 色。 */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun MicButton(
+    active: Boolean,
+    cancelZone: Boolean,
+    loading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val container = when {
+        active && cancelZone -> MaterialTheme.colorScheme.error
+        active -> MaterialTheme.colorScheme.primary
+        loading -> MaterialTheme.colorScheme.surfaceContainerHighest
+        else -> MaterialTheme.colorScheme.primary
+    }
+    val content = when {
+        active && cancelZone -> MaterialTheme.colorScheme.onError
+        loading -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> MaterialTheme.colorScheme.onPrimary
+    }
+    Surface(
+        shape = CircleShape,
+        color = container,
+        contentColor = content,
+        modifier = modifier.size(if (active) 56.dp else 48.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (loading) {
+                LoadingIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = stringResource(Res.string.chat_voice_mic),
+                    modifier = Modifier.size(if (active) 24.dp else 20.dp),
+                )
+            }
+        }
+    }
+}
+
+/** 录音中占据输入区的状态：计时 + 操作提示（进入取消区时换文案）。 */
+@Composable
+private fun RecordingStatus(
+    startedAt: Long,
+    inCancelZone: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var elapsedMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(startedAt) {
+        while (true) {
+            elapsedMs = epochNow() - startedAt
+            delay(200)
+        }
+    }
+    val seconds = elapsedMs / 1000
+    Column(modifier = modifier) {
+        Text(
+            text = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (inCancelZone) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(
+                if (inCancelZone) Res.string.chat_voice_release_cancel else Res.string.chat_voice_release_send,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

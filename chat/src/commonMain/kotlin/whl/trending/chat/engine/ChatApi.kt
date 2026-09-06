@@ -5,13 +5,18 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.header
+import io.ktor.client.request.post
 import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -45,14 +50,16 @@ private const val TAG = "ChatApi"
  */
 class ChatApi(
     private val baseUrl: String = "https://api.trendingai.cn/api",
-) : ChatEngine {
+) : ChatEngine, VoiceTranscriber {
 
     companion object {
         /**
          * App 级共享实例：全进程仅一个 HttpClient，常驻至进程结束，无需 close。
          * 各会话线（keyed ChatViewModel）共用同一 engine，避免反复新建且从不关闭的泄漏。
          */
-        val shared: ChatEngine by lazy { ChatApi() }
+        private val sharedApi: ChatApi by lazy { ChatApi() }
+        val shared: ChatEngine get() = sharedApi
+        val sharedTranscriber: VoiceTranscriber get() = sharedApi
 
         /** 流式请求总时长上限：生成 2500~4000 字解读可能远超普通请求，放到 5 分钟 */
         private const val STREAM_REQUEST_TIMEOUT_MS = 300_000L
@@ -83,6 +90,9 @@ class ChatApi(
 
     @Serializable
     private data class ChatResponse(val content: String)
+
+    @Serializable
+    private data class TranscribeResponse(val text: String, val languages: List<String> = emptyList())
 
     @Serializable
     private data class ErrorResponse(
@@ -153,6 +163,44 @@ class ChatApi(
      * 2xx 非 SSE（服务端降级非流式）整段作为一个 delta 兜底。
      * 流在 done 之前结束视为中途断流 → SERVER 可重试，已渲染部分由调用方丢弃。
      */
+    override suspend fun transcribe(path: String, durationMs: Long): Transcription {
+        val lang = resolveLang()
+        try {
+            val bytes = FileSystem.SYSTEM.read(path.toPath()) { readByteArray() }
+            val sentAsLoggedIn = chatHost.isLoggedInNow()
+            val response = client.post("$baseUrl/chat/transcribe") {
+                header("X-Install-Id", chatHost.installId())
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append("lang", lang)
+                            append("duration_ms", durationMs.toString())
+                            append(
+                                "file", bytes,
+                                Headers.build {
+                                    append(HttpHeaders.ContentType, "audio/mp4")
+                                    append(HttpHeaders.ContentDisposition, "filename=\"voice.m4a\"")
+                                },
+                            )
+                        },
+                    ),
+                )
+            }
+            if (response.status != HttpStatusCode.OK) throw toChatException(response, sentAsLoggedIn)
+            val parsed = json.decodeFromString<TranscribeResponse>(response.bodyAsText())
+            return Transcription(parsed.text, parsed.languages)
+        } catch (e: ChatException) {
+            logFailure("chat/transcribe", e.error)
+            throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            val error = ChatErrors.forThrowable(e)
+            logFailure("chat/transcribe", error)
+            throw ChatException(error)
+        }
+    }
+
     private suspend fun executeStreaming(
         path: String,
         onDelta: (String) -> Unit,

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 语音录入（按住说话）；权限跟着功能走，宿主 manifest 经 merger 自动合入 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application>
         <!--
             离线 Demo 入口。不带 LAUNCHER intent-filter（避免给正式包多一个图标），

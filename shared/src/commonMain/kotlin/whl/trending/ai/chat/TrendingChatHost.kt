@@ -12,6 +12,7 @@ import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.analytics.AiKind
 import whl.trending.ai.core.analytics.AiOutcome
 import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.VoiceInputOutcome
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.local.globalSettingsManager
@@ -22,6 +23,7 @@ import whl.trending.ai.ui.profile.ProBadge
 import whl.trending.chat.host.ChatAiEvent
 import whl.trending.chat.host.ChatAiOutcome
 import whl.trending.chat.host.ChatHost
+import whl.trending.chat.host.ChatVoiceOutcome
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.ChatModelsResponse
 
@@ -51,6 +53,7 @@ private object TrendingChatHost : ChatHost {
 
     override fun imagesMaxCount() = globalSettingsManager.chatImagesMaxCount()
     override fun imagesPerImageJpegKb() = globalSettingsManager.chatImagesPerImageJpegKb()
+    override fun voiceMaxDurationMs() = globalSettingsManager.chatVoiceMaxDurationMs()
     override fun installId() = globalSettingsManager.getOrCreateInstallId()
 
     /** 仅 app 语言为中文（或跟随系统且系统为中文）时用 zh，其余 en（与后端默认一致）。 */
@@ -83,6 +86,18 @@ private object TrendingChatHost : ChatHost {
                 durationMs = event.durationMs,
                 reason = event.reason,
                 tier = event.tier,
+            )
+            is ChatAiEvent.VoiceInput -> AppEvent.VoiceInput(
+                outcome = when (event.outcome) {
+                    ChatVoiceOutcome.SENT -> VoiceInputOutcome.SENT
+                    ChatVoiceOutcome.CANCELLED -> VoiceInputOutcome.CANCELLED
+                    ChatVoiceOutcome.TOO_SHORT -> VoiceInputOutcome.TOO_SHORT
+                    ChatVoiceOutcome.EMPTY -> VoiceInputOutcome.EMPTY
+                    ChatVoiceOutcome.ERROR -> VoiceInputOutcome.ERROR
+                    ChatVoiceOutcome.PERMISSION_DENIED -> VoiceInputOutcome.PERMISSION_DENIED
+                    ChatVoiceOutcome.PRO_GATE -> VoiceInputOutcome.PRO_GATE
+                },
+                durationMs = event.durationMs,
             )
         },
     )

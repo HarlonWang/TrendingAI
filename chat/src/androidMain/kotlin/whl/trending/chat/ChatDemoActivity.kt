@@ -54,6 +54,7 @@ private fun DemoContent(real: Boolean, onBack: () -> Unit) {
             initialMessages = SampleData.messages,
             // 纯内存：假引擎的样例会话不落真库
             persistent = false,
+            transcriber = null,
         )
     }
 }
