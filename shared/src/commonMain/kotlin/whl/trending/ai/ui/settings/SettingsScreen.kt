@@ -325,7 +325,7 @@ fun SettingsScreen(
                         trailing = {
                             Box {
                                 Text(
-                                    text = homeTabOptionText(HomeTab.defaultFromName(defaultHomeTab)),
+                                    text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                                 TrendingDropdownMenu(
