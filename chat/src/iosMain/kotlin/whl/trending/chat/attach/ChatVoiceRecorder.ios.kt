@@ -127,7 +127,9 @@ private class IosVoiceRecorder(
     override fun stop(): VoiceRecording? {
         val rec = recorder ?: return null
         val target = path
-        val durationMs = epochMillis() - startedAt
+        // 取录音器自己计的秒数而非墙钟：音频会话激活到真正开录之间有延迟（模拟器可达数秒），
+        // 墙钟从 start() 返回起算会把有效时长算短，与文件里的音频对不上
+        val durationMs = (rec.currentTime * 1000).toLong().takeIf { it > 0 } ?: (epochMillis() - startedAt)
         release(rec)
         val size = target?.let { runCatching { FileSystem.SYSTEM.metadata(it.toPath()).size ?: 0L }.getOrDefault(0L) } ?: 0L
         if (target == null || durationMs < minDurationMs || size == 0L) {
