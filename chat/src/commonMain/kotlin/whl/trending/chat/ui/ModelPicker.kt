@@ -119,10 +119,11 @@ internal fun ModelPicker(
     Box(modifier) {
         // M3 Expressive 的 SplitButton 而不是 chip：模型名与下拉箭头分成两块，「这是个选择器」
         // 由形态本身讲清楚，不用靠「能不能点掉」去猜（chip 的老问题）。
-        // 挂在顶栏中央当标题，用主色容器：这里没有别的能力控件与它抢注意力
+        // 挂在顶栏中央当标题，配色保持中性：模型是常驻信息，不该是页面第一眼的落点。
+        // 顶栏底色是 surfaceContainer，取深两档的 Highest 才在浅色下看得出胶囊轮廓
         val modelColors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         )
         SplitButtonLayout(
             // 限宽：长模型名截断成省略号，别把顶栏两侧的图标挤出去
