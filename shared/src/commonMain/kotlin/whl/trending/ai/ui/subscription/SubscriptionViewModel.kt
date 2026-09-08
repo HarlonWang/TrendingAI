@@ -2,7 +2,6 @@ package whl.trending.ai.ui.subscription
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +18,6 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.PricesResponse
 import whl.trending.ai.data.model.ProBenefitRow
 import whl.trending.ai.data.repository.BillingRepository
-import whl.trending.ai.update.refreshAppConfig
 
 sealed interface SubscriptionEvent {
     /** 下单失败（创建交易没成功），UI 提示重试。已开出收银台的失败不在此列。 */
@@ -32,7 +30,7 @@ data class BenefitRowText(val label: String, val free: String, val pro: String)
 /**
  * @param prices 服务端算好的两档价格；[PricesResponse.available] 为 false 时整页不报价，
  *   把定价交给收银台呈现——只报一半或报错的价格比不报更伤信任。
- * @param benefitRows 权益对比行，来自 app-config 的最近一次成功拉取；空表示从未拉到，UI 显示一句兜底。
+ * @param benefitRows 权益对比行，读冷启动拉取的 app-config 缓存（本页不发请求）；空表示从未拉到，UI 显示一句兜底。
  */
 data class SubscriptionUiState(
     val loading: Boolean = true,
@@ -65,11 +63,7 @@ class SubscriptionViewModel(
     fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
-            val pricesJob = async { repository.fetchPrices() }
-            // 冷启动已拉过一次；这里再拉是为了拿最新文案，失败则读缓存
-            val configJob = async { refreshAppConfig() }
-            val prices = pricesJob.await()
-            configJob.await()
+            val prices = repository.fetchPrices()
             val rows = resolveBenefitRows(globalSettingsManager.proBenefitRows(), uiLanguage())
             _uiState.update {
                 it.copy(loading = false, prices = prices, benefitRows = rows)
