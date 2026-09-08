@@ -47,11 +47,8 @@ import trendingai.chat.generated.resources.chat_model_unlock_message
 import trendingai.chat.generated.resources.chat_model_unlock_title
 
 /**
- * [ModelPicker] 是否有东西可渲染。
- *
- * 抽出来是给 [ChatContextRow] 用的：那一行要在「模型和能力 chip 都没有」时整行缺席，
- * 而选择器是否出现只有这里知道——组件内部 return 掉的话，外面看到的是一个高度为 0 却
- * 仍占着 Arrangement 间距的成员。
+ * [ModelPicker] 是否有东西可渲染：顶栏标题槽据此决定放选择器还是回落文字标题。
+ * 选择器是否出现只有这里知道——组件内部 return 掉的话，标题槽会空着。
  */
 internal fun chatModelPickerVisible(catalog: ChatModelsResponse): Boolean =
     catalog.models.size > 1 && catalogDefaultChatModel(catalog) != null

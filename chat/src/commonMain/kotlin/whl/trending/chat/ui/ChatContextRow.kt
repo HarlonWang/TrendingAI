@@ -26,8 +26,8 @@ import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_web_search
 
 /**
- * 输入胶囊正上方的单行「已开启的能力」区，回答一个问题：**下一条消息会以什么配置发出去**。
- * 模型选择器不在这里——它是常驻信息，挂在顶栏中央；这一行只放临时开启、需要被看见的能力。
+ * 输入胶囊正上方的单行「已开启的能力」区，只显示临时开启、需要被看见的能力（如联网搜索）。
+ * 模型选择器不在这里——它是常驻信息，挂在顶栏中央。
  *
  * 参照 EchoFlow 的 `ContextChipRow`（`ChatComposer.kt`）。行内用 M3 Expressive 的按钮而不是 chip：
  * chip 的规范是 32dp 高 + `CornerSmall`（8dp），下面的输入胶囊是 72dp 高 + 36dp 全圆，两者放一起
