@@ -56,6 +56,9 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">联网搜索</string>
     <string name="chat_searching">正在搜索网络…</string>
+    <string name="chat_waiting_processing">处理中…</string>
+    <string name="chat_waiting_thinking">思考中…</string>
+    <string name="chat_waiting_still_thinking">还在思考，请稍候…</string>
     <string name="chat_voice_mic">语音输入</string>
     <string name="chat_voice_release_send">松开发送 · 上滑取消</string>
     <string name="chat_voice_release_cancel">松开取消</string>
