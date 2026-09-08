@@ -59,6 +59,9 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">Web search</string>
     <string name="chat_searching">Searching the web…</string>
+    <string name="chat_waiting_processing">Processing…</string>
+    <string name="chat_waiting_thinking">Thinking…</string>
+    <string name="chat_waiting_still_thinking">Still thinking, hang tight…</string>
     <string name="chat_voice_mic">Voice input</string>
     <string name="chat_voice_release_send">Release to send · Slide up to cancel</string>
     <string name="chat_voice_release_cancel">Release to cancel</string>

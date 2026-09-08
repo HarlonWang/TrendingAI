@@ -193,22 +193,24 @@ private fun AssistantMessage(
             if (message.sources.isNotEmpty()) {
                 SourcesRow(message.sources)
             }
-            Row {
-                CopyIconButton(
-                    text = message.content,
-                    modifier = Modifier.size(32.dp),
-                )
-                val share = rememberShareText()
-                IconButton(
-                    onClick = { share(message.content) },
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Share,
-                        contentDescription = stringResource(Res.string.chat_share),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
+            if (message.content.isNotBlank()) {
+                Row {
+                    CopyIconButton(
+                        text = message.content,
+                        modifier = Modifier.size(32.dp),
                     )
+                    val share = rememberShareText()
+                    IconButton(
+                        onClick = { share(message.content) },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = stringResource(Res.string.chat_share),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         } else if (error.code == ChatError.CODE_QUOTA_DEVICE) {
