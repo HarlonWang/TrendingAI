@@ -25,8 +25,8 @@
     <string name="chat_model_unlock_message">「%1$s」目前仅对 Pro 开放，可继续使用默认模型。</string>
     <string name="chat_model_unlock_dismiss">知道了</string>
     <string name="chat_model_picker_title">选择模型</string>
-    <string name="chat_model_meta_default">默认</string>
-    <string name="chat_model_meta_pro">Pro</string>
+    <string name="chat_model_tier_free">免费</string>
+    <string name="chat_model_tier_pro">PRO</string>
     <string name="chat_model_cap_images">图片</string>
     <string name="chat_model_cap_search">联网</string>
     <string name="chat_model_meta_separator"> · </string>

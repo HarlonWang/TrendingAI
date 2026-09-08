@@ -2,6 +2,7 @@ package whl.trending.chat.ui
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.AlertDialog
@@ -68,11 +68,11 @@ import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_list_separator
 import trendingai.chat.generated.resources.chat_model_cap_images
 import trendingai.chat.generated.resources.chat_model_cap_search
-import trendingai.chat.generated.resources.chat_model_meta_default
-import trendingai.chat.generated.resources.chat_model_meta_pro
 import trendingai.chat.generated.resources.chat_model_meta_separator
 import trendingai.chat.generated.resources.chat_model_picker_title
 import trendingai.chat.generated.resources.chat_model_provider
+import trendingai.chat.generated.resources.chat_model_tier_free
+import trendingai.chat.generated.resources.chat_model_tier_pro
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_model_unlock_message
 import trendingai.chat.generated.resources.chat_model_unlock_title
@@ -258,7 +258,6 @@ private fun ModelPickerContent(
                     shape = groupItemShape(index, group.size),
                     selected = model.id == current.id,
                     locked = model.proOnly && !isPro,
-                    isDefault = model.id == catalog.default,
                     onClick = { if (model.proOnly && !isPro) onLockedClick(model) else onSelect(model) },
                 )
             }
@@ -279,8 +278,9 @@ private fun ModelPickerContent(
 }
 
 /**
- * 一行模型：名称 + 元信息副行（档位、支持的能力位）。卡片规格镜像宿主 app 的 `SettingsGroup`
- * （chat 是独立 SDK，不能依赖 shared）。锁定行仍可点（弹说明），所以只降透明度、不走禁用态。
+ * 一行模型：标题行 = 名称 + 档位徽标（免费 / PRO），副行 = 支持的能力位。卡片规格镜像宿主 app 的
+ * `SettingsGroup`（chat 是独立 SDK，不能依赖 shared）。锁定行仍可点（弹说明），所以只降透明度、
+ * 不走禁用态；PRO 徽标已说明锁定原因，右侧不再叠锁图标，trailing 只承担「当前选中」一种含义。
  */
 @Composable
 private fun ModelRow(
@@ -288,7 +288,6 @@ private fun ModelRow(
     shape: Shape,
     selected: Boolean,
     locked: Boolean,
-    isDefault: Boolean,
     onClick: () -> Unit,
 ) {
     val containerColor = if (selected) {
@@ -310,18 +309,24 @@ private fun ModelRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(model.name, style = MaterialTheme.typography.titleMedium)
-                ModelMetaLine(model = model, isDefault = isDefault)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        model.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    TierBadge(proOnly = model.proOnly)
+                }
+                ModelCapsLine(model)
             }
-            Spacer(Modifier.width(8.dp))
-            when {
-                locked -> Icon(
-                    Icons.Filled.Lock,
-                    contentDescription = "Pro",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                selected -> Icon(
+            if (selected) {
+                Spacer(Modifier.width(8.dp))
+                Icon(
                     Icons.Filled.Check,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
@@ -331,18 +336,41 @@ private fun ModelRow(
     }
 }
 
-/** 副行：档位标签在前、能力位在后，「·」分隔；只列支持的能力，不支持的不出现。全空则不占行。 */
+/**
+ * 档位徽标。PRO 复用宿主的金色徽标（与欢迎页、账户页同一个符号），宿主没给时退回文字胶囊；
+ * 免费用描边胶囊——描边在选中行（secondaryContainer）和普通行上都看得见，填色胶囊会在选中行上消失。
+ * 标签按 minTier 走而不按目录 default 走：用户关心的只有「免费 / Pro」这一个轴。
+ */
 @Composable
-private fun ModelMetaLine(model: ChatModelOption, isDefault: Boolean) {
-    val parts = mutableListOf<@Composable () -> Unit>()
-    when {
-        isDefault -> parts += { Text(stringResource(Res.string.chat_model_meta_default)) }
-        model.proOnly -> parts += { Text(stringResource(Res.string.chat_model_meta_pro)) }
+private fun TierBadge(proOnly: Boolean) {
+    if (proOnly) {
+        val hostBadge = chatHost.proBadge
+        if (hostBadge != null) hostBadge() else OutlinedTag(stringResource(Res.string.chat_model_tier_pro))
+    } else {
+        OutlinedTag(stringResource(Res.string.chat_model_tier_free))
     }
+}
+
+@Composable
+private fun OutlinedTag(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
+/** 副行：只列支持的能力位，「·」分隔；不支持的不出现，全空则不占行。 */
+@Composable
+private fun ModelCapsLine(model: ChatModelOption) {
+    val parts = mutableListOf<@Composable () -> Unit>()
     if (model.caps.images) parts += { MetaCapability(Icons.Outlined.Image, stringResource(Res.string.chat_model_cap_images)) }
     if (model.caps.search) parts += { MetaCapability(Icons.Outlined.TravelExplore, stringResource(Res.string.chat_model_cap_search)) }
     if (parts.isEmpty()) return
-    Spacer(Modifier.height(2.dp))
+    Spacer(Modifier.height(4.dp))
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
         ProvideTextStyle(MaterialTheme.typography.bodySmall) {
             Row(verticalAlignment = Alignment.CenterVertically) {
