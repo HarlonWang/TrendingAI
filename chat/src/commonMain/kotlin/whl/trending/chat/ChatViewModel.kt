@@ -366,10 +366,7 @@ class ChatViewModel(
                 } else {
                     val sources = _uiState.value.messages
                         .firstOrNull { it.id == PLACEHOLDER_ID }?.sources.orEmpty()
-                    replaceVisible(
-                        PLACEHOLDER_ID,
-                        store.appendAssistantMessage(threadId, full, selectedModelId(), sources),
-                    )
+                    replacePlaceholder(store.appendAssistantMessage(threadId, full, selectedModelId(), sources))
                 }
                 track(
                     ChatAiEvent.Completed(
@@ -383,7 +380,7 @@ class ChatViewModel(
                     ?: ChatError(ChatErrorCategory.UNKNOWN, detail = e.toString())
                 track(failureEvent(error, epochMillis() - startedAt))
                 // 已渲染部分丢弃，整条重试（中途断流语义）
-                replaceVisible(PLACEHOLDER_ID, store.appendErrorMessage(threadId, error))
+                replacePlaceholder(store.appendErrorMessage(threadId, error))
             },
         )
         _uiState.update { it.copy(isSending = false) }
@@ -454,9 +451,10 @@ class ChatViewModel(
         _uiState.update { s -> s.copy(messages = s.messages.filterNot { it.id == messageId }) }
     }
 
-    private fun replaceVisible(messageId: Long, replacement: ChatMessage) {
+    // 流式占位条 → 落库后的真实消息（成功或错误条）
+    private fun replacePlaceholder(replacement: ChatMessage) {
         _uiState.update { s ->
-            s.copy(messages = s.messages.map { if (it.id == messageId) replacement else it })
+            s.copy(messages = s.messages.map { if (it.id == PLACEHOLDER_ID) replacement else it })
         }
     }
 
