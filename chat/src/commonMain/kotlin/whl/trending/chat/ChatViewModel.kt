@@ -4,7 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,10 +32,12 @@ import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
+import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.model.ChatModelsProvider
 import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.Role
+import whl.trending.chat.model.effectiveChatModelCaps
 import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.SourceRef
 import whl.trending.chat.model.resolveDisplayedChatModel
@@ -71,6 +78,10 @@ class ChatViewModel(
     private val transcriber: VoiceTranscriber? = null,
     private val loadModels: suspend () -> ChatModelsResponse = { ChatModelsProvider.get() },
     private val track: (ChatAiEvent) -> Unit = { chatHost.onAiEvent(it) },
+    // 「手选 id × 是否 Pro」流，驱动能力位；懒取宿主，无宿主（单测）时静默为空流
+    private val modelSelection: () -> Flow<Pair<String, Boolean>> = {
+        combine(chatHost.chatModelChoice, chatHost.isPro) { id, pro -> id to pro }
+    },
     private val selectedModelId: () -> String? = {
         // 留痕记「实际生效」而非「手选值」：未手选时手选值是空哨兵，实际用的是目录里的免费默认项
         runCatching {
@@ -97,11 +108,19 @@ class ChatViewModel(
     private val _currentThreadId = MutableStateFlow<Long?>(null)
     val currentThreadId: StateFlow<Long?> = _currentThreadId.asStateFlow()
 
+    /** 当前生效模型的能力位：入口置灰的依据。切到不支持搜索的模型时已开的搜索开关随之收回；
+     *  已选图片刻意不清理——带图发到不吃图的模型由服务端 400 拒绝且不扣额度，客户端不为此加状态 */
+    val currentCaps: StateFlow<ChatModelCaps> =
+        combine(_catalog, flow { emitAll(modelSelection()) }.catch { }) { catalog, (id, pro) ->
+            effectiveChatModelCaps(catalog, id, pro)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, ChatModelCaps())
+
     /** 联网搜索开关（P2）。粘滞语义：开启后对后续每条消息生效，直到手动关闭 */
     private val _searchEnabled = MutableStateFlow(false)
     val searchEnabled: StateFlow<Boolean> = _searchEnabled.asStateFlow()
 
     fun toggleWebSearch() {
+        if (!_searchEnabled.value && !currentCaps.value.search) return
         _searchEnabled.value = !_searchEnabled.value
     }
 
@@ -119,6 +138,9 @@ class ChatViewModel(
     init {
         viewModelScope.launch {
             _catalog.value = runCatching { loadModels() }.getOrDefault(ChatModelsResponse())
+        }
+        viewModelScope.launch {
+            currentCaps.collect { caps -> if (!caps.search) _searchEnabled.value = false }
         }
     }
 

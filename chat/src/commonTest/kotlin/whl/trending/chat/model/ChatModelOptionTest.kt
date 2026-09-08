@@ -97,4 +97,36 @@ class ChatModelOptionTest {
         // 有效的手选不受契约破损影响，照常显示
         assertEquals(pro, resolveDisplayedChatModel(broken, "gpt-6", isPro = true))
     }
+
+    /** 契约 v2 新增字段：旧服务端不下发时按 OpenAI 全能力解析（行为不变） */
+    @Test
+    fun entry_missing_provider_and_caps_defaults_to_openai_full_caps() {
+        val parsed = Json.decodeFromString<ChatModelsResponse>("""{"default":"m1","models":[{"id":"m1"}]}""")
+        val model = parsed.models.single()
+        assertEquals("openai", model.provider)
+        assertEquals("OpenAI", model.providerName)
+        assertEquals(ChatModelCaps(images = true, search = true), model.caps)
+    }
+
+    @Test
+    fun entry_with_provider_and_caps_decodes() {
+        val parsed = Json.decodeFromString<ChatModelsResponse>(
+            """{"default":"m1","models":[{"id":"m1"},{"id":"deepseek-v4-flash","name":"DeepSeek V4 Flash","minTier":"user","provider":"deepseek","providerName":"DeepSeek","caps":{"images":false,"search":false}}]}""",
+        )
+        val ds = parsed.models.last()
+        assertEquals("deepseek", ds.provider)
+        assertEquals(ChatModelCaps(images = false, search = false), ds.caps)
+        assertEquals(listOf("OpenAI", "DeepSeek"), catalogProviderNames(parsed))
+    }
+
+    @Test
+    fun effective_caps_follow_selected_model_and_fall_back_to_full() {
+        val ds = ChatModelOption(id = "deepseek-v4-flash", provider = "deepseek", providerName = "DeepSeek", caps = ChatModelCaps(images = false, search = false))
+        val withDs = ChatModelsResponse(models = listOf(free, pro, ds), default = free.id)
+        assertEquals(ChatModelCaps(false, false), effectiveChatModelCaps(withDs, "deepseek-v4-flash", isPro = false))
+        // 未手选 → 默认项（OpenAI）的全能力
+        assertEquals(ChatModelCaps(true, true), effectiveChatModelCaps(withDs, FOLLOW_SERVER_DEFAULT, isPro = false))
+        // 目录未到 → 全开，不多藏入口
+        assertEquals(ChatModelCaps(true, true), effectiveChatModelCaps(ChatModelsResponse(), "deepseek-v4-flash", isPro = false))
+    }
 }

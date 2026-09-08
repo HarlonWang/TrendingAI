@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import whl.trending.chat.host.chatHost
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_assistant_title
+import trendingai.chat.generated.resources.chat_list_separator
 import trendingai.chat.generated.resources.chat_model_provider
 import trendingai.chat.generated.resources.chat_quota_login_cta
 import trendingai.chat.generated.resources.chat_quota_notice
@@ -30,9 +31,9 @@ import trendingai.chat.generated.resources.chat_quota_notice_user
 /** 欢迎区的额度口径档位，与服务端 `resolveQuotaTier` 的三档同名同义。 */
 internal enum class WelcomeTier { Anonymous, Free, Pro }
 
-/** 空状态欢迎区，尚无任何对话时显示。 */
+/** 空状态欢迎区，尚无任何对话时显示。[providerNames] 是目录里的厂商展示名，空则不标出处。 */
 @Composable
-fun ChatWelcome(modifier: Modifier = Modifier) {
+fun ChatWelcome(modifier: Modifier = Modifier, providerNames: List<String> = emptyList()) {
     // 档位判据取本地缓存而非 GET /api/quota：一行小字不值得打网络。失准窗口只有「订阅已到期
     // 且 app 未冷启」，下次冷启的 syncMe 即纠正（唯一日常写入点见 App.kt 根部 LaunchedEffect）
     val isPro by chatHost.isPro.collectAsState(
@@ -50,6 +51,7 @@ fun ChatWelcome(modifier: Modifier = Modifier) {
         canSignIn = chatHost.canSignIn,
         onSignIn = { chatHost.signIn("chat_welcome") },
         proBadge = chatHost.proBadge,
+        providerNames = providerNames,
         modifier = modifier,
     )
 }
@@ -58,6 +60,7 @@ fun ChatWelcome(modifier: Modifier = Modifier) {
 internal fun ChatWelcomeContent(
     tier: WelcomeTier,
     canSignIn: Boolean,
+    providerNames: List<String> = emptyList(),
     onSignIn: () -> Unit,
     proBadge: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -99,12 +102,17 @@ internal fun ChatWelcomeContent(
             Spacer(Modifier.height(6.dp))
         }
         // 模型出处不做视觉强调：OpenAI 品牌指南要求其展示不得比我们自己的名称更显著
-        Text(
-            text = stringResource(Res.string.chat_model_provider),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        if (providerNames.isNotEmpty()) {
+            Text(
+                text = stringResource(
+                    Res.string.chat_model_provider,
+                    providerNames.joinToString(stringResource(Res.string.chat_list_separator)),
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
