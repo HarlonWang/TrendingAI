@@ -10,14 +10,27 @@ import kotlinx.serialization.Serializable
 const val FOLLOW_SERVER_DEFAULT = ""
 
 /**
+ * 模型接受的输入能力（契约 `caps`）。缺省全开：旧服务端不下发时行为不变，
+ * 服务端在请求时另有真闸（`images_unsupported` / `search_unsupported`），这里只管隐藏入口。
+ */
+@Serializable
+data class ChatModelCaps(
+    val images: Boolean = true,
+    val search: Boolean = true,
+)
+
+/**
  * 一个可选聊天模型（`GET /api/chat/models`）。
- * `name`/`minTier` 带缺省容错：单条缺字段不该让整个目录解码失败（服务端仍按 tier 强制，不越权）。
+ * `name`/`minTier`/`provider`/`caps` 带缺省容错：单条缺字段不该让整个目录解码失败（服务端仍按 tier 强制，不越权）。
  */
 @Serializable
 data class ChatModelOption(
     val id: String,
     val name: String = id,
     val minTier: String = TIER_USER,
+    val provider: String = PROVIDER_DEFAULT,
+    val providerName: String = PROVIDER_DEFAULT_NAME,
+    val caps: ChatModelCaps = ChatModelCaps(),
 ) {
     val proOnly: Boolean get() = minTier == TIER_PRO
 
@@ -25,6 +38,10 @@ data class ChatModelOption(
         /** minTier 取值词汇，与后端 models.js 契约对齐。 */
         const val TIER_USER = "user"
         const val TIER_PRO = "pro"
+
+        /** 旧服务端不下发 provider 字段时的缺省：多厂商上线前目录只有 OpenAI */
+        const val PROVIDER_DEFAULT = "openai"
+        const val PROVIDER_DEFAULT_NAME = "OpenAI"
     }
 }
 
@@ -58,3 +75,11 @@ fun resolveDisplayedChatModel(catalog: ChatModelsResponse, selectedId: String, i
     val effective = resolveEffectiveChatModel(catalog.models, selectedId, isPro)
     return catalog.models.firstOrNull { it.id == effective } ?: catalogDefaultChatModel(catalog)
 }
+
+/** 当前生效模型的能力位；目录未到或解析不出时按全开处理（与缺省一致，不多藏入口）。 */
+fun effectiveChatModelCaps(catalog: ChatModelsResponse, selectedId: String, isPro: Boolean): ChatModelCaps =
+    resolveDisplayedChatModel(catalog, selectedId, isPro)?.caps ?: ChatModelCaps()
+
+/** 目录里出现的厂商展示名（按目录顺序去重），供出处标注拼接；目录未到时为空。 */
+fun catalogProviderNames(catalog: ChatModelsResponse): List<String> =
+    catalog.models.map { it.providerName }.distinct()

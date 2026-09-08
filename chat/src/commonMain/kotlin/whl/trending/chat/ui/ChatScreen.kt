@@ -45,6 +45,7 @@ import whl.trending.chat.VoiceNotice
 import whl.trending.chat.engine.ChatApi
 import whl.trending.chat.engine.ChatEngine
 import whl.trending.chat.engine.VoiceTranscriber
+import whl.trending.chat.model.catalogProviderNames
 import whl.trending.chat.host.chatHost
 import trendingai.chat.generated.resources.chat_voice_empty
 import trendingai.chat.generated.resources.chat_voice_failed
@@ -158,6 +159,7 @@ fun ChatScreen(
             bottomBar = {
                 val searchActive by viewModel.searchEnabled.collectAsState()
                 val catalog by viewModel.catalog.collectAsState()
+                val caps by viewModel.currentCaps.collectAsState()
                 Column {
                     // 建议动作行（描边 = 建议、填充的「当前配置」行 = 已生效状态，靠样式分层）：
                     // 宿主按入口注入，仅空会话欢迎态展示——发送后与恢复历史会话都自然隐藏
@@ -191,6 +193,7 @@ fun ChatScreen(
                         pendingImages = state.pendingImages,
                         searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
+                        caps = caps,
                         onInputChange = viewModel::updateInput,
                         onSend = viewModel::send,
                         onAddImage = viewModel::addPendingImage,
@@ -213,7 +216,8 @@ fun ChatScreen(
                     .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
             ) {
                 if (state.messages.isEmpty()) {
-                    ChatWelcome()
+                    val catalog by viewModel.catalog.collectAsState()
+                    ChatWelcome(providerNames = catalogProviderNames(catalog))
                 } else {
                     MessageList(
                         messages = state.messages,

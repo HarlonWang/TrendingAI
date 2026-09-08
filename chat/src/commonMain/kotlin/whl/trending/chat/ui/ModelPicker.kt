@@ -34,9 +34,11 @@ import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.chat.model.ChatModelOption
 import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.catalogDefaultChatModel
+import whl.trending.chat.model.catalogProviderNames
 import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.model.resolveEffectiveChatModel
 import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_list_separator
 import trendingai.chat.generated.resources.chat_model_provider
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_model_unlock_message
@@ -151,40 +153,56 @@ internal fun ModelPicker(
             },
         )
         ChatDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            models.forEach { model ->
-                val locked = model.proOnly && !isPro
-                DropdownMenuItem(
-                    text = { Text(model.name) },
-                    trailingIcon = if (locked) {
-                        {
-                            Icon(
-                                Icons.Filled.Lock,
-                                contentDescription = "Pro",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    } else null,
-                    onClick = {
-                        expanded = false
-                        when {
-                            locked -> unlockDialogModel = model
-                            // 选「默认项」记为跟随服务端默认而非钉住这个 id：否则后端换默认模型时，
-                            // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
-                            model.id == catalogDefault.id ->
-                                chatHost.followServerDefault()
-                            else -> chatHost.pinChatModel(model.id)
-                        }
-                    },
-                )
-            }
+            // 多厂商时按厂商分段：段头只是小字标签，不可点；单厂商不加段头（信息与页脚重复）
+            val grouped = models.groupBy { it.provider }
+            val showGroupHeaders = grouped.size > 1
+            grouped.values.forEach { group ->
+                if (showGroupHeaders) {
+                    Text(
+                        text = group.first().providerName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+                group.forEach { model ->
+                    val locked = model.proOnly && !isPro
+                    DropdownMenuItem(
+                        text = { Text(model.name) },
+                        trailingIcon = if (locked) {
+                            {
+                                Icon(
+                                    Icons.Filled.Lock,
+                                    contentDescription = "Pro",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        } else null,
+                        onClick = {
+                            expanded = false
+                            when {
+                                locked -> unlockDialogModel = model
+                                // 选「默认项」记为跟随服务端默认而非钉住这个 id：否则后端换默认模型时，
+                                // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
+                                model.id == catalogDefault.id ->
+                                    chatHost.followServerDefault()
+                                else -> chatHost.pinChatModel(model.id)
+                            }
+                        },
+                    )
+                }
+                }
             // 模型出处。放在菜单末尾而不是常驻行内：起疑的人会点开选择器（型号名就是疑问的原点），
             // 而常驻行受 horizontalScroll + 防输入框跳位约束，塞不下也留不住。
             // 视觉压到 bodySmall + onSurfaceVariant——OpenAI 品牌指南要求其展示不得比我们自己的
             // 名称更显著，且醒目的供应商声明本身会读作辩解。
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Text(
-                text = stringResource(Res.string.chat_model_provider),
+                text = stringResource(
+                    Res.string.chat_model_provider,
+                    catalogProviderNames(catalog).joinToString(stringResource(Res.string.chat_list_separator)),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

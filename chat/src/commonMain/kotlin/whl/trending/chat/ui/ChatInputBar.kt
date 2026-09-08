@@ -71,6 +71,7 @@ import whl.trending.chat.attach.VoiceRecording
 import whl.trending.chat.attach.VoiceStart
 import whl.trending.chat.attach.rememberChatImagePicker
 import whl.trending.chat.attach.rememberChatVoiceRecorder
+import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.host.ChatVoiceOutcome
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
@@ -78,6 +79,7 @@ import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_attach
 import trendingai.chat.generated.resources.chat_attach_album
 import trendingai.chat.generated.resources.chat_attach_camera
+import trendingai.chat.generated.resources.chat_cap_unsupported
 import trendingai.chat.generated.resources.chat_image_login_confirm
 import trendingai.chat.generated.resources.chat_image_login_dismiss
 import trendingai.chat.generated.resources.chat_image_login_message
@@ -136,6 +138,7 @@ fun ChatInputBar(
     modifier: Modifier = Modifier,
     searchActive: Boolean = false,
     onToggleSearch: () -> Unit = {},
+    caps: ChatModelCaps = ChatModelCaps(),
     autoFocus: Boolean = false,
     voiceEnabled: Boolean = false,
     isTranscribing: Boolean = false,
@@ -284,7 +287,8 @@ fun ChatInputBar(
                         modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                     )
                 } else {
-                // + 菜单常开：搜索 toggle 对匿名可用；图片两项在点击时才做登录闸
+                // + 菜单常开：搜索 toggle 对匿名可用；图片两项在点击时才做登录闸。
+                // 所选模型不接受的能力置灰而不隐藏：用户要能看出「这个模型不能发图」，而不是找不到入口
                 run {
                     Box {
                         // 无容器裸图标：附件/能力开关是次要入口，给它填充容器就等于在输入区里
@@ -312,8 +316,10 @@ fun ChatInputBar(
                                 text = { Text(stringResource(Res.string.chat_web_search)) },
                                 leadingIcon = { Icon(Icons.Outlined.TravelExplore, contentDescription = null) },
                                 trailingIcon = {
-                                    if (searchActive) Icon(Icons.Filled.Check, contentDescription = null)
+                                    if (!caps.search) UnsupportedHint()
+                                    else if (searchActive) Icon(Icons.Filled.Check, contentDescription = null)
                                 },
+                                enabled = caps.search,
                                 onClick = {
                                     menuExpanded = false
                                     onToggleSearch()
@@ -322,6 +328,8 @@ fun ChatInputBar(
                             if (chatHost.canSignIn && picker.canCapture) DropdownMenuItem(
                                 text = { Text(stringResource(Res.string.chat_attach_camera)) },
                                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
+                                trailingIcon = { if (!caps.images) UnsupportedHint() },
+                                enabled = caps.images,
                                 onClick = {
                                     menuExpanded = false
                                     if (!loggedIn) {
@@ -334,6 +342,8 @@ fun ChatInputBar(
                             if (chatHost.canSignIn) DropdownMenuItem(
                                 text = { Text(stringResource(Res.string.chat_attach_album)) },
                                 leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                                trailingIcon = { if (!caps.images) UnsupportedHint() },
+                                enabled = caps.images,
                                 onClick = {
                                     menuExpanded = false
                                     if (!loggedIn) {
@@ -596,4 +606,14 @@ private fun ChatInputBarPreview() {
             onRemoveImage = {},
         )
     }
+}
+
+/** 禁用态菜单项的尾注：说明为何不可用（所选模型不接受该输入） */
+@Composable
+private fun UnsupportedHint() {
+    Text(
+        text = stringResource(Res.string.chat_cap_unsupported),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
