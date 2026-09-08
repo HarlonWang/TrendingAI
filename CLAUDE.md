@@ -8,7 +8,7 @@
 
 ## Pro 权益文案
 
-**Pro 权益对比表（多行 label / free / pro 形态）禁止写进客户端 strings，只允许从 `/api/app-config` 的 `pro_benefits` 渲染；本地只保留一句不列具体项的兜底概括。** 单功能的锁定提示（「X 仅对 Pro 开放」）与一句话概括不受此限。权益的事实与文案都在后端仓，改权益不发版；取舍见后端 `docs/pro-benefits.md`。
+**Pro 权益清单（逐条列举 Pro 得到什么）禁止写进客户端 strings，只允许从 `/api/app-config` 的 `pro_benefits` 渲染；本地只保留一句不列具体项的兜底概括。** 单功能的锁定提示（「X 仅对 Pro 开放」）与一句话概括不受此限。权益的事实与文案都在后端仓，改权益不发版；服务端只传图标 key，客户端映射表认不出的 key 用通用图标，所以加新行也不需要先发版。取舍见后端 `docs/pro-benefits.md`。
 
 ## 埋点（自建 eventbase，2026-08-19 起）
 

@@ -36,13 +36,14 @@ class AppConfigResponseTest {
     }
 
     @Test
-    fun decodes_pro_benefit_rows_with_bilingual_cells() {
+    fun decodes_pro_benefit_rows_and_tolerates_missing_icon() {
         val config = json.decodeFromString<AppConfigResponse>(
-            """{"pro_benefits":{"rows":[{"label":{"zh":"额度","en":"Allowance"},"free":{"en":"Some"},"pro":{"zh":"更多","en":"More"}}]}}"""
+            """{"pro_benefits":{"rows":[{"icon":"quota","text":{"zh":"额度","en":"Allowance"}},{"text":{"en":"More"}}]}}"""
         )
-        val row = config.proBenefits!!.rows.single()
-        assertEquals("额度", row.label.zh)
-        assertNull(row.free.zh)
-        assertEquals("More", row.pro.en)
+        val rows = config.proBenefits!!.rows
+        assertEquals("quota", rows[0].icon)
+        assertEquals("额度", rows[0].text.zh)
+        assertNull(rows[1].icon)
+        assertNull(rows[1].text.zh)
     }
 }

@@ -11,22 +11,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -40,7 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.stringResource
@@ -49,8 +53,6 @@ import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.subscription_already_pro
 import trendingai.shared.generated.resources.subscription_benefits_fallback
 import trendingai.shared.generated.resources.subscription_checkout_failed
-import trendingai.shared.generated.resources.subscription_col_free
-import trendingai.shared.generated.resources.subscription_col_pro
 import trendingai.shared.generated.resources.subscription_cta_signin
 import trendingai.shared.generated.resources.subscription_cta_subscribe
 import trendingai.shared.generated.resources.subscription_cta_view_price
@@ -107,7 +109,7 @@ fun SubscriptionScreen(
     TrendingScaffold(
         topBar = {
             TrendingTopAppBar(
-                title = { Text(stringResource(Res.string.subscription_title)) },
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -129,15 +131,24 @@ fun SubscriptionScreen(
         ) {
             Spacer(Modifier.height(8.dp))
             Text(
+                stringResource(Res.string.subscription_title),
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
                 stringResource(Res.string.subscription_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(16.dp))
-            BenefitTable(rows = uiState.benefitRows)
+            Spacer(Modifier.height(24.dp))
+            BenefitList(items = uiState.benefits)
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             if (uiState.loading) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), Alignment.Center) {
                     LoadingIndicator(modifier = Modifier.size(24.dp))
@@ -197,64 +208,40 @@ fun SubscriptionScreen(
     }
 }
 
-/** 权益对比：比「能做什么」而不是比数字。 */
+/** 权益清单：只列 Pro 得到什么，不做免费/Pro 对比列 */
 @Composable
-private fun BenefitTable(rows: List<BenefitRowText>) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (rows.isEmpty()) {
-                Text(
-                    stringResource(Res.string.subscription_benefits_fallback),
-                    style = MaterialTheme.typography.bodyMedium,
+private fun BenefitList(items: List<BenefitItem>) {
+    if (items.isEmpty()) {
+        Text(
+            stringResource(Res.string.subscription_benefits_fallback),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        items.forEach { item ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    benefitIcon(item.icon),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
                 )
-                return@Column
+                Spacer(Modifier.width(16.dp))
+                Text(item.text, style = MaterialTheme.typography.bodyLarge)
             }
-            Row {
-                Spacer(Modifier.weight(1f))
-                Text(
-                    stringResource(Res.string.subscription_col_free),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    stringResource(Res.string.subscription_col_pro),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            HorizontalDivider()
-            rows.forEach { BenefitRow(label = it.label, free = it.free, pro = it.pro) }
         }
     }
 }
 
-@Composable
-private fun BenefitRow(label: String, free: String, pro: String) {
-    // 三列字号不同（行标题 bodyMedium 14sp，两个值 bodySmall 12sp），必须按**基线**对齐：
-    // Alignment.Top 对齐的是文字框顶部，字号一大一小时基线必然错开，肉眼看就是行标题
-    // 比同行的值高出一截（真机截图暴露）。alignByBaseline 对齐第一行基线，与字号无关。
-    Row {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f).alignByBaseline(),
-        )
-        Text(
-            free,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f).alignByBaseline(),
-        )
-        Text(
-            pro,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f).alignByBaseline(),
-        )
-    }
+/** key 与后端 lib/pro-benefits.js 对应；认不出的 key 用通用勾选，新行不必等客户端发版 */
+private fun benefitIcon(key: String?): ImageVector = when (key) {
+    "quota" -> Icons.Outlined.Bolt
+    "models" -> Icons.Outlined.AutoAwesome
+    "voice" -> Icons.Outlined.Mic
+    else -> Icons.Outlined.CheckCircle
 }
 
 /**

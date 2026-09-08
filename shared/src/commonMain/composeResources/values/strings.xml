@@ -253,8 +253,6 @@
     <string name="account_manage_subscription_hint">Change payment method or cancel renewal</string>
     <string name="subscription_title">Upgrade to Pro</string>
     <string name="subscription_intro">Trending and Picks stay free. Pro raises your AI allowance and models.</string>
-    <string name="subscription_col_free">Free</string>
-    <string name="subscription_col_pro">Pro</string>
     <string name="subscription_benefits_fallback">A higher daily allowance and more models</string>
     <string name="subscription_plan_annual">Yearly</string>
     <string name="subscription_plan_monthly">Monthly</string>

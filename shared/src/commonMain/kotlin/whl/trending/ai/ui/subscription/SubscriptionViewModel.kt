@@ -24,18 +24,18 @@ sealed interface SubscriptionEvent {
     data object CheckoutFailed : SubscriptionEvent
 }
 
-/** 权益表一行，已按 UI 语言选好文案 */
-data class BenefitRowText(val label: String, val free: String, val pro: String)
+/** 权益清单一行，已按 UI 语言选好文案；[icon] 是服务端给的 key，由 UI 映射成图标 */
+data class BenefitItem(val icon: String?, val text: String)
 
 /**
  * @param prices 服务端算好的两档价格；[PricesResponse.available] 为 false 时整页不报价，
  *   把定价交给收银台呈现——只报一半或报错的价格比不报更伤信任。
- * @param benefitRows 权益对比行，读冷启动拉取的 app-config 缓存（本页不发请求）；空表示从未拉到，UI 显示一句兜底。
+ * @param benefits 权益清单，读冷启动拉取的 app-config 缓存（本页不发请求）；空表示从未拉到，UI 显示一句兜底。
  */
 data class SubscriptionUiState(
     val loading: Boolean = true,
     val prices: PricesResponse? = null,
-    val benefitRows: List<BenefitRowText> = emptyList(),
+    val benefits: List<BenefitItem> = emptyList(),
     val selectedPlan: String = ProCheckout.PLAN_ANNUAL,
     val checkingOut: Boolean = false,
 )
@@ -64,9 +64,9 @@ class SubscriptionViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             val prices = repository.fetchPrices()
-            val rows = resolveBenefitRows(globalSettingsManager.proBenefitRows(), uiLanguage())
+            val benefits = resolveBenefits(globalSettingsManager.proBenefitRows(), uiLanguage())
             _uiState.update {
-                it.copy(loading = false, prices = prices, benefitRows = rows)
+                it.copy(loading = false, prices = prices, benefits = benefits)
             }
         }
     }
@@ -102,11 +102,6 @@ private fun uiLanguage(): String {
     return if (lang.startsWith("zh")) "zh" else "en"
 }
 
-/** 按语言取每格文案；任一格取不到的行整行跳过，宁可少一行也不显示半行 */
-internal fun resolveBenefitRows(rows: List<ProBenefitRow>, lang: String): List<BenefitRowText> =
-    rows.mapNotNull { row ->
-        val label = row.label.forLang(lang) ?: return@mapNotNull null
-        val free = row.free.forLang(lang) ?: return@mapNotNull null
-        val pro = row.pro.forLang(lang) ?: return@mapNotNull null
-        BenefitRowText(label, free, pro)
-    }
+/** 按语言取文案；取不到的行跳过 */
+internal fun resolveBenefits(rows: List<ProBenefitRow>, lang: String): List<BenefitItem> =
+    rows.mapNotNull { row -> row.text.forLang(lang)?.let { BenefitItem(row.icon, it) } }

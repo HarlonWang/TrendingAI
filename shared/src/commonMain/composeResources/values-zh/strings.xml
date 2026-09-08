@@ -253,8 +253,6 @@
     <string name="account_manage_subscription_hint">更改支付方式或取消续费</string>
     <string name="subscription_title">升级 Pro</string>
     <string name="subscription_intro">榜单与精选始终免费，Pro 提升 AI 用量与模型</string>
-    <string name="subscription_col_free">免费</string>
-    <string name="subscription_col_pro">Pro</string>
     <string name="subscription_benefits_fallback">更高的每日额度与更多模型</string>
     <string name="subscription_plan_annual">年付</string>
     <string name="subscription_plan_monthly">月付</string>

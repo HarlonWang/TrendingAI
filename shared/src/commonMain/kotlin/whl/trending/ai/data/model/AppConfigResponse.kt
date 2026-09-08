@@ -28,17 +28,17 @@ data class ChatVoiceRemoteConfig(
     @SerialName("max_duration_ms") val maxDurationMs: Int? = null,
 )
 
-/** Pro 权益对比表（服务端单源下发，行顺序即展示顺序；见后端 docs/pro-benefits.md） */
+/** Pro 权益清单（服务端单源下发，行顺序即展示顺序；见后端 docs/pro-benefits.md） */
 @Serializable
 data class ProBenefitsRemoteConfig(
     val rows: List<ProBenefitRow> = emptyList(),
 )
 
+/** [icon] 是客户端图标映射表的 key，认不出时用通用图标，新行在旧客户端照常显示 */
 @Serializable
 data class ProBenefitRow(
-    val label: LocalizedText,
-    val free: LocalizedText,
-    val pro: LocalizedText,
+    val icon: String? = null,
+    val text: LocalizedText,
 )
 
 @Serializable
