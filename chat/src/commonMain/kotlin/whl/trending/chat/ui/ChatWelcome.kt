@@ -33,7 +33,7 @@ internal enum class WelcomeTier { Anonymous, Free, Pro }
 
 /** 空状态欢迎区，尚无任何对话时显示。[providerNames] 是目录里的厂商展示名，空则不标出处。 */
 @Composable
-fun ChatWelcome(providerNames: List<String> = emptyList(), modifier: Modifier = Modifier) {
+fun ChatWelcome(modifier: Modifier = Modifier, providerNames: List<String> = emptyList()) {
     // 档位判据取本地缓存而非 GET /api/quota：一行小字不值得打网络。失准窗口只有「订阅已到期
     // 且 app 未冷启」，下次冷启的 syncMe 即纠正（唯一日常写入点见 App.kt 根部 LaunchedEffect）
     val isPro by chatHost.isPro.collectAsState(

@@ -108,7 +108,7 @@ class ChatViewModel(
     private val _currentThreadId = MutableStateFlow<Long?>(null)
     val currentThreadId: StateFlow<Long?> = _currentThreadId.asStateFlow()
 
-    /** 当前生效模型的能力位：入口显隐的依据。切到不支持的模型时，已开的搜索开关随之收回 */
+    /** 当前生效模型的能力位：入口置灰的依据。切到不支持的模型时，已开的搜索开关与待发图片随之收回 */
     val currentCaps: StateFlow<ChatModelCaps> =
         combine(_catalog, flow { emitAll(modelSelection()) }.catch { }) { catalog, (id, pro) ->
             effectiveChatModelCaps(catalog, id, pro)
@@ -139,7 +139,10 @@ class ChatViewModel(
             _catalog.value = runCatching { loadModels() }.getOrDefault(ChatModelsResponse())
         }
         viewModelScope.launch {
-            currentCaps.collect { caps -> if (!caps.search) _searchEnabled.value = false }
+            currentCaps.collect { caps ->
+                if (!caps.search) _searchEnabled.value = false
+                if (!caps.images) discardPendingImages()
+            }
         }
     }
 
@@ -152,8 +155,10 @@ class ChatViewModel(
         _uiState.update { it.copy(input = text) }
     }
 
-    /** 追加一张已压缩好的待发图片（本地缓存路径），超过单条上限时忽略。 */
+    /** 追加一张已压缩好的待发图片（本地缓存路径），超过单条上限或当前模型不接受图片时忽略
+     *  （后者堵住「选图异步返回时已切到不支持的模型」的竞态）。 */
     fun addPendingImage(path: String) {
+        if (!currentCaps.value.images) return
         _uiState.update {
             if (it.pendingImages.size >= maxImagesPerMessage() || path in it.pendingImages) it
             else it.copy(pendingImages = it.pendingImages + path)
@@ -162,6 +167,11 @@ class ChatViewModel(
 
     fun removePendingImage(path: String) {
         _uiState.update { it.copy(pendingImages = it.pendingImages - path) }
+    }
+
+    /** 清空待发图片（切到不接受图片的模型时由选择器在用户确认后调用；能力位变化时也自动兜底） */
+    fun discardPendingImages() {
+        _uiState.update { if (it.pendingImages.isEmpty()) it else it.copy(pendingImages = emptyList()) }
     }
 
     fun send() {

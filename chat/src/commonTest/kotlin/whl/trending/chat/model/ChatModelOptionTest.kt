@@ -120,6 +120,14 @@ class ChatModelOptionTest {
     }
 
     @Test
+    fun switch_discards_images_only_when_target_rejects_images_and_images_pending() {
+        val ds = ChatModelOption(id = "deepseek-v4-flash", caps = ChatModelCaps(images = false, search = false))
+        assertEquals(true, switchDiscardsImages(ds, pendingImageCount = 2))
+        assertEquals(false, switchDiscardsImages(ds, pendingImageCount = 0))
+        assertEquals(false, switchDiscardsImages(free, pendingImageCount = 2))
+    }
+
+    @Test
     fun effective_caps_follow_selected_model_and_fall_back_to_full() {
         val ds = ChatModelOption(id = "deepseek-v4-flash", provider = "deepseek", providerName = "DeepSeek", caps = ChatModelCaps(images = false, search = false))
         val withDs = ChatModelsResponse(models = listOf(free, pro, ds), default = free.id)

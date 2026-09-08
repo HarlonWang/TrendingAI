@@ -37,9 +37,14 @@ import whl.trending.chat.model.catalogDefaultChatModel
 import whl.trending.chat.model.catalogProviderNames
 import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.model.resolveEffectiveChatModel
+import whl.trending.chat.model.switchDiscardsImages
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_list_separator
 import trendingai.chat.generated.resources.chat_model_provider
+import trendingai.chat.generated.resources.chat_model_switch_discard_cancel
+import trendingai.chat.generated.resources.chat_model_switch_discard_confirm
+import trendingai.chat.generated.resources.chat_model_switch_discard_message
+import trendingai.chat.generated.resources.chat_model_switch_discard_title
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_model_unlock_message
 import trendingai.chat.generated.resources.chat_model_unlock_title
@@ -68,6 +73,8 @@ internal fun chatModelPickerVisible(catalog: ChatModelsResponse): Boolean =
 internal fun ModelPicker(
     catalog: ChatModelsResponse,
     modifier: Modifier = Modifier,
+    pendingImageCount: Int = 0,
+    onDiscardImages: () -> Unit = {},
 ) {
     val models = catalog.models
     if (models.size <= 1) return
@@ -81,6 +88,36 @@ internal fun ModelPicker(
     var expanded by remember { mutableStateOf(false) }
     // 点锁定项弹纯告知弹窗：说明这是 Pro 模型、默认模型仍可用，单按钮关闭，不外跳
     var unlockDialogModel by remember { mutableStateOf<ChatModelOption?>(null) }
+    // 目标模型不接受图片且待发区有图：二次确认后才切换并清图，取消则什么都不动
+    var discardDialogModel by remember { mutableStateOf<ChatModelOption?>(null) }
+
+    // 选「默认项」记为跟随服务端默认而非钉住这个 id：否则后端换默认模型时，
+    // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
+    val select = { model: ChatModelOption ->
+        if (model.id == catalogDefault.id) chatHost.followServerDefault() else chatHost.pinChatModel(model.id)
+    }
+
+    discardDialogModel?.let { model ->
+        AlertDialog(
+            onDismissRequest = { discardDialogModel = null },
+            title = { Text(stringResource(Res.string.chat_model_switch_discard_title, model.name)) },
+            text = { Text(stringResource(Res.string.chat_model_switch_discard_message, pendingImageCount)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    discardDialogModel = null
+                    onDiscardImages()
+                    select(model)
+                }) {
+                    Text(stringResource(Res.string.chat_model_switch_discard_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { discardDialogModel = null }) {
+                    Text(stringResource(Res.string.chat_model_switch_discard_cancel))
+                }
+            },
+        )
+    }
 
     unlockDialogModel?.let { model ->
         AlertDialog(
@@ -183,11 +220,8 @@ internal fun ModelPicker(
                             expanded = false
                             when {
                                 locked -> unlockDialogModel = model
-                                // 选「默认项」记为跟随服务端默认而非钉住这个 id：否则后端换默认模型时，
-                                // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
-                                model.id == catalogDefault.id ->
-                                    chatHost.followServerDefault()
-                                else -> chatHost.pinChatModel(model.id)
+                                switchDiscardsImages(model, pendingImageCount) -> discardDialogModel = model
+                                else -> select(model)
                             }
                         },
                     )

@@ -24,6 +24,10 @@
     <string name="chat_model_unlock_title">Pro 专属模型</string>
     <string name="chat_model_unlock_message">「%1$s」目前仅对 Pro 开放，可继续使用默认模型。</string>
     <string name="chat_model_unlock_dismiss">知道了</string>
+    <string name="chat_model_switch_discard_title">切换到「%1$s」？</string>
+    <string name="chat_model_switch_discard_message">该模型不支持图片，已选的 %1$d 张图片将被移除。</string>
+    <string name="chat_model_switch_discard_confirm">切换</string>
+    <string name="chat_model_switch_discard_cancel">取消</string>
     <string name="chat_model_provider">模型由 %1$s 的 API 提供</string>
     <string name="chat_cap_unsupported">当前模型不支持</string>
     <string name="chat_list_separator">、</string>

@@ -44,6 +44,8 @@ internal fun ChatContextRow(
     searchActive: Boolean,
     onToggleSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    pendingImageCount: Int = 0,
+    onDiscardImages: () -> Unit = {},
 ) {
     val showModel = chatModelPickerVisible(catalog)
     // 两者都无内容时整行缺席：留一个空 Row 会在胶囊上方多出一段说不清来由的留白
@@ -55,7 +57,7 @@ internal fun ChatContextRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showModel) ModelPicker(catalog = catalog)
+        if (showModel) ModelPicker(catalog = catalog, pendingImageCount = pendingImageCount, onDiscardImages = onDiscardImages)
         if (searchActive) {
             // 已开启的能力。用 TonalToggleButton 而不是带 × 的 InputChip：Expressive 的表达方式是
             // 让形状承担状态——选中态是 squircle（CornerMedium），按下时收成 6dp 圆角，撤销那一下
