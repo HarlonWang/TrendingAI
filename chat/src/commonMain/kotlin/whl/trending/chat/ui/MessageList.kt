@@ -34,10 +34,11 @@ fun MessageList(
         if (messages.isNotEmpty()) listState.animateScrollToItem(0)
     }
 
-    // 流式占位一旦开始出字（或出错）就收起 typing 指示器，避免「正文下面还转圈」
+    // 任一时刻只有一条状态行：空占位由 typing 指示器顶替，搜索标签出现时指示器让位，
+    // 出字或出错后两者都收起
     val last = messages.lastOrNull()
-    val showTyping = isSending &&
-        (last == null || last.role == Role.USER || (last.content.isBlank() && last.error == null))
+    val showTyping = isSending && (last == null || last.role == Role.USER || last.isBlankPlaceholder)
+    val visible = if (last != null && last.isBlankPlaceholder) messages.dropLast(1) else messages
 
     LazyColumn(
         state = listState,
@@ -50,7 +51,7 @@ fun MessageList(
         if (showTyping) {
             item(key = "typing") { TypingIndicator() }
         }
-        items(messages.asReversed(), key = { it.id }) { message ->
+        items(visible.asReversed(), key = { it.id }) { message ->
             MessageItem(
                 message = message,
                 onRetry = { onRetry(message) },
@@ -58,3 +59,6 @@ fun MessageList(
         }
     }
 }
+
+private val ChatMessage.isBlankPlaceholder: Boolean
+    get() = role == Role.ASSISTANT && content.isBlank() && error == null && !searching
