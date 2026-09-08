@@ -2,7 +2,6 @@ package whl.trending.chat.ui
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.AlertDialog
@@ -71,8 +71,6 @@ import trendingai.chat.generated.resources.chat_model_cap_search
 import trendingai.chat.generated.resources.chat_model_meta_separator
 import trendingai.chat.generated.resources.chat_model_picker_title
 import trendingai.chat.generated.resources.chat_model_provider
-import trendingai.chat.generated.resources.chat_model_tier_free
-import trendingai.chat.generated.resources.chat_model_tier_pro
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_model_unlock_message
 import trendingai.chat.generated.resources.chat_model_unlock_title
@@ -196,6 +194,8 @@ internal fun ModelPicker(
             ChatBottomSheet(
                 onDismissRequest = { expanded = false },
                 title = stringResource(Res.string.chat_model_picker_title),
+                // Pro 身份只在标题行说一次：逐行挂金色徽标时 5/6 行都是 Pro，稀缺色变成了主色
+                titleTrailing = if (isPro) chatHost.proBadge else null,
             ) {
                 ModelPickerContent(
                     catalog = catalog,
@@ -278,9 +278,9 @@ private fun ModelPickerContent(
 }
 
 /**
- * 一行模型：标题行 = 名称 + 档位徽标（免费 / PRO），副行 = 支持的能力位。卡片规格镜像宿主 app 的
- * `SettingsGroup`（chat 是独立 SDK，不能依赖 shared）。锁定行仍可点（弹说明），所以只降透明度、
- * 不走禁用态；PRO 徽标已说明锁定原因，右侧不再叠锁图标，trailing 只承担「当前选中」一种含义。
+ * 一行模型：名称 + 能力位副行。卡片规格镜像宿主 app 的 `SettingsGroup`（chat 是独立 SDK，不能依赖 shared）。
+ * 档位不逐行标：Pro 用户在标题行看一次徽标，免费用户靠锁定行的锁图标 + 降透明度分辨。
+ * 锁定行仍可点（弹说明），所以不走禁用态。
  */
 @Composable
 private fun ModelRow(
@@ -309,24 +309,23 @@ private fun ModelRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        model.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    TierBadge(proOnly = model.proOnly)
-                }
+                Text(
+                    model.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 ModelCapsLine(model)
             }
-            if (selected) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
+            Spacer(Modifier.width(8.dp))
+            when {
+                locked -> Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = "Pro",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                selected -> Icon(
                     Icons.Filled.Check,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
@@ -334,33 +333,6 @@ private fun ModelRow(
             }
         }
     }
-}
-
-/**
- * 档位徽标。PRO 复用宿主的金色徽标（与欢迎页、账户页同一个符号），宿主没给时退回文字胶囊；
- * 免费用描边胶囊——描边在选中行（secondaryContainer）和普通行上都看得见，填色胶囊会在选中行上消失。
- * 标签按 minTier 走而不按目录 default 走：用户关心的只有「免费 / Pro」这一个轴。
- */
-@Composable
-private fun TierBadge(proOnly: Boolean) {
-    if (proOnly) {
-        val hostBadge = chatHost.proBadge
-        if (hostBadge != null) hostBadge() else OutlinedTag(stringResource(Res.string.chat_model_tier_pro))
-    } else {
-        OutlinedTag(stringResource(Res.string.chat_model_tier_free))
-    }
-}
-
-@Composable
-private fun OutlinedTag(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
 }
 
 /** 副行：只列支持的能力位，「·」分隔；不支持的不出现，全空则不占行。 */

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -105,6 +107,7 @@ internal fun ChatBottomSheet(
     onDismissRequest: () -> Unit,
     title: String,
     modifier: Modifier = Modifier,
+    titleTrailing: (@Composable () -> Unit)? = null,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     // 全展开：内容是短列表，半展开会把末项与页脚裁在折叠线下
@@ -123,7 +126,14 @@ internal fun ChatBottomSheet(
                 .navigationBarsPadding()
                 .padding(bottom = 16.dp),
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                titleTrailing?.invoke()
+            }
             Spacer(Modifier.height(16.dp))
             content()
         }
