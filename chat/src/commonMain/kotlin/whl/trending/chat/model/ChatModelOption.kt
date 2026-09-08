@@ -80,10 +80,6 @@ fun resolveDisplayedChatModel(catalog: ChatModelsResponse, selectedId: String, i
 fun effectiveChatModelCaps(catalog: ChatModelsResponse, selectedId: String, isPro: Boolean): ChatModelCaps =
     resolveDisplayedChatModel(catalog, selectedId, isPro)?.caps ?: ChatModelCaps()
 
-/** 切到 [target] 是否会移除已选图片：目标模型不接受图片且待发区非空。选择器据此弹二次确认。 */
-fun switchDiscardsImages(target: ChatModelOption, pendingImageCount: Int): Boolean =
-    pendingImageCount > 0 && !target.caps.images
-
 /** 目录里出现的厂商展示名（按目录顺序去重），供出处标注拼接；目录未到时为空。 */
 fun catalogProviderNames(catalog: ChatModelsResponse): List<String> =
     catalog.models.map { it.providerName }.distinct()

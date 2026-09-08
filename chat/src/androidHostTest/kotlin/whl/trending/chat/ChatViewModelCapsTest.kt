@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -15,8 +16,6 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import whl.trending.chat.engine.ChatEngine
-import whl.trending.chat.host.chatHost
-import whl.trending.chat.sample.DemoChatHost
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.model.ChatModelOption
@@ -30,11 +29,7 @@ class ChatViewModelCapsTest {
     private val dispatcher = StandardTestDispatcher()
 
     @BeforeTest
-    fun setUp() {
-        Dispatchers.setMain(dispatcher)
-        // addPendingImage 读宿主的图片上限；用 Demo 宿主装上，模型选择流仍由构造参数注入
-        chatHost = DemoChatHost
-    }
+    fun setUp() = Dispatchers.setMain(dispatcher)
 
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
@@ -89,28 +84,11 @@ class ChatViewModelCapsTest {
     }
 
     @Test
-    fun `切到不接受图片的模型：待发图片清空，且此后新增被忽略`() = runTest(dispatcher) {
-        val choice = MutableStateFlow(FOLLOW_SERVER_DEFAULT)
-        val viewModel = vm(choice)
-        advanceUntilIdle()
-        viewModel.addPendingImage("/cache/a.jpg")
-        assertEquals(listOf("/cache/a.jpg"), viewModel.uiState.value.pendingImages)
-
-        choice.value = deepseek.id
-        advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.pendingImages.isEmpty())
-        viewModel.addPendingImage("/cache/b.jpg") // 异步选图在切换后才返回
-        assertTrue(viewModel.uiState.value.pendingImages.isEmpty())
-
-        choice.value = FOLLOW_SERVER_DEFAULT
-        advanceUntilIdle()
-        viewModel.addPendingImage("/cache/c.jpg")
-        assertEquals(listOf("/cache/c.jpg"), viewModel.uiState.value.pendingImages)
-    }
-
-    @Test
-    fun `无宿主（选择流缺席）时能力位保持全开`() = runTest(dispatcher) {
-        val viewModel = ChatViewModel(NoopEngine, loadModels = { catalog }, track = {})
+    fun `选择流抛错（无宿主）时能力位保持全开`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel(
+            NoopEngine, loadModels = { catalog }, track = {},
+            modelSelection = { flow { error("chatHost not installed") } },
+        )
         advanceUntilIdle()
         assertEquals(ChatModelCaps(true, true), viewModel.currentCaps.value)
     }

@@ -186,8 +186,6 @@ fun ChatScreen(
                         searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
                         modifier = Modifier.padding(horizontal = 12.dp),
-                        pendingImageCount = state.pendingImages.size,
-                        onDiscardImages = viewModel::discardPendingImages,
                     )
                     ChatInputBar(
                         input = state.input,
