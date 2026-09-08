@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.host.chatHost
@@ -116,25 +118,26 @@ internal fun ModelPicker(
 
     Box(modifier) {
         // M3 Expressive 的 SplitButton 而不是 chip：模型名与下拉箭头分成两块，「这是个选择器」
-        // 由形态本身讲清楚，不用靠「能不能点掉」去猜（chip 的老问题）。它天生 40dp 高 + 全圆，
-        // 与下面的输入胶囊同一套圆角语言。
-        //
-        // 配色刻意选中性的 surfaceContainerHigh，而不是 tonal 默认的 secondaryContainer：
-        // 模型是常驻的纯信息，带色相就会跟旁边「已开启的能力」抢注意力。也不能用再深一档的
-        // surfaceContainerHighest——那正是禁用态发送键的容器色（实测浅色下同为 #E7E0EC），
-        // 空输入时同屏会出现两块一样的颜色，一块可点一块禁用。选 High 后浅色梯度是
-        // 背景 #FDF7FE → 胶囊 #F3EDF4（High + 3dp tonal 提亮）→ 模型 #ECE6F0 → 禁用发送键 #E7E0EC。
+        // 由形态本身讲清楚，不用靠「能不能点掉」去猜（chip 的老问题）。
+        // 挂在顶栏中央当标题，用主色容器：这里没有别的能力控件与它抢注意力
         val modelColors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         )
         SplitButtonLayout(
+            // 限宽：长模型名截断成省略号，别把顶栏两侧的图标挤出去
+            modifier = Modifier.widthIn(max = 240.dp),
             leadingButton = {
                 SplitButtonDefaults.LeadingButton(
                     onClick = { expanded = true },
                     colors = modelColors,
                 ) {
-                    Text(current.name)
+                    Text(
+                        text = current.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                 }
             },
             trailingButton = {
