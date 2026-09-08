@@ -313,11 +313,10 @@ fun ChatInputBar(
                         ) {
                             // 能力开关：联网搜索（勾选态 = 已开启；EchoFlow 的「菜单开启 + chip 回显」范式）
                             DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.chat_web_search)) },
+                                text = { MenuLabel(stringResource(Res.string.chat_web_search), enabled = caps.search) },
                                 leadingIcon = { Icon(Icons.Outlined.TravelExplore, contentDescription = null) },
                                 trailingIcon = {
-                                    if (!caps.search) UnsupportedHint()
-                                    else if (searchActive) Icon(Icons.Filled.Check, contentDescription = null)
+                                    if (caps.search && searchActive) Icon(Icons.Filled.Check, contentDescription = null)
                                 },
                                 enabled = caps.search,
                                 onClick = {
@@ -326,9 +325,8 @@ fun ChatInputBar(
                                 },
                             )
                             if (chatHost.canSignIn && picker.canCapture) DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.chat_attach_camera)) },
+                                text = { MenuLabel(stringResource(Res.string.chat_attach_camera), enabled = caps.images) },
                                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
-                                trailingIcon = { if (!caps.images) UnsupportedHint() },
                                 enabled = caps.images,
                                 onClick = {
                                     menuExpanded = false
@@ -340,9 +338,8 @@ fun ChatInputBar(
                                 },
                             )
                             if (chatHost.canSignIn) DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.chat_attach_album)) },
+                                text = { MenuLabel(stringResource(Res.string.chat_attach_album), enabled = caps.images) },
                                 leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
-                                trailingIcon = { if (!caps.images) UnsupportedHint() },
                                 enabled = caps.images,
                                 onClick = {
                                     menuExpanded = false
@@ -608,12 +605,17 @@ private fun ChatInputBarPreview() {
     }
 }
 
-/** 禁用态菜单项的尾注：说明为何不可用（所选模型不接受该输入） */
+/** 菜单项标签；禁用时在标签下方补一行「当前模型不支持」，不占标签的横向空间 */
 @Composable
-private fun UnsupportedHint() {
-    Text(
-        text = stringResource(Res.string.chat_cap_unsupported),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+private fun MenuLabel(label: String, enabled: Boolean) {
+    Column {
+        Text(label)
+        if (!enabled) {
+            Text(
+                text = stringResource(Res.string.chat_cap_unsupported),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
