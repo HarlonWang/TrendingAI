@@ -24,6 +24,7 @@
     <string name="chat_model_unlock_title">Pro-only model</string>
     <string name="chat_model_unlock_message">%1$s is currently available to Pro only. You can keep using the default model.</string>
     <string name="chat_model_unlock_dismiss">Got it</string>
+    <string name="chat_model_picker_title">Choose a model</string>
     <!-- 模型出处。刻意是事实陈述而非 "Powered by OpenAI" 那类品牌宣传语——后者读起来像背书。
          措辞受 OpenAI 品牌指南约束：提及模型必须表述精确，且禁止 "Powered by ChatGPT"/
          "Built with ChatGPT" 之类说法；改文案前先核对 openai.com/brand -->
