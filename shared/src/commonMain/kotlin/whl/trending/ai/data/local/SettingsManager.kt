@@ -23,6 +23,7 @@ import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
+import whl.trending.ai.data.model.ProBenefitRow
 
 /**
  * 持久化存的是 ordinal，新档位只能追加在末尾，否则老用户的选择会错位。
@@ -154,6 +155,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val CHAT_IMAGES_MAX_KEY = "prefs_chat_images_max"
     private val CHAT_IMAGES_PER_KB_KEY = "prefs_chat_images_per_kb"
     private val CHAT_VOICE_MAX_MS_KEY = "prefs_chat_voice_max_ms"
+    private val PRO_BENEFITS_KEY = "prefs_pro_benefits"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
@@ -391,6 +393,16 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setChatVoiceConfig(maxDurationMs: Int?) {
         if (maxDurationMs != null) settings.putInt(CHAT_VOICE_MAX_MS_KEY, maxDurationMs)
+    }
+
+    /** 最近一次成功拉取的 Pro 权益行；从未拉到或解码失败为空，订阅页据此显示一句兜底 */
+    fun proBenefitRows(): List<ProBenefitRow> {
+        val json = settings.getStringOrNull(PRO_BENEFITS_KEY) ?: return emptyList()
+        return runCatching { Json.decodeFromString<List<ProBenefitRow>>(json) }.getOrElse { emptyList() }
+    }
+
+    fun setProBenefits(rows: List<ProBenefitRow>) {
+        settings.putString(PRO_BENEFITS_KEY, Json.encodeToString(rows))
     }
 
     /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */

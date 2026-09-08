@@ -14,26 +14,30 @@ import whl.trending.ai.core.ProCheckout
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.CheckoutStepKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.chat.model.ChatModelOption
+import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.PricesResponse
+import whl.trending.ai.data.model.ProBenefitRow
 import whl.trending.ai.data.repository.BillingRepository
-import whl.trending.chat.model.ChatModelsProvider
+import whl.trending.ai.update.refreshAppConfig
 
 sealed interface SubscriptionEvent {
     /** 下单失败（创建交易没成功），UI 提示重试。已开出收银台的失败不在此列。 */
     data object CheckoutFailed : SubscriptionEvent
 }
 
+/** 权益表一行，已按 UI 语言选好文案 */
+data class BenefitRowText(val label: String, val free: String, val pro: String)
+
 /**
  * @param prices 服务端算好的两档价格；[PricesResponse.available] 为 false 时整页不报价，
  *   把定价交给收银台呈现——只报一半或报错的价格比不报更伤信任。
- * @param proModels 目录里 Pro 专属的模型名。这是权益里**唯一给得出确切承诺**的一项：
- *   它来自 `/api/chat/models`，与模型选择器同一份数据，后端调目录时本页自动跟随。
+ * @param benefitRows 权益对比行，来自 app-config 的最近一次成功拉取；空表示从未拉到，UI 显示一句兜底。
  */
 data class SubscriptionUiState(
     val loading: Boolean = true,
     val prices: PricesResponse? = null,
-    val proModels: List<String> = emptyList(),
+    val benefitRows: List<BenefitRowText> = emptyList(),
     val selectedPlan: String = ProCheckout.PLAN_ANNUAL,
     val checkingOut: Boolean = false,
 )
@@ -61,15 +65,14 @@ class SubscriptionViewModel(
     fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
-            // 两者互不依赖：价格来自 Paddle、模型目录来自进程缓存（多半已预热），并发取
             val pricesJob = async { repository.fetchPrices() }
-            val modelsJob = async { runCatching { ChatModelsProvider.get() }.getOrNull() }
+            // 冷启动已拉过一次；这里再拉是为了拿最新文案，失败则读缓存
+            val configJob = async { refreshAppConfig() }
             val prices = pricesJob.await()
-            val models = modelsJob.await()?.models.orEmpty()
-                .filter { it.minTier == ChatModelOption.TIER_PRO }
-                .map { it.name }
+            configJob.await()
+            val rows = resolveBenefitRows(globalSettingsManager.proBenefitRows(), uiLanguage())
             _uiState.update {
-                it.copy(loading = false, prices = prices, proModels = models)
+                it.copy(loading = false, prices = prices, benefitRows = rows)
             }
         }
     }
@@ -99,3 +102,17 @@ class SubscriptionViewModel(
         }
     }
 }
+
+private fun uiLanguage(): String {
+    val lang = globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
+    return if (lang.startsWith("zh")) "zh" else "en"
+}
+
+/** 按语言取每格文案；任一格取不到的行整行跳过，宁可少一行也不显示半行 */
+internal fun resolveBenefitRows(rows: List<ProBenefitRow>, lang: String): List<BenefitRowText> =
+    rows.mapNotNull { row ->
+        val label = row.label.forLang(lang) ?: return@mapNotNull null
+        val free = row.free.forLang(lang) ?: return@mapNotNull null
+        val pro = row.pro.forLang(lang) ?: return@mapNotNull null
+        BenefitRowText(label, free, pro)
+    }

@@ -6,6 +6,10 @@
 
 修法：Run → Edit Configurations → androidApp → Launch Options 改为 **Specified Activity** → `whl.trending.ai.MainActivity`（本体 `exported="true"`，显式启动不需要 LAUNCHER filter），一次配置后与图标状态永不打架。**不要**用 adb 强行 enable `MainActivityDefault`——app 内持久化的图标选择不会跟着变，状态不一致还可能桌面双图标。adb 脚本侧无此问题（`monkey -c LAUNCHER` 解析的是当前启用的入口）。
 
+## Pro 权益文案
+
+**Pro 权益对比表（多行 label / free / pro 形态）禁止写进客户端 strings，只允许从 `/api/app-config` 的 `pro_benefits` 渲染；本地只保留一句不列具体项的兜底概括。** 单功能的锁定提示（「X 仅对 Pro 开放」）与一句话概括不受此限。权益的事实与文案都在后端仓，改权益不发版；取舍见后端 `docs/pro-benefits.md`。
+
 ## 埋点（自建 eventbase，2026-08-19 起）
 
 上报走 `wang.harlon:eventbase-kt`（仓库 `~/eventbase-kt`，服务端 `~/eventbase`），Aptabase 已下线。

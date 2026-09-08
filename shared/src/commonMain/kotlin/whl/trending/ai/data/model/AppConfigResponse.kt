@@ -12,6 +12,7 @@ data class AppConfigResponse(
     @SerialName("min_version") val minVersion: String? = null,
     @SerialName("chat_images") val chatImages: ChatImagesRemoteConfig? = null,
     @SerialName("chat_voice") val chatVoice: ChatVoiceRemoteConfig? = null,
+    @SerialName("pro_benefits") val proBenefits: ProBenefitsRemoteConfig? = null,
 )
 
 /** chat 图片参数（服务端 KV 单源下发，与服务端校验闸同值；见后端 lib/chat-images.js） */
@@ -26,3 +27,25 @@ data class ChatImagesRemoteConfig(
 data class ChatVoiceRemoteConfig(
     @SerialName("max_duration_ms") val maxDurationMs: Int? = null,
 )
+
+/** Pro 权益对比表（服务端单源下发，行顺序即展示顺序；见后端 docs/pro-benefits.md） */
+@Serializable
+data class ProBenefitsRemoteConfig(
+    val rows: List<ProBenefitRow> = emptyList(),
+)
+
+@Serializable
+data class ProBenefitRow(
+    val label: LocalizedText,
+    val free: LocalizedText,
+    val pro: LocalizedText,
+)
+
+@Serializable
+data class LocalizedText(
+    val zh: String? = null,
+    val en: String? = null,
+) {
+    /** 按 UI 语言取值：zh 缺回落 en；en 也缺返回 null，调用方整行跳过 */
+    fun forLang(lang: String): String? = if (lang == "zh") zh ?: en else en
+}

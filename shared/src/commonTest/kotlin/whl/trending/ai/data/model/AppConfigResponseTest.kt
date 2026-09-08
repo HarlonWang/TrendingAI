@@ -34,4 +34,15 @@ class AppConfigResponseTest {
         )
         assertEquals("0.15.0", config.minVersion)
     }
+
+    @Test
+    fun decodes_pro_benefit_rows_with_bilingual_cells() {
+        val config = json.decodeFromString<AppConfigResponse>(
+            """{"pro_benefits":{"rows":[{"label":{"zh":"额度","en":"Allowance"},"free":{"en":"Some"},"pro":{"zh":"更多","en":"More"}}]}}"""
+        )
+        val row = config.proBenefits!!.rows.single()
+        assertEquals("额度", row.label.zh)
+        assertNull(row.free.zh)
+        assertEquals("More", row.pro.en)
+    }
 }
