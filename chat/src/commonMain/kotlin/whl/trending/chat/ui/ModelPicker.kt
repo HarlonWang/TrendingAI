@@ -1,41 +1,61 @@
 package whl.trending.chat.ui
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
-import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.chat.model.ChatModelOption
@@ -46,6 +66,11 @@ import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.model.resolveEffectiveChatModel
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_list_separator
+import trendingai.chat.generated.resources.chat_model_cap_images
+import trendingai.chat.generated.resources.chat_model_cap_search
+import trendingai.chat.generated.resources.chat_model_meta_default
+import trendingai.chat.generated.resources.chat_model_meta_pro
+import trendingai.chat.generated.resources.chat_model_meta_separator
 import trendingai.chat.generated.resources.chat_model_picker_title
 import trendingai.chat.generated.resources.chat_model_provider
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
@@ -172,65 +197,183 @@ internal fun ModelPicker(
                 onDismissRequest = { expanded = false },
                 title = stringResource(Res.string.chat_model_picker_title),
             ) {
-                // 多厂商时按厂商分节：节头只是小字标签，不可点；单厂商不加节头（信息与页脚重复）
-                val grouped = models.groupBy { it.provider }
-                val showGroupHeaders = grouped.size > 1
-                grouped.values.forEach { group ->
-                    if (showGroupHeaders) {
-                        Text(
-                            text = group.first().providerName,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            // ListItem 自带 16dp 水平内边距，节头与页脚对齐到同一条线
-                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp),
-                        )
-                    }
-                    group.forEach { model ->
-                        val locked = model.proOnly && !isPro
-                        ListItem(
-                            headlineContent = { Text(model.name) },
-                            trailingContent = {
-                                when {
-                                    locked -> Icon(
-                                        Icons.Filled.Lock,
-                                        contentDescription = "Pro",
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                    model.id == current.id -> Icon(
-                                        Icons.Filled.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier
-                                .clip(MaterialTheme.shapes.medium)
-                                .clickable {
-                                    expanded = false
-                                    when {
-                                        locked -> unlockDialogModel = model
-                                        else -> select(model)
-                                    }
-                                },
-                        )
-                    }
-                }
-                // 模型出处。放在浮层末尾而不是常驻行内：起疑的人会点开选择器（型号名就是疑问的原点）。
-                // 视觉压到 bodySmall + onSurfaceVariant——OpenAI 品牌指南要求其展示不得比我们自己的
-                // 名称更显著，且醒目的供应商声明本身会读作辩解。
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                Text(
-                    text = stringResource(
-                        Res.string.chat_model_provider,
-                        catalogProviderNames(catalog).joinToString(stringResource(Res.string.chat_list_separator)),
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                ModelPickerContent(
+                    catalog = catalog,
+                    current = current,
+                    isPro = isPro,
+                    onSelect = { model ->
+                        expanded = false
+                        select(model)
+                    },
+                    // 锁定项不关浮层：说明弹窗盖在浮层上，关掉后用户仍在列表里继续挑
+                    onLockedClick = { unlockDialogModel = it },
                 )
             }
         }
     }
 }
+
+/**
+ * 浮层正文：厂商分段 + 当前厂商的连体卡片组 + 出处页脚。
+ * 按厂商分段而不是一条长列表：OpenAI 目录是动态上架的，再加一家厂商就轻松过十项，
+ * 分段后每屏只有一家的四五项，不用滚动也不用折叠。单厂商时不出分段行。
+ */
+@Composable
+private fun ModelPickerContent(
+    catalog: ChatModelsResponse,
+    current: ChatModelOption,
+    isPro: Boolean,
+    onSelect: (ChatModelOption) -> Unit,
+    onLockedClick: (ChatModelOption) -> Unit,
+) {
+    val groups = remember(catalog.models) { catalog.models.groupBy { it.provider }.values.toList() }
+    // 默认停在当前模型所属的厂商；重新打开浮层时组件重组，自然回到当前值
+    var providerIndex by remember(groups, current.provider) {
+        mutableStateOf(groups.indexOfFirst { it.first().provider == current.provider }.coerceAtLeast(0))
+    }
+    Column(Modifier.verticalScroll(rememberScrollState())) {
+        if (groups.size > 1) {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                groups.forEachIndexed { index, group ->
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = groups.size),
+                        selected = index == providerIndex,
+                        onClick = { providerIndex = index },
+                    ) {
+                        Text(group.first().providerName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+        val group = groups[providerIndex]
+        // 各厂商条数不同，切分段时浮层高度会变；动画过渡而不是跳变
+        Column(
+            verticalArrangement = Arrangement.spacedBy(ItemGap),
+            modifier = Modifier.animateContentSize(),
+        ) {
+            group.forEachIndexed { index, model ->
+                ModelRow(
+                    model = model,
+                    shape = groupItemShape(index, group.size),
+                    selected = model.id == current.id,
+                    locked = model.proOnly && !isPro,
+                    isDefault = model.id == catalog.default,
+                    onClick = { if (model.proOnly && !isPro) onLockedClick(model) else onSelect(model) },
+                )
+            }
+        }
+        // 模型出处。放在浮层末尾而不是常驻行内：起疑的人会点开选择器（型号名就是疑问的原点）。
+        // 视觉压到 bodySmall + onSurfaceVariant——OpenAI 品牌指南要求其展示不得比我们自己的
+        // 名称更显著，且醒目的供应商声明本身会读作辩解。
+        Text(
+            text = stringResource(
+                Res.string.chat_model_provider,
+                catalogProviderNames(catalog).joinToString(stringResource(Res.string.chat_list_separator)),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+    }
+}
+
+/**
+ * 一行模型：名称 + 元信息副行（档位、支持的能力位）。卡片规格镜像宿主 app 的 `SettingsGroup`
+ * （chat 是独立 SDK，不能依赖 shared）。锁定行仍可点（弹说明），所以只降透明度、不走禁用态。
+ */
+@Composable
+private fun ModelRow(
+    model: ChatModelOption,
+    shape: Shape,
+    selected: Boolean,
+    locked: Boolean,
+    isDefault: Boolean,
+    onClick: () -> Unit,
+) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.secondaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    Surface(
+        shape = shape,
+        color = containerColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (locked) LockedAlpha else 1f),
+    ) {
+        Row(
+            modifier = Modifier
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(model.name, style = MaterialTheme.typography.titleMedium)
+                ModelMetaLine(model = model, isDefault = isDefault)
+            }
+            Spacer(Modifier.width(8.dp))
+            when {
+                locked -> Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = "Pro",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                selected -> Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+/** 副行：档位标签在前、能力位在后，「·」分隔；只列支持的能力，不支持的不出现。全空则不占行。 */
+@Composable
+private fun ModelMetaLine(model: ChatModelOption, isDefault: Boolean) {
+    val parts = mutableListOf<@Composable () -> Unit>()
+    when {
+        isDefault -> parts += { Text(stringResource(Res.string.chat_model_meta_default)) }
+        model.proOnly -> parts += { Text(stringResource(Res.string.chat_model_meta_pro)) }
+    }
+    if (model.caps.images) parts += { MetaCapability(Icons.Outlined.Image, stringResource(Res.string.chat_model_cap_images)) }
+    if (model.caps.search) parts += { MetaCapability(Icons.Outlined.TravelExplore, stringResource(Res.string.chat_model_cap_search)) }
+    if (parts.isEmpty()) return
+    Spacer(Modifier.height(2.dp))
+    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
+        ProvideTextStyle(MaterialTheme.typography.bodySmall) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                parts.forEachIndexed { index, part ->
+                    if (index > 0) Text(stringResource(Res.string.chat_model_meta_separator))
+                    part()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetaCapability(icon: ImageVector, label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
+        Text(label)
+    }
+}
+
+/** 首项顶部大圆角、末项底部大圆角、中间一律小圆角；只有一项时四角全大。 */
+private fun groupItemShape(index: Int, count: Int): Shape {
+    val top = if (index == 0) LargeCorner else SmallCorner
+    val bottom = if (index == count - 1) LargeCorner else SmallCorner
+    return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
+}
+
+private val LargeCorner = 24.dp
+private val SmallCorner = 6.dp
+private val ItemGap = 4.dp
+private const val LockedAlpha = 0.6f
