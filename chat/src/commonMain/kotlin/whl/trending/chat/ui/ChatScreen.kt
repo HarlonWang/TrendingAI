@@ -27,7 +27,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
@@ -125,15 +124,21 @@ fun ChatScreen(
             )
         },
     ) {
+        val catalog by viewModel.catalog.collectAsState()
         ChatScaffold(
             topBar = {
                 ChatTopAppBar(
+                    // 模型选择器就是标题；只有一个可选模型时无从选择，回落文字标题
                     title = {
-                        Text(
-                            text = stringResource(Res.string.chat_assistant_title),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        if (chatModelPickerVisible(catalog)) {
+                            ModelPicker(catalog = catalog)
+                        } else {
+                            Text(
+                                text = stringResource(Res.string.chat_assistant_title),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -158,7 +163,6 @@ fun ChatScreen(
             },
             bottomBar = {
                 val searchActive by viewModel.searchEnabled.collectAsState()
-                val catalog by viewModel.catalog.collectAsState()
                 val caps by viewModel.currentCaps.collectAsState()
                 Column {
                     // 建议动作行（描边 = 建议、填充的「当前配置」行 = 已生效状态，靠样式分层）：
@@ -180,9 +184,8 @@ fun ChatScreen(
                             }
                         }
                     }
-                    // 当前配置行：回答「下一条消息以什么配置发出去」
+                    // 已开启的能力行：回答「下一条消息以什么配置发出去」
                     ChatContextRow(
-                        catalog = catalog,
                         searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
                         modifier = Modifier.padding(horizontal = 12.dp),
@@ -216,7 +219,6 @@ fun ChatScreen(
                     .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
             ) {
                 if (state.messages.isEmpty()) {
-                    val catalog by viewModel.catalog.collectAsState()
                     ChatWelcome(providerNames = catalogProviderNames(catalog))
                 } else {
                     MessageList(

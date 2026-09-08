@@ -1,15 +1,19 @@
 package whl.trending.chat.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,7 +30,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.chat.host.chatHost
@@ -39,17 +46,15 @@ import whl.trending.chat.model.resolveDisplayedChatModel
 import whl.trending.chat.model.resolveEffectiveChatModel
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_list_separator
+import trendingai.chat.generated.resources.chat_model_picker_title
 import trendingai.chat.generated.resources.chat_model_provider
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_model_unlock_message
 import trendingai.chat.generated.resources.chat_model_unlock_title
 
 /**
- * [ModelPicker] 是否有东西可渲染。
- *
- * 抽出来是给 [ChatContextRow] 用的：那一行要在「模型和能力 chip 都没有」时整行缺席，
- * 而选择器是否出现只有这里知道——组件内部 return 掉的话，外面看到的是一个高度为 0 却
- * 仍占着 Arrangement 间距的成员。
+ * [ModelPicker] 是否有东西可渲染：顶栏标题槽据此决定放选择器还是回落文字标题。
+ * 选择器是否出现只有这里知道——组件内部 return 掉的话，标题槽会空着。
  */
 internal fun chatModelPickerVisible(catalog: ChatModelsResponse): Boolean =
     catalog.models.size > 1 && catalogDefaultChatModel(catalog) != null
@@ -116,25 +121,27 @@ internal fun ModelPicker(
 
     Box(modifier) {
         // M3 Expressive 的 SplitButton 而不是 chip：模型名与下拉箭头分成两块，「这是个选择器」
-        // 由形态本身讲清楚，不用靠「能不能点掉」去猜（chip 的老问题）。它天生 40dp 高 + 全圆，
-        // 与下面的输入胶囊同一套圆角语言。
-        //
-        // 配色刻意选中性的 surfaceContainerHigh，而不是 tonal 默认的 secondaryContainer：
-        // 模型是常驻的纯信息，带色相就会跟旁边「已开启的能力」抢注意力。也不能用再深一档的
-        // surfaceContainerHighest——那正是禁用态发送键的容器色（实测浅色下同为 #E7E0EC），
-        // 空输入时同屏会出现两块一样的颜色，一块可点一块禁用。选 High 后浅色梯度是
-        // 背景 #FDF7FE → 胶囊 #F3EDF4（High + 3dp tonal 提亮）→ 模型 #ECE6F0 → 禁用发送键 #E7E0EC。
+        // 由形态本身讲清楚，不用靠「能不能点掉」去猜（chip 的老问题）。
+        // 挂在顶栏中央当标题，配色保持中性：模型是常驻信息，不该是页面第一眼的落点。
+        // 顶栏底色是 surfaceContainer，取深两档的 Highest 才在浅色下看得出胶囊轮廓
         val modelColors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             contentColor = MaterialTheme.colorScheme.onSurface,
         )
         SplitButtonLayout(
+            // 限宽：长模型名截断成省略号，别把顶栏两侧的图标挤出去
+            modifier = Modifier.widthIn(max = 240.dp),
             leadingButton = {
                 SplitButtonDefaults.LeadingButton(
                     onClick = { expanded = true },
                     colors = modelColors,
                 ) {
-                    Text(current.name)
+                    Text(
+                        text = current.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                 }
             },
             trailingButton = {
@@ -158,57 +165,72 @@ internal fun ModelPicker(
                 }
             },
         )
-        ChatDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // 多厂商时按厂商分段：段头只是小字标签，不可点；单厂商不加段头（信息与页脚重复）
-            val grouped = models.groupBy { it.provider }
-            val showGroupHeaders = grouped.size > 1
-            grouped.values.forEach { group ->
-                if (showGroupHeaders) {
-                    Text(
-                        text = group.first().providerName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
+        // 底部浮层而不是下拉：6 项以上、带段头与锁图标，已超出下拉菜单的适用范围（仓库 UI 规范）；
+        // 顶栏锚点的 Popup 定位在 edge-to-edge 下还会漂到状态栏上盖住选择器本身
+        if (expanded) {
+            ChatBottomSheet(
+                onDismissRequest = { expanded = false },
+                title = stringResource(Res.string.chat_model_picker_title),
+            ) {
+                // 多厂商时按厂商分节：节头只是小字标签，不可点；单厂商不加节头（信息与页脚重复）
+                val grouped = models.groupBy { it.provider }
+                val showGroupHeaders = grouped.size > 1
+                grouped.values.forEach { group ->
+                    if (showGroupHeaders) {
+                        Text(
+                            text = group.first().providerName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            // ListItem 自带 16dp 水平内边距，节头与页脚对齐到同一条线
+                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    group.forEach { model ->
+                        val locked = model.proOnly && !isPro
+                        ListItem(
+                            headlineContent = { Text(model.name) },
+                            trailingContent = {
+                                when {
+                                    locked -> Icon(
+                                        Icons.Filled.Lock,
+                                        contentDescription = "Pro",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                    model.id == current.id -> Icon(
+                                        Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .clickable {
+                                    expanded = false
+                                    when {
+                                        locked -> unlockDialogModel = model
+                                        else -> select(model)
+                                    }
+                                },
+                        )
+                    }
                 }
-                group.forEach { model ->
-                    val locked = model.proOnly && !isPro
-                    DropdownMenuItem(
-                        text = { Text(model.name) },
-                        trailingIcon = if (locked) {
-                            {
-                                Icon(
-                                    Icons.Filled.Lock,
-                                    contentDescription = "Pro",
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        } else null,
-                        onClick = {
-                            expanded = false
-                            when {
-                                locked -> unlockDialogModel = model
-                                else -> select(model)
-                            }
-                        },
-                    )
-                }
-                }
-            // 模型出处。放在菜单末尾而不是常驻行内：起疑的人会点开选择器（型号名就是疑问的原点），
-            // 而常驻行受 horizontalScroll + 防输入框跳位约束，塞不下也留不住。
-            // 视觉压到 bodySmall + onSurfaceVariant——OpenAI 品牌指南要求其展示不得比我们自己的
-            // 名称更显著，且醒目的供应商声明本身会读作辩解。
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            Text(
-                text = stringResource(
-                    Res.string.chat_model_provider,
-                    catalogProviderNames(catalog).joinToString(stringResource(Res.string.chat_list_separator)),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            )
+                // 模型出处。放在浮层末尾而不是常驻行内：起疑的人会点开选择器（型号名就是疑问的原点）。
+                // 视觉压到 bodySmall + onSurfaceVariant——OpenAI 品牌指南要求其展示不得比我们自己的
+                // 名称更显著，且醒目的供应商声明本身会读作辩解。
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = stringResource(
+                        Res.string.chat_model_provider,
+                        catalogProviderNames(catalog).joinToString(stringResource(Res.string.chat_list_separator)),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
     }
 }

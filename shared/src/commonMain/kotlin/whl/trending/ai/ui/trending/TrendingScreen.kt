@@ -48,7 +48,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -561,7 +562,10 @@ private fun FilterBottomSheet(
 
     var tempPeriod by remember { mutableStateOf(selectedPeriod) }
     var tempLanguage by remember { mutableStateOf(selectedLanguage) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
 
     // 这里曾挂一个「更新机制」InfoDialog：更新节奏与筛选周期/语言无关，位置本就错了，
     // 且那份文案已并入「数据来源与更新」页（从列表头部的抓取时机条进入）。
@@ -653,7 +657,10 @@ private fun HistoryBottomSheet(
     var tempDate by remember { mutableStateOf(selectedDate ?: "") }
     var tempBatch by remember { mutableStateOf(selectedBatch ?: "am") }
     var showHelpDialog by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
 
     val datePickerState = rememberDatePickerState()
     var showDatePicker by remember { mutableStateOf(false) }

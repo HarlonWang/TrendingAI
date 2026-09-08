@@ -6,9 +6,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -53,7 +63,8 @@ internal fun ChatTopAppBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    TopAppBar(
+    // 居中：标题槽放模型选择器（单模型时回落文字标题），两侧图标由组件自动避让
+    CenterAlignedTopAppBar(
         title = title,
         modifier = modifier,
         navigationIcon = navigationIcon,
@@ -82,4 +93,39 @@ internal fun ChatDropdownMenu(
         tonalElevation = MenuDefaults.TonalElevation,
         content = content,
     )
+}
+
+/**
+ * chat 模块的底部浮层，规格镜像宿主 app 的 `TrendingBottomSheet`（chat 是独立 SDK，不能依赖 shared）：
+ * `titleLarge` 标题、24dp 水平边距、导航栏避让 + 16dp 底部留白。内容区不自带滚动。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ChatBottomSheet(
+    onDismissRequest: () -> Unit,
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    // 全展开：内容是短列表，半展开会把末项与页脚裁在折叠线下
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        sheetState = rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(16.dp))
+            content()
+        }
+    }
 }
