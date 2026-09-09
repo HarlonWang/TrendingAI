@@ -41,7 +41,7 @@
     <string name="official_website">Official Website</string>
     <string name="donate">Donate</string>
     <string name="donate_message">We build Trending AI in our limited spare time, hoping to help you discover global tech trends more efficiently.\nIf you find it helpful, a donation would mean a lot to us.\n\nAll donations go toward improving our servers and operations to keep the product moving forward.</string>
-    <string name="donate_github_desc">Sponsor Pro on GitHub · unlock a more generous daily chat quota and stronger, newer models</string>
+    <string name="donate_github_desc">Sponsor Pro on GitHub · unlock a more generous chat quota and stronger, newer models</string>
     <string name="stars_total">Stars %1$s</string>
     <string name="stars_period">Stars (%1$s) %2$s</string>
     <string name="no_data">No data available</string>
@@ -230,7 +230,7 @@
     <!-- Account hub -->
     <string name="account_title">Account</string>
     <string name="account_signed_out_title">Not signed in</string>
-    <string name="account_signed_out_prompt">Sign in to sync your data and unlock more daily credits</string>
+    <string name="account_signed_out_prompt">Sign in to sync your data and unlock more credits</string>
     <string name="account_plan_title">Plan &amp; usage</string>
     <string name="account_tier_free">Free</string>
     <string name="account_tier_pro">Pro</string>
@@ -247,13 +247,13 @@
     <string name="sponsor_link_needed_title">One more step</string>
     <string name="sponsor_link_needed_message">If you just sponsored: Pro perks are tied to your GitHub account — link it to activate them.</string>
     <string name="sponsor_link_needed_later">Later</string>
-    <string name="account_signin_for_more">Sign in for more daily quota</string>
+    <string name="account_signin_for_more">Sign in for more quota</string>
     <string name="account_pro_active">You&apos;re a Pro member — thanks for the support!</string>
     <string name="account_manage_subscription">Manage subscription</string>
     <string name="account_manage_subscription_hint">Change payment method or cancel renewal</string>
     <string name="subscription_title">Upgrade to Pro</string>
     <string name="subscription_intro">Trending and Picks stay free. Pro raises your AI allowance and models.</string>
-    <string name="subscription_benefits_fallback">A higher daily allowance and more models</string>
+    <string name="subscription_benefits_fallback">A higher allowance and more models</string>
     <string name="subscription_plan_annual">Yearly</string>
     <string name="subscription_plan_monthly">Monthly</string>
     <string name="subscription_plan_annual_unit">per year</string>
@@ -269,7 +269,7 @@
     <string name="subscription_cancel_scheduled">Set to stop renewing at the end of this period</string>
     <string name="subscription_portal_failed">Couldn&apos;t open the management page right now. Please try again.</string>
     <string name="checkout_activated_title">Pro is active</string>
-    <string name="checkout_activated_message">Thank you! Your higher daily allowance and all advanced models are unlocked.</string>
+    <string name="checkout_activated_message">Thank you! Your higher allowance and all advanced models are unlocked.</string>
     <string name="checkout_activated_ok">Got it</string>
     <string name="account_github_entry">GitHub profile</string>
     <string name="account_github_entry_desc">Contributions &amp; network activity</string>

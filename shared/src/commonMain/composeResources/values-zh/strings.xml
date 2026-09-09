@@ -41,7 +41,7 @@
     <string name="official_website">官网</string>
     <string name="donate">捐助我们</string>
     <string name="donate_message">我们利用有限的业余时间打造 Trending AI，希望帮你更高效地发现全球技术热点。\n如果它对你有帮助，欢迎捐赠支持我们。\n\n所有捐赠都将用于改善服务器与运营，让产品持续前行。</string>
-    <string name="donate_github_desc">GitHub 赞助 Pro · 解锁更宽裕的每日聊天额度，以及更强、更新的模型</string>
+    <string name="donate_github_desc">GitHub 赞助 Pro · 解锁更宽裕的聊天额度，以及更强、更新的模型</string>
     <string name="stars_total">Stars %1$s</string>
     <string name="stars_period">Stars (%1$s) %2$s</string>
     <string name="no_data">暂无数据</string>
@@ -230,7 +230,7 @@
     <!-- 账户中心 -->
     <string name="account_title">账户</string>
     <string name="account_signed_out_title">未登录</string>
-    <string name="account_signed_out_prompt">登录以同步你的数据，并解锁更多每日额度</string>
+    <string name="account_signed_out_prompt">登录以同步你的数据，并解锁更多额度</string>
     <string name="account_plan_title">套餐与用量</string>
     <string name="account_tier_free">免费版</string>
     <string name="account_tier_pro">Pro</string>
@@ -247,13 +247,13 @@
     <string name="sponsor_link_needed_title">赞助前还差一步</string>
     <string name="sponsor_link_needed_message">如果你刚完成赞助：Pro 权益绑定在 GitHub 账号上，关联后即可生效。</string>
     <string name="sponsor_link_needed_later">稍后</string>
-    <string name="account_signin_for_more">登录即可获得更多每日额度</string>
+    <string name="account_signin_for_more">登录即可获得更多额度</string>
     <string name="account_pro_active">你已是 Pro 会员，感谢支持！</string>
     <string name="account_manage_subscription">管理订阅</string>
     <string name="account_manage_subscription_hint">更改支付方式或取消续费</string>
     <string name="subscription_title">升级 Pro</string>
     <string name="subscription_intro">榜单与精选始终免费，Pro 提升 AI 用量与模型</string>
-    <string name="subscription_benefits_fallback">更高的每日额度与更多模型</string>
+    <string name="subscription_benefits_fallback">更高的额度与更多模型</string>
     <string name="subscription_plan_annual">年付</string>
     <string name="subscription_plan_monthly">月付</string>
     <string name="subscription_plan_annual_unit">每年</string>
@@ -269,7 +269,7 @@
     <string name="subscription_cancel_scheduled">已约定到期后不再续费</string>
     <string name="subscription_portal_failed">暂时打不开管理页面，请稍后再试</string>
     <string name="checkout_activated_title">Pro 已开通</string>
-    <string name="checkout_activated_message">感谢支持！更高的每日额度与全部高阶模型都已解锁。</string>
+    <string name="checkout_activated_message">感谢支持！更高的额度与全部高阶模型都已解锁。</string>
     <string name="checkout_activated_ok">好的</string>
     <string name="account_github_entry">GitHub 主页</string>
     <string name="account_github_entry_desc">贡献与关注动态</string>
