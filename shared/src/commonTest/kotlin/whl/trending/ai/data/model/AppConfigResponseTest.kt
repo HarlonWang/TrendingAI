@@ -58,4 +58,19 @@ class AppConfigResponseTest {
         assertEquals("1.0.0", config.minVersion)
         assertNull(config.proPaywall!!.benefits.single().text)
     }
+
+    @Test
+    fun decodes_quota_help_and_tolerates_missing_title() {
+        val config = json.decodeFromString<AppConfigResponse>(
+            """{"quota_help":{"title":{"zh":"说明","en":"About"},"paragraphs":[{"zh":"一","en":"One"},{"en":"Two"}]}}"""
+        )
+        val help = config.quotaHelp!!
+        assertEquals("About", help.title!!.en)
+        assertEquals(2, help.paragraphs.size)
+        assertNull(help.paragraphs[1].zh)
+
+        val partial = json.decodeFromString<AppConfigResponse>("""{"quota_help":{"paragraphs":[]}}""")
+        assertNull(partial.quotaHelp!!.title)
+        assertNull(json.decodeFromString<AppConfigResponse>("""{}""").quotaHelp)
+    }
 }

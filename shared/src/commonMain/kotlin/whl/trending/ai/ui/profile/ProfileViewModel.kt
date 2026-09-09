@@ -90,6 +90,10 @@ class ProfileViewModel(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    /** 额度卡 ⓘ 弹窗内容；读冷启动落盘的 app-config 缓存，未拉到过为 null（不显示入口） */
+    val quotaHelp: QuotaHelpContent? =
+        resolveQuotaHelp(settingsManager.quotaHelp(), settingsManager.uiLanguage())
+
     private var nextFeedPage = 1
     /** 已消费的原始 events 总数（用于判断是否到达 GitHub 300 条硬上限） */
     private var consumedRawCount = 0

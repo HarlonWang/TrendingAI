@@ -227,6 +227,7 @@
     <string name="profile_quota_reset_hours">约 %1$d 小时后重置</string>
     <string name="profile_quota_reset_soon">1 小时内重置</string>
     <string name="profile_quota_error">额度信息暂时无法获取</string>
+    <string name="profile_quota_help">额度说明</string>
     <!-- 账户中心 -->
     <string name="account_title">账户</string>
     <string name="account_signed_out_title">未登录</string>

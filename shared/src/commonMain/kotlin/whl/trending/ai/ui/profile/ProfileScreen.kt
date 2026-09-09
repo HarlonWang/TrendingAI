@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -82,6 +84,7 @@ import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_load_failed
 import trendingai.shared.generated.resources.profile_quota_error
 import trendingai.shared.generated.resources.profile_quota_exhausted
+import trendingai.shared.generated.resources.profile_quota_help
 import trendingai.shared.generated.resources.profile_quota_reset_hours
 import trendingai.shared.generated.resources.profile_quota_reset_soon
 import trendingai.shared.generated.resources.profile_quota_used
@@ -97,6 +100,7 @@ import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.QuotaResponse
+import whl.trending.ai.ui.common.InfoDialog
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.SettingsGroup
@@ -207,6 +211,7 @@ fun ProfileScreen(
                     PlanUsageCard(
                         quota = uiState.quota,
                         quotaError = uiState.quotaError,
+                        quotaHelp = viewModel.quotaHelp,
                         loggedIn = uiState.loggedIn,
                         isPro = isPro,
                         // 进订阅页，不再直奔 Sponsors，也不再要求先关联 GitHub：
@@ -388,7 +393,7 @@ private fun AccountHeader(
 }
 
 /**
- * 套餐 & 用量卡：档位徽章 + 余额进度 + 重置倒计时 + 费率；底部按状态给不同 CTA
+ * 套餐 & 用量卡：档位徽章 + 余额进度 + 重置倒计时 + 额度说明入口；底部按状态给不同 CTA
  * （匿名→登录引导 / Free 登录→升级 Pro / Pro→致谢）。数据与整页解耦，失败只降级本卡。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -396,6 +401,7 @@ private fun AccountHeader(
 private fun PlanUsageCard(
     quota: QuotaResponse?,
     quotaError: Boolean,
+    quotaHelp: QuotaHelpContent?,
     loggedIn: Boolean,
     isPro: Boolean,
     onUpgrade: () -> Unit,
@@ -410,19 +416,38 @@ private fun PlanUsageCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            var showHelp by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(Res.string.account_plan_title),
                     style = MaterialTheme.typography.titleSmall,
                 )
+                // 说明文案随 app-config 下发，从未拉到过就没有入口；与额度是否加载成功无关
+                if (quotaHelp != null) {
+                    IconButton(onClick = { showHelp = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = stringResource(Res.string.profile_quota_help),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 if (isPro) ProBadge() else if (loggedIn) TierPillFree()
+            }
+            if (showHelp && quotaHelp != null) {
+                InfoDialog(
+                    title = quotaHelp.title,
+                    content = quotaHelp.paragraphs.joinToString("\n\n"),
+                    onDismiss = { showHelp = false },
+                )
             }
 
             when {
                 quota != null -> {
-                    // 只讲「用掉了多大比例」和「何时重置」，不透出余额绝对值与单价：
-                    // 用户无从算计单价，后端调价/调额度也不必跟着改文案（改了就会说谎）。
+                    // 主展示只讲「用掉了多大比例」和「何时重置」，不透出余额绝对值；
+                    // 费率与档位数字由服务端下发的说明弹窗承担，本地不写任何数字。
                     val usedRatio = remember(quota.balance, quota.dailyGrant) {
                         if (quota.dailyGrant <= 0) 0f
                         else ((quota.dailyGrant - quota.balance).toFloat() / quota.dailyGrant)

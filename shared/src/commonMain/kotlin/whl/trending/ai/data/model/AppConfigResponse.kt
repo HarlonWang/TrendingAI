@@ -13,6 +13,7 @@ data class AppConfigResponse(
     @SerialName("chat_images") val chatImages: ChatImagesRemoteConfig? = null,
     @SerialName("chat_voice") val chatVoice: ChatVoiceRemoteConfig? = null,
     @SerialName("pro_paywall") val proPaywall: ProPaywallRemoteConfig? = null,
+    @SerialName("quota_help") val quotaHelp: QuotaHelpRemoteConfig? = null,
 )
 
 /** chat 图片参数（服务端 KV 单源下发，与服务端校验闸同值；见后端 lib/chat-images.js） */
@@ -56,6 +57,16 @@ data class ProBenefitRow(
     val icon: String? = null,
     // 可空：一行漏了 text 只丢这一行，不能让整个 app-config（含强更配置）解码失败
     val text: LocalizedText? = null,
+)
+
+/**
+ * 账户页额度说明（服务端单源下发；见后端 docs/quota-help.md）。
+ * 没有本地默认：说明全是数字，落后的默认即错误信息，未下发就不显示入口。
+ */
+@Serializable
+data class QuotaHelpRemoteConfig(
+    val title: LocalizedText? = null,
+    val paragraphs: List<LocalizedText> = emptyList(),
 )
 
 @Serializable
