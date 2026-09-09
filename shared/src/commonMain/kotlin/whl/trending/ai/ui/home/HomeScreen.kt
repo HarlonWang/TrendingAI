@@ -89,7 +89,6 @@ fun HomeScreen(
     onOpenDigest: (DigestPage) -> Unit = {},
     onOpenHiring: () -> Unit = {},
     onNavigateToGithubProfile: () -> Unit = {},
-    onNavigateToSubscription: () -> Unit = {},
     onNavigateToFavorites: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
 ) {
@@ -241,7 +240,6 @@ fun HomeScreen(
                             )
                             HomeTab.Me -> ProfileScreen(
                                 onNavigateToGithubProfile = onNavigateToGithubProfile,
-                                onNavigateToSubscription = onNavigateToSubscription,
                                 onNavigateToFavorites = onNavigateToFavorites,
                             )
                             HomeTab.Chat -> Unit

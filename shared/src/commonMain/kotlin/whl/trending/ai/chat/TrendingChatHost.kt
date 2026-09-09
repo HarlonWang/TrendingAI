@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
+import whl.trending.ai.core.ProPaywall
 import whl.trending.ai.core.analytics.AiKind
 import whl.trending.ai.core.analytics.AiOutcome
 import whl.trending.ai.core.analytics.AppEvent
@@ -43,6 +44,7 @@ private object TrendingChatHost : ChatHost {
         emitAll(globalAuthManager.authState.map { it is AuthState.LoggedIn })
     }
     override fun signIn(source: String) = globalAuthManager.signIn(source)
+    override fun openPaywall(source: String) = ProPaywall.open(source)
 
     override fun currentIsPro() = globalSettingsManager.currentIsPro()
     override val isPro: Flow<Boolean> get() = globalSettingsManager.isPro

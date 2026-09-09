@@ -21,9 +21,9 @@
     <string name="open_system_settings">前往系统设置</string>
     <string name="summary_language">摘要语言</string>
     <string name="summary_language_desc">AI 摘要支持中英文 · 点击了解</string>
-    <string name="summary_language_message">摘要语言可独立于应用语言单独设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换后自动刷新。\n\n希望支持你的母语？通过 GitHub 赞助 Pro 支持我们持续投入，你的语言会进入优先排期，最快在下个版本上线。</string>
+    <string name="summary_language_message">摘要语言可独立于应用语言单独设置：GitHub、Hacker News、Product Hunt 的 AI 摘要与 Picks 深度解读均支持中文和英文，切换后自动刷新。\n\n希望支持你的母语？升级 Pro 支持我们持续投入，你的语言会进入优先排期，最快在下个版本上线。</string>
     <string name="summary_language_feedback">去反馈</string>
-    <string name="summary_language_sponsor">GitHub 赞助 Pro</string>
+    <string name="summary_language_upgrade">升级 Pro</string>
     <string name="summary_lang_capture_title">你希望支持哪门语言？</string>
     <string name="summary_lang_capture_message">已填入你的系统语言，可改成你希望支持的语言。提交后将带你前往 GitHub 赞助页。</string>
     <string name="summary_lang_capture_label">语言</string>

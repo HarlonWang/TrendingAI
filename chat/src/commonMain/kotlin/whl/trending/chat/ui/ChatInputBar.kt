@@ -73,6 +73,7 @@ import whl.trending.chat.attach.rememberChatImagePicker
 import whl.trending.chat.attach.rememberChatVoiceRecorder
 import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.host.ChatVoiceOutcome
+import whl.trending.chat.host.PaywallSource
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
 import trendingai.chat.generated.resources.Res
@@ -198,16 +199,7 @@ fun ChatInputBar(
     val voiceFailedText = stringResource(Res.string.chat_voice_failed)
 
     if (showProDialog) {
-        AlertDialog(
-            onDismissRequest = { showProDialog = false },
-            title = { Text(stringResource(Res.string.chat_voice_pro_title)) },
-            text = { Text(stringResource(Res.string.chat_voice_pro_message)) },
-            confirmButton = {
-                TextButton(onClick = { showProDialog = false }) {
-                    Text(stringResource(Res.string.chat_model_unlock_dismiss))
-                }
-            },
-        )
+        VoiceProGateDialog(onDismiss = { showProDialog = false })
     }
     if (showPermissionDialog) {
         AlertDialog(
@@ -618,4 +610,15 @@ private fun MenuLabel(label: String, enabled: Boolean) {
             )
         }
     }
+}
+
+/** 语音的 Pro 门槛弹窗；按下按钮与服务端 403 两条路共用，后者在 ChatScreen 触发。 */
+@Composable
+internal fun VoiceProGateDialog(onDismiss: () -> Unit) {
+    ProGateDialog(
+        title = stringResource(Res.string.chat_voice_pro_title),
+        message = stringResource(Res.string.chat_voice_pro_message),
+        paywallSource = PaywallSource.VOICE_GATE,
+        onDismiss = onDismiss,
+    )
 }

@@ -24,6 +24,7 @@
     <string name="chat_model_unlock_title">Pro-only model</string>
     <string name="chat_model_unlock_message">%1$s is currently available to Pro only. You can keep using the default model.</string>
     <string name="chat_model_unlock_dismiss">Got it</string>
+    <string name="chat_upgrade_pro">Upgrade to Pro</string>
     <string name="chat_model_picker_title">Choose a model</string>
     <string name="chat_model_cap_images">Images</string>
     <string name="chat_model_cap_search">Web search</string>

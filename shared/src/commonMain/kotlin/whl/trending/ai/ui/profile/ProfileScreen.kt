@@ -92,6 +92,7 @@ import trendingai.shared.generated.resources.sign_out
 import trendingai.shared.generated.resources.sign_out_confirm
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.auth.isGithubOAuthSupported
+import whl.trending.ai.core.ProPaywall
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.local.globalSettingsManager
@@ -122,7 +123,6 @@ fun ProfileScreen(
     onNavigateToGithubProfile: () -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToFavorites: () -> Unit = {},
-    onNavigateToSubscription: () -> Unit = {},
 ) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
@@ -213,7 +213,7 @@ fun ProfileScreen(
                         // Paddle 的身份键是 app_users.user_id（走 custom_data），与 GitHub 无关。
                         // 那道关联闸是 Sponsors 专属前置（权益以 GitHub 数字 ID 发放），
                         // 留着会把纯邮箱注册的用户挡在购买之外。
-                        onUpgrade = onNavigateToSubscription,
+                        onUpgrade = { ProPaywall.open(ProPaywall.SOURCE_PROFILE_PLAN_CARD) },
                         onSignIn = { globalAuthManager.signIn("account_hub") },
                     )
                 }

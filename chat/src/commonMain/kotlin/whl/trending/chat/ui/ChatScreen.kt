@@ -22,6 +22,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,7 +50,6 @@ import whl.trending.chat.model.catalogProviderNames
 import whl.trending.chat.host.chatHost
 import trendingai.chat.generated.resources.chat_voice_empty
 import trendingai.chat.generated.resources.chat_voice_failed
-import trendingai.chat.generated.resources.chat_voice_pro_message
 import whl.trending.chat.store.InMemoryChatStore
 import whl.trending.chat.store.rememberDefaultChatStore
 
@@ -80,17 +81,19 @@ fun ChatScreen(
     val showNotice = rememberShowNotice()
     val voiceEmptyText = stringResource(Res.string.chat_voice_empty)
     val voiceFailedText = stringResource(Res.string.chat_voice_failed)
-    val voiceProText = stringResource(Res.string.chat_voice_pro_message)
+    var showVoiceProDialog by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) {
         viewModel.voiceNotices.collect { notice ->
-            showNotice(
-                when (notice) {
-                    VoiceNotice.EMPTY -> voiceEmptyText
-                    VoiceNotice.FAILED -> voiceFailedText
-                    VoiceNotice.PRO_REQUIRED -> voiceProText
-                },
-            )
+            when (notice) {
+                VoiceNotice.EMPTY -> showNotice(voiceEmptyText)
+                VoiceNotice.FAILED -> showNotice(voiceFailedText)
+                // 本地 Pro 态过期被服务端拦下：与按钮侧同一个门槛弹窗，而不是一条没出口的提示
+                VoiceNotice.PRO_REQUIRED -> showVoiceProDialog = true
+            }
         }
+    }
+    if (showVoiceProDialog) {
+        VoiceProGateDialog(onDismiss = { showVoiceProDialog = false })
     }
     val threads by viewModel.threads.collectAsState()
     val currentThreadId by viewModel.currentThreadId.collectAsState()
