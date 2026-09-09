@@ -4,6 +4,7 @@ import com.russhwolf.settings.MapSettings
 import com.russhwolf.settings.ObservableSettings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,10 @@ import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.data.local.FakeCacheFileStore
 import whl.trending.ai.data.local.LastDataCache
+import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SettingsManager
+import whl.trending.ai.data.model.LocalizedText
+import whl.trending.ai.data.model.QuotaHelpRemoteConfig
 import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
 import whl.trending.ai.data.model.QuotaResponse
@@ -315,5 +319,29 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         assertNull(cache.get<ProfileCache>(ProfileCache.KEY))
+    }
+
+    @Test
+    fun quotaHelpFollowsCacheWrittenAfterCreationAndLanguageSwitch() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val settings = settings().also { it.setLanguage(AppLanguage.ENGLISH) }
+        val vm = viewModel(cache(), settingsManager = settings)
+        val collector = launch { vm.quotaHelp.collect {} }
+        advanceUntilIdle()
+        assertNull(vm.quotaHelp.value)
+
+        settings.setQuotaHelp(
+            QuotaHelpRemoteConfig(
+                title = LocalizedText("说明", "About"),
+                paragraphs = listOf(LocalizedText("一", "One")),
+            )
+        )
+        advanceUntilIdle()
+        assertEquals(QuotaHelpContent("About", listOf("One")), vm.quotaHelp.value)
+
+        settings.setLanguage(AppLanguage.CHINESE)
+        advanceUntilIdle()
+        assertEquals(QuotaHelpContent("说明", listOf("一")), vm.quotaHelp.value)
+        collector.cancel()
     }
 }

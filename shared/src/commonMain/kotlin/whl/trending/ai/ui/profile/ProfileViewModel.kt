@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
@@ -90,9 +93,13 @@ class ProfileViewModel(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    /** 额度卡 ⓘ 弹窗内容；读冷启动落盘的 app-config 缓存，未拉到过为 null（不显示入口） */
-    val quotaHelp: QuotaHelpContent? =
-        resolveQuotaHelp(settingsManager.quotaHelp(), settingsManager.uiLanguage())
+    /**
+     * 额度卡 ⓘ 弹窗内容，未拉到过 app-config 为 null（不显示入口）。跟着缓存与语言走：
+     * VM 常驻 Activity，升级后首启用户可能先进账户页、配置后落盘，读一次就会永久错过。
+     */
+    val quotaHelp: StateFlow<QuotaHelpContent?> =
+        combine(settingsManager.quotaHelp, settingsManager.uiLanguageFlow, ::resolveQuotaHelp)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private var nextFeedPage = 1
     /** 已消费的原始 events 总数（用于判断是否到达 GitHub 300 条硬上限） */

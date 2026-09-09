@@ -410,10 +410,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /** 最近一次成功拉取的额度说明；从未拉到或解码失败为 null，账户页不显示说明入口 */
-    fun quotaHelp(): QuotaHelpRemoteConfig? {
-        val json = settings.getStringOrNull(QUOTA_HELP_KEY) ?: return null
-        return runCatching { Json.decodeFromString<QuotaHelpRemoteConfig>(json) }.getOrNull()
-    }
+    val quotaHelp: Flow<QuotaHelpRemoteConfig?> = settings.getStringOrNullFlow(QUOTA_HELP_KEY)
+        .map { json -> json?.let { runCatching { Json.decodeFromString<QuotaHelpRemoteConfig>(it) }.getOrNull() } }
 
     fun setQuotaHelp(config: QuotaHelpRemoteConfig?) {
         if (config == null) settings.remove(QUOTA_HELP_KEY)
@@ -421,8 +419,13 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /** 服务端双语文案按此取字段：App 内语言优先，跟随系统时取系统语言 */
-    fun uiLanguage(): String {
-        val lang = currentAppLanguage().isoCode ?: getSystemLanguage()
+    fun uiLanguage(): String = uiLanguageOf(currentAppLanguage())
+
+    /** [uiLanguage] 的响应式版本，语言切换后重取文案 */
+    val uiLanguageFlow: Flow<String> = appLanguage.map { uiLanguageOf(it) }
+
+    private fun uiLanguageOf(language: AppLanguage): String {
+        val lang = language.isoCode ?: getSystemLanguage()
         return if (lang.startsWith("zh")) "zh" else "en"
     }
 

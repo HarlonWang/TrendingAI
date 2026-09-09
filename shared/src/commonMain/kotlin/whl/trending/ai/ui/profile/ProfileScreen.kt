@@ -130,6 +130,7 @@ fun ProfileScreen(
 ) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
+    val quotaHelp by viewModel.quotaHelp.collectAsState()
     // 未接入登录的平台（iOS NoopAuthManager）：身份/额度/GitHub/登录都无意义，
     // 隐藏这些动态区块，本页退化成「收藏 + 设置 + 关于」三个入口。
     val authSupported = globalAuthManager.isSupported
@@ -211,7 +212,7 @@ fun ProfileScreen(
                     PlanUsageCard(
                         quota = uiState.quota,
                         quotaError = uiState.quotaError,
-                        quotaHelp = viewModel.quotaHelp,
+                        quotaHelp = quotaHelp,
                         loggedIn = uiState.loggedIn,
                         isPro = isPro,
                         // 进订阅页，不再直奔 Sponsors，也不再要求先关联 GitHub：
