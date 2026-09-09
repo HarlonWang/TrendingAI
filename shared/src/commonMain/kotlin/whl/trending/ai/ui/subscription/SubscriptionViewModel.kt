@@ -26,12 +26,12 @@ sealed interface SubscriptionEvent {
 /**
  * @param prices 服务端算好的两档价格；[PricesResponse.available] 为 false 时整页不报价，
  *   把定价交给收银台呈现——只报一半或报错的价格比不报更伤信任。
- * @param copy 订阅页文案，读冷启动拉取的 app-config 缓存（本页不发请求）；缺的键 UI 用本地默认。
+ * @param content 订阅页文案，读冷启动拉取的 app-config 缓存（本页不发请求）；缺的键 UI 用本地默认。
  */
 data class SubscriptionUiState(
     val loading: Boolean = true,
     val prices: PricesResponse? = null,
-    val copy: PaywallCopy = PaywallCopy(),
+    val content: PaywallContent = PaywallContent(),
     val selectedPlan: String = ProCheckout.PLAN_ANNUAL,
     val checkingOut: Boolean = false,
 )
@@ -60,9 +60,9 @@ class SubscriptionViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             val prices = repository.fetchPrices()
-            val copy = resolvePaywallCopy(globalSettingsManager.proPaywall(), uiLanguage())
+            val content = resolvePaywallContent(globalSettingsManager.proPaywall(), uiLanguage())
             _uiState.update {
-                it.copy(loading = false, prices = prices, copy = copy)
+                it.copy(loading = false, prices = prices, content = content)
             }
         }
     }

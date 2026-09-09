@@ -8,13 +8,13 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class PaywallCopyTest {
+class PaywallContentTest {
 
     private fun t(zh: String? = null, en: String? = null) = LocalizedText(zh, en)
 
     @Test
     fun null_remote_yields_all_null_so_ui_falls_back_to_local_strings() {
-        assertEquals(PaywallCopy(), resolvePaywallCopy(null, "zh"))
+        assertEquals(PaywallContent(), resolvePaywallContent(null, "zh"))
     }
 
     @Test
@@ -25,20 +25,20 @@ class PaywallCopyTest {
             cta = PaywallCtaRemoteConfig(subscribe = t("订阅", "Subscribe")),
             refundNote = t(zh = "退款"),
         )
-        val copy = resolvePaywallCopy(remote, "zh")
-        assertEquals("升级 Pro", copy.title)
-        assertEquals("Sub", copy.subtitle)
-        assertEquals("订阅", copy.ctaSubscribe)
-        assertNull(copy.ctaSignIn)
-        assertEquals("退款", copy.refundNote)
+        val content = resolvePaywallContent(remote, "zh")
+        assertEquals("升级 Pro", content.title)
+        assertEquals("Sub", content.subtitle)
+        assertEquals("订阅", content.ctaSubscribe)
+        assertNull(content.ctaSignIn)
+        assertEquals("退款", content.refundNote)
     }
 
     @Test
     fun en_never_reads_zh_and_missing_en_means_key_not_delivered() {
         val remote = ProPaywallRemoteConfig(title = t("升级 Pro", "Upgrade"), refundNote = t(zh = "退款"))
-        val copy = resolvePaywallCopy(remote, "en")
-        assertEquals("Upgrade", copy.title)
-        assertNull(copy.refundNote)
+        val content = resolvePaywallContent(remote, "en")
+        assertEquals("Upgrade", content.title)
+        assertNull(content.refundNote)
     }
 
     @Test

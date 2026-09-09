@@ -8,7 +8,7 @@ import whl.trending.ai.data.model.ProPaywallRemoteConfig
 data class BenefitItem(val icon: String?, val text: String)
 
 /** 订阅页文案，已按 UI 语言选好；字段为 null 表示服务端未下发，UI 用本地默认 */
-data class PaywallCopy(
+data class PaywallContent(
     val title: String? = null,
     val subtitle: String? = null,
     val benefits: List<BenefitItem> = emptyList(),
@@ -20,10 +20,10 @@ data class PaywallCopy(
     val checkoutFailed: String? = null,
 )
 
-internal fun resolvePaywallCopy(remote: ProPaywallRemoteConfig?, lang: String): PaywallCopy {
-    if (remote == null) return PaywallCopy()
+internal fun resolvePaywallContent(remote: ProPaywallRemoteConfig?, lang: String): PaywallContent {
+    if (remote == null) return PaywallContent()
     fun LocalizedText?.pick(): String? = this?.forLang(lang)
-    return PaywallCopy(
+    return PaywallContent(
         title = remote.title.pick(),
         subtitle = remote.subtitle.pick(),
         benefits = resolveBenefits(remote.benefits, lang),

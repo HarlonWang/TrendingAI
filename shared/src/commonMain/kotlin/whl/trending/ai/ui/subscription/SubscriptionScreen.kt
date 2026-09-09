@@ -104,7 +104,7 @@ fun SubscriptionScreen(
 
     // effect 只在首次组合启动，远程文案是之后才到的，闭包里必须读最新值
     val checkoutFailed by rememberUpdatedState(
-        uiState.copy.checkoutFailed ?: stringResource(Res.string.subscription_checkout_failed),
+        uiState.content.checkoutFailed ?: stringResource(Res.string.subscription_checkout_failed),
     )
     LaunchedEffect(Unit) {
         viewModel.events.collect { snackbarHostState.showSnackbar(checkoutFailed) }
@@ -135,14 +135,14 @@ fun SubscriptionScreen(
         ) {
             Spacer(Modifier.height(8.dp))
             Text(
-                uiState.copy.title ?: stringResource(Res.string.subscription_title),
+                uiState.content.title ?: stringResource(Res.string.subscription_title),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                uiState.copy.subtitle ?: stringResource(Res.string.subscription_intro),
+                uiState.content.subtitle ?: stringResource(Res.string.subscription_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -150,7 +150,7 @@ fun SubscriptionScreen(
             )
 
             Spacer(Modifier.height(24.dp))
-            BenefitList(items = uiState.copy.benefits)
+            BenefitList(items = uiState.content.benefits)
 
             Spacer(Modifier.height(24.dp))
             if (uiState.loading) {
@@ -168,7 +168,7 @@ fun SubscriptionScreen(
             when {
                 // 直接进来的 Pro 用户（账户页不会给入口，但深链/返回栈可能到这）：不推销
                 isPro -> Text(
-                    uiState.copy.alreadyPro ?: stringResource(Res.string.subscription_already_pro),
+                    uiState.content.alreadyPro ?: stringResource(Res.string.subscription_already_pro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -190,11 +190,11 @@ fun SubscriptionScreen(
                     } else {
                         Text(
                             when {
-                                !loggedIn -> uiState.copy.ctaSignIn
+                                !loggedIn -> uiState.content.ctaSignIn
                                     ?: stringResource(Res.string.subscription_cta_signin)
-                                uiState.prices?.available == true -> uiState.copy.ctaSubscribe
+                                uiState.prices?.available == true -> uiState.content.ctaSubscribe
                                     ?: stringResource(Res.string.subscription_cta_subscribe)
-                                else -> uiState.copy.ctaViewPrice
+                                else -> uiState.content.ctaViewPrice
                                     ?: stringResource(Res.string.subscription_cta_view_price)
                             },
                         )
@@ -204,7 +204,7 @@ fun SubscriptionScreen(
 
             Spacer(Modifier.height(12.dp))
             Text(
-                uiState.copy.refundNote ?: stringResource(Res.string.subscription_refund_note),
+                uiState.content.refundNote ?: stringResource(Res.string.subscription_refund_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
