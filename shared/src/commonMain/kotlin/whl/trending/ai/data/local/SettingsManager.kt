@@ -401,8 +401,10 @@ class SettingsManager(private val settings: ObservableSettings) {
         return runCatching { Json.decodeFromString<ProPaywallRemoteConfig>(json) }.getOrNull()
     }
 
-    fun setProPaywall(config: ProPaywallRemoteConfig) {
-        settings.putString(PRO_PAYWALL_KEY, Json.encodeToString(config))
+    /** 与 min_version 同一语义：响应里没有即清除，回落本地默认 */
+    fun setProPaywall(config: ProPaywallRemoteConfig?) {
+        if (config == null) settings.remove(PRO_PAYWALL_KEY)
+        else settings.putString(PRO_PAYWALL_KEY, Json.encodeToString(config))
     }
 
     /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */

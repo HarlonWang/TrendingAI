@@ -38,4 +38,4 @@ internal fun resolvePaywallCopy(remote: ProPaywallRemoteConfig?, lang: String): 
 
 /** 按语言取文案；取不到的行跳过 */
 internal fun resolveBenefits(rows: List<ProBenefitRow>, lang: String): List<BenefitItem> =
-    rows.mapNotNull { row -> row.text.forLang(lang)?.let { BenefitItem(row.icon, it) } }
+    rows.mapNotNull { row -> row.text?.forLang(lang)?.let { BenefitItem(row.icon, it) } }

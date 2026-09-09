@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -101,7 +102,10 @@ fun SubscriptionScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val loggedIn = authState is AuthState.LoggedIn
 
-    val checkoutFailed = uiState.copy.checkoutFailed ?: stringResource(Res.string.subscription_checkout_failed)
+    // effect 只在首次组合启动，远程文案是之后才到的，闭包里必须读最新值
+    val checkoutFailed by rememberUpdatedState(
+        uiState.copy.checkoutFailed ?: stringResource(Res.string.subscription_checkout_failed),
+    )
     LaunchedEffect(Unit) {
         viewModel.events.collect { snackbarHostState.showSnackbar(checkoutFailed) }
     }
@@ -237,7 +241,7 @@ private fun BenefitList(items: List<BenefitItem>) {
     }
 }
 
-/** key 与后端 lib/pro-benefits.js 对应；认不出的 key 用通用勾选，新行不必等客户端发版 */
+/** key 与后端 lib/pro-paywall.js 对应；认不出的 key 用通用勾选，新行不必等客户端发版 */
 private fun benefitIcon(key: String?): ImageVector = when (key) {
     "quota" -> Icons.Outlined.Bolt
     "models" -> Icons.Outlined.AutoAwesome

@@ -54,7 +54,8 @@ data class PaywallCtaRemoteConfig(
 @Serializable
 data class ProBenefitRow(
     val icon: String? = null,
-    val text: LocalizedText,
+    // 可空：一行漏了 text 只丢这一行，不能让整个 app-config（含强更配置）解码失败
+    val text: LocalizedText? = null,
 )
 
 @Serializable

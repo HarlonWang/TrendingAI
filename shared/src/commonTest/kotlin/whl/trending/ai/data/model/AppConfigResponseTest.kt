@@ -49,4 +49,13 @@ class AppConfigResponseTest {
         assertNull(paywall.cta!!.subscribe)
         assertNull(paywall.refundNote)
     }
+
+    @Test
+    fun benefit_row_without_text_does_not_break_the_whole_config() {
+        val config = json.decodeFromString<AppConfigResponse>(
+            """{"min_version":"1.0.0","pro_paywall":{"benefits":[{"icon":"quota"}]}}"""
+        )
+        assertEquals("1.0.0", config.minVersion)
+        assertNull(config.proPaywall!!.benefits.single().text)
+    }
 }

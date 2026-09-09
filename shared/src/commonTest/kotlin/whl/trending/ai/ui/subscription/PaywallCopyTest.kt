@@ -47,6 +47,7 @@ class PaywallCopyTest {
             ProBenefitRow("quota", t("额度", "Allowance")),
             ProBenefitRow("voice", t(zh = "语音")),
             ProBenefitRow("future", t(en = "X")),
+            ProBenefitRow("broken", null),
         )
         assertEquals(
             listOf(BenefitItem("quota", "Allowance"), BenefitItem("future", "X")),
