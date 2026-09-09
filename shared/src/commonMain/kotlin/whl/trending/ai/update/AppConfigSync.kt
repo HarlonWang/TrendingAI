@@ -20,6 +20,7 @@ suspend fun refreshAppConfig(): AppConfigResponse? =
         )
         globalSettingsManager.setChatVoiceConfig(config.chatVoice?.maxDurationMs)
         globalSettingsManager.setProPaywall(config.proPaywall)
+        globalSettingsManager.setQuotaHelp(config.quotaHelp)
         config
     } catch (e: CancellationException) {
         throw e

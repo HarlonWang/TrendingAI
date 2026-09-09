@@ -226,6 +226,7 @@
     <string name="profile_quota_reset_hours">Resets in ~%1$d h</string>
     <string name="profile_quota_reset_soon">Resets within an hour</string>
     <string name="profile_quota_error">Couldn&apos;t load credits right now</string>
+    <string name="profile_quota_help">About credits</string>
     <string name="profile_pro_badge_desc">Pro member</string>
     <!-- Account hub -->
     <string name="account_title">Account</string>

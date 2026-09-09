@@ -10,6 +10,8 @@
 
 **订阅页的标题、副标题、权益清单、CTA、退款说明、致谢、失败提示以 `/api/app-config` 的 `pro_paywall` 为准，本地 strings 只是从未拉到配置时的兜底默认。改这些文案先改服务端（`github-ai-trending-api/src/lib/pro-paywall.js`）；订阅页新增任何文字位置，必须先进服务端契约，禁止只在本地加键。** 权益行的图标由服务端 key 映射，认不出的 key 用通用图标，加新行不需要先发版。方案标签（年付 / 月付等）与价格仍在原处；单功能锁定提示、账户页一句话升级提示不受此限。取舍见后端 `docs/pro-paywall.md`。
 
+**账户页额度说明（额度卡 ⓘ 弹窗）以 `/api/app-config` 的 `quota_help` 为准，客户端不保留本地默认，禁止在本地 strings 写任何费率或档位数字。** 说明全是数字，落后的本地文案就是错误信息，从未拉到配置就不显示入口。改说明先改服务端（`github-ai-trending-api/src/lib/quota-help.js`，数字从常量拼出）。取舍见后端 `docs/quota-help.md`。
+
 ## 埋点（自建 eventbase，2026-08-19 起）
 
 上报走 `wang.harlon:eventbase-kt`（仓库 `~/eventbase-kt`，服务端 `~/eventbase`），Aptabase 已下线。

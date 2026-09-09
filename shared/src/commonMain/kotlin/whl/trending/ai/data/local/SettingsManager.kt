@@ -24,6 +24,7 @@ import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.model.ProPaywallRemoteConfig
+import whl.trending.ai.data.model.QuotaHelpRemoteConfig
 
 /**
  * 持久化存的是 ordinal，新档位只能追加在末尾，否则老用户的选择会错位。
@@ -156,6 +157,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val CHAT_IMAGES_PER_KB_KEY = "prefs_chat_images_per_kb"
     private val CHAT_VOICE_MAX_MS_KEY = "prefs_chat_voice_max_ms"
     private val PRO_PAYWALL_KEY = "prefs_pro_paywall"
+    private val QUOTA_HELP_KEY = "prefs_quota_help"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
@@ -405,6 +407,26 @@ class SettingsManager(private val settings: ObservableSettings) {
     fun setProPaywall(config: ProPaywallRemoteConfig?) {
         if (config == null) settings.remove(PRO_PAYWALL_KEY)
         else settings.putString(PRO_PAYWALL_KEY, Json.encodeToString(config))
+    }
+
+    /** 最近一次成功拉取的额度说明；从未拉到或解码失败为 null，账户页不显示说明入口 */
+    val quotaHelp: Flow<QuotaHelpRemoteConfig?> = settings.getStringOrNullFlow(QUOTA_HELP_KEY)
+        .map { json -> json?.let { runCatching { Json.decodeFromString<QuotaHelpRemoteConfig>(it) }.getOrNull() } }
+
+    fun setQuotaHelp(config: QuotaHelpRemoteConfig?) {
+        if (config == null) settings.remove(QUOTA_HELP_KEY)
+        else settings.putString(QUOTA_HELP_KEY, Json.encodeToString(config))
+    }
+
+    /** 服务端双语文案按此取字段：App 内语言优先，跟随系统时取系统语言 */
+    fun uiLanguage(): String = uiLanguageOf(currentAppLanguage())
+
+    /** [uiLanguage] 的响应式版本，语言切换后重取文案 */
+    val uiLanguageFlow: Flow<String> = appLanguage.map { uiLanguageOf(it) }
+
+    private fun uiLanguageOf(language: AppLanguage): String {
+        val lang = language.isoCode ?: getSystemLanguage()
+        return if (lang.startsWith("zh")) "zh" else "en"
     }
 
     /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */

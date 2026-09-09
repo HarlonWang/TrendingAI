@@ -13,7 +13,6 @@ import whl.trending.ai.core.ProCheckout
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.CheckoutStepKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.PricesResponse
 import whl.trending.ai.data.repository.BillingRepository
@@ -60,7 +59,7 @@ class SubscriptionViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             val prices = repository.fetchPrices()
-            val content = resolvePaywallContent(globalSettingsManager.proPaywall(), uiLanguage())
+            val content = resolvePaywallContent(globalSettingsManager.proPaywall(), globalSettingsManager.uiLanguage())
             _uiState.update {
                 it.copy(loading = false, prices = prices, content = content)
             }
@@ -91,9 +90,4 @@ class SubscriptionViewModel(
             ProCheckout.openCheckout(checkout.url, plan)
         }
     }
-}
-
-private fun uiLanguage(): String {
-    val lang = globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
-    return if (lang.startsWith("zh")) "zh" else "en"
 }
