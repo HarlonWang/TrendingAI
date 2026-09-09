@@ -34,4 +34,28 @@ class AppConfigResponseTest {
         )
         assertEquals("0.15.0", config.minVersion)
     }
+
+    @Test
+    fun decodes_pro_paywall_partially_and_tolerates_missing_keys() {
+        val config = json.decodeFromString<AppConfigResponse>(
+            """{"pro_paywall":{"title":{"zh":"升级","en":"Upgrade"},"benefits":[{"icon":"quota","text":{"en":"More"}},{"text":{"en":"X"}}],"cta":{"sign_in":{"en":"Sign in"}}}}"""
+        )
+        val paywall = config.proPaywall!!
+        assertEquals("升级", paywall.title!!.zh)
+        assertNull(paywall.subtitle)
+        assertEquals("quota", paywall.benefits[0].icon)
+        assertNull(paywall.benefits[1].icon)
+        assertEquals("Sign in", paywall.cta!!.signIn!!.en)
+        assertNull(paywall.cta!!.subscribe)
+        assertNull(paywall.refundNote)
+    }
+
+    @Test
+    fun benefit_row_without_text_does_not_break_the_whole_config() {
+        val config = json.decodeFromString<AppConfigResponse>(
+            """{"min_version":"1.0.0","pro_paywall":{"benefits":[{"icon":"quota"}]}}"""
+        )
+        assertEquals("1.0.0", config.minVersion)
+        assertNull(config.proPaywall!!.benefits.single().text)
+    }
 }

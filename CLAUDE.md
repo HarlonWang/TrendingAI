@@ -6,6 +6,10 @@
 
 修法：Run → Edit Configurations → androidApp → Launch Options 改为 **Specified Activity** → `whl.trending.ai.MainActivity`（本体 `exported="true"`，显式启动不需要 LAUNCHER filter），一次配置后与图标状态永不打架。**不要**用 adb 强行 enable `MainActivityDefault`——app 内持久化的图标选择不会跟着变，状态不一致还可能桌面双图标。adb 脚本侧无此问题（`monkey -c LAUNCHER` 解析的是当前启用的入口）。
 
+## 订阅页文案
+
+**订阅页的标题、副标题、权益清单、CTA、退款说明、致谢、失败提示以 `/api/app-config` 的 `pro_paywall` 为准，本地 strings 只是从未拉到配置时的兜底默认。改这些文案先改服务端（`github-ai-trending-api/src/lib/pro-paywall.js`）；订阅页新增任何文字位置，必须先进服务端契约，禁止只在本地加键。** 权益行的图标由服务端 key 映射，认不出的 key 用通用图标，加新行不需要先发版。方案标签（年付 / 月付等）与价格仍在原处；单功能锁定提示、账户页一句话升级提示不受此限。取舍见后端 `docs/pro-paywall.md`。
+
 ## 埋点（自建 eventbase，2026-08-19 起）
 
 上报走 `wang.harlon:eventbase-kt`（仓库 `~/eventbase-kt`，服务端 `~/eventbase`），Aptabase 已下线。

@@ -2,7 +2,6 @@ package whl.trending.ai.ui.subscription
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,10 +13,10 @@ import whl.trending.ai.core.ProCheckout
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.CheckoutStepKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.chat.model.ChatModelOption
+import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.PricesResponse
 import whl.trending.ai.data.repository.BillingRepository
-import whl.trending.chat.model.ChatModelsProvider
 
 sealed interface SubscriptionEvent {
     /** 下单失败（创建交易没成功），UI 提示重试。已开出收银台的失败不在此列。 */
@@ -27,13 +26,12 @@ sealed interface SubscriptionEvent {
 /**
  * @param prices 服务端算好的两档价格；[PricesResponse.available] 为 false 时整页不报价，
  *   把定价交给收银台呈现——只报一半或报错的价格比不报更伤信任。
- * @param proModels 目录里 Pro 专属的模型名。这是权益里**唯一给得出确切承诺**的一项：
- *   它来自 `/api/chat/models`，与模型选择器同一份数据，后端调目录时本页自动跟随。
+ * @param content 订阅页文案，读冷启动拉取的 app-config 缓存（本页不发请求）；缺的键 UI 用本地默认。
  */
 data class SubscriptionUiState(
     val loading: Boolean = true,
     val prices: PricesResponse? = null,
-    val proModels: List<String> = emptyList(),
+    val content: PaywallContent = PaywallContent(),
     val selectedPlan: String = ProCheckout.PLAN_ANNUAL,
     val checkingOut: Boolean = false,
 )
@@ -61,15 +59,10 @@ class SubscriptionViewModel(
     fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
-            // 两者互不依赖：价格来自 Paddle、模型目录来自进程缓存（多半已预热），并发取
-            val pricesJob = async { repository.fetchPrices() }
-            val modelsJob = async { runCatching { ChatModelsProvider.get() }.getOrNull() }
-            val prices = pricesJob.await()
-            val models = modelsJob.await()?.models.orEmpty()
-                .filter { it.minTier == ChatModelOption.TIER_PRO }
-                .map { it.name }
+            val prices = repository.fetchPrices()
+            val content = resolvePaywallContent(globalSettingsManager.proPaywall(), uiLanguage())
             _uiState.update {
-                it.copy(loading = false, prices = prices, proModels = models)
+                it.copy(loading = false, prices = prices, content = content)
             }
         }
     }
@@ -98,4 +91,9 @@ class SubscriptionViewModel(
             ProCheckout.openCheckout(checkout.url, plan)
         }
     }
+}
+
+private fun uiLanguage(): String {
+    val lang = globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
+    return if (lang.startsWith("zh")) "zh" else "en"
 }
