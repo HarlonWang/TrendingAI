@@ -23,9 +23,8 @@ object ProSponsor {
     private val RECONCILE_WINDOW = 30.minutes
 
     /** upsell_clicked 的 source 词汇，新增赞助入口在此登记，别在调用点自造。 */
-    const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
+    // 关于页「支持项目」是唯一走 Sponsors 的入口：它是支持项目语义而非买权益；买权益的入口一律走 ProPaywall。
     const val SOURCE_SETTINGS_DONATE = "settings_donate"
-    // 这两个入口是「支持项目」语义而非买权益，走 Sponsors 而非 Paddle 订阅。
 
     /** 打开赞助页统一入口。[upsellSource] 非空时上报 upsell_clicked，各入口不再自报点击事件。 */
     fun openSponsorPage(upsellSource: String? = null) {

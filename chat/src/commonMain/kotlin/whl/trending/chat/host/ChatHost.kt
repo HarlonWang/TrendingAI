@@ -33,6 +33,13 @@ sealed interface ChatAiEvent {
     ) : ChatAiEvent
 }
 
+/** [ChatHost.openPaywall] 的 source 词汇，新增触点在此登记，别在调用点自造。 */
+object PaywallSource {
+    const val MODEL_LOCKED = "chat_model_locked"
+    const val VOICE_GATE = "chat_voice_gate"
+    const val QUOTA_CARD = "chat_quota_card"
+}
+
 /**
  * chat SDK 的宿主契约：登录、档位、偏好持久化、埋点、网络鉴权全部由宿主注入，
  * SDK 对宿主 app 零依赖。接入方在任何 chat UI/引擎被触达之前给 [chatHost] 赋值
@@ -51,6 +58,9 @@ interface ChatHost {
 
     /** 唤起宿主登录流程。[source] 为入口标识（如 "chat_welcome"），供宿主埋点归因。 */
     fun signIn(source: String)
+
+    /** 打开宿主的 Pro 订阅页。[source] 取 [PaywallSource]，供宿主埋点归因。 */
+    fun openPaywall(source: String)
 
     /** 当前是否 Pro 档（宿主本地缓存口径，不打网络）。 */
     fun currentIsPro(): Boolean

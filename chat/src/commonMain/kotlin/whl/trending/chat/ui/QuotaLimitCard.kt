@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.StringResource
+import whl.trending.chat.host.PaywallSource
 import whl.trending.chat.host.chatHost
 import trendingai.chat.generated.resources.Res
 import trendingai.chat.generated.resources.chat_quota_auth_degraded
@@ -21,18 +22,18 @@ import trendingai.chat.generated.resources.chat_quota_pro_exceeded
 import trendingai.chat.generated.resources.chat_quota_unlocked
 import trendingai.chat.generated.resources.chat_quota_user_exceeded
 import trendingai.chat.generated.resources.chat_retry
+import trendingai.chat.generated.resources.chat_upgrade_pro
 import whl.trending.chat.model.ChatError
 
 /**
  * 个人配额触顶卡片（`quota_device`），按档位分形态：
  * - 匿名触顶：登录 CTA（转化点）
  * - 匿名触顶后完成登录：提示已解锁，给重试按钮直接续聊
- * - 登录触顶：纯提示，无 CTA
+ * - 登录触顶：提示下方一行「升级 Pro」进订阅页（可带一行 CTA、不拦截，见 product-plan 的转化入口克制原则）
  *
  * 全局熔断（`quota_global`）不走本卡片，仍是普通错误文案——语义上与个人额度承诺切开。
  *
- * 登录档触顶不做 Pro 引导（2026-07-26 起）：撞墙时刻推销转化低、观感差，Pro 信息统一
- * 留在账户页由用户主动了解。匿名档的登录 CTA 保留——那是身份引导，不是付费引导。
+ * 匿名档的登录 CTA 是身份引导不是付费引导，匿名撞墙不推 Pro：登录后才有资格买。
  *
  * 文案刻意不写具体数字：后端配额是 credits 账本、各 feature 费率不同，
  * 一次深度调研就吃掉登录档一天的额度，任何写死的「每天 N 条」都会立刻变成谎话。
@@ -53,8 +54,10 @@ internal fun QuotaLimitCard(
                 QuotaText(Res.string.chat_quota_pro_exceeded)
             }
             isUserTier -> {
-                // 登录档触顶：与 Pro 触顶同为纯提示，不推销、不外跳
                 QuotaText(Res.string.chat_quota_user_exceeded)
+                TextButton(onClick = { chatHost.openPaywall(PaywallSource.QUOTA_CARD) }) {
+                    Text(stringResource(Res.string.chat_upgrade_pro))
+                }
             }
             loggedIn -> {
                 if (error.authDegraded) {

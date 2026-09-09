@@ -73,6 +73,7 @@ import whl.trending.chat.attach.rememberChatImagePicker
 import whl.trending.chat.attach.rememberChatVoiceRecorder
 import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.host.ChatVoiceOutcome
+import whl.trending.chat.host.PaywallSource
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.ChatViewModel
 import trendingai.chat.generated.resources.Res
@@ -118,7 +119,7 @@ import trendingai.chat.generated.resources.chat_web_search
  *
  * 语音录入：输入框为空时右侧主按钮是麦克风（有文字即变回发送键，不加第三个图标）。
  * 按住说话、松手即发、上滑取消；转写成文本后直接发送，不经输入框。仅 Pro 可用，
- * 非 Pro 按下弹纯告知弹窗（与锁定模型同一处理，不外跳）。
+ * 非 Pro 按下弹门槛弹窗（与锁定模型同一处理，可选进订阅页，不拦截）。
  *
  * @param voiceEnabled 宿主是否注入了转写能力；false 时永远显示发送键
  * @param isTranscribing 转写在途：麦克风位显示 loading，输入框占位改为「正在识别」
@@ -198,16 +199,7 @@ fun ChatInputBar(
     val voiceFailedText = stringResource(Res.string.chat_voice_failed)
 
     if (showProDialog) {
-        AlertDialog(
-            onDismissRequest = { showProDialog = false },
-            title = { Text(stringResource(Res.string.chat_voice_pro_title)) },
-            text = { Text(stringResource(Res.string.chat_voice_pro_message)) },
-            confirmButton = {
-                TextButton(onClick = { showProDialog = false }) {
-                    Text(stringResource(Res.string.chat_model_unlock_dismiss))
-                }
-            },
-        )
+        VoiceProGateDialog(onDismiss = { showProDialog = false })
     }
     if (showPermissionDialog) {
         AlertDialog(
@@ -618,4 +610,15 @@ private fun MenuLabel(label: String, enabled: Boolean) {
             )
         }
     }
+}
+
+/** 语音的 Pro 门槛弹窗；按下按钮与服务端 403 两条路共用，后者在 ChatScreen 触发。 */
+@Composable
+internal fun VoiceProGateDialog(onDismiss: () -> Unit) {
+    ProGateDialog(
+        title = stringResource(Res.string.chat_voice_pro_title),
+        message = stringResource(Res.string.chat_voice_pro_message),
+        paywallSource = PaywallSource.VOICE_GATE,
+        onDismiss = onDismiss,
+    )
 }

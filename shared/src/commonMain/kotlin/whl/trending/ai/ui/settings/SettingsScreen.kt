@@ -94,10 +94,10 @@ import trendingai.shared.generated.resources.summary_language
 import trendingai.shared.generated.resources.summary_language_desc
 import trendingai.shared.generated.resources.summary_language_feedback
 import trendingai.shared.generated.resources.summary_language_message
-import trendingai.shared.generated.resources.summary_language_sponsor
+import trendingai.shared.generated.resources.summary_language_upgrade
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
-import whl.trending.ai.core.ProSponsor
+import whl.trending.ai.core.ProPaywall
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.FeedbackKind
 import whl.trending.ai.core.analytics.SettingKey
@@ -190,7 +190,7 @@ fun SettingsScreen(
                     showSummaryLanguageDialog = false
                     showLangCaptureDialog = true
                 }) {
-                    Text(stringResource(Res.string.summary_language_sponsor))
+                    Text(stringResource(Res.string.summary_language_upgrade))
                 }
             },
             dismissButton = {
@@ -598,7 +598,7 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                                 langSubmitting = false
                                 onDismiss()
                                 track(AppEvent.FeedbackSent(FeedbackKind.SUMMARY_LANGUAGE, lang))
-                                ProSponsor.openSponsorPage(ProSponsor.SOURCE_SETTINGS_LANGUAGE)
+                                ProPaywall.open(ProPaywall.SOURCE_SETTINGS_LANGUAGE)
                             },
                             onFailure = { e ->
                                 langSubmitting = false
@@ -611,7 +611,7 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                 if (langSubmitting) {
                     LoadingIndicator(modifier = Modifier.size(24.dp))
                 } else {
-                    Text(stringResource(Res.string.summary_language_sponsor))
+                    Text(stringResource(Res.string.summary_language_upgrade))
                 }
             }
         },

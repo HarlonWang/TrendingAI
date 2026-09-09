@@ -173,6 +173,11 @@ fun App() {
                     SponsorLinkHost()
                     CheckoutResultHost()
                     ProReconcileHost()
+                    LaunchedEffect(Unit) {
+                        ProPaywall.requests.collect {
+                            if (backStack.lastOrNull() !is ProSubscription) backStack.add(ProSubscription)
+                        }
+                    }
                     OAuthOutcomeHost()
                     // 页面浏览埋点的路由源，全 app 就这一处；tab 源在 HomeScreen
                     TrackRouteScreenViews(backStack)
@@ -220,7 +225,6 @@ fun App() {
                                         backStack.add(Hiring())
                                     },
                                     onNavigateToGithubProfile = { backStack.add(GithubProfile) },
-                                    onNavigateToSubscription = { backStack.add(ProSubscription) },
                                     onNavigateToFavorites = { backStack.add(Favorites) },
                                     onNavigateToSettings = { backStack.add(Settings) },
                                 )

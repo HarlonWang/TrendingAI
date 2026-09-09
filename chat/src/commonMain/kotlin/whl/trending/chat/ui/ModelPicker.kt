@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
+import whl.trending.chat.host.PaywallSource
 import whl.trending.chat.host.chatHost
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.chat.model.ChatModelOption
@@ -84,10 +85,7 @@ internal fun chatModelPickerVisible(catalog: ChatModelsResponse): Boolean =
 
 /**
  * 常驻模型选择器（对所有用户透出）。未手选时显示目录里的免费默认项；Pro 专属项对免费用户锁定，
- * 点锁定项 → 纯告知弹窗（说明该模型属于 Pro，可继续用默认模型），不外跳赞助页。
- *
- * 2026-07-26 起此处不再承担 Pro 转化：与配额触顶卡同一决策——功能受限的当下推销观感差，
- * Pro 信息统一留在账户页由用户主动了解。
+ * 点锁定项 → 门槛弹窗（说明该模型属于 Pro，可继续用默认模型），可选「升级 Pro」进订阅页，不拦截。
  *
  * 只有一个可选模型时不渲染（无从选择，锁定项也无从触达）。
  */
@@ -107,7 +105,7 @@ internal fun ModelPicker(
     val selectedId by chatHost.chatModelChoice
         .collectAsState(initial = chatHost.currentChatModelChoice())
     var expanded by remember { mutableStateOf(false) }
-    // 点锁定项弹纯告知弹窗：说明这是 Pro 模型、默认模型仍可用，单按钮关闭，不外跳
+    // 点锁定项弹告知弹窗：说明这是 Pro 模型、默认模型仍可用，可选进订阅页，不拦截
     var unlockDialogModel by remember { mutableStateOf<ChatModelOption?>(null) }
     // 选「默认项」记为跟随服务端默认而非钉住这个 id：否则后端换默认模型时，
     // 只是点过一次默认的用户会被永久留在旧模型上——正是要解掉的耦合
@@ -117,15 +115,11 @@ internal fun ModelPicker(
 
 
     unlockDialogModel?.let { model ->
-        AlertDialog(
-            onDismissRequest = { unlockDialogModel = null },
-            title = { Text(stringResource(Res.string.chat_model_unlock_title)) },
-            text = { Text(stringResource(Res.string.chat_model_unlock_message, model.name)) },
-            confirmButton = {
-                TextButton(onClick = { unlockDialogModel = null }) {
-                    Text(stringResource(Res.string.chat_model_unlock_dismiss))
-                }
-            },
+        ProGateDialog(
+            title = stringResource(Res.string.chat_model_unlock_title),
+            message = stringResource(Res.string.chat_model_unlock_message, model.name),
+            paywallSource = PaywallSource.MODEL_LOCKED,
+            onDismiss = { unlockDialogModel = null },
         )
     }
 
