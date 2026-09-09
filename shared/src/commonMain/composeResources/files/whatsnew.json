@@ -1,13 +1,17 @@
 {
-  "version": "1.5.1",
+  "version": "1.6.0",
   "zh": [
-    "iOS 版新增邮箱验证码登录和 GitHub 授权登录",
-    "修复登录成功后 AI 对话仍显示为未登录状态的问题",
-    "GitHub 授权失效时，「我的」页会引导重新关联"
+    "AI 对话支持语音输入：按住说话、松手即发（Pro 专属）",
+    "AI 对话新增 DeepSeek 模型；模型选择器移到顶栏",
+    "「启动时进入的页面」可选 AI 对话",
+    "「我的」页额度卡新增额度使用说明",
+    "iOS：修复 AI 对话拍照闪退，以及 3x 机型图片过大导致发送失败"
   ],
   "en": [
-    "iOS: sign in with an email code or GitHub authorization",
-    "Fixed the AI chat still showing a signed-out state after a successful sign-in",
-    "Profile now prompts you to re-link GitHub when the authorization has expired"
+    "Voice input in AI chat: hold to talk, release to send (Pro only)",
+    "DeepSeek models added to AI chat; the model picker moved to the top bar",
+    "\"Default home page\" can now open AI chat",
+    "The credits card on the Me page now explains how credits work",
+    "iOS: fixed a crash when taking photos in AI chat, and oversized images failing to send on 3x devices"
   ]
 }

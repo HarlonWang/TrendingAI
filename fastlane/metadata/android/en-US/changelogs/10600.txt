@@ -1,0 +1,5 @@
+• Voice input in AI chat: hold to talk, release to send (Pro only)
+• DeepSeek models added to AI chat; the model picker moved to the top bar
+• "Default home page" can now open AI chat
+• The credits card on the Me page now explains how credits work
+• iOS: fixed a crash when taking photos in AI chat, and oversized images failing to send on 3x devices
