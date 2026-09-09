@@ -25,7 +25,7 @@
     <string name="summary_language_feedback">去反馈</string>
     <string name="summary_language_upgrade">升级 Pro</string>
     <string name="summary_lang_capture_title">你希望支持哪门语言？</string>
-    <string name="summary_lang_capture_message">已填入你的系统语言，可改成你希望支持的语言。提交后将带你前往 GitHub 赞助页。</string>
+    <string name="summary_lang_capture_message">已填入你的系统语言，可改成你希望支持的语言。提交后将进入 Pro 订阅页。</string>
     <string name="summary_lang_capture_label">语言</string>
     <string name="summary_lang_capture_identity_note">提交时会带上你的 GitHub 身份，方便我们后续通知你。</string>
     <string name="open_links_in_browser">用系统浏览器打开外链</string>

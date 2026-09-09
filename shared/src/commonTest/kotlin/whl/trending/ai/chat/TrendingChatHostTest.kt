@@ -15,6 +15,7 @@ import whl.trending.chat.host.PaywallSource
 import whl.trending.chat.host.chatHost
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -51,6 +52,6 @@ class TrendingChatHostTest {
         // 总线无 replay，收集者必须先于 open 挂上（App 里由常驻的 LaunchedEffect 保证）
         val received = async(start = CoroutineStart.UNDISPATCHED) { ProPaywall.requests.first() }
         chatHost.openPaywall(PaywallSource.QUOTA_CARD)
-        received.await()
+        assertEquals(PaywallSource.QUOTA_CARD, received.await())
     }
 }

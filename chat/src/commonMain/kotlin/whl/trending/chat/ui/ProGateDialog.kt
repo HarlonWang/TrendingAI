@@ -11,8 +11,8 @@ import trendingai.chat.generated.resources.chat_upgrade_pro
 import whl.trending.chat.host.chatHost
 
 /**
- * Pro 门槛告知弹窗：说明功能仅 Pro 可用、免费路径仍在，「升级 Pro」进宿主订阅页，「知道了」照常关闭。
- * 不做拦截：两个按钮都只关弹窗，不改变用户正在做的事。
+ * Pro 门槛告知弹窗：说明功能仅 Pro 可用、免费路径仍在。「升级 Pro」关闭弹窗并打开宿主订阅页，
+ * 「知道了」只关闭弹窗；不拦截用户正在做的事。
  */
 @Composable
 internal fun ProGateDialog(

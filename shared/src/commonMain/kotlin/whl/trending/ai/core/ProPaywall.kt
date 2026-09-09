@@ -18,11 +18,12 @@ object ProPaywall {
     const val SOURCE_PROFILE_PLAN_CARD = "profile_plan_card"
     const val SOURCE_SETTINGS_LANGUAGE = "settings_language"
 
-    private val _requests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val requests: SharedFlow<Unit> = _requests.asSharedFlow()
+    /** 打开请求，值为触点 source；根部 App 收集后进订阅页。 */
+    private val _requests = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val requests: SharedFlow<String> = _requests.asSharedFlow()
 
     fun open(source: String) {
         track(AppEvent.UpsellClicked(source = source, target = UpsellTarget.PRO))
-        _requests.tryEmit(Unit)
+        _requests.tryEmit(source)
     }
 }

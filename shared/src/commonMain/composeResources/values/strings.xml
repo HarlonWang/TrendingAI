@@ -25,7 +25,7 @@
     <string name="summary_language_feedback">Send Feedback</string>
     <string name="summary_language_upgrade">Upgrade to Pro</string>
     <string name="summary_lang_capture_title">Which language would you like?</string>
-    <string name="summary_lang_capture_message">We&apos;ve filled in your system language — change it if you&apos;d like a different one. You&apos;ll be taken to the GitHub sponsor page after submitting.</string>
+    <string name="summary_lang_capture_message">We&apos;ve filled in your system language — change it if you&apos;d like a different one. You&apos;ll be taken to the Pro subscription page after submitting.</string>
     <string name="summary_lang_capture_label">Language</string>
     <string name="summary_lang_capture_identity_note">We&apos;ll include your GitHub identity so we can follow up with you.</string>
     <string name="open_links_in_browser">Open links in browser</string>

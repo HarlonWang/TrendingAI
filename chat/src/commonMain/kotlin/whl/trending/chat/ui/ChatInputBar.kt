@@ -119,7 +119,7 @@ import trendingai.chat.generated.resources.chat_web_search
  *
  * 语音录入：输入框为空时右侧主按钮是麦克风（有文字即变回发送键，不加第三个图标）。
  * 按住说话、松手即发、上滑取消；转写成文本后直接发送，不经输入框。仅 Pro 可用，
- * 非 Pro 按下弹纯告知弹窗（与锁定模型同一处理，不外跳）。
+ * 非 Pro 按下弹门槛弹窗（与锁定模型同一处理，可选进订阅页，不拦截）。
  *
  * @param voiceEnabled 宿主是否注入了转写能力；false 时永远显示发送键
  * @param isTranscribing 转写在途：麦克风位显示 loading，输入框占位改为「正在识别」
