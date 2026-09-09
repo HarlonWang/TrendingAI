@@ -19,7 +19,7 @@ suspend fun refreshAppConfig(): AppConfigResponse? =
             config.chatImages?.perImageJpegKb,
         )
         globalSettingsManager.setChatVoiceConfig(config.chatVoice?.maxDurationMs)
-        config.proBenefits?.let { globalSettingsManager.setProBenefits(it.rows) }
+        config.proPaywall?.let { globalSettingsManager.setProPaywall(it) }
         config
     } catch (e: CancellationException) {
         throw e

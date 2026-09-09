@@ -12,7 +12,7 @@ data class AppConfigResponse(
     @SerialName("min_version") val minVersion: String? = null,
     @SerialName("chat_images") val chatImages: ChatImagesRemoteConfig? = null,
     @SerialName("chat_voice") val chatVoice: ChatVoiceRemoteConfig? = null,
-    @SerialName("pro_benefits") val proBenefits: ProBenefitsRemoteConfig? = null,
+    @SerialName("pro_paywall") val proPaywall: ProPaywallRemoteConfig? = null,
 )
 
 /** chat 图片参数（服务端 KV 单源下发，与服务端校验闸同值；见后端 lib/chat-images.js） */
@@ -28,10 +28,26 @@ data class ChatVoiceRemoteConfig(
     @SerialName("max_duration_ms") val maxDurationMs: Int? = null,
 )
 
-/** Pro 权益清单（服务端单源下发，行顺序即展示顺序；见后端 docs/pro-benefits.md） */
+/**
+ * 订阅页文案（服务端单源下发；见后端 docs/pro-paywall.md）。字段全部可空：
+ * 缺哪个键客户端就用本地默认，方案标签与价格不在此列。
+ */
 @Serializable
-data class ProBenefitsRemoteConfig(
-    val rows: List<ProBenefitRow> = emptyList(),
+data class ProPaywallRemoteConfig(
+    val title: LocalizedText? = null,
+    val subtitle: LocalizedText? = null,
+    val benefits: List<ProBenefitRow> = emptyList(),
+    val cta: PaywallCtaRemoteConfig? = null,
+    @SerialName("refund_note") val refundNote: LocalizedText? = null,
+    @SerialName("already_pro") val alreadyPro: LocalizedText? = null,
+    @SerialName("checkout_failed") val checkoutFailed: LocalizedText? = null,
+)
+
+@Serializable
+data class PaywallCtaRemoteConfig(
+    val subscribe: LocalizedText? = null,
+    @SerialName("sign_in") val signIn: LocalizedText? = null,
+    @SerialName("view_price") val viewPrice: LocalizedText? = null,
 )
 
 /** [icon] 是客户端图标映射表的 key，认不出时用通用图标，新行在旧客户端照常显示 */

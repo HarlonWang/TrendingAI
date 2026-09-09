@@ -16,7 +16,6 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.PricesResponse
-import whl.trending.ai.data.model.ProBenefitRow
 import whl.trending.ai.data.repository.BillingRepository
 
 sealed interface SubscriptionEvent {
@@ -24,18 +23,15 @@ sealed interface SubscriptionEvent {
     data object CheckoutFailed : SubscriptionEvent
 }
 
-/** 权益清单一行，已按 UI 语言选好文案；[icon] 是服务端给的 key，由 UI 映射成图标 */
-data class BenefitItem(val icon: String?, val text: String)
-
 /**
  * @param prices 服务端算好的两档价格；[PricesResponse.available] 为 false 时整页不报价，
  *   把定价交给收银台呈现——只报一半或报错的价格比不报更伤信任。
- * @param benefits 权益清单，读冷启动拉取的 app-config 缓存（本页不发请求）；空表示从未拉到，UI 显示一句兜底。
+ * @param copy 订阅页文案，读冷启动拉取的 app-config 缓存（本页不发请求）；缺的键 UI 用本地默认。
  */
 data class SubscriptionUiState(
     val loading: Boolean = true,
     val prices: PricesResponse? = null,
-    val benefits: List<BenefitItem> = emptyList(),
+    val copy: PaywallCopy = PaywallCopy(),
     val selectedPlan: String = ProCheckout.PLAN_ANNUAL,
     val checkingOut: Boolean = false,
 )
@@ -64,9 +60,9 @@ class SubscriptionViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             val prices = repository.fetchPrices()
-            val benefits = resolveBenefits(globalSettingsManager.proBenefitRows(), uiLanguage())
+            val copy = resolvePaywallCopy(globalSettingsManager.proPaywall(), uiLanguage())
             _uiState.update {
-                it.copy(loading = false, prices = prices, benefits = benefits)
+                it.copy(loading = false, prices = prices, copy = copy)
             }
         }
     }
@@ -101,7 +97,3 @@ private fun uiLanguage(): String {
     val lang = globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage()
     return if (lang.startsWith("zh")) "zh" else "en"
 }
-
-/** 按语言取文案；取不到的行跳过 */
-internal fun resolveBenefits(rows: List<ProBenefitRow>, lang: String): List<BenefitItem> =
-    rows.mapNotNull { row -> row.text.forLang(lang)?.let { BenefitItem(row.icon, it) } }

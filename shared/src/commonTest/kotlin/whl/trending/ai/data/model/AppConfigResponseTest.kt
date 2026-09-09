@@ -36,14 +36,17 @@ class AppConfigResponseTest {
     }
 
     @Test
-    fun decodes_pro_benefit_rows_and_tolerates_missing_icon() {
+    fun decodes_pro_paywall_partially_and_tolerates_missing_keys() {
         val config = json.decodeFromString<AppConfigResponse>(
-            """{"pro_benefits":{"rows":[{"icon":"quota","text":{"zh":"额度","en":"Allowance"}},{"text":{"en":"More"}}]}}"""
+            """{"pro_paywall":{"title":{"zh":"升级","en":"Upgrade"},"benefits":[{"icon":"quota","text":{"en":"More"}},{"text":{"en":"X"}}],"cta":{"sign_in":{"en":"Sign in"}}}}"""
         )
-        val rows = config.proBenefits!!.rows
-        assertEquals("quota", rows[0].icon)
-        assertEquals("额度", rows[0].text.zh)
-        assertNull(rows[1].icon)
-        assertNull(rows[1].text.zh)
+        val paywall = config.proPaywall!!
+        assertEquals("升级", paywall.title!!.zh)
+        assertNull(paywall.subtitle)
+        assertEquals("quota", paywall.benefits[0].icon)
+        assertNull(paywall.benefits[1].icon)
+        assertEquals("Sign in", paywall.cta!!.signIn!!.en)
+        assertNull(paywall.cta!!.subscribe)
+        assertNull(paywall.refundNote)
     }
 }

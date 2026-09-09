@@ -76,8 +76,8 @@ import whl.trending.ai.ui.common.TrendingTopAppBar
  *
  * 三条刻意为之的约束：
  *
- * 1. **权益行不写在客户端。** 来自 app-config 的 `pro_benefits`，服务端改权益本页自动跟随；
- *    本地只有一句不列具体项的兜底（从未拉到时显示）。约束见仓库 CLAUDE.md「Pro 权益文案」。
+ * 1. **文案以服务端为准。** 标题、副标题、权益行、CTA、退款说明、致谢、失败提示来自
+ *    app-config 的 `pro_paywall`，本地 strings 只是从未拉到时的默认。约束见仓库 CLAUDE.md「订阅页文案」。
  *
  * 2. **不出现任何硬编码价格。** 价格由 `/api/billing/prices` 按访客所在地取——中国区是
  *    真·本地价（¥199）而不是 $39 的汇率换算，客户端猜不出来；拿不到就整页不报价，
@@ -101,7 +101,7 @@ fun SubscriptionScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val loggedIn = authState is AuthState.LoggedIn
 
-    val checkoutFailed = stringResource(Res.string.subscription_checkout_failed)
+    val checkoutFailed = uiState.copy.checkoutFailed ?: stringResource(Res.string.subscription_checkout_failed)
     LaunchedEffect(Unit) {
         viewModel.events.collect { snackbarHostState.showSnackbar(checkoutFailed) }
     }
@@ -131,14 +131,14 @@ fun SubscriptionScreen(
         ) {
             Spacer(Modifier.height(8.dp))
             Text(
-                stringResource(Res.string.subscription_title),
+                uiState.copy.title ?: stringResource(Res.string.subscription_title),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                stringResource(Res.string.subscription_intro),
+                uiState.copy.subtitle ?: stringResource(Res.string.subscription_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -146,7 +146,7 @@ fun SubscriptionScreen(
             )
 
             Spacer(Modifier.height(24.dp))
-            BenefitList(items = uiState.benefits)
+            BenefitList(items = uiState.copy.benefits)
 
             Spacer(Modifier.height(24.dp))
             if (uiState.loading) {
@@ -164,7 +164,7 @@ fun SubscriptionScreen(
             when {
                 // 直接进来的 Pro 用户（账户页不会给入口，但深链/返回栈可能到这）：不推销
                 isPro -> Text(
-                    stringResource(Res.string.subscription_already_pro),
+                    uiState.copy.alreadyPro ?: stringResource(Res.string.subscription_already_pro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -185,13 +185,14 @@ fun SubscriptionScreen(
                         )
                     } else {
                         Text(
-                            stringResource(
-                                when {
-                                    !loggedIn -> Res.string.subscription_cta_signin
-                                    uiState.prices?.available == true -> Res.string.subscription_cta_subscribe
-                                    else -> Res.string.subscription_cta_view_price
-                                },
-                            ),
+                            when {
+                                !loggedIn -> uiState.copy.ctaSignIn
+                                    ?: stringResource(Res.string.subscription_cta_signin)
+                                uiState.prices?.available == true -> uiState.copy.ctaSubscribe
+                                    ?: stringResource(Res.string.subscription_cta_subscribe)
+                                else -> uiState.copy.ctaViewPrice
+                                    ?: stringResource(Res.string.subscription_cta_view_price)
+                            },
                         )
                     }
                 }
@@ -199,7 +200,7 @@ fun SubscriptionScreen(
 
             Spacer(Modifier.height(12.dp))
             Text(
-                stringResource(Res.string.subscription_refund_note),
+                uiState.copy.refundNote ?: stringResource(Res.string.subscription_refund_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
