@@ -263,7 +263,7 @@
     <string name="subscription_cta_subscribe">Subscribe to Pro</string>
     <string name="subscription_cta_signin">Sign in to subscribe</string>
     <string name="subscription_cta_view_price">See price and subscribe</string>
-    <string name="subscription_refund_note">Cancel anytime and keep access until the period ends. Full refund available within 14 days.</string>
+    <string name="subscription_refund_note">Cancel anytime. Full refund available within 14 days.</string>
     <string name="subscription_already_pro">You&apos;re already a Pro member — thank you!</string>
     <string name="subscription_checkout_failed">Couldn&apos;t start the subscription right now. Please try again.</string>
     <string name="subscription_period_end">Renews %1$s</string>

@@ -263,7 +263,7 @@
     <string name="subscription_cta_subscribe">订阅 Pro</string>
     <string name="subscription_cta_signin">登录后订阅</string>
     <string name="subscription_cta_view_price">查看价格并订阅</string>
-    <string name="subscription_refund_note">支持随时取消，取消后可用到当期结束。14 天内可申请全额退款。</string>
+    <string name="subscription_refund_note">支持随时取消，14 天内可申请全额退款。</string>
     <string name="subscription_already_pro">你已经是 Pro，感谢支持</string>
     <string name="subscription_checkout_failed">暂时无法发起订阅，请稍后再试</string>
     <string name="subscription_period_end">%1$s 到期</string>
