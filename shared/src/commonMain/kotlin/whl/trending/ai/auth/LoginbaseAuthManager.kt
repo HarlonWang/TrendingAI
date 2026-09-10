@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import wang.harlon.eventbase.Eventbase
 import wang.harlon.loginbase.AuthClient
 import wang.harlon.loginbase.AuthState as LoginbaseState
+import wang.harlon.loginbase.ClientInfo
+import wang.harlon.loginbase.ClientPlatform
 import wang.harlon.loginbase.RefreshOutcome
 import wang.harlon.loginbase.SignOutReason
 import wang.harlon.loginbase.TokenStore
@@ -18,7 +20,10 @@ import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.AuthAction
 import whl.trending.ai.core.analytics.setAnalyticsUser
 import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.getAppVersion
+import whl.trending.ai.core.platform.getDeviceInfo
 import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.clearAuthTokenCache
 import whl.trending.ai.data.repository.globalFavoriteRepository
@@ -168,6 +173,16 @@ object LoginSheetBus {
  * @param httpEngine 取 engine 的工厂而非 engine 本身：幂等分支要先返回，否则每次重复调用都会
  *   白建一个持有原生会话对象的 engine 且无人 close。缺省 null = 让 ktor 自行发现。
  */
+// ClientInfo 对不合规的版本串直接抛；版本来自构建脚本、理论不会不合规，但登录初始化不能因统计字段崩
+private fun loginbaseClientInfo(): ClientInfo? = runCatching {
+    ClientInfo(
+        appName = "TrendingAI",
+        version = getAppVersion(),
+        platform = if (isIosPlatform()) ClientPlatform.IOS else ClientPlatform.ANDROID,
+        deviceInfo = getDeviceInfo(),
+    )
+}.getOrNull()
+
 fun initLoginbaseAuth(
     tokenStore: TokenStore,
     httpEngine: () -> HttpClientEngine? = { null },
@@ -180,6 +195,7 @@ fun initLoginbaseAuth(
         // .lproj，NSBundle.preferredLocalizations 因此恒为 en，界面中文的用户会收到英文验证码邮件
         // （2026-09-01 实测）
         localeProvider = { globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage() }
+        this.client = loginbaseClientInfo()
     }
     val manager = LoginbaseAuthManager(client)
     globalAuthManager = manager

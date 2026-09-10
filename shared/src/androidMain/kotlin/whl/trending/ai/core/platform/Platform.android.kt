@@ -151,10 +151,7 @@ actual fun getSystemLanguageDisplayName(): String {
 actual fun getSystemLocaleTag(): String =
     android.content.res.Resources.getSystem().configuration.locales[0].toLanguageTag()
 
-actual fun getUserAgent(): String {
-    val appVersion = getAppVersion()
-    val osVersion = Build.VERSION.RELEASE
-    val model = Build.MODEL
-    val channel = ChannelHolder.get()
-    return "TrendingAI/$appVersion (Android $osVersion; $model; channel=$channel)"
-}
+actual fun getUserAgent(): String = "TrendingAI/${getAppVersion()} (${getDeviceInfo()})"
+
+actual fun getDeviceInfo(): String =
+    "Android ${Build.VERSION.RELEASE}; ${Build.MODEL}; channel=${ChannelHolder.get()}"

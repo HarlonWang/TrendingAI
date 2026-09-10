@@ -95,11 +95,9 @@ actual fun getSystemLanguageDisplayName(): String {
 actual fun getSystemLocaleTag(): String =
     NSLocale.preferredLanguages.firstOrNull() as? String ?: "en"
 
-actual fun getUserAgent(): String {
-    val appVersion = getAppVersion()
+actual fun getUserAgent(): String = "TrendingAI/${getAppVersion()} (${getDeviceInfo()})"
+
+actual fun getDeviceInfo(): String {
     val device = UIDevice.currentDevice
-    val osVersion = device.systemVersion
-    val model = device.model
-    val channel = ChannelHolder.get()
-    return "TrendingAI/$appVersion (iOS $osVersion; $model; channel=$channel)"
+    return "iOS ${device.systemVersion}; ${device.model}; channel=${ChannelHolder.get()}"
 }

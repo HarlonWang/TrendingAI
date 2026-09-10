@@ -78,3 +78,6 @@ expect fun getSystemLocaleTag(): String
 
 expect fun getUserAgent(): String
 
+/** UA 括号段：系统版本、机型、渠道，如 `Android 14; Pixel 7; channel=play`；也交给 loginbase 作 deviceInfo */
+expect fun getDeviceInfo(): String
+
