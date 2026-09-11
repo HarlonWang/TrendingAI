@@ -101,6 +101,19 @@ class ChatViewModelCapsTest {
         assertFalse(viewModel.imageEnabled.value)
     }
 
+    @Test
+    fun `生图与搜索互斥：开一个收另一个`() = runTest(dispatcher) {
+        val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT))
+        advanceUntilIdle()
+        viewModel.toggleWebSearch()
+        viewModel.toggleImageGeneration()
+        assertTrue(viewModel.imageEnabled.value)
+        assertFalse(viewModel.searchEnabled.value)
+        viewModel.toggleWebSearch()
+        assertTrue(viewModel.searchEnabled.value)
+        assertFalse(viewModel.imageEnabled.value)
+    }
+
     /** 旧服务端不下发 imageOut：缺省 false，入口不亮 */
     @Test
     fun `目录未声明 imageOut 时生图不可开`() = runTest(dispatcher) {

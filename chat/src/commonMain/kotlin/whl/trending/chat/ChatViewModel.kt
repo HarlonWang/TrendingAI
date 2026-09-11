@@ -123,15 +123,18 @@ class ChatViewModel(
     fun toggleWebSearch() {
         if (!_searchEnabled.value && !currentCaps.value.search) return
         _searchEnabled.value = !_searchEnabled.value
+        if (_searchEnabled.value) _imageEnabled.value = false
     }
 
-    /** 图片生成开关。与搜索同款粘滞语义；Pro 闸在入口（ChatInputBar）而非这里，服务端另有真闸 */
+    /** 图片生成开关。与搜索同款粘滞语义且两者互斥（服务端单条消息只挂一个工具，见 chat-protocol.md）；
+     *  Pro 闸在入口（ChatInputBar）而非这里，服务端另有真闸 */
     private val _imageEnabled = MutableStateFlow(false)
     val imageEnabled: StateFlow<Boolean> = _imageEnabled.asStateFlow()
 
     fun toggleImageGeneration() {
         if (!_imageEnabled.value && !currentCaps.value.imageOut) return
         _imageEnabled.value = !_imageEnabled.value
+        if (_imageEnabled.value) _searchEnabled.value = false
     }
 
     val voiceAvailable: Boolean get() = transcriber != null
