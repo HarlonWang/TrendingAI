@@ -51,7 +51,7 @@ internal object ChatSse {
                 else -> null // 未知 state 忽略（向前兼容）
             }
         }
-        (obj["image"])?.let { image ->
+        (obj["imageGeneration"])?.let { image ->
             val s = runCatching { image.jsonObject }.getOrNull() ?: return null
             return when ((s["state"] as? JsonPrimitive)?.contentOrNull) {
                 "generating" -> Event.ImageGenerating

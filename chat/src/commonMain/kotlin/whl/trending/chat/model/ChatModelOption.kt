@@ -11,14 +11,14 @@ const val FOLLOW_SERVER_DEFAULT = ""
 
 /**
  * 模型能力（契约 `caps`）。输入能力缺省全开：旧服务端不下发时行为不变；
- * 输出能力 [imageOut] 缺省关——旧服务端不下发时不能凭空亮出一个打过去必 400 的入口。
+ * 输出能力 [imageGeneration] 缺省关——旧服务端不下发时不能凭空亮出一个打过去必 400 的入口。
  * 服务端在请求时另有真闸（`images_unsupported` / `search_unsupported` / `image_unsupported`），这里只管入口。
  */
 @Serializable
 data class ChatModelCaps(
     val images: Boolean = true,
     val search: Boolean = true,
-    val imageOut: Boolean = false,
+    val imageGeneration: Boolean = false,
 )
 
 /**

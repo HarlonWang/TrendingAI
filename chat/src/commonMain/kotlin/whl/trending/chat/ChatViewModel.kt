@@ -132,7 +132,7 @@ class ChatViewModel(
     val imageEnabled: StateFlow<Boolean> = _imageEnabled.asStateFlow()
 
     fun toggleImageGeneration() {
-        if (!_imageEnabled.value && !currentCaps.value.imageOut) return
+        if (!_imageEnabled.value && !currentCaps.value.imageGeneration) return
         _imageEnabled.value = !_imageEnabled.value
         if (_imageEnabled.value) _searchEnabled.value = false
     }
@@ -155,7 +155,7 @@ class ChatViewModel(
         viewModelScope.launch {
             currentCaps.collect { caps ->
                 if (!caps.search) _searchEnabled.value = false
-                if (!caps.imageOut) _imageEnabled.value = false
+                if (!caps.imageGeneration) _imageEnabled.value = false
             }
         }
     }

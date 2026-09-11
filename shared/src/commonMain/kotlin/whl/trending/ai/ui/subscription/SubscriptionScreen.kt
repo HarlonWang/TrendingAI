@@ -247,7 +247,7 @@ private fun benefitIcon(key: String?): ImageVector = when (key) {
     "quota" -> Icons.Outlined.Bolt
     "models" -> Icons.Outlined.AutoAwesome
     "voice" -> Icons.Outlined.Mic
-    "image" -> Icons.Outlined.Image
+    "image_generation" -> Icons.Outlined.Image
     else -> Icons.Outlined.CheckCircle
 }
 

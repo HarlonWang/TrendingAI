@@ -37,7 +37,7 @@ sealed interface ChatAiEvent {
 object PaywallSource {
     const val MODEL_LOCKED = "chat_model_locked"
     const val VOICE_GATE = "chat_voice_gate"
-    const val IMAGE_GATE = "chat_image_gate"
+    const val IMAGE_GENERATION_GATE = "chat_image_generation_gate"
     const val QUOTA_CARD = "chat_quota_card"
 }
 

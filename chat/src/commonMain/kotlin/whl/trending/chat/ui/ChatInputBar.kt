@@ -214,7 +214,7 @@ fun ChatInputBar(
         ProGateDialog(
             title = stringResource(Res.string.chat_image_gen_pro_title),
             message = stringResource(Res.string.chat_image_gen_pro_message),
-            paywallSource = PaywallSource.IMAGE_GATE,
+            paywallSource = PaywallSource.IMAGE_GENERATION_GATE,
             onDismiss = { showImageProDialog = false },
         )
     }
@@ -338,15 +338,15 @@ fun ChatInputBar(
                                 text = {
                                     MenuLabel(
                                         stringResource(Res.string.chat_image_gen),
-                                        enabled = caps.imageOut,
+                                        enabled = caps.imageGeneration,
                                         note = stringResource(Res.string.chat_image_gen_cost),
                                     )
                                 },
                                 leadingIcon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null) },
                                 trailingIcon = {
-                                    if (caps.imageOut && imageActive) Icon(Icons.Filled.Check, contentDescription = null)
+                                    if (caps.imageGeneration && imageActive) Icon(Icons.Filled.Check, contentDescription = null)
                                 },
-                                enabled = caps.imageOut,
+                                enabled = caps.imageGeneration,
                                 onClick = {
                                     menuExpanded = false
                                     if (!isPro) {

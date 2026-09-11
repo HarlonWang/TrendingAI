@@ -246,8 +246,8 @@ private fun errorMessageRes(error: ChatError): StringResource = when (error.code
     ChatError.CODE_QUOTA_DEVICE -> Res.string.chat_quota_exceeded
     "upstream_timeout" -> Res.string.chat_error_timeout
     ChatError.CODE_REGION_BLOCKED -> Res.string.chat_error_region_blocked
-    ChatError.CODE_IMAGE_REQUIRES_PRO -> Res.string.chat_image_gen_pro_message
-    ChatError.CODE_IMAGE_UNSUPPORTED -> Res.string.chat_error_image_unsupported
+    ChatError.CODE_IMAGE_GENERATION_REQUIRES_PRO -> Res.string.chat_image_gen_pro_message
+    ChatError.CODE_IMAGE_GENERATION_UNSUPPORTED -> Res.string.chat_error_image_unsupported
     "upstream_error" -> Res.string.chat_error_server
     else -> when (error.category) {
         ChatErrorCategory.NETWORK -> Res.string.chat_error_network

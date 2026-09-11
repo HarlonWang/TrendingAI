@@ -46,7 +46,7 @@ class ChatViewModelCapsTest {
             ): String = ""
     }
 
-    private val openai = ChatModelOption(id = "gpt-5.6-luna", name = "GPT-5.6 Luna", caps = ChatModelCaps(imageOut = true))
+    private val openai = ChatModelOption(id = "gpt-5.6-luna", name = "GPT-5.6 Luna", caps = ChatModelCaps(imageGeneration = true))
     private val deepseek = ChatModelOption(
         id = "deepseek-v4-flash", name = "DeepSeek V4 Flash",
         provider = "deepseek", providerName = "DeepSeek",
@@ -65,7 +65,7 @@ class ChatViewModelCapsTest {
     fun `默认模型全能力：搜索可开`() = runTest(dispatcher) {
         val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT))
         advanceUntilIdle()
-        assertEquals(ChatModelCaps(true, true, imageOut = true), viewModel.currentCaps.value)
+        assertEquals(ChatModelCaps(true, true, imageGeneration = true), viewModel.currentCaps.value)
         viewModel.toggleWebSearch()
         assertTrue(viewModel.searchEnabled.value)
     }
@@ -87,7 +87,7 @@ class ChatViewModelCapsTest {
     }
 
     @Test
-    fun `生图开关：目录声明 imageOut 才可开，切到不支持的模型收回`() = runTest(dispatcher) {
+    fun `生图开关：目录声明 imageGeneration 才可开，切到不支持的模型收回`() = runTest(dispatcher) {
         val choice = MutableStateFlow(FOLLOW_SERVER_DEFAULT)
         val viewModel = vm(choice)
         advanceUntilIdle()
@@ -114,13 +114,13 @@ class ChatViewModelCapsTest {
         assertFalse(viewModel.imageEnabled.value)
     }
 
-    /** 旧服务端不下发 imageOut：缺省 false，入口不亮 */
+    /** 旧服务端不下发 imageGeneration：缺省 false，入口不亮 */
     @Test
-    fun `目录未声明 imageOut 时生图不可开`() = runTest(dispatcher) {
+    fun `目录未声明 imageGeneration 时生图不可开`() = runTest(dispatcher) {
         val legacy = ChatModelsResponse(models = listOf(ChatModelOption(id = "gpt-5.6-luna")), default = "gpt-5.6-luna")
         val viewModel = ChatViewModel(NoopEngine, loadModels = { legacy }, track = {}, modelSelection = { MutableStateFlow(FOLLOW_SERVER_DEFAULT).map { it to false } })
         advanceUntilIdle()
-        assertFalse(viewModel.currentCaps.value.imageOut)
+        assertFalse(viewModel.currentCaps.value.imageGeneration)
         viewModel.toggleImageGeneration()
         assertFalse(viewModel.imageEnabled.value)
     }

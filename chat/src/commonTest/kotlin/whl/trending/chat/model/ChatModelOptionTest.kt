@@ -108,14 +108,14 @@ class ChatModelOptionTest {
         assertEquals(ChatModelCaps(images = true, search = true), model.caps)
     }
 
-    /** 契约 v3：imageOut 缺省 false——旧服务端不下发时不能凭空亮出生图入口 */
+    /** 契约 v3：imageGeneration 缺省 false——旧服务端不下发时不能凭空亮出生图入口 */
     @Test
-    fun caps_imageOut_defaults_false_and_decodes_when_present() {
+    fun caps_imageGeneration_defaults_false_and_decodes_when_present() {
         val parsed = Json.decodeFromString<ChatModelsResponse>(
-            """{"default":"m1","models":[{"id":"m1"},{"id":"m2","caps":{"images":true,"search":true,"imageOut":true}}]}""",
+            """{"default":"m1","models":[{"id":"m1"},{"id":"m2","caps":{"images":true,"search":true,"imageGeneration":true}}]}""",
         )
-        assertEquals(false, parsed.models[0].caps.imageOut)
-        assertEquals(true, parsed.models[1].caps.imageOut)
+        assertEquals(false, parsed.models[0].caps.imageGeneration)
+        assertEquals(true, parsed.models[1].caps.imageGeneration)
     }
 
     @Test

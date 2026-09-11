@@ -87,7 +87,7 @@ class ChatApi(
         val stream: Boolean,
         // P2 联网搜索开关：默认 false 时被 encodeDefaults=false 省略，旧服务端零感知
         val search: Boolean = false,
-        val image: Boolean = false,
+        val imageGeneration: Boolean = false,
     )
 
     @Serializable
@@ -157,7 +157,7 @@ class ChatApi(
                     ),
                     stream = true,
                     search = search,
-                    image = image,
+                    imageGeneration = image,
                 ),
             )
         }
