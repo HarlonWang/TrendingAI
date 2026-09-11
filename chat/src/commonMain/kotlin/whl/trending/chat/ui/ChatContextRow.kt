@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import trendingai.chat.generated.resources.Res
-import trendingai.chat.generated.resources.chat_image_gen
+import trendingai.chat.generated.resources.chat_image_generation
 import trendingai.chat.generated.resources.chat_web_search
 
 /**
@@ -42,11 +42,11 @@ internal fun ChatContextRow(
     searchActive: Boolean,
     onToggleSearch: () -> Unit,
     modifier: Modifier = Modifier,
-    imageActive: Boolean = false,
-    onToggleImage: () -> Unit = {},
+    imageGenerationActive: Boolean = false,
+    onToggleImageGeneration: () -> Unit = {},
 ) {
     // 无内容时整行缺席：留一个空 Row 会在胶囊上方多出一段说不清来由的留白
-    if (!searchActive && !imageActive) return
+    if (!searchActive && !imageGenerationActive) return
 
     Row(
         // 能力将来变多时横向滚动而不是换行：换行会让输入框在开关能力时上下跳
@@ -57,8 +57,8 @@ internal fun ChatContextRow(
         if (searchActive) {
             CapabilityToggle(Icons.Outlined.TravelExplore, stringResource(Res.string.chat_web_search), onToggleSearch)
         }
-        if (imageActive) {
-            CapabilityToggle(Icons.Outlined.AutoAwesome, stringResource(Res.string.chat_image_gen), onToggleImage)
+        if (imageGenerationActive) {
+            CapabilityToggle(Icons.Outlined.AutoAwesome, stringResource(Res.string.chat_image_generation), onToggleImageGeneration)
         }
     }
 }

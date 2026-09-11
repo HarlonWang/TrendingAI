@@ -37,7 +37,7 @@ import whl.trending.chat.model.ChatError
 import whl.trending.chat.model.ChatErrorCategory
 import whl.trending.chat.model.ChatMessage
 import whl.trending.chat.model.Role
-import whl.trending.chat.model.ImageEvent
+import whl.trending.chat.model.ImageGenerationEvent
 import whl.trending.chat.model.SearchEvent
 
 private const val TAG = "ChatApi"
@@ -123,13 +123,13 @@ class ChatApi(
         onDelta: (String) -> Unit,
         search: Boolean,
         onSearch: (SearchEvent) -> Unit,
-        image: Boolean,
-        onImage: (ImageEvent) -> Unit,
+        imageGeneration: Boolean,
+        onImageGeneration: (ImageGenerationEvent) -> Unit,
     ): String {
         val lang = resolveLang()
         val imagePlaceholder = if (lang == "zh") "[图片]" else "[image]"
         val maxImages = ChatViewModel.maxImagesPerMessage()
-        return executeStreaming(path = "chat", onDelta = onDelta, onSearch = onSearch, onImage = onImage) {
+        return executeStreaming(path = "chat", onDelta = onDelta, onSearch = onSearch, onImageGeneration = onImageGeneration) {
             setBody(
                 ChatRequest(
                     messages = history.mapIndexed { index, m ->
@@ -157,7 +157,7 @@ class ChatApi(
                     ),
                     stream = true,
                     search = search,
-                    imageGeneration = image,
+                    imageGeneration = imageGeneration,
                 ),
             )
         }
@@ -210,7 +210,7 @@ class ChatApi(
         path: String,
         onDelta: (String) -> Unit,
         onSearch: (SearchEvent) -> Unit = {},
-        onImage: (ImageEvent) -> Unit = {},
+        onImageGeneration: (ImageGenerationEvent) -> Unit = {},
         configure: HttpRequestBuilder.() -> Unit,
     ): String {
         try {
@@ -245,8 +245,8 @@ class ChatApi(
                         is ChatSse.Event.SearchStarted -> onSearch(SearchEvent.Started)
                         is ChatSse.Event.SearchDone -> onSearch(SearchEvent.Done(event.query))
                         is ChatSse.Event.Source -> onSearch(SearchEvent.Source(event.title, event.url))
-                        is ChatSse.Event.ImageGenerating -> onImage(ImageEvent.Generating)
-                        is ChatSse.Event.ImageDone -> onImage(ImageEvent.Done)
+                        is ChatSse.Event.ImageGenerationStarted -> onImageGeneration(ImageGenerationEvent.Generating)
+                        is ChatSse.Event.ImageGenerationDone -> onImageGeneration(ImageGenerationEvent.Done)
                         null -> Unit
                     }
                 }

@@ -87,11 +87,11 @@ import trendingai.chat.generated.resources.chat_image_login_dismiss
 import trendingai.chat.generated.resources.chat_image_login_message
 import trendingai.chat.generated.resources.chat_image_login_title
 import trendingai.chat.generated.resources.chat_image_remove
-import trendingai.chat.generated.resources.chat_image_gen
-import trendingai.chat.generated.resources.chat_image_gen_cost
-import trendingai.chat.generated.resources.chat_image_gen_hint
-import trendingai.chat.generated.resources.chat_image_gen_pro_message
-import trendingai.chat.generated.resources.chat_image_gen_pro_title
+import trendingai.chat.generated.resources.chat_image_generation
+import trendingai.chat.generated.resources.chat_image_generation_cost
+import trendingai.chat.generated.resources.chat_image_generation_hint
+import trendingai.chat.generated.resources.chat_image_generation_pro_message
+import trendingai.chat.generated.resources.chat_image_generation_pro_title
 import trendingai.chat.generated.resources.chat_input_hint
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
 import trendingai.chat.generated.resources.chat_send
@@ -145,8 +145,8 @@ fun ChatInputBar(
     modifier: Modifier = Modifier,
     searchActive: Boolean = false,
     onToggleSearch: () -> Unit = {},
-    imageActive: Boolean = false,
-    onToggleImage: () -> Unit = {},
+    imageGenerationActive: Boolean = false,
+    onToggleImageGeneration: () -> Unit = {},
     caps: ChatModelCaps = ChatModelCaps(),
     autoFocus: Boolean = false,
     voiceEnabled: Boolean = false,
@@ -177,7 +177,7 @@ fun ChatInputBar(
 
     val isPro by chatHost.isPro.collectAsState(chatHost.currentIsPro())
     var showProDialog by remember { mutableStateOf(false) }
-    var showImageProDialog by remember { mutableStateOf(false) }
+    var showImageGenerationProDialog by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     // 录音中：startedAt > 0；inCancelZone 随手指上滑切换
     var recordingStartedAt by remember { mutableLongStateOf(0L) }
@@ -210,12 +210,12 @@ fun ChatInputBar(
     if (showProDialog) {
         VoiceProGateDialog(onDismiss = { showProDialog = false })
     }
-    if (showImageProDialog) {
+    if (showImageGenerationProDialog) {
         ProGateDialog(
-            title = stringResource(Res.string.chat_image_gen_pro_title),
-            message = stringResource(Res.string.chat_image_gen_pro_message),
+            title = stringResource(Res.string.chat_image_generation_pro_title),
+            message = stringResource(Res.string.chat_image_generation_pro_message),
             paywallSource = PaywallSource.IMAGE_GENERATION_GATE,
-            onDismiss = { showImageProDialog = false },
+            onDismiss = { showImageGenerationProDialog = false },
         )
     }
     if (showPermissionDialog) {
@@ -337,23 +337,23 @@ fun ChatInputBar(
                             DropdownMenuItem(
                                 text = {
                                     MenuLabel(
-                                        stringResource(Res.string.chat_image_gen),
+                                        stringResource(Res.string.chat_image_generation),
                                         enabled = caps.imageGeneration,
-                                        note = stringResource(Res.string.chat_image_gen_cost),
+                                        note = stringResource(Res.string.chat_image_generation_cost),
                                     )
                                 },
                                 leadingIcon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null) },
                                 trailingIcon = {
-                                    if (caps.imageGeneration && imageActive) Icon(Icons.Filled.Check, contentDescription = null)
+                                    if (caps.imageGeneration && imageGenerationActive) Icon(Icons.Filled.Check, contentDescription = null)
                                 },
                                 enabled = caps.imageGeneration,
                                 onClick = {
                                     menuExpanded = false
                                     if (!isPro) {
-                                        showImageProDialog = true
+                                        showImageGenerationProDialog = true
                                         return@DropdownMenuItem
                                     }
-                                    onToggleImage()
+                                    onToggleImageGeneration()
                                 },
                             )
                             if (chatHost.canSignIn && picker.canCapture) DropdownMenuItem(
@@ -396,7 +396,7 @@ fun ChatInputBar(
                             stringResource(
                                 when {
                                     isTranscribing -> Res.string.chat_voice_transcribing
-                                    imageActive -> Res.string.chat_image_gen_hint
+                                    imageGenerationActive -> Res.string.chat_image_generation_hint
                                     else -> Res.string.chat_input_hint
                                 },
                             ),

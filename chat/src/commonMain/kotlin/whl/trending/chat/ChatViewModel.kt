@@ -38,7 +38,7 @@ import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.ChatUiState
 import whl.trending.chat.model.Role
 import whl.trending.chat.model.effectiveChatModelCaps
-import whl.trending.chat.model.ImageEvent
+import whl.trending.chat.model.ImageGenerationEvent
 import whl.trending.chat.model.SearchEvent
 import whl.trending.chat.model.SourceRef
 import whl.trending.chat.model.resolveDisplayedChatModel
@@ -123,18 +123,18 @@ class ChatViewModel(
     fun toggleWebSearch() {
         if (!_searchEnabled.value && !currentCaps.value.search) return
         _searchEnabled.value = !_searchEnabled.value
-        if (_searchEnabled.value) _imageEnabled.value = false
+        if (_searchEnabled.value) _imageGenerationEnabled.value = false
     }
 
     /** 图片生成开关。与搜索同款粘滞语义且两者互斥（服务端单条消息只挂一个工具，见 chat-protocol.md）；
      *  Pro 闸在入口（ChatInputBar）而非这里，服务端另有真闸 */
-    private val _imageEnabled = MutableStateFlow(false)
-    val imageEnabled: StateFlow<Boolean> = _imageEnabled.asStateFlow()
+    private val _imageGenerationEnabled = MutableStateFlow(false)
+    val imageGenerationEnabled: StateFlow<Boolean> = _imageGenerationEnabled.asStateFlow()
 
     fun toggleImageGeneration() {
-        if (!_imageEnabled.value && !currentCaps.value.imageGeneration) return
-        _imageEnabled.value = !_imageEnabled.value
-        if (_imageEnabled.value) _searchEnabled.value = false
+        if (!_imageGenerationEnabled.value && !currentCaps.value.imageGeneration) return
+        _imageGenerationEnabled.value = !_imageGenerationEnabled.value
+        if (_imageGenerationEnabled.value) _searchEnabled.value = false
     }
 
     val voiceAvailable: Boolean get() = transcriber != null
@@ -155,7 +155,7 @@ class ChatViewModel(
         viewModelScope.launch {
             currentCaps.collect { caps ->
                 if (!caps.search) _searchEnabled.value = false
-                if (!caps.imageGeneration) _imageEnabled.value = false
+                if (!caps.imageGeneration) _imageGenerationEnabled.value = false
             }
         }
     }
@@ -273,12 +273,12 @@ class ChatViewModel(
         if (text.isBlank() && images.isEmpty()) return false
         // 发送被接受那一刻捕获能力开关：排队与流启动之间用户再切开关不影响本条
         val search = _searchEnabled.value
-        val image = _imageEnabled.value
+        val imageGeneration = _imageGenerationEnabled.value
         trackChatSend(from, images.size)
         _uiState.update { it.copy(isSending = true) }
         val threadId = ensureThread(text)
         appendVisible(store.appendUserMessage(threadId, text, images))
-        startStream(threadId, search, image)
+        startStream(threadId, search, imageGeneration)
         return true
     }
 
@@ -298,7 +298,7 @@ class ChatViewModel(
             val resent = _uiState.value.messages.lastOrNull { it.role == Role.USER }
             trackChatSend(from = "retry", imageCount = resent?.images?.size ?: 0)
             _uiState.update { it.copy(isSending = true) }
-            startStream(threadId, _searchEnabled.value, _imageEnabled.value)
+            startStream(threadId, _searchEnabled.value, _imageGenerationEnabled.value)
         }
     }
 
@@ -347,7 +347,7 @@ class ChatViewModel(
      * 终局在 [stateLock] 内收口——成功以全文落库并替换占位，失败落错误行（整条重试）。
      * 流协程只在占位上做原子更新，不碰其他状态，取消它无需回滚。
      */
-    private fun startStream(threadId: Long, search: Boolean, image: Boolean) {
+    private fun startStream(threadId: Long, search: Boolean, imageGeneration: Boolean) {
         val startedAt = epochMillis()
         _uiState.update {
             it.copy(messages = it.messages + ChatMessage(PLACEHOLDER_ID, Role.ASSISTANT, ""))
@@ -363,8 +363,8 @@ class ChatViewModel(
                     onDelta = { appendDelta(it) },
                     search = search,
                     onSearch = { applySearchEvent(it) },
-                    image = image,
-                    onImage = { applyImageEvent(it) },
+                    imageGeneration = imageGeneration,
+                    onImageGeneration = { applyImageGenerationEvent(it) },
                 )
             }
             // 取消不是失败：runCatching 连 CancellationException 一起吞，必须重抛——
@@ -487,8 +487,8 @@ class ChatViewModel(
     private fun appendDelta(delta: String) =
         updatePlaceholder { it.copy(content = it.content + delta) }
 
-    private fun applyImageEvent(event: ImageEvent) = updatePlaceholder { m ->
-        m.copy(generatingImage = event is ImageEvent.Generating)
+    private fun applyImageGenerationEvent(event: ImageGenerationEvent) = updatePlaceholder { m ->
+        m.copy(generatingImage = event is ImageGenerationEvent.Generating)
     }
 
     private fun applySearchEvent(event: SearchEvent) = updatePlaceholder { m ->

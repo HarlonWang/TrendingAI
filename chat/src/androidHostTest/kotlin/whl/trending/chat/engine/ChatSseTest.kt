@@ -80,8 +80,8 @@ class ChatSseSearchTest {
 
     @Test
     fun image_progress_frames() {
-        assertEquals(ChatSse.Event.ImageGenerating, ChatSse.parseLine("""data: {"imageGeneration":{"state":"generating"}}"""))
-        assertEquals(ChatSse.Event.ImageDone, ChatSse.parseLine("""data: {"imageGeneration":{"state":"done"}}"""))
+        assertEquals(ChatSse.Event.ImageGenerationStarted, ChatSse.parseLine("""data: {"imageGeneration":{"state":"generating"}}"""))
+        assertEquals(ChatSse.Event.ImageGenerationDone, ChatSse.parseLine("""data: {"imageGeneration":{"state":"done"}}"""))
         // 未知 state 忽略（向前兼容）
         assertNull(ChatSse.parseLine("""data: {"imageGeneration":{"state":"partial"}}"""))
     }

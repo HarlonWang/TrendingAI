@@ -45,8 +45,8 @@ class ChatViewModelStreamingTest {
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
-            image: Boolean,
-            onImage: (whl.trending.chat.model.ImageEvent) -> Unit,
+            imageGeneration: Boolean,
+            onImageGeneration: (whl.trending.chat.model.ImageGenerationEvent) -> Unit,
             ): String {
             chatCalls++
             // 先吐块再抛错：失败用例覆盖的是「已渲染部分被丢弃」的半途断流路径

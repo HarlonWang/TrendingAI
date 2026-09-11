@@ -27,8 +27,8 @@ internal object ChatSse {
         data class Source(val title: String, val url: String) : Event
 
         /** 生图进度（图片本身以 Markdown delta 到达） */
-        data object ImageGenerating : Event
-        data object ImageDone : Event
+        data object ImageGenerationStarted : Event
+        data object ImageGenerationDone : Event
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -54,8 +54,8 @@ internal object ChatSse {
         (obj["imageGeneration"])?.let { image ->
             val s = runCatching { image.jsonObject }.getOrNull() ?: return null
             return when ((s["state"] as? JsonPrimitive)?.contentOrNull) {
-                "generating" -> Event.ImageGenerating
-                "done" -> Event.ImageDone
+                "generating" -> Event.ImageGenerationStarted
+                "done" -> Event.ImageGenerationDone
                 else -> null
             }
         }

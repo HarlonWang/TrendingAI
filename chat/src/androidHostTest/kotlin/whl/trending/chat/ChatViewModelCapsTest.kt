@@ -21,7 +21,7 @@ import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.model.ChatModelOption
 import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
-import whl.trending.chat.model.ImageEvent
+import whl.trending.chat.model.ImageGenerationEvent
 import whl.trending.chat.model.SearchEvent
 
 /** 能力位驱动的入口显隐：切到不支持搜索的模型时搜索开关收回、且不可再开。 */
@@ -41,8 +41,8 @@ class ChatViewModelCapsTest {
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (SearchEvent) -> Unit,
-            image: Boolean,
-            onImage: (ImageEvent) -> Unit,
+            imageGeneration: Boolean,
+            onImageGeneration: (ImageGenerationEvent) -> Unit,
             ): String = ""
     }
 
@@ -92,13 +92,13 @@ class ChatViewModelCapsTest {
         val viewModel = vm(choice)
         advanceUntilIdle()
         viewModel.toggleImageGeneration()
-        assertTrue(viewModel.imageEnabled.value)
+        assertTrue(viewModel.imageGenerationEnabled.value)
 
         choice.value = deepseek.id
         advanceUntilIdle()
-        assertFalse(viewModel.imageEnabled.value)
+        assertFalse(viewModel.imageGenerationEnabled.value)
         viewModel.toggleImageGeneration()
-        assertFalse(viewModel.imageEnabled.value)
+        assertFalse(viewModel.imageGenerationEnabled.value)
     }
 
     @Test
@@ -107,11 +107,11 @@ class ChatViewModelCapsTest {
         advanceUntilIdle()
         viewModel.toggleWebSearch()
         viewModel.toggleImageGeneration()
-        assertTrue(viewModel.imageEnabled.value)
+        assertTrue(viewModel.imageGenerationEnabled.value)
         assertFalse(viewModel.searchEnabled.value)
         viewModel.toggleWebSearch()
         assertTrue(viewModel.searchEnabled.value)
-        assertFalse(viewModel.imageEnabled.value)
+        assertFalse(viewModel.imageGenerationEnabled.value)
     }
 
     /** 旧服务端不下发 imageGeneration：缺省 false，入口不亮 */
@@ -122,7 +122,7 @@ class ChatViewModelCapsTest {
         advanceUntilIdle()
         assertFalse(viewModel.currentCaps.value.imageGeneration)
         viewModel.toggleImageGeneration()
-        assertFalse(viewModel.imageEnabled.value)
+        assertFalse(viewModel.imageGenerationEnabled.value)
     }
 
     @Test

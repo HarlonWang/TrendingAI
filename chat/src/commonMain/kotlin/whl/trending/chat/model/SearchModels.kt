@@ -11,7 +11,7 @@ sealed interface SearchEvent {
 }
 
 /** 流式过程中的生图进度（引擎 → VM）。图片本身不走事件：服务端以 Markdown 图片作为 delta 下发 */
-sealed interface ImageEvent {
-    data object Generating : ImageEvent
-    data object Done : ImageEvent
+sealed interface ImageGenerationEvent {
+    data object Generating : ImageGenerationEvent
+    data object Done : ImageGenerationEvent
 }

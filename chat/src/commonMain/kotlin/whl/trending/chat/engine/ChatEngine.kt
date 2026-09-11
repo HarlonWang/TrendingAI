@@ -20,7 +20,7 @@ interface ChatEngine {
         onDelta: (String) -> Unit = {},
         search: Boolean = false,
         onSearch: (whl.trending.chat.model.SearchEvent) -> Unit = {},
-        image: Boolean = false,
-        onImage: (whl.trending.chat.model.ImageEvent) -> Unit = {},
+        imageGeneration: Boolean = false,
+        onImageGeneration: (whl.trending.chat.model.ImageGenerationEvent) -> Unit = {},
     ): String
 }
