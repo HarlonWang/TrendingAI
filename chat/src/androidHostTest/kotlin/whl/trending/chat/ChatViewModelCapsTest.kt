@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -54,11 +55,11 @@ class ChatViewModelCapsTest {
     )
     private val catalog = ChatModelsResponse(models = listOf(openai, deepseek), default = openai.id)
 
-    private fun vm(choice: MutableStateFlow<String>) = ChatViewModel(
+    private fun vm(choice: MutableStateFlow<String>, pro: MutableStateFlow<Boolean> = MutableStateFlow(true)) = ChatViewModel(
         NoopEngine,
         loadModels = { catalog },
         track = {},
-        modelSelection = { choice.map { it to false } },
+        modelSelection = { combine(choice, pro) { id, p -> id to p } },
     )
 
     @Test
@@ -111,6 +112,19 @@ class ChatViewModelCapsTest {
         assertFalse(viewModel.searchEnabled.value)
         viewModel.toggleWebSearch()
         assertTrue(viewModel.searchEnabled.value)
+        assertFalse(viewModel.imageGenerationEnabled.value)
+    }
+
+    @Test
+    fun `Pro 失效时生图开关收回`() = runTest(dispatcher) {
+        val pro = MutableStateFlow(true)
+        val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT), pro)
+        advanceUntilIdle()
+        viewModel.toggleImageGeneration()
+        assertTrue(viewModel.imageGenerationEnabled.value)
+
+        pro.value = false
+        advanceUntilIdle()
         assertFalse(viewModel.imageGenerationEnabled.value)
     }
 
