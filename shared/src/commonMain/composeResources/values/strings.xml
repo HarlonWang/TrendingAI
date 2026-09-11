@@ -101,6 +101,7 @@
     <string name="feedback">Feedback</string>
     <string name="feedback_desc">Report issues or suggest improvements</string>
     <string name="feedback_content_placeholder">Describe your feedback or suggestion…</string>
+    <string name="feedback_report_image_prefix">Report an AI-generated image:</string>
     <string name="feedback_email_placeholder">Email (optional, for follow-up)</string>
     <string name="feedback_submit">Submit</string>
     <string name="feedback_success">Thanks for your feedback!</string>

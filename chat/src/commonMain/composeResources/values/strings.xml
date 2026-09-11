@@ -66,6 +66,14 @@
     <!-- P2 联网搜索 -->
     <string name="chat_web_search">Web search</string>
     <string name="chat_searching">Searching the web…</string>
+    <string name="chat_image_gen">Generate image</string>
+    <string name="chat_image_gen_cost">Pro · 10 quota per image</string>
+    <string name="chat_report_image">Report image</string>
+    <string name="chat_image_gen_hint">Describe the image you want…</string>
+    <string name="chat_generating_image">Generating image…</string>
+    <string name="chat_image_gen_pro_title">Pro feature</string>
+    <string name="chat_image_gen_pro_message">Image generation is available to Pro only. Each image uses 10 of your daily AI allowance.</string>
+    <string name="chat_error_image_unsupported">This model can&apos;t generate images. Switch to a GPT model and try again.</string>
     <string name="chat_waiting_processing">Processing…</string>
     <string name="chat_waiting_thinking">Thinking…</string>
     <string name="chat_waiting_still_thinking">Still thinking, hang tight…</string>

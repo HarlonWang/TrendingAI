@@ -41,6 +41,8 @@ data class ChatError(
         /** 个人配额触顶的机器码（服务端 chat.js quotaError）；重试放行与专属卡片选择都以它为判据 */
         const val CODE_QUOTA_DEVICE = "quota_device"
         const val CODE_VOICE_REQUIRES_PRO = "voice_requires_pro"
+        const val CODE_IMAGE_REQUIRES_PRO = "image_requires_pro"
+        const val CODE_IMAGE_UNSUPPORTED = "image_unsupported"
 
         /** 流在 done 事件之前断了（见 engine/ChatApi）：埋点据此把「中断」与「真错误」分开 */
         const val CODE_STREAM_INTERRUPTED = "stream_interrupted"

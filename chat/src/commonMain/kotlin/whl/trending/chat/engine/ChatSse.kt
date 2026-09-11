@@ -25,6 +25,10 @@ internal object ChatSse {
 
         /** 引用来源（服务端已按 url 去重） */
         data class Source(val title: String, val url: String) : Event
+
+        /** 生图进度（图片本身以 Markdown delta 到达） */
+        data object ImageGenerating : Event
+        data object ImageDone : Event
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -45,6 +49,14 @@ internal object ChatSse {
                 "started" -> Event.SearchStarted
                 "done" -> Event.SearchDone((s["query"] as? JsonPrimitive)?.contentOrNull)
                 else -> null // 未知 state 忽略（向前兼容）
+            }
+        }
+        (obj["image"])?.let { image ->
+            val s = runCatching { image.jsonObject }.getOrNull() ?: return null
+            return when ((s["state"] as? JsonPrimitive)?.contentOrNull) {
+                "generating" -> Event.ImageGenerating
+                "done" -> Event.ImageDone
+                else -> null
             }
         }
         (obj["source"])?.let { source ->

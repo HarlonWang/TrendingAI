@@ -58,7 +58,9 @@ class ChatViewModelPersistenceTest {
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
-        ): String {
+            image: Boolean,
+            onImage: (whl.trending.chat.model.ImageEvent) -> Unit,
+            ): String {
             failWith?.let { throw ChatException(it) }
             onDelta(reply)
             gate?.await()
@@ -260,7 +262,9 @@ class ChatViewModelPersistenceTest {
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
-        ): String {
+            image: Boolean,
+            onImage: (whl.trending.chat.model.ImageEvent) -> Unit,
+            ): String {
             lastSearchFlag = search
             lastHistory = history
             if (search) {

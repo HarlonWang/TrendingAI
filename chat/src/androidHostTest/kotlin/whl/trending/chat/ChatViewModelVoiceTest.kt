@@ -47,7 +47,9 @@ class ChatViewModelVoiceTest {
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
-        ): String {
+            image: Boolean,
+            onImage: (whl.trending.chat.model.ImageEvent) -> Unit,
+            ): String {
             sent += history.last { it.role == Role.USER }.content
             onDelta("ok")
             return "ok"

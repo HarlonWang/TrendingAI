@@ -9,3 +9,9 @@ sealed interface SearchEvent {
     data class Done(val query: String?) : SearchEvent
     data class Source(val title: String, val url: String) : SearchEvent
 }
+
+/** 流式过程中的生图进度（引擎 → VM）。图片本身不走事件：服务端以 Markdown 图片作为 delta 下发 */
+sealed interface ImageEvent {
+    data object Generating : ImageEvent
+    data object Done : ImageEvent
+}

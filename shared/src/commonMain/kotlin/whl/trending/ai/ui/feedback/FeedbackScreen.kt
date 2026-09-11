@@ -58,8 +58,12 @@ import trendingai.shared.generated.resources.feedback_github_issues
 @Composable
 fun FeedbackScreen(
     onBack: () -> Unit,
+    prefill: String? = null,
     viewModel: FeedbackViewModel = viewModel { FeedbackViewModel() }
 ) {
+    LaunchedEffect(prefill) {
+        if (prefill != null) viewModel.prefillContent(prefill)
+    }
     val uiState by viewModel.uiState.collectAsState()
     val uriHandler = LocalUriHandler.current
     val snackbarHostState = remember { SnackbarHostState() }

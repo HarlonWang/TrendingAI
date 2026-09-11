@@ -54,6 +54,7 @@ import androidx.navigation3.ui.NavDisplay
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.chat_suggest_what_can_you_do
+import trendingai.shared.generated.resources.feedback_report_image_prefix
 import trendingai.shared.generated.resources.chat_suggest_what_can_you_do_prompt
 import whl.trending.chat.ui.ChatScreen
 import whl.trending.chat.ui.ChatSuggestion
@@ -77,7 +78,7 @@ data object ColorLab : Route { override val screen = Screen.COLOR_LAB }
 data object Settings : Route { override val screen = Screen.SETTINGS }
 data object About : Route { override val screen = Screen.ABOUT }
 data object DataSources : Route { override val screen = Screen.DATA_SOURCES }
-data object Feedback : Route { override val screen = Screen.FEEDBACK }
+data class Feedback(val prefill: String? = null) : Route { override val screen = Screen.FEEDBACK }
 data object Subscribe : Route { override val screen = Screen.SUBSCRIBE }
 data object ProSubscription : Route { override val screen = Screen.PAYWALL }
 data class RepoDetail(val owner: String, val repo: String) : Route {
@@ -178,6 +179,12 @@ fun App() {
                             if (backStack.lastOrNull() !is ProSubscription) backStack.add(ProSubscription)
                         }
                     }
+                    val reportPrefix = stringResource(Res.string.feedback_report_image_prefix)
+                    LaunchedEffect(Unit) {
+                        ContentReport.requests.collect { url ->
+                            if (backStack.lastOrNull() !is Feedback) backStack.add(Feedback(prefill = "$reportPrefix\n$url\n"))
+                        }
+                    }
                     OAuthOutcomeHost()
                     // 页面浏览埋点的路由源，全 app 就这一处；tab 源在 HomeScreen
                     TrackRouteScreenViews(backStack)
@@ -268,7 +275,8 @@ fun App() {
                                 FeedbackScreen(
                                     onBack = {
                                         backStack.safePop()
-                                    }
+                                    },
+                                    prefill = key.prefill,
                                 )
                             }
 
@@ -312,7 +320,7 @@ fun App() {
                                     onBack = { backStack.safePop() },
                                     onNavigateToAppearance = { backStack.add(Appearance) },
                                     onNavigateToSubscribe = { backStack.add(Subscribe) },
-                                    onNavigateToFeedback = { backStack.add(Feedback) },
+                                    onNavigateToFeedback = { backStack.add(Feedback()) },
                                     onNavigateToAbout = { backStack.add(About) },
                                     onNavigateToDataSources = { backStack.add(DataSources) },
                                 )

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -20,9 +21,11 @@ import androidx.compose.material3.TonalToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import trendingai.chat.generated.resources.Res
+import trendingai.chat.generated.resources.chat_image_gen
 import trendingai.chat.generated.resources.chat_web_search
 
 /**
@@ -39,9 +42,11 @@ internal fun ChatContextRow(
     searchActive: Boolean,
     onToggleSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    imageActive: Boolean = false,
+    onToggleImage: () -> Unit = {},
 ) {
     // 无内容时整行缺席：留一个空 Row 会在胶囊上方多出一段说不清来由的留白
-    if (!searchActive) return
+    if (!searchActive && !imageActive) return
 
     Row(
         // 能力将来变多时横向滚动而不是换行：换行会让输入框在开关能力时上下跳
@@ -50,28 +55,39 @@ internal fun ChatContextRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (searchActive) {
-            // 已开启的能力。用 TonalToggleButton 而不是带 × 的 InputChip：Expressive 的表达方式是
-            // 让形状承担状态——选中态是 squircle（CornerMedium），按下时收成 6dp 圆角，撤销那一下
-            // 有形变反馈。它只在能力已开启时出现，所以 checked 恒为 true，点击即回到关闭。
-            TonalToggleButton(
-                checked = true,
-                onCheckedChange = { onToggleSearch() },
-                // checked 态默认是 secondary 深色实心，摆在这里会变成全屏最重的一块。压到
-                // secondaryContainer 后，它成了这一行**唯一带色相**的元素——这是有意的：能力是
-                // 临时开启、需要被看见的状态，而模型是常驻信息，退在中性梯度里（见 ModelPicker）。
-                colors = ToggleButtonDefaults.tonalToggleButtonColors(
-                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.TravelExplore,
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(stringResource(Res.string.chat_web_search))
-            }
+            CapabilityToggle(Icons.Outlined.TravelExplore, stringResource(Res.string.chat_web_search), onToggleSearch)
         }
+        if (imageActive) {
+            CapabilityToggle(Icons.Outlined.AutoAwesome, stringResource(Res.string.chat_image_gen), onToggleImage)
+        }
+    }
+}
+
+/**
+ * 一个已开启的能力。用 TonalToggleButton 而不是带 × 的 InputChip：Expressive 的表达方式是
+ * 让形状承担状态——选中态是 squircle（CornerMedium），按下时收成 6dp 圆角，撤销那一下
+ * 有形变反馈。它只在能力已开启时出现，所以 checked 恒为 true，点击即回到关闭。
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CapabilityToggle(icon: ImageVector, label: String, onToggle: () -> Unit) {
+    TonalToggleButton(
+        checked = true,
+        onCheckedChange = { onToggle() },
+        // checked 态默认是 secondary 深色实心，摆在这里会变成全屏最重的一块。压到
+        // secondaryContainer 后，它成了这一行**唯一带色相**的元素——这是有意的：能力是
+        // 临时开启、需要被看见的状态，而模型是常驻信息，退在中性梯度里（见 ModelPicker）。
+        colors = ToggleButtonDefaults.tonalToggleButtonColors(
+            checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(label)
     }
 }

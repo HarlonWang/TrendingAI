@@ -49,6 +49,9 @@ import trendingai.chat.generated.resources.chat_error_server
 import trendingai.chat.generated.resources.chat_error_timeout
 import trendingai.chat.generated.resources.chat_quota_exceeded
 import trendingai.chat.generated.resources.chat_retry
+import trendingai.chat.generated.resources.chat_error_image_unsupported
+import trendingai.chat.generated.resources.chat_generating_image
+import trendingai.chat.generated.resources.chat_image_gen_pro_message
 import trendingai.chat.generated.resources.chat_searching
 import trendingai.chat.generated.resources.chat_share
 import trendingai.chat.generated.resources.chat_user_image
@@ -168,12 +171,12 @@ private fun AssistantMessage(
         if (error == null) {
             // 联网搜索瞬态指示（M3 Expressive LoadingIndicator，全 app 统一）
             @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-            if (message.searching) {
+            if (message.searching || message.generatingImage) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LoadingIndicator(modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = stringResource(Res.string.chat_searching),
+                        text = stringResource(if (message.searching) Res.string.chat_searching else Res.string.chat_generating_image),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -243,6 +246,8 @@ private fun errorMessageRes(error: ChatError): StringResource = when (error.code
     ChatError.CODE_QUOTA_DEVICE -> Res.string.chat_quota_exceeded
     "upstream_timeout" -> Res.string.chat_error_timeout
     ChatError.CODE_REGION_BLOCKED -> Res.string.chat_error_region_blocked
+    ChatError.CODE_IMAGE_REQUIRES_PRO -> Res.string.chat_image_gen_pro_message
+    ChatError.CODE_IMAGE_UNSUPPORTED -> Res.string.chat_error_image_unsupported
     "upstream_error" -> Res.string.chat_error_server
     else -> when (error.category) {
         ChatErrorCategory.NETWORK -> Res.string.chat_error_network

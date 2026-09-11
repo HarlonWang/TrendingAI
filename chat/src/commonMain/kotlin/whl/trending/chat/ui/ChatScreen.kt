@@ -166,6 +166,7 @@ fun ChatScreen(
             },
             bottomBar = {
                 val searchActive by viewModel.searchEnabled.collectAsState()
+                val imageActive by viewModel.imageEnabled.collectAsState()
                 val caps by viewModel.currentCaps.collectAsState()
                 Column {
                     // 建议动作行（描边 = 建议、填充的「当前配置」行 = 已生效状态，靠样式分层）：
@@ -192,6 +193,8 @@ fun ChatScreen(
                         searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
                         modifier = Modifier.padding(horizontal = 12.dp),
+                        imageActive = imageActive,
+                        onToggleImage = viewModel::toggleImageGeneration,
                     )
                     ChatInputBar(
                         input = state.input,
@@ -199,6 +202,8 @@ fun ChatScreen(
                         pendingImages = state.pendingImages,
                         searchActive = searchActive,
                         onToggleSearch = viewModel::toggleWebSearch,
+                        imageActive = imageActive,
+                        onToggleImage = viewModel::toggleImageGeneration,
                         caps = caps,
                         onInputChange = viewModel::updateInput,
                         onSend = viewModel::send,

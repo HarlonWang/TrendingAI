@@ -37,6 +37,7 @@ sealed interface ChatAiEvent {
 object PaywallSource {
     const val MODEL_LOCKED = "chat_model_locked"
     const val VOICE_GATE = "chat_voice_gate"
+    const val IMAGE_GATE = "chat_image_gate"
     const val QUOTA_CARD = "chat_quota_card"
 }
 
@@ -61,6 +62,9 @@ interface ChatHost {
 
     /** 打开宿主的 Pro 订阅页。[source] 取 [PaywallSource]，供宿主埋点归因。 */
     fun openPaywall(source: String)
+
+    /** 举报一张 AI 生成的图片（Play 要求 AI 生成内容可在 App 内举报）。[imageUrl] 由宿主带进反馈表单。 */
+    fun reportGeneratedImage(imageUrl: String)
 
     /** 当前是否 Pro 档（宿主本地缓存口径，不打网络）。 */
     fun currentIsPro(): Boolean

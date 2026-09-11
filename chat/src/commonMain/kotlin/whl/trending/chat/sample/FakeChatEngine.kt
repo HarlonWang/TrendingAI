@@ -24,7 +24,9 @@ class FakeChatEngine(
         onDelta: (String) -> Unit,
         search: Boolean,
         onSearch: (whl.trending.chat.model.SearchEvent) -> Unit,
-    ): String {
+        image: Boolean,
+        onImage: (whl.trending.chat.model.ImageEvent) -> Unit,
+        ): String {
         if (search) {
             onSearch(whl.trending.chat.model.SearchEvent.Started)
             delay(600)
