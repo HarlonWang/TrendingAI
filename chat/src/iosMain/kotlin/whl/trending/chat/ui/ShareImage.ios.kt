@@ -1,29 +1,23 @@
 package whl.trending.chat.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.addressOf
 import platform.Foundation.NSData
-import platform.Foundation.NSURL
-import platform.Foundation.dataWithContentsOfURL
+import platform.Foundation.create
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIImage
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
-internal actual fun rememberShareImageUrl(): (String) -> Unit {
-    val scope = rememberCoroutineScope()
-    return { url ->
-        scope.launch {
-            val image = withContext(Dispatchers.Default) {
-                NSURL.URLWithString(url)?.let { NSData.dataWithContentsOfURL(it) }?.let { UIImage.imageWithData(it) }
-            } ?: return@launch
-            topViewController()?.presentViewController(
-                UIActivityViewController(activityItems = listOf(image), applicationActivities = null),
-                animated = true,
-                completion = null,
-            )
-        }
+internal actual fun rememberShareImageBytes(): (ByteArray) -> Unit = { bytes ->
+    val data = bytes.usePinned { NSData.create(bytes = it.addressOf(0), length = bytes.size.toULong()) }
+    UIImage.imageWithData(data)?.let { image ->
+        topViewController()?.presentViewController(
+            UIActivityViewController(activityItems = listOf(image), applicationActivities = null),
+            animated = true,
+            completion = null,
+        )
     }
 }
