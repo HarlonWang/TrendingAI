@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -130,7 +130,7 @@ fun ImageViewerDialog(
                     }
                     IconButton(onClick = { onDismiss(); chatHost.reportGeneratedImage(url) }) {
                         Icon(
-                            imageVector = Icons.Outlined.Flag,
+                            imageVector = Icons.Outlined.Report,
                             contentDescription = stringResource(Res.string.chat_report_image),
                             tint = Color.White,
                         )
