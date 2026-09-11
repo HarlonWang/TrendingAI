@@ -58,6 +58,6 @@ private val shareClient by lazy {
     HttpClient { install(HttpTimeout) { requestTimeoutMillis = 30_000; connectTimeoutMillis = 10_000 } }
 }
 
-/** 一张 JPEG 的字节 → 系统分享面板。 */
+/** 一张 JPEG 的字节 → 系统分享面板。suspend：Android 要先落盘（IO 线程），面板本身在调用方的主线程起。 */
 @Composable
-internal expect fun rememberShareImageBytes(): (ByteArray) -> Unit
+internal expect fun rememberShareImageBytes(): suspend (ByteArray) -> Unit

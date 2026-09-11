@@ -11,7 +11,7 @@ import platform.UIKit.UIImage
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
-internal actual fun rememberShareImageBytes(): (ByteArray) -> Unit = { bytes ->
+internal actual fun rememberShareImageBytes(): suspend (ByteArray) -> Unit = { bytes ->
     val data = bytes.usePinned { NSData.create(bytes = it.addressOf(0), length = bytes.size.toULong()) }
     UIImage.imageWithData(data)?.let { image ->
         topViewController()?.presentViewController(
