@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -58,7 +58,7 @@ internal fun ChatContextRow(
             CapabilityToggle(Icons.Outlined.TravelExplore, stringResource(Res.string.chat_web_search), onToggleSearch)
         }
         if (imageGenerationActive) {
-            CapabilityToggle(Icons.Outlined.AutoAwesome, stringResource(Res.string.chat_image_generation), onToggleImageGeneration)
+            CapabilityToggle(Icons.Outlined.Brush, stringResource(Res.string.chat_image_generation), onToggleImageGeneration)
         }
     }
 }

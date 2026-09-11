@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.TravelExplore
@@ -342,7 +342,7 @@ fun ChatInputBar(
                                         note = stringResource(Res.string.chat_image_generation_cost),
                                     )
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null) },
+                                leadingIcon = { Icon(Icons.Outlined.Brush, contentDescription = null) },
                                 trailingIcon = {
                                     if (caps.imageGeneration && imageGenerationActive) Icon(Icons.Filled.Check, contentDescription = null)
                                 },

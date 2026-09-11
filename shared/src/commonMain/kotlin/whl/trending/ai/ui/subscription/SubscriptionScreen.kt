@@ -19,8 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -247,7 +247,7 @@ private fun benefitIcon(key: String?): ImageVector = when (key) {
     "quota" -> Icons.Outlined.Bolt
     "models" -> Icons.Outlined.AutoAwesome
     "voice" -> Icons.Outlined.Mic
-    "image_generation" -> Icons.Outlined.Image
+    "image_generation" -> Icons.Outlined.Brush
     else -> Icons.Outlined.CheckCircle
 }
 
