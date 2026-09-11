@@ -68,7 +68,7 @@
     <string name="chat_image_generation_hint">描述你想要的图片…</string>
     <string name="chat_generating_image">正在生成图片…</string>
     <string name="chat_image_generation_pro_title">Pro 功能</string>
-    <string name="chat_image_generation_pro_message">图片生成仅 Pro 可用，每张图消耗 10 次当日 AI 额度。</string>
+    <string name="chat_image_generation_pro_message">图片生成仅 Pro 可用，消耗的额度高于普通对话，详见账户页的额度说明。</string>
     <string name="chat_error_image_generation_unsupported">当前模型不支持生成图片，请切换到 GPT 系列模型后重试。</string>
     <string name="chat_waiting_processing">处理中…</string>
     <string name="chat_waiting_thinking">思考中…</string>
