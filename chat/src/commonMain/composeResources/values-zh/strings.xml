@@ -26,7 +26,7 @@
     <string name="chat_model_unlock_dismiss">知道了</string>
     <string name="chat_upgrade_pro">升级 Pro</string>
     <string name="chat_model_picker_title">选择模型</string>
-    <string name="chat_model_cap_images">图片</string>
+    <string name="chat_model_cap_images">识图</string>
     <string name="chat_model_cap_search">联网</string>
     <string name="chat_model_meta_separator"> · </string>
     <string name="chat_model_provider">模型由 %1$s 的 API 提供</string>
@@ -42,7 +42,7 @@
     <string name="chat_attach_camera">拍照</string>
     <string name="chat_attach_album">从相册选择</string>
     <string name="chat_image_login_title">登录后可发送图片</string>
-    <string name="chat_image_login_message">图片理解功能对登录用户开放，登录后即可发送照片和图片。</string>
+    <string name="chat_image_login_message">图片理解功能对登录用户开放，登录后即可发送照片和图片让 AI 识别。AI 不能生成或编辑图片。</string>
     <string name="chat_image_login_confirm">登录</string>
     <string name="chat_image_login_dismiss">暂不</string>
     <string name="chat_image_processing_failed">图片处理失败，请换一张试试。</string>

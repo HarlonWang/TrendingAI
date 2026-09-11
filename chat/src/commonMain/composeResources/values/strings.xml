@@ -26,7 +26,7 @@
     <string name="chat_model_unlock_dismiss">Got it</string>
     <string name="chat_upgrade_pro">Upgrade to Pro</string>
     <string name="chat_model_picker_title">Choose a model</string>
-    <string name="chat_model_cap_images">Images</string>
+    <string name="chat_model_cap_images">Reads images</string>
     <string name="chat_model_cap_search">Web search</string>
     <string name="chat_model_meta_separator"> · </string>
     <!-- 模型出处。刻意是事实陈述而非 "Powered by OpenAI" 那类品牌宣传语——后者读起来像背书。
@@ -45,7 +45,7 @@
     <string name="chat_attach_camera">Take photo</string>
     <string name="chat_attach_album">Choose from album</string>
     <string name="chat_image_login_title">Sign in to send images</string>
-    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in to send photos and pictures.</string>
+    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in to send photos for the assistant to read. It can&apos;t generate or edit images.</string>
     <string name="chat_image_login_confirm">Sign in</string>
     <string name="chat_image_login_dismiss">Not now</string>
     <string name="chat_image_processing_failed">Couldn&apos;t process the image. Please try another one.</string>
