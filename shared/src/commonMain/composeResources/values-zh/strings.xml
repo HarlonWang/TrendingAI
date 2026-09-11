@@ -101,6 +101,7 @@
     <string name="feedback">反馈建议</string>
     <string name="feedback_desc">提交反馈、问题或改进建议</string>
     <string name="feedback_content_placeholder">描述你的反馈或建议…</string>
+    <string name="feedback_report_image_prefix">举报 AI 生成的图片：</string>
     <string name="feedback_email_placeholder">邮箱（可选，方便我们回复你）</string>
     <string name="feedback_submit">提交</string>
     <string name="feedback_success">感谢你的反馈！</string>

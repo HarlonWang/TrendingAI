@@ -61,4 +61,4 @@ fun MessageList(
 }
 
 private val ChatMessage.isBlankPlaceholder: Boolean
-    get() = role == Role.ASSISTANT && content.isBlank() && error == null && !searching
+    get() = role == Role.ASSISTANT && content.isBlank() && error == null && !searching && !generatingImage

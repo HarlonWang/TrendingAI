@@ -40,6 +40,11 @@ class FeedbackViewModel(
         _uiState.update { it.copy(content = value) }
     }
 
+    /** 从举报入口进来时预填正文；用户已经打过字则不覆盖 */
+    fun prefillContent(value: String) {
+        _uiState.update { if (it.content.isBlank()) it.copy(content = value) else it }
+    }
+
     fun updateEmail(value: String) {
         val valid = value.isBlank() || isValidEmail(value)
         _uiState.update { it.copy(email = value, isEmailValid = valid) }

@@ -20,6 +20,7 @@ object DemoChatHost : ChatHost {
     override fun signIn(source: String) {}
 
     override fun openPaywall(source: String) {}
+    override fun reportGeneratedImage(imageUrl: String) {}
 
     override fun currentIsPro() = false
     override val isPro: Flow<Boolean> = flowOf(false)

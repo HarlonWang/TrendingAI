@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -21,6 +22,7 @@ import whl.trending.chat.model.ChatModelCaps
 import whl.trending.chat.model.ChatModelOption
 import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
+import whl.trending.chat.model.ImageGenerationEvent
 import whl.trending.chat.model.SearchEvent
 
 /** 能力位驱动的入口显隐：切到不支持搜索的模型时搜索开关收回、且不可再开。 */
@@ -40,10 +42,12 @@ class ChatViewModelCapsTest {
             onDelta: (String) -> Unit,
             search: Boolean,
             onSearch: (SearchEvent) -> Unit,
-        ): String = ""
+            imageGeneration: Boolean,
+            onImageGeneration: (ImageGenerationEvent) -> Unit,
+            ): String = ""
     }
 
-    private val openai = ChatModelOption(id = "gpt-5.6-luna", name = "GPT-5.6 Luna")
+    private val openai = ChatModelOption(id = "gpt-5.6-luna", name = "GPT-5.6 Luna", caps = ChatModelCaps(imageGeneration = true))
     private val deepseek = ChatModelOption(
         id = "deepseek-v4-flash", name = "DeepSeek V4 Flash",
         provider = "deepseek", providerName = "DeepSeek",
@@ -51,18 +55,18 @@ class ChatViewModelCapsTest {
     )
     private val catalog = ChatModelsResponse(models = listOf(openai, deepseek), default = openai.id)
 
-    private fun vm(choice: MutableStateFlow<String>) = ChatViewModel(
+    private fun vm(choice: MutableStateFlow<String>, pro: MutableStateFlow<Boolean> = MutableStateFlow(true)) = ChatViewModel(
         NoopEngine,
         loadModels = { catalog },
         track = {},
-        modelSelection = { choice.map { it to false } },
+        modelSelection = { combine(choice, pro) { id, p -> id to p } },
     )
 
     @Test
     fun `默认模型全能力：搜索可开`() = runTest(dispatcher) {
         val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT))
         advanceUntilIdle()
-        assertEquals(ChatModelCaps(true, true), viewModel.currentCaps.value)
+        assertEquals(ChatModelCaps(true, true, imageGeneration = true), viewModel.currentCaps.value)
         viewModel.toggleWebSearch()
         assertTrue(viewModel.searchEnabled.value)
     }
@@ -81,6 +85,58 @@ class ChatViewModelCapsTest {
         assertFalse(viewModel.searchEnabled.value)
         viewModel.toggleWebSearch()
         assertFalse(viewModel.searchEnabled.value)
+    }
+
+    @Test
+    fun `生图开关：目录声明 imageGeneration 才可开，切到不支持的模型收回`() = runTest(dispatcher) {
+        val choice = MutableStateFlow(FOLLOW_SERVER_DEFAULT)
+        val viewModel = vm(choice)
+        advanceUntilIdle()
+        viewModel.toggleImageGeneration()
+        assertTrue(viewModel.imageGenerationEnabled.value)
+
+        choice.value = deepseek.id
+        advanceUntilIdle()
+        assertFalse(viewModel.imageGenerationEnabled.value)
+        viewModel.toggleImageGeneration()
+        assertFalse(viewModel.imageGenerationEnabled.value)
+    }
+
+    @Test
+    fun `生图与搜索互斥：开一个收另一个`() = runTest(dispatcher) {
+        val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT))
+        advanceUntilIdle()
+        viewModel.toggleWebSearch()
+        viewModel.toggleImageGeneration()
+        assertTrue(viewModel.imageGenerationEnabled.value)
+        assertFalse(viewModel.searchEnabled.value)
+        viewModel.toggleWebSearch()
+        assertTrue(viewModel.searchEnabled.value)
+        assertFalse(viewModel.imageGenerationEnabled.value)
+    }
+
+    @Test
+    fun `Pro 失效时生图开关收回`() = runTest(dispatcher) {
+        val pro = MutableStateFlow(true)
+        val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT), pro)
+        advanceUntilIdle()
+        viewModel.toggleImageGeneration()
+        assertTrue(viewModel.imageGenerationEnabled.value)
+
+        pro.value = false
+        advanceUntilIdle()
+        assertFalse(viewModel.imageGenerationEnabled.value)
+    }
+
+    /** 旧服务端不下发 imageGeneration：缺省 false，入口不亮 */
+    @Test
+    fun `目录未声明 imageGeneration 时生图不可开`() = runTest(dispatcher) {
+        val legacy = ChatModelsResponse(models = listOf(ChatModelOption(id = "gpt-5.6-luna")), default = "gpt-5.6-luna")
+        val viewModel = ChatViewModel(NoopEngine, loadModels = { legacy }, track = {}, modelSelection = { MutableStateFlow(FOLLOW_SERVER_DEFAULT).map { it to false } })
+        advanceUntilIdle()
+        assertFalse(viewModel.currentCaps.value.imageGeneration)
+        viewModel.toggleImageGeneration()
+        assertFalse(viewModel.imageGenerationEnabled.value)
     }
 
     @Test

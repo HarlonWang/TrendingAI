@@ -12,6 +12,7 @@ enum class Role { USER, ASSISTANT }
  * @param error 非空表示这条 assistant 消息是一次失败（按 [ChatError.category] 区分展示）
  * @param sources 联网搜索的引用来源（随消息持久化，尾部 SourcesRow 渲染）
  * @param searching 流式过程中「正在搜索」瞬态指示（不持久化）
+ * @param generatingImage 流式过程中「正在生成图片」瞬态指示（不持久化）
  * @param model 生成本条消息的模型 id（气泡上标注用），可空
  */
 data class ChatMessage(
@@ -22,5 +23,6 @@ data class ChatMessage(
     val error: ChatError? = null,
     val sources: List<SourceRef> = emptyList(),
     val searching: Boolean = false,
+    val generatingImage: Boolean = false,
     val model: String? = null,
 )
