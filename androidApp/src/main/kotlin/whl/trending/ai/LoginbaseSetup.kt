@@ -29,7 +29,7 @@ internal fun installLoginbase(activity: Activity) {
         } else {
             when (mode) {
                 OAuthMode.SIGN_IN -> client.signIn(host, OAuthProvider.GitHub, clientFlowId = clientFlowId)
-                OAuthMode.LINK -> client.link(host, OAuthProvider.GitHub)
+                OAuthMode.LINK -> client.link(host, OAuthProvider.GitHub, clientFlowId = clientFlowId)
             }
             true
         }

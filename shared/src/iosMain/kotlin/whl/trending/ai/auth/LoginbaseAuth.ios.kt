@@ -25,7 +25,7 @@ fun initLoginbaseAuth(): LoginbaseAuthManager {
     globalOAuthLauncher = { client, mode, clientFlowId ->
         when (mode) {
             OAuthMode.SIGN_IN -> client.signIn(OAuthProvider.GitHub, REDIRECT_URI, clientFlowId)
-            OAuthMode.LINK -> client.link(OAuthProvider.GitHub, REDIRECT_URI)
+            OAuthMode.LINK -> client.link(OAuthProvider.GitHub, REDIRECT_URI, clientFlowId)
         }
         true
     }

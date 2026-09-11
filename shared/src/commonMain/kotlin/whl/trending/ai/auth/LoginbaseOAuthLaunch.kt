@@ -58,5 +58,6 @@ internal fun launchGithubSignIn(client: AuthClient): Boolean {
 
 internal fun launchGithubLink(client: AuthClient): Boolean {
     OAuthResultGuard.reset()
-    return globalOAuthLauncher?.invoke(client, OAuthMode.LINK, null) ?: false
+    // 同 launchGithubSignIn：绑定流程也要能与服务端事件对齐（loginbase 2.1.0 起走 link/start 的 body）
+    return globalOAuthLauncher?.invoke(client, OAuthMode.LINK, Eventbase.currentFlow()) ?: false
 }
