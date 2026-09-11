@@ -88,7 +88,6 @@ import trendingai.chat.generated.resources.chat_image_login_message
 import trendingai.chat.generated.resources.chat_image_login_title
 import trendingai.chat.generated.resources.chat_image_remove
 import trendingai.chat.generated.resources.chat_image_generation
-import trendingai.chat.generated.resources.chat_image_generation_cost
 import trendingai.chat.generated.resources.chat_image_generation_hint
 import trendingai.chat.generated.resources.chat_image_generation_pro_message
 import trendingai.chat.generated.resources.chat_image_generation_pro_title
@@ -336,11 +335,7 @@ fun ChatInputBar(
                             // 生图：Pro 闸在这里（弹窗由点击触发，不拦截）；模型不支持则置灰
                             DropdownMenuItem(
                                 text = {
-                                    MenuLabel(
-                                        stringResource(Res.string.chat_image_generation),
-                                        enabled = caps.imageGeneration,
-                                        note = stringResource(Res.string.chat_image_generation_cost),
-                                    )
+                                    MenuLabel(stringResource(Res.string.chat_image_generation), enabled = caps.imageGeneration)
                                 },
                                 leadingIcon = { Icon(Icons.Outlined.Brush, contentDescription = null) },
                                 trailingIcon = {
@@ -643,14 +638,12 @@ private fun ChatInputBarPreview() {
 
 /** 菜单项标签；禁用时在标签下方补一行「当前模型不支持」，不占标签的横向空间 */
 @Composable
-private fun MenuLabel(label: String, enabled: Boolean, note: String? = null) {
+private fun MenuLabel(label: String, enabled: Boolean) {
     Column {
         Text(label)
-        // 置灰原因优先于常态尾注：两行一起出现会让「不支持」被读成「不支持 + 收费」
-        val sub = if (!enabled) stringResource(Res.string.chat_cap_unsupported) else note
-        if (sub != null) {
+        if (!enabled) {
             Text(
-                text = sub,
+                text = stringResource(Res.string.chat_cap_unsupported),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -42,7 +42,7 @@
     <string name="chat_attach_camera">拍照</string>
     <string name="chat_attach_album">从相册选择</string>
     <string name="chat_image_login_title">登录后可发送图片</string>
-    <string name="chat_image_login_message">图片理解功能对登录用户开放，登录后即可发送照片和图片让 AI 识别。AI 不能生成或编辑图片。</string>
+    <string name="chat_image_login_message">图片理解功能对登录用户开放，登录后即可发送照片和图片让 AI 识别。生成图片是 Pro 功能，可在「+」菜单开启。</string>
     <string name="chat_image_login_confirm">登录</string>
     <string name="chat_image_login_dismiss">暂不</string>
     <string name="chat_image_processing_failed">图片处理失败，请换一张试试。</string>
@@ -64,7 +64,6 @@
     <string name="chat_web_search">联网搜索</string>
     <string name="chat_searching">正在搜索网络…</string>
     <string name="chat_image_generation">生成图片</string>
-    <string name="chat_image_generation_cost">Pro · 每张 10 次额度</string>
     <string name="chat_report_image">举报图片</string>
     <string name="chat_image_generation_hint">描述你想要的图片…</string>
     <string name="chat_generating_image">正在生成图片…</string>

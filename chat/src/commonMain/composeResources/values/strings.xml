@@ -45,7 +45,7 @@
     <string name="chat_attach_camera">Take photo</string>
     <string name="chat_attach_album">Choose from album</string>
     <string name="chat_image_login_title">Sign in to send images</string>
-    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in to send photos for the assistant to read. It can&apos;t generate or edit images.</string>
+    <string name="chat_image_login_message">Image understanding is available to signed-in users. Sign in to send photos for the assistant to read. Image generation is a Pro feature you can turn on from the "+" menu.</string>
     <string name="chat_image_login_confirm">Sign in</string>
     <string name="chat_image_login_dismiss">Not now</string>
     <string name="chat_image_processing_failed">Couldn&apos;t process the image. Please try another one.</string>
@@ -67,7 +67,6 @@
     <string name="chat_web_search">Web search</string>
     <string name="chat_searching">Searching the web…</string>
     <string name="chat_image_generation">Generate image</string>
-    <string name="chat_image_generation_cost">Pro · 10 quota per image</string>
     <string name="chat_report_image">Report image</string>
     <string name="chat_image_generation_hint">Describe the image you want…</string>
     <string name="chat_generating_image">Generating image…</string>
