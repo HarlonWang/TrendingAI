@@ -1,0 +1,3 @@
+• AI chat can now generate images: turn on "Generate image" in the "+" menu and describe what you want (Pro only)
+• Generated images open full-screen and can be shared, saved to Photos, or reported
+• The "Image" capability tag is now "Vision", to tell it apart from image generation

@@ -1,17 +1,13 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "zh": [
-    "AI 对话支持语音输入：按住说话、松手即发（Pro 专属）",
-    "AI 对话新增 DeepSeek 模型；模型选择器移到顶栏",
-    "「启动时进入的页面」可选 AI 对话",
-    "「我的」页额度卡新增额度使用说明",
-    "iOS：修复 AI 对话拍照闪退，以及 3x 机型图片过大导致发送失败"
+    "AI 对话支持生成图片：在「+」菜单开启「生成图片」，用文字描述想要的画面即可（Pro 专属）",
+    "生成的图片可全屏查看，支持分享、保存到相册与举报",
+    "模型能力标签「图片」改为「识图」，与生成图片区分开"
   ],
   "en": [
-    "Voice input in AI chat: hold to talk, release to send (Pro only)",
-    "DeepSeek models added to AI chat; the model picker moved to the top bar",
-    "\"Default home page\" can now open AI chat",
-    "The credits card on the Me page now explains how credits work",
-    "iOS: fixed a crash when taking photos in AI chat, and oversized images failing to send on 3x devices"
+    "AI chat can now generate images: turn on \"Generate image\" in the \"+\" menu and describe what you want (Pro only)",
+    "Generated images open full-screen and can be shared, saved to Photos, or reported",
+    "The \"Image\" capability tag is now \"Vision\", to tell it apart from image generation"
   ]
 }
