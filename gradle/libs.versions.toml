@@ -18,7 +18,7 @@ multiplatform-nav3-ui = "1.1.1"
 multiplatform-navigationevent = "1.1.0"
 multiplatform-settings = "1.3.0"
 composeMultiplatform = "1.12.0"
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 # 独立版本线，**不跟 composeMultiplatform 的版本号走**（该坐标只发 alpha，没有 1.12.0）。
 # 必须与 CMP 同代：落后会在渲染 TextField 时 AbstractMethodError，而编译/单测/冒烟全绿，只在真机炸
 material3 = "1.12.0-alpha03"
@@ -28,23 +28,23 @@ kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.8.0"
 kotlinx-coroutines = "1.11.0"
 composeIcons = "1.7.3"
-coil = "3.6.0"
+coil = "3.6.2"
 material-kolor = "5.0.1"
 commonmark = "0.30.0"
 highlights = "1.1.0"
-kmp-webview = "0.1.11"
+kmp-webview = "0.1.12"
 # CI 只认这个版本；本机可经 composite build 改吃本地源码（见 settings.gradle.kts 的双轨说明）。
 # 改了 loginbase-kt 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
 loginbase-kt = "0.5.0"
 # 与 loginbase-kt 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
-eventbase-kt = "0.2.0"
+eventbase-kt = "0.2.1"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
-room = "2.8.4"
+room = "2.8.5"
 # Room KMP 的 iOS 驱动；版本随 room 的 androidx.sqlite 依赖走
-sqlite = "2.7.0"
+sqlite = "2.7.1"
 # chat 的跨平台文件操作；版本对齐 coil 传递的 okio
-okio = "3.18.1"
+okio = "3.18.2"
 # KSP2 起版本线与 Kotlin 解耦（不再是 kotlin-x.y.z 配对命名）
 ksp = "2.3.10"
 robolectric = "4.16.1"
