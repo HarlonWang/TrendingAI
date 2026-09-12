@@ -25,6 +25,7 @@ fun MessageList(
     messages: List<ChatMessage>,
     isSending: Boolean,
     onRetry: (ChatMessage) -> Unit,
+    onOpenViewer: (ChatViewer) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -55,6 +56,7 @@ fun MessageList(
             MessageItem(
                 message = message,
                 onRetry = { onRetry(message) },
+                onOpenViewer = onOpenViewer,
             )
         }
     }
