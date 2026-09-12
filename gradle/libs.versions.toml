@@ -100,7 +100,6 @@ loginbase-kt = { module = "wang.harlon:loginbase-kt", version.ref = "loginbase-k
 loginbase-kt-browser = { module = "wang.harlon:loginbase-kt-browser", version.ref = "loginbase-kt" }
 eventbase-kt = { module = "wang.harlon:eventbase-kt", version.ref = "eventbase-kt" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
