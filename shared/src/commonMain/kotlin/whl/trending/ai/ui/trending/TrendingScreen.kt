@@ -105,6 +105,8 @@ import trendingai.shared.generated.resources.stars_total
 import whl.trending.ai.auth.RepoStarService
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.DateTimeUtils
+import whl.trending.ai.core.DigestPage
+import whl.trending.ai.core.toDigestPage
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.ListFilter
@@ -132,6 +134,7 @@ import whl.trending.ai.ui.common.withBatchSuffix
 @Composable
 fun TrendingScreen(
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onOpenDigest: (DigestPage) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: TrendingViewModel = viewModel { TrendingViewModel() }
 ) {
@@ -169,6 +172,7 @@ fun TrendingScreen(
             modifier = Modifier.fillMaxSize(),
             onRefresh = { viewModel.fetchData(isRefresh = true) },
             onNavigateToDetail = onNavigateToDetail,
+            onOpenDigest = onOpenDigest,
             onStarRepo = if (starEnabled) viewModel::starRepo else null,
         )
         SnackbarHost(
@@ -216,6 +220,7 @@ private fun RepoList(
     uiState: TrendingUiState,
     onRefresh: () -> Unit,
     onNavigateToDetail: (owner: String, repo: String) -> Unit,
+    onOpenDigest: (DigestPage) -> Unit,
     modifier: Modifier = Modifier,
     /** 非空时列表项菜单显示「Star 到 GitHub」，null（不支持登录的平台）则隐藏 */
     onStarRepo: ((TrendingRepo) -> Unit)? = null,
@@ -329,7 +334,13 @@ private fun RepoList(
                                     title = "${repo.author}/${repo.repoName}",
                                 )
                             )
-                            onNavigateToDetail(repo.author, repo.repoName)
+                            // 预生成解读只盖 daily 全语言榜：该视图进解读页（README 页降级为其出路按钮），
+                            // 周榜 / 月榜 / 语言榜几乎条条无解读，直落 README 页不多那一跳
+                            if (uiState.selectedPeriod == "daily" && uiState.selectedLanguage == "all") {
+                                onOpenDigest(repo.toDigestPage(summary = repo.aiSummaries.firstOrNull()?.content))
+                            } else {
+                                onNavigateToDetail(repo.author, repo.repoName)
+                            }
                         }
                     )
                     if (index < displayRepos.lastIndex) {

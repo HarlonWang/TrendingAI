@@ -197,6 +197,7 @@ fun HomeScreen(
                                 when (selectedSource) {
                                     TrendingSource.GitHub -> TrendingScreen(
                                         onNavigateToDetail = onNavigateToDetail,
+                                        onOpenDigest = onOpenDigest,
                                         viewModel = viewModel { TrendingViewModel() }
                                     )
                                     TrendingSource.HackerNews -> FeedScreen(
@@ -206,7 +207,8 @@ fun HomeScreen(
                                     )
                                     TrendingSource.ProductHunt -> FeedScreen(
                                         viewModel = viewModel(key = "producthunt") { FeedViewModel("producthunt") },
-                                        onOpenUrl = onOpenUrl
+                                        onOpenUrl = onOpenUrl,
+                                        onOpenDigest = onOpenDigest
                                     )
                                 }
                                 // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
@@ -232,7 +234,6 @@ fun HomeScreen(
                                 }
                             }
                             HomeTab.Picks -> PicksScreen(
-                                onNavigateToDetail = onNavigateToDetail,
                                 onOpenUrl = onOpenUrl,
                                 onNavigateToSubscribe = onNavigateToSubscribe,
                                 viewModel = viewModel { PicksViewModel() },
