@@ -1,6 +1,7 @@
 package whl.trending.chat.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
@@ -20,13 +20,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.layout.ContentScale
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -75,50 +73,68 @@ import whl.trending.chat.model.Role
  * 单条消息：
  * - 用户：右侧气泡（primaryContainer）
  * - 助手：左侧全宽 Markdown 渲染（无气泡，贴近 Claude/ChatGPT 风格）
- * 均支持长按选中复制；助手出错时展示错误与重试按钮。
+ * 双击文字进全屏放大查看（放大页内可长按选择复制）；助手出错时展示错误与重试按钮。
+ *
+ * @param onOpenViewer 请求打开全屏查看器（文字放大 / 图片），由 ChatScreen 根部渲染
  */
 @Composable
 fun MessageItem(
     message: ChatMessage,
     onRetry: () -> Unit,
+    onOpenViewer: (ChatViewer) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (message.role) {
-        Role.USER -> UserMessage(message, modifier)
-        Role.ASSISTANT -> AssistantMessage(message, onRetry, modifier)
+        Role.USER -> UserMessage(message, onOpenViewer, modifier)
+        Role.ASSISTANT -> AssistantMessage(message, onRetry, onOpenViewer, modifier)
     }
 }
 
 @Composable
-private fun UserMessage(message: ChatMessage, modifier: Modifier = Modifier) {
-    var viewerPath by remember { mutableStateOf<String?>(null) }
+private fun UserMessage(
+    message: ChatMessage,
+    onOpenViewer: (ChatViewer) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (message.images.isNotEmpty()) {
-            UserImages(images = message.images, onImageClick = { viewerPath = it })
+            UserImages(images = message.images, onImageClick = { onOpenViewer(ChatViewer.Image(it.toPath())) })
         }
         if (message.content.isNotBlank()) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.widthIn(max = 300.dp),
+                modifier = Modifier
+                    .widthIn(max = 300.dp)
+                    .doubleTapToEnlarge { onOpenViewer(ChatViewer.Text(message.id)) },
             ) {
-                SelectionContainer {
-                    Text(
-                        text = message.content,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    )
-                }
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                )
             }
         }
     }
-    viewerPath?.let { path ->
-        ImageViewerDialog(model = path.toPath(), onDismiss = { viewerPath = null })
+}
+
+/**
+ * 双击进放大查看。单击顺手收起键盘：这里消费了按下事件，ChatScreen 根部那只「点空白收键盘」
+ * 的手势看不到落在文字上的点击。
+ */
+@Composable
+private fun Modifier.doubleTapToEnlarge(onDoubleTap: () -> Unit): Modifier {
+    val focusManager = LocalFocusManager.current
+    return pointerInput(Unit) {
+        detectTapGestures(
+            onTap = { focusManager.clearFocus() },
+            onDoubleTap = { onDoubleTap() },
+        )
     }
 }
 
@@ -164,6 +180,7 @@ private fun UserImageThumb(path: String, onClick: () -> Unit, modifier: Modifier
 private fun AssistantMessage(
     message: ChatMessage,
     onRetry: () -> Unit,
+    onOpenViewer: (ChatViewer) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -182,17 +199,12 @@ private fun AssistantMessage(
                     )
                 }
             }
-            var viewerUrl by remember { mutableStateOf<String?>(null) }
-            SelectionContainer {
-                MarkdownText(
-                    markdown = message.content,
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    onImageClick = { viewerUrl = it },
-                )
-            }
-            viewerUrl?.let { url ->
-                ImageViewerDialog(model = url, onDismiss = { viewerUrl = null })
-            }
+            MarkdownText(
+                markdown = message.content,
+                textStyle = MaterialTheme.typography.bodyLarge,
+                onImageClick = { onOpenViewer(ChatViewer.Image(it)) },
+                modifier = Modifier.doubleTapToEnlarge { onOpenViewer(ChatViewer.Text(message.id)) },
+            )
             if (message.sources.isNotEmpty()) {
                 SourcesRow(message.sources)
             }
@@ -270,6 +282,7 @@ private fun MessageItemPreview() {
             MessageItem(
                 ChatMessage(1, Role.USER, "帮我用 Kotlin 写一个快速排序"),
                 onRetry = {},
+                onOpenViewer = {},
             )
             MessageItem(
                 ChatMessage(
@@ -282,6 +295,7 @@ private fun MessageItemPreview() {
                         "- 平均时间复杂度 `O(n log n)`\n- 最坏 `O(n²)`",
                 ),
                 onRetry = {},
+                onOpenViewer = {},
             )
         }
     }

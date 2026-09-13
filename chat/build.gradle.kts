@@ -50,6 +50,7 @@ kotlin {
             implementation(libs.compose.components.resources)
             implementation(libs.compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
+            implementation(libs.jetbrains.navigationevent.compose)
 
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
