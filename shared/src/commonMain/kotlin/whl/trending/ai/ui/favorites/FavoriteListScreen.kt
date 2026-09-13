@@ -64,7 +64,6 @@ import whl.trending.ai.ui.picks.SourceTag
 @Composable
 fun FavoriteListScreen(
     onBack: () -> Unit,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit = { _, _ -> },
     onOpenUrl: (url: String) -> Unit = {},
     onOpenDigest: (DigestPage) -> Unit = {}
 ) {
@@ -111,7 +110,7 @@ fun FavoriteListScreen(
                 ) { index, item ->
                     FavoriteCard(
                         item = item,
-                        onClick = { handleFavoriteClick(item, onNavigateToDetail, onOpenUrl, onOpenDigest) },
+                        onClick = { handleFavoriteClick(item, onOpenUrl, onOpenDigest) },
                         onRemove = { globalFavoriteRepository.remove(item.url) }
                     )
                     if (index < favorites.lastIndex) {
@@ -125,19 +124,11 @@ fun FavoriteListScreen(
 
 private fun handleFavoriteClick(
     item: FavoriteItem,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onOpenUrl: (url: String) -> Unit,
     onOpenDigest: (DigestPage) -> Unit
 ) {
-    if (item.source == "github") {
-        val parts = item.url.removePrefix("https://github.com/").split("/")
-        if (parts.size >= 2) {
-            onNavigateToDetail(parts[0], parts[1])
-            return
-        }
-    }
-    // HN 条目进解读页（与列表同一落点）；存量收藏无 externalId 时解读页会展示「暂无解读」+ 原文入口
-    if (item.source == "hackernews") {
+    // 三源都进解读页（与列表同一落点）；存量收藏无 externalId 时解读页会展示「暂无解读」+ 出路按钮
+    if (item.source == "github" || item.source == "hackernews" || item.source == "producthunt") {
         onOpenDigest(item.toDigestPage())
         return
     }

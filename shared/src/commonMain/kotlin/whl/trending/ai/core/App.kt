@@ -299,9 +299,6 @@ fun App() {
                             is Favorites -> NavEntry(key) {
                                 FavoriteListScreen(
                                     onBack = { backStack.safePop() },
-                                    onNavigateToDetail = { owner, repo ->
-                                        backStack.add(RepoDetail(owner, repo))
-                                    },
                                     onOpenUrl = { url ->
                                         openExternalUrl(url, "")
                                     },
@@ -372,6 +369,9 @@ fun App() {
                                     onBack = { backStack.safePop() },
                                     onOpenUrl = { url ->
                                         openExternalUrl(url, "")
+                                    },
+                                    onOpenRepo = { owner, repo ->
+                                        backStack.add(RepoDetail(owner, repo))
                                     }
                                 )
                             }

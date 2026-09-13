@@ -84,7 +84,6 @@ import whl.trending.ai.ui.common.generatedStampText
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PicksScreen(
-    onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onOpenUrl: (url: String) -> Unit,
     onNavigateToSubscribe: () -> Unit,
     viewModel: PicksViewModel,
@@ -158,7 +157,7 @@ fun PicksScreen(
                             track(AppEvent.NewsletterAction(NewsletterActionKind.BANNER_DISMISSED))
                             globalSettingsManager.setPicksNewsletterBannerDismissed(true)
                         },
-                        onItemClick = { item, section -> handleItemClick(item, section, onNavigateToDetail, onOpenUrl, onOpenDigest) },
+                        onItemClick = { item, section -> handleItemClick(item, section, onOpenUrl, onOpenDigest) },
                     )
                 }
             }
@@ -169,7 +168,6 @@ fun PicksScreen(
 private fun handleItemClick(
     item: PickItem,
     section: String,
-    onNavigateToDetail: (owner: String, repo: String) -> Unit,
     onOpenUrl: (url: String) -> Unit,
     onOpenDigest: (DigestPage) -> Unit
 ) {
@@ -182,16 +180,10 @@ private fun handleItemClick(
             section = section,
         )
     )
-    if (item.source == "github") {
-        val parts = item.url.removePrefix("https://github.com/").split("/")
-        if (parts.size >= 2) {
-            onNavigateToDetail(parts[0], parts[1])
-            return
-        }
-    }
-    // HN 条目进解读页（与 Feed/收藏同一落点），外链从解读页首屏按钮出去
-    if (item.source == "hackernews" && item.externalId.isNotBlank()) {
-        onOpenDigest(item.toDigestPage())
+    // 三源都进解读页（与列表 / 收藏同一落点）：README 页与外链从解读页首屏按钮出去
+    val page = item.toDigestPage()
+    if (page.externalId.isNotBlank()) {
+        onOpenDigest(page)
         return
     }
     onOpenUrl(item.openUrl)

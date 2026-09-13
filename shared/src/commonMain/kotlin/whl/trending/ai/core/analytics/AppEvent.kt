@@ -247,7 +247,7 @@ enum class TabSwitchMethod { TAP, DOUBLE_TAP_REFRESH }
  * 加的是**属性值**不是新事件——词汇表的核心原则是「维度进 props，不进事件名」，
  * 21 个 settings_* 就是反面教材。
  */
-enum class ContentActionKind { FAVORITE, UNFAVORITE, SHARE_TO_AI, STAR, READ_ORIGINAL, HN_COMMENTS, APPLY }
+enum class ContentActionKind { FAVORITE, UNFAVORITE, SHARE_TO_AI, STAR, READ_ORIGINAL, HN_COMMENTS, PH_PAGE, APPLY }
 
 /**
  * 后三项服务于招聘月度专题：[ROLE_CATEGORY] / [REMOTE_KIND] 是筛选维度，

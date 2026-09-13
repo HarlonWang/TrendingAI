@@ -218,8 +218,8 @@ private fun FeedItemCard(
                 title = item.title,
             )
         )
-        // HN 条目整卡点击进解读页（预生成、零等待），外链降级为解读页首屏出路按钮
-        if (item.source == "hackernews") {
+        // HN / PH 条目整卡点击进解读页（预生成、零等待），外链降级为解读页首屏出路按钮
+        if (item.source == "hackernews" || item.source == "producthunt") {
             onOpenDigest(item.toDigestPage())
         } else {
             onOpenUrl(item.openUrl)

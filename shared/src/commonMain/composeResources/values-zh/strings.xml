@@ -329,6 +329,12 @@
     <string name="digest_unavailable_desc">这条内容的公开信息还不足以生成可靠的解读。你可以通过上方按钮阅读原文或查看 HN 讨论。</string>
     <string name="digest_generated_at">AI 生成于 %1$s · 内容可能滞后于最新讨论</string>
     <string name="digest_load_failed">加载失败，请重试</string>
+    <string name="digest_view_readme">查看 README</string>
+    <string name="digest_open_github">在 GitHub 打开</string>
+    <string name="digest_open_product">打开产品</string>
+    <string name="digest_ph_page">PH 页面</string>
+    <string name="digest_unavailable_desc_github">README 内容不足以生成可靠的解读。你可以通过上方按钮查看 README 或在 GitHub 打开仓库。</string>
+    <string name="digest_unavailable_desc_producthunt">maker 尚未发布说明，公开信息不足以生成可靠的解读。你可以通过上方按钮打开产品或查看 PH 页面。</string>
 
     <!-- 登录（loginbase 自建登录 UI） -->
     <string name="login_title">登录或注册</string>
