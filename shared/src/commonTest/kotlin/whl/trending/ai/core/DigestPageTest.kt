@@ -50,6 +50,20 @@ class DigestPageTest {
     }
 
     @Test
+    fun GitHub_url带query或fragment_反解时剥掉() {
+        val page = PickItem(source = "github", externalId = "", title = "b", url = "https://github.com/a/b?tab=readme-ov-file#readme").toDigestPage()
+        assertEquals("a/b", page.externalId)
+        assertEquals("a" to "b", page.githubOwnerRepo)
+    }
+
+    @Test
+    fun GitHub收藏_url非github域_合成键不给README按钮() {
+        val page = FavoriteItem(url = "https://example.com/x/y", title = "t", source = "github").toDigestPage()
+        assertTrue(page.externalId.startsWith("url:"))
+        assertNull(page.githubOwnerRepo)
+    }
+
+    @Test
     fun GitHub_Picks条目_externalId从url反解() {
         val page = PickItem(source = "github", externalId = "", title = "b", url = "https://github.com/a/b").toDigestPage()
         assertEquals("a/b", page.externalId)

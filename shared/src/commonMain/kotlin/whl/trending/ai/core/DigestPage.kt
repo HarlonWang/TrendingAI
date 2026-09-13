@@ -43,10 +43,10 @@ data class DigestPage(
         get() = discussionUrl != null &&
             (url.isBlank() || url == discussionUrl || url.contains("news.ycombinator.com"))
 
-    /** GitHub 的 externalId 是 owner/repo，供「查看 README」进 RepoDetail */
+    /** GitHub 的 externalId 是 owner/repo，供「查看 README」进 RepoDetail；收藏的 `url:` 合成键不是仓库，不给按钮 */
     val githubOwnerRepo: Pair<String, String>?
         get() {
-            if (!isGithub) return null
+            if (!isGithub || externalId.startsWith("url:")) return null
             val parts = externalId.split("/", limit = 2)
             return if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) parts[0] to parts[1] else null
         }
@@ -55,9 +55,11 @@ data class DigestPage(
 fun hnDiscussionUrl(externalId: String): String =
     "https://news.ycombinator.com/item?id=$externalId"
 
-/** 从 GitHub 仓库 url 反解 owner/repo（收藏、Picks 都只带 url） */
+/** 从 GitHub 仓库 url 反解 owner/repo（收藏、Picks 都只带 url）；query / fragment 不属于路径 */
 private fun githubExternalId(url: String): String? {
     val path = url
+        .substringBefore('#')
+        .substringBefore('?')
         .removePrefix("https://github.com/")
         .removePrefix("http://github.com/")
         .trimEnd('/')
