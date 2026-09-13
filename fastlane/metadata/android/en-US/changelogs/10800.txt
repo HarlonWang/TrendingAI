@@ -1,0 +1,2 @@
+• AI digests now cover GitHub and Product Hunt: open any item for a one-minute read
+• Double-tap a message in AI chat to view it full-screen
