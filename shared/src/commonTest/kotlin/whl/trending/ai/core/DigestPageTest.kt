@@ -42,7 +42,7 @@ class DigestPageTest {
 
     @Test
     fun GitHub收藏_无externalId时从url反解ownerRepo_无讨论页() {
-        val page = FavoriteItem(url = "https://github.com/owner/repo/", title = "t", source = "github").toDigestPage()
+        val page = FavoriteItem(url = "https://github.com/owner/repo/?tab=readme-ov-file", title = "t", source = "github").toDigestPage()
         assertEquals("owner/repo", page.externalId)
         assertEquals("owner" to "repo", page.githubOwnerRepo)
         assertNull(page.discussionUrl)

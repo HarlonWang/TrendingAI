@@ -123,7 +123,8 @@ fun PickItem.toDigestPage(): DigestPage {
  */
 fun FavoriteItem.toDigestPage(): DigestPage = DigestPage(
     source = source,
-    externalId = resolvedExternalId,
+    // GitHub 与 Picks 同一反解（剥 query / fragment），失败再回退云同步键
+    externalId = if (source == "github") githubExternalId(url) ?: resolvedExternalId else resolvedExternalId,
     title = title,
     url = url,
     discussionUrl = when (source) {
