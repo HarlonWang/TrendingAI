@@ -27,13 +27,17 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.createSavedStateHandle
@@ -52,6 +56,7 @@ import trendingai.shared.generated.resources.producthunt_title
 import whl.trending.ai.core.DigestPage
 import whl.trending.ai.core.analytics.trackScreenView
 import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.ui.common.HeaderOverlayLayout
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.TrendingScaffold
@@ -130,23 +135,23 @@ fun HomeScreen(
         // 铺满全高的内容之上（沉浸式地基，见 LocalContentTopPadding 的 KDoc），
         // 占了槽位内容就被顶下去，将来头部收起时内容没法原地全展开。
     ) { _ ->
-        // 内容层不消费 Scaffold padding：顶部由各页按 LocalContentTopPadding 让出，
-        // 底部由 LocalContentBottomPadding 让出，列表才能从头部/底栏下面穿过去。
+        // 内容层不消费 Scaffold padding：顶部由各页按 LocalContentTopPadding 让出（头部实测高，
+        // 由 HeaderOverlayLayout 量出），底部由 LocalContentBottomPadding 让出，列表才能从
+        // 头部/底栏下面穿过去。
         val barBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val contentBottomPadding = barBottomInset + FloatingBarHeight + FloatingBarBottomMargin * 2
         val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        // 头部高度用 M3 规范定值（TopAppBar 容器 64dp + SecondaryTabRow 48dp）而非实测上报：
-        // 它是内容 contentPadding 的输入，实测 onSizeChanged 回写会引入首帧跳动。
-        val topBarBottom = statusBarTop + TopBarHeight
+        val density = LocalDensity.current
 
+        // 沉浸式手势行程取所有栏中最长的行程——Home 头部（状态栏 + 顶栏 + 子 tab 行）的实测高，
+        // 它 1:1 跟手、其余栏按行程比例减速——视差即由此来。实测前用 M3 规范定值起步，只影响
+        // 首次量到之前的手势速率；切到 Picks/我的 后沿用上次实测值。
+        var homeHeaderHeight by remember {
+            mutableStateOf(statusBarTop + TopBarHeight + SourceTabRowHeight)
+        }
         // 沉浸式状态：开关关闭时为 null，下游四个挂点全部原样返回（零开销，见 HomeImmersive)。
-        // 手势行程取所有栏中最长的行程（Home 的子 tab 行底缘），它 1:1 跟手、其余栏按行程
-        // 比例减速——视差即由此来。
         val immersiveState = if (immersiveEnabled) {
-            rememberImmersiveState(
-                topBarBottom + SourceTabRowHeight,
-                selectedTab, selectedSource,
-            )
+            rememberImmersiveState(homeHeaderHeight, selectedTab, selectedSource)
         } else null
 
         val barItems = homeTabSpecs.map { spec ->
@@ -162,38 +167,72 @@ fun HomeScreen(
 
         Box(modifier = Modifier.fillMaxSize().immersiveNestedScroll(immersiveState)) {
             CompositionLocalProvider(LocalContentBottomPadding provides contentBottomPadding) {
-                // 切 tab 的方向性转场：新页从前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms
-                // 淡入淡出。位移量、时长与方向判定照搬 Echo 的 NavHost enter/exitTransition；
-                // 差别只在承载方式——它的 tab 是 NavHost 目的地，我们的 tab 是状态，等价物是
-                // AnimatedContent。
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = {
-                        if (targetState.ordinal > initialState.ordinal) {
-                            slideInHorizontally { it / 8 } + fadeIn(tween(200)) togetherWith
-                                slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                        } else {
-                            slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
-                                slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                // 顶栏层：浮在内容之上、与悬浮底栏同构，z-order 盖住页内的子 tab 行——沉浸式的
+                // 视差（子 tab 行钻进顶栏底下）靠的就是这层跨层绘制顺序。
+                HeaderOverlayLayout(
+                    modifier = Modifier.fillMaxSize(),
+                    header = {
+                        Box(
+                            modifier = Modifier
+                                .immersiveExit(immersiveState, ImmersiveEdge.Top)
+                                .fillMaxWidth()
+                        ) {
+                            HomeTopBar(
+                                selectedTab = selectedTab,
+                                selectedSource = selectedSource,
+                                onNavigateToSettings = onNavigateToSettings,
+                                onOpenHiring = onOpenHiring,
+                            )
                         }
                     },
-                    label = "homeTabContent",
-                ) { tab ->
-                    // 各页（与各自顶栏）都就地 viewModel() 自取：同一 ViewModelStore 返回同一
-                    // 实例，不会多创建；转场期间旧页仍在组合树里，也不依赖任何外部提升的引用。
-                    //
-                    // LocalContentTopPadding 必须 provide 在页级（此 lambda 内）：转场期间新旧
-                    // 两页同时在树，Home 的头部比 Picks/我的多一条子 tab 行，provide 在外层
-                    // 会让其中一页拿错高度。
-                    val contentTopPadding =
-                        topBarBottom + if (tab == HomeTab.Home) SourceTabRowHeight else 0.dp
-                    CompositionLocalProvider(LocalContentTopPadding provides contentTopPadding) {
+                ) {
+                    // 切 tab 的方向性转场：新页从前进方向滑入 1/8 屏、旧页往反方向滑出，各配 200ms
+                    // 淡入淡出。位移量、时长与方向判定照搬 Echo 的 NavHost enter/exitTransition；
+                    // 差别只在承载方式——它的 tab 是 NavHost 目的地，我们的 tab 是状态，等价物是
+                    // AnimatedContent。
+                    AnimatedContent(
+                        targetState = selectedTab,
+                        transitionSpec = {
+                            if (targetState.ordinal > initialState.ordinal) {
+                                slideInHorizontally { it / 8 } + fadeIn(tween(200)) togetherWith
+                                    slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                            } else {
+                                slideInHorizontally { -it / 8 } + fadeIn(tween(200)) togetherWith
+                                    slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                            }
+                        },
+                        label = "homeTabContent",
+                    ) { tab ->
+                        // 各页（与各自顶栏）都就地 viewModel() 自取：同一 ViewModelStore 返回同一
+                        // 实例，不会多创建；转场期间旧页仍在组合树里，也不依赖任何外部提升的引用。
                         when (tab) {
                             // 子 tab 行是 Home 页内的 overlay 而非外层头部的一部分：留在
-                            // AnimatedContent 里，切 tab 时随页面横滑（与改造前一致）。沉浸式
-                            // 需要的「钻进顶栏底下」不要求两者同容器——外层顶栏画在整个内容层
-                            // 之后，z-order 天然在子 tab 行之上；将来只需让两者共享同一手势进度。
-                            HomeTab.Home -> Box(modifier = Modifier.fillMaxSize()) {
+                            // AnimatedContent 里，切 tab 时随页面横滑。沉浸式需要的「钻进顶栏底下」
+                            // 不要求两者同容器——外层顶栏画在整个内容层之后，z-order 天然在子 tab
+                            // 行之上。Home 内容的顶部留白由这一层量出（顶栏 + 子 tab 行）。
+                            HomeTab.Home -> HeaderOverlayLayout(
+                                modifier = Modifier.fillMaxSize(),
+                                header = {
+                                    // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里
+                                    // 时它是透明底、透出的正是这块颜色；悬浮后透明会透出滚动中的列表。
+                                    // 沉浸位移的行程含顶部让出的顶栏高度，比顶栏长、从顶栏底下钻过。
+                                    Box(
+                                        modifier = Modifier
+                                            .immersiveExit(immersiveState, ImmersiveEdge.Top)
+                                            .onSizeChanged {
+                                                homeHeaderHeight = with(density) { it.height.toDp() }
+                                            }
+                                            .padding(top = LocalContentTopPadding.current)
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.background)
+                                    ) {
+                                        TrendingSourceTabs(
+                                            selected = selectedSource,
+                                            onSelect = { homeViewModel.selectSource(it) },
+                                        )
+                                    }
+                                },
+                            ) {
                                 when (selectedSource) {
                                     TrendingSource.GitHub -> TrendingScreen(
                                         onNavigateToDetail = onNavigateToDetail,
@@ -211,27 +250,6 @@ fun HomeScreen(
                                         onOpenDigest = onOpenDigest
                                     )
                                 }
-                                // 悬浮在铺满全高的列表之上，底色显式补 background——在内容流里时
-                                // 它是透明底、透出的正是这块颜色；悬浮后透明会透出滚动中的列表。
-                                // 沉浸位移：行程 = 顶栏底缘 + 自身高（三栏中最长），与手势行程相等
-                                // ——1:1 跟手，比顶栏快，从顶栏底下钻过（顶栏在外层、画在其上）。
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .immersiveExit(
-                                            immersiveState,
-                                            ImmersiveEdge.Top,
-                                            travel = topBarBottom + SourceTabRowHeight,
-                                        )
-                                        .padding(top = topBarBottom)
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.background)
-                                ) {
-                                    TrendingSourceTabs(
-                                        selected = selectedSource,
-                                        onSelect = { homeViewModel.selectSource(it) },
-                                    )
-                                }
                             }
                             HomeTab.Picks -> PicksScreen(
                                 onOpenUrl = onOpenUrl,
@@ -246,85 +264,6 @@ fun HomeScreen(
                             HomeTab.Chat -> Unit
                         }
                     }
-                }
-            }
-
-            // 顶栏层：浮在内容之上、与悬浮底栏同构。画在内容层之后，z-order 盖住页内的
-            // 子 tab 行——沉浸式的视差（子 tab 行钻进顶栏底下）靠的就是这层跨层绘制顺序。
-            //
-            // 触摸不穿透的依据：M3 TopAppBar/TabRow 外层的 Surface 自带空 pointerInput，
-            // 会吞掉落在其区域内的触摸，列表滚到头部背后也点不到被遮的 item。若将来把
-            // 头部换成非 Surface 容器，必须自行补上这层消费，否则点击会穿透。
-            // 沉浸位移：行程 = 状态栏 + 容器高（短于子 tab 行的行程 → 速率较慢，视差由此来）
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .immersiveExit(immersiveState, ImmersiveEdge.Top, travel = topBarBottom)
-                    .fillMaxWidth()
-            ) {
-                when (selectedTab) {
-                    HomeTab.Home -> when (selectedSource) {
-                        TrendingSource.GitHub -> TrendingTopBar(
-                            onSettingsClick = onNavigateToSettings,
-                        )
-                        TrendingSource.HackerNews -> {
-                            val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                            FeedTopBar(
-                                title = stringResource(Res.string.hackernews_title),
-                                navigationIcon = {
-                                    Icon(
-                                        imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
-                                        contentDescription = "Hacker News",
-                                        modifier = Modifier.size(24.dp),
-                                        tint = Color.Unspecified
-                                    )
-                                },
-                                // 招聘月度专题入口。只挂在 HN 源上——内容本来就是 HN 的，
-                                // 来源归属由动线本身交代；GitHub / PH 的标题栏不受影响
-                                leadingActions = {
-                                    IconButton(onClick = onOpenHiring) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.WorkOutline,
-                                            contentDescription = stringResource(Res.string.hiring_entry),
-                                        )
-                                    }
-                                },
-                                onSettingsClick = onNavigateToSettings,
-                            )
-                        }
-                        TrendingSource.ProductHunt -> {
-                            val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                            FeedTopBar(
-                                title = stringResource(Res.string.producthunt_title),
-                                navigationIcon = {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (isDark) Res.drawable.icon_producthunt_dark
-                                            else Res.drawable.icon_producthunt_light
-                                        ),
-                                        contentDescription = "Product Hunt",
-                                        modifier = Modifier.size(24.dp),
-                                        tint = Color.Unspecified
-                                    )
-                                },
-                                onSettingsClick = onNavigateToSettings,
-                            )
-                        }
-                    }
-                    HomeTab.Picks -> PicksTopBar(
-                        onSettingsClick = onNavigateToSettings,
-                    )
-                    HomeTab.Me -> TrendingTopAppBar(
-                        title = {
-                            Text(
-                                text = stringResource(Res.string.me_title),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        },
-                        actions = { SettingsAction(onClick = onNavigateToSettings) },
-                    )
-                    // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
-                    HomeTab.Chat -> Unit
                 }
             }
 
@@ -354,14 +293,10 @@ fun HomeScreen(
                 onOpenChat = onNavigateToChat,
                 // 定高与内容底部留白同源（contentBottomPadding 也按它算），两者不能各算各的。
                 // 高度加在调用处而非组件内部，与 Echo 在 MainActivity 的写法一致。
+                // 沉浸位移的行程含底部让出的外边距与导航栏 inset：胶囊顶边正好推到屏幕底沿。
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    // 沉浸位移：行程 = 胶囊高 + 外边距 + 导航栏 inset（胶囊顶边正好推到屏幕底沿）
-                    .immersiveExit(
-                        immersiveState,
-                        ImmersiveEdge.Bottom,
-                        travel = FloatingBarHeight + FloatingBarBottomMargin + barBottomInset,
-                    )
+                    .immersiveExit(immersiveState, ImmersiveEdge.Bottom)
                     .padding(horizontal = 16.dp)
                     .padding(bottom = barBottomInset + FloatingBarBottomMargin)
                     .height(FloatingBarHeight),
@@ -370,8 +305,86 @@ fun HomeScreen(
     }
 }
 
-/** M3 TopAppBar 的容器高度（TopAppBarSmallTokens.ContainerHeight），不含状态栏 inset。 */
+/** 首页顶栏：按当前 tab / 子源切换，各顶栏的状态由自己就地 viewModel() 自取。 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeTopBar(
+    selectedTab: HomeTab,
+    selectedSource: TrendingSource,
+    onNavigateToSettings: () -> Unit,
+    onOpenHiring: () -> Unit,
+) {
+    when (selectedTab) {
+        HomeTab.Home -> when (selectedSource) {
+            TrendingSource.GitHub -> TrendingTopBar(
+                onSettingsClick = onNavigateToSettings,
+            )
+            TrendingSource.HackerNews -> {
+                val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                FeedTopBar(
+                    title = stringResource(Res.string.hackernews_title),
+                    navigationIcon = {
+                        Icon(
+                            imageVector = hackerNewsIcon(if (isDark) HackerNewsOrange else Color.Black),
+                            contentDescription = "Hacker News",
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Unspecified
+                        )
+                    },
+                    // 招聘月度专题入口。只挂在 HN 源上——内容本来就是 HN 的，
+                    // 来源归属由动线本身交代；GitHub / PH 的标题栏不受影响
+                    leadingActions = {
+                        IconButton(onClick = onOpenHiring) {
+                            Icon(
+                                imageVector = Icons.Outlined.WorkOutline,
+                                contentDescription = stringResource(Res.string.hiring_entry),
+                            )
+                        }
+                    },
+                    onSettingsClick = onNavigateToSettings,
+                )
+            }
+            TrendingSource.ProductHunt -> {
+                val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                FeedTopBar(
+                    title = stringResource(Res.string.producthunt_title),
+                    navigationIcon = {
+                        Icon(
+                            painter = painterResource(
+                                if (isDark) Res.drawable.icon_producthunt_dark
+                                else Res.drawable.icon_producthunt_light
+                            ),
+                            contentDescription = "Product Hunt",
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Unspecified
+                        )
+                    },
+                    onSettingsClick = onNavigateToSettings,
+                )
+            }
+        }
+        HomeTab.Picks -> PicksTopBar(
+            onSettingsClick = onNavigateToSettings,
+        )
+        HomeTab.Me -> TrendingTopAppBar(
+            title = {
+                Text(
+                    text = stringResource(Res.string.me_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            },
+            actions = { SettingsAction(onClick = onNavigateToSettings) },
+        )
+        // 选中态永不为 Chat（点击即推聊天页），这里只是穷尽 when
+        HomeTab.Chat -> Unit
+    }
+}
+
+/**
+ * M3 TopAppBar 的容器高度（TopAppBarSmallTokens.ContainerHeight），不含状态栏 inset。
+ * 只作沉浸式手势行程实测前的初值，头部实际高度以 [HeaderOverlayLayout] 量到的为准。
+ */
 private val TopBarHeight = 64.dp
 
-/** [TrendingSourceTabs] 的高度：SecondaryTabRow 纯文字 tab 的规范定高。 */
+/** [TrendingSourceTabs] 的规范定高（SecondaryTabRow 纯文字 tab），用途同 [TopBarHeight]。 */
 private val SourceTabRowHeight = 48.dp
