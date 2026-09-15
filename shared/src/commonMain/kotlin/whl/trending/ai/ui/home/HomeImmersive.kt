@@ -68,13 +68,14 @@ fun Modifier.immersiveNestedScroll(state: ImmersiveState?): Modifier =
     if (state == null) this else nestedScroll(state.connection)
 
 /**
- * 挂在要退场的栏上施加位移：[travel] 是该栏从常驻位到完全出屏的距离，[edge] 决定方向。
+ * 挂在要退场的栏上施加位移，[edge] 决定方向。行程 = 该栏自身的实测高度：要挂在栏
+ * modifier 链的最外层，让出屏所需的 inset / 外边距 padding 都在它之内，高度才把这些一并算进去。
  * 读 progress 落在 draw 阶段，滚动全程不触发重组。[state] 为 null（开关关闭）时原样返回。
  */
-fun Modifier.immersiveExit(state: ImmersiveState?, edge: ImmersiveEdge, travel: Dp): Modifier =
+fun Modifier.immersiveExit(state: ImmersiveState?, edge: ImmersiveEdge): Modifier =
     if (state == null) this
     else graphicsLayer {
-        val ty = state.progress * travel.toPx()
+        val ty = state.progress * size.height
         translationY = if (edge == ImmersiveEdge.Top) -ty else ty
     }
 
