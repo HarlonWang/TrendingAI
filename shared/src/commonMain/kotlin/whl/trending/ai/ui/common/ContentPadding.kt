@@ -47,21 +47,21 @@ fun HeaderOverlayLayout(
     content: @Composable () -> Unit,
 ) {
     SubcomposeLayout(modifier) { constraints ->
-        val headerPlaceables = subcompose(HeaderOverlaySlot.Header, header)
+        val measuredHeader = subcompose(HeaderOverlaySlot.Header, header)
             .map { it.measure(constraints.copy(minHeight = 0)) }
-        val headerHeight = headerPlaceables.maxOfOrNull { it.height } ?: 0
-        val contentPlaceables = subcompose(HeaderOverlaySlot.Content) {
+        val headerHeight = measuredHeader.maxOfOrNull { it.height } ?: 0
+        val measuredContent = subcompose(HeaderOverlaySlot.Content) {
             CompositionLocalProvider(
                 LocalContentTopPadding provides headerHeight.toDp(),
                 content = content,
             )
         }.map { it.measure(constraints) }
 
-        val width = (headerPlaceables + contentPlaceables).maxOfOrNull { it.width } ?: 0
-        val height = contentPlaceables.maxOfOrNull { it.height } ?: headerHeight
+        val width = (measuredHeader + measuredContent).maxOfOrNull { it.width } ?: 0
+        val height = measuredContent.maxOfOrNull { it.height } ?: headerHeight
         layout(constraints.constrainWidth(width), constraints.constrainHeight(height)) {
-            contentPlaceables.forEach { it.place(0, 0) }
-            headerPlaceables.forEach { it.place(0, 0) }
+            measuredContent.forEach { it.place(0, 0) }
+            measuredHeader.forEach { it.place(0, 0) }
         }
     }
 }
