@@ -77,6 +77,7 @@ kotlin {
             api(libs.loginbase.kt)
             // api 而非 implementation：AppEvent 继承库里的 Event，notifier 模块看得见才编得过
             api(libs.eventbase.kt)
+            implementation(libs.tinyui)
             implementation(libs.jetbrains.navigationevent.compose)
         }
         iosMain.dependencies {

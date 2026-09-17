@@ -1,0 +1,14 @@
+{
+  "runtime": [
+    "@tiny-ui/core",
+    "@tiny-ui/native"
+  ],
+  "pages": [
+    "pages/subscription"
+  ],
+  "buildIds": {
+    "@tiny-ui/core": "bea04958",
+    "@tiny-ui/native": "7fd24664",
+    "pages/subscription": "323ed7c0"
+  }
+}
