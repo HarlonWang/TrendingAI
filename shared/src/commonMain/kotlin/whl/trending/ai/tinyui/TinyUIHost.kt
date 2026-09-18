@@ -69,7 +69,7 @@ object TinyUIHost {
     @OptIn(ExperimentalResourceApi::class)
     suspend fun page(name: String): Page = lock.withLock {
         val manifest = manifest ?: BuildManifest.parse(read("manifest.json").decodeToString()).also { manifest = it }
-        val runtime = runtime ?: RuntimeBundle(core = read("runtime/core.bin"), native = read("runtime/native.bin")).also {
+        val runtime = runtime ?: RuntimeBundle(core = read("${manifest.file("tinyui-core")}.bin"), native = read("${manifest.file("tinyui-native")}.bin")).also {
             runtime = it
             for (module in manifest.runtime) map(manifest.file(module))?.let { maps[module] = it }
         }

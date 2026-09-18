@@ -89,4 +89,4 @@ asset 里字节码（`.bin`）共 18 KiB、source map（`.js.map`）共 22 KiB�
    渠道必须一致（r2 与 github 都含 updater，尺寸相同，但仍按同渠道比）。
 3. `diffuse diff <old.apk> <new.apk> > diff.txt`（`brew install diffuse`）。首表看分类，`==== APK ====`
    节看逐文件，`==== DEX ====` 节看类 / 方法级明细。
-4. 看 ABI 覆盖：`unzip -l <new.apk> 'lib/*'`，各 ABI 目录下的 `.so` 清单应一致。
+4. 看 ABI 覆盖：`unzip -l <new.apk> 'lib/*'`，arm64-v8a / armeabi-v7a / x86_64 三个目录的 `.so` 清单应一致；`lib/x86/` 缺 `libquickjs_kmp.so` 是待决项 2 的已知现状，待决后按其结论（排除 x86 或补 so）改这条校验。
