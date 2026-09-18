@@ -1,14 +1,19 @@
 {
   "runtime": [
-    "@tiny-ui/core",
-    "@tiny-ui/native"
+    "tinyui-core",
+    "tinyui-native"
   ],
   "pages": [
     "pages/subscription"
   ],
+  "files": {
+    "tinyui-core": "runtime/core",
+    "tinyui-native": "runtime/native",
+    "pages/subscription": "pages/subscription"
+  },
   "buildIds": {
-    "@tiny-ui/core": "bea04958",
-    "@tiny-ui/native": "7fd24664",
-    "pages/subscription": "d9f1d2c3"
+    "tinyui-core": "ce85cb47",
+    "tinyui-native": "f2403ac0",
+    "pages/subscription": "d5eb6006"
   }
 }

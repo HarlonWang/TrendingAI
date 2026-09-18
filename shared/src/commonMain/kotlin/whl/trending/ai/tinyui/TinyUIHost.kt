@@ -71,10 +71,10 @@ object TinyUIHost {
         val manifest = manifest ?: BuildManifest.parse(read("manifest.json").decodeToString()).also { manifest = it }
         val runtime = runtime ?: RuntimeBundle(core = read("runtime/core.bin"), native = read("runtime/native.bin")).also {
             runtime = it
-            for (module in manifest.runtime) map("runtime/" + module.removePrefix("@tiny-ui/"))?.let { maps[module] = it }
+            for (module in manifest.runtime) map(manifest.file(module))?.let { maps[module] = it }
         }
-        map(name)?.let { maps[name] = it }
-        Page(runtime, PageModule(name, read("$name.bin"), manifest.buildId(name)), SourceMaps(maps.toMap()))
+        map(manifest.file(name))?.let { maps[name] = it }
+        Page(runtime, PageModule(name, read("${manifest.file(name)}.bin"), manifest.buildId(name)), SourceMaps(maps.toMap()))
     }
 
     @OptIn(ExperimentalResourceApi::class)
