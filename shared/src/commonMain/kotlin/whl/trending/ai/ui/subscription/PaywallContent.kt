@@ -1,10 +1,12 @@
 package whl.trending.ai.ui.subscription
 
+import kotlinx.serialization.Serializable
 import whl.trending.ai.data.model.LocalizedText
 import whl.trending.ai.data.model.ProBenefitRow
 import whl.trending.ai.data.model.ProPaywallRemoteConfig
 
 /** 权益清单一行，已按 UI 语言选好文案；[icon] 是服务端给的 key，由 UI 映射成图标 */
+@Serializable
 data class BenefitItem(val icon: String?, val text: String)
 
 /** 订阅页文案，已按 UI 语言选好；字段为 null 表示服务端未下发，UI 用本地默认 */
