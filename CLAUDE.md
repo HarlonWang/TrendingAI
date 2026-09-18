@@ -99,6 +99,8 @@
 
 **打 tag 前必须跑 `scripts/release-smoke.sh` 并看到 PASS。** 它构建 r2 渠道 release 包（与线上同样开 R8 minify）、安装到 Pixel_9_2 模拟器、启动并检查崩溃日志与进程存活。日常开发全用 debug 包（不混淆），R8 裁剪类问题只有 release 包能暴露——0.20.0 曾因此启动即崩、发布后才发现（room 2.6.1 老 keep 规则 + R8 full mode 裁掉 WorkDatabase_Impl 构造器）。FAIL 时禁止发布，先按崩溃堆栈排查。
 
+做包大小优化或评估依赖体积影响前，先读 `docs/apk-size-tinyui-baseline.md`——订阅页接入 TinyUI 的 diffuse 拆解基线（+2.2 MiB，96% 是 QuickJS native 库）、复现协议与三条待决项（universal 包多带 ABI、x86 空洞、source map 随包），别重新分析一遍。
+
 ## 版本更新说明（whatsnew）发布流程
 
 App 升级后首启弹的「新版本更新说明」来自 `shared/src/commonMain/composeResources/files/whatsnew.json`（随 APK 打包）。同一份内容也用于拼 GitHub Release 正文。它有两种生成模式，由**内容驱动的开关**决定，无需额外配置：
