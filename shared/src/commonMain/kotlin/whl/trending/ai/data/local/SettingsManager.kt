@@ -642,12 +642,12 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /**
-     * 沉浸式浏览：首页三栏跟随滚动收起/恢复。默认 false——顶/底栏是导航锚点，代价留给需要的人自己开。
+     * 沉浸式浏览：首页三栏跟随滚动收起/恢复。默认开启；
      * 关闭时首页不接入任何滚动监听（见 ui/home/HomeImmersive.kt 的 null 模式）。
      */
-    val immersiveBrowsing: Flow<Boolean> = settings.getBooleanFlow(IMMERSIVE_BROWSING_KEY, false)
+    val immersiveBrowsing: Flow<Boolean> = settings.getBooleanFlow(IMMERSIVE_BROWSING_KEY, true)
 
-    fun currentImmersiveBrowsing(): Boolean = settings.getBoolean(IMMERSIVE_BROWSING_KEY, false)
+    fun currentImmersiveBrowsing(): Boolean = settings.getBoolean(IMMERSIVE_BROWSING_KEY, true)
 
     fun setImmersiveBrowsing(value: Boolean) {
         settings.putBoolean(IMMERSIVE_BROWSING_KEY, value)
