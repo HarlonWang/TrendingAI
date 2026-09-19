@@ -112,7 +112,12 @@ class LoginbaseAuthManager(
 }
 
 /** GitHub 授权结束后，面板需要据此恢复 UI 的结果（成功不在此列——成功直接关面板） */
-enum class GithubAuthResult { FAILED, CANCELED }
+enum class GithubAuthResult {
+    FAILED,
+    // 授权已过、换 token 的请求没发出去：GitHub 那边没坏，红字不能指向它
+    NETWORK_FAILED,
+    CANCELED,
+}
 
 /**
  * 登录面板请求总线。用 StateFlow 而非事件流——「当前是否有待处理的登录请求」是状态，

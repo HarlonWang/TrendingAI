@@ -16,6 +16,7 @@ import trendingai.shared.generated.resources.account_link_already_linked
 import trendingai.shared.generated.resources.account_link_failed
 import trendingai.shared.generated.resources.account_link_github
 import trendingai.shared.generated.resources.account_link_github_in_use
+import trendingai.shared.generated.resources.error_network
 import trendingai.shared.generated.resources.sponsor_link_needed_later
 import wang.harlon.eventbase.Eventbase
 import wang.harlon.loginbase.OAuthOutcome
@@ -110,6 +111,7 @@ fun OAuthOutcomeHost() {
                             // 改绑会让 Pro 权益随 GitHub ID 漂移到别人账上
                             "github_in_use" -> getString(Res.string.account_link_github_in_use)
                             "already_linked" -> getString(Res.string.account_link_already_linked)
+                            "network" -> getString(Res.string.error_network)
                             else -> getString(Res.string.account_link_failed)
                         }
                     } else {
@@ -123,7 +125,10 @@ fun OAuthOutcomeHost() {
                             ),
                             Eventbase.currentFlow(),
                         )
-                        LoginSheetBus.reportGithubResult(GithubAuthResult.FAILED)
+                        LoginSheetBus.reportGithubResult(
+                            if (outcome.reason == "network") GithubAuthResult.NETWORK_FAILED
+                            else GithubAuthResult.FAILED,
+                        )
                     }
                 }
 

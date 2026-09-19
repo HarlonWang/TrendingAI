@@ -38,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
+import trendingai.shared.generated.resources.error_network
 import trendingai.shared.generated.resources.login_code_expired
 import trendingai.shared.generated.resources.login_code_hint
 import trendingai.shared.generated.resources.login_code_invalid
@@ -134,6 +135,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
     val tooManyRequestsTemplate = stringResource(Res.string.login_too_many_requests)
     val tooManyRequestsMinutesTemplate = stringResource(Res.string.login_too_many_requests_minutes)
     val oauthFailed = stringResource(Res.string.login_oauth_failed)
+    val networkError = stringResource(Res.string.error_network)
 
     // 服务端给的冷却秒数倒计时，不写死 60
     LaunchedEffect(cooldown) {
@@ -210,6 +212,10 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         when (githubResult) {
             GithubAuthResult.FAILED -> {
                 error = oauthFailed
+                busy = false
+            }
+            GithubAuthResult.NETWORK_FAILED -> {
+                error = networkError
                 busy = false
             }
             // 用户放弃授权（关掉 CCT / 从浏览器返回）——库给的确定信号，不报错只解除等待
