@@ -41,11 +41,11 @@ import trendingai.shared.generated.resources.subscription_plan_monthly_unit
 import trendingai.shared.generated.resources.subscription_refund_note
 import trendingai.shared.generated.resources.subscription_savings_badge
 import trendingai.shared.generated.resources.subscription_title
-import wang.harlon.tinyui.HostCapability
-import wang.harlon.tinyui.HostException
-import wang.harlon.tinyui.HostServices
-import wang.harlon.tinyui.InMemoryStore
-import wang.harlon.tinyui.TinyUIPage
+import app.tinyui.HostCapability
+import app.tinyui.HostException
+import app.tinyui.HostServices
+import app.tinyui.InMemoryStore
+import app.tinyui.TinyUIPage
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProCheckout

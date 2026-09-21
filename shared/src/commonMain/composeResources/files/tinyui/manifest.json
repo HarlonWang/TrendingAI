@@ -12,8 +12,8 @@
     "pages/subscription": "pages/subscription"
   },
   "buildIds": {
-    "tinyui-core": "ce85cb47",
-    "tinyui-native": "f2403ac0",
+    "tinyui-core": "ac1e0a4c",
+    "tinyui-native": "1143c4c2",
     "pages/subscription": "d5eb6006"
   }
 }

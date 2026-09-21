@@ -20,14 +20,14 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import trendingai.shared.generated.resources.Res
-import wang.harlon.tinyui.BuildManifest
-import wang.harlon.tinyui.PageError
-import wang.harlon.tinyui.PageModule
-import wang.harlon.tinyui.PageSink
-import wang.harlon.tinyui.RuntimeBundle
-import wang.harlon.tinyui.SourceMaps
-import wang.harlon.tinyui.components.registerBuiltins
-import wang.harlon.tinyui.schema.ComponentRegistry
+import app.tinyui.BuildManifest
+import app.tinyui.PageError
+import app.tinyui.PageModule
+import app.tinyui.PageSink
+import app.tinyui.RuntimeBundle
+import app.tinyui.SourceMaps
+import app.tinyui.components.registerBuiltins
+import app.tinyui.schema.ComponentRegistry
 import whl.trending.ai.tinyui.generated.HostSchemas
 
 /**
