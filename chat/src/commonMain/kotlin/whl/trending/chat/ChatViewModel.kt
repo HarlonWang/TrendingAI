@@ -158,10 +158,13 @@ class ChatViewModel(
                 if (!caps.imageGeneration) _imageGenerationEnabled.value = false
             }
         }
-        // Pro 到期 / 切账号后开关不能残留：入口的 Pro 弹窗只拦开启那一下，之后每条都会带 imageGeneration
+        // Pro 到期 / 切账号后开关不能残留：入口的 Pro 弹窗只拦开启那一下，之后每条都会带 search / imageGeneration
         viewModelScope.launch {
             flow { emitAll(modelSelection()) }.catch { }.collect { (_, pro) ->
-                if (!pro) _imageGenerationEnabled.value = false
+                if (!pro) {
+                    _searchEnabled.value = false
+                    _imageGenerationEnabled.value = false
+                }
             }
         }
     }

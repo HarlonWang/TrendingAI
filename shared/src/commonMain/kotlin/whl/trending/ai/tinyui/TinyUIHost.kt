@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
@@ -89,5 +90,6 @@ private fun benefitIcon(key: String?): ImageVector = when (key) {
     "models" -> Icons.Outlined.AutoAwesome
     "voice" -> Icons.Outlined.Mic
     "image_generation" -> Icons.Outlined.Brush
+    "search" -> Icons.Outlined.TravelExplore
     else -> Icons.Outlined.CheckCircle
 }

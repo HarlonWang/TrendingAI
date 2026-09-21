@@ -128,6 +128,19 @@ class ChatViewModelCapsTest {
         assertFalse(viewModel.imageGenerationEnabled.value)
     }
 
+    @Test
+    fun `Pro 失效时搜索开关收回`() = runTest(dispatcher) {
+        val pro = MutableStateFlow(true)
+        val viewModel = vm(MutableStateFlow(FOLLOW_SERVER_DEFAULT), pro)
+        advanceUntilIdle()
+        viewModel.toggleWebSearch()
+        assertTrue(viewModel.searchEnabled.value)
+
+        pro.value = false
+        advanceUntilIdle()
+        assertFalse(viewModel.searchEnabled.value)
+    }
+
     /** 旧服务端不下发 imageGeneration：缺省 false，入口不亮 */
     @Test
     fun `目录未声明 imageGeneration 时生图不可开`() = runTest(dispatcher) {

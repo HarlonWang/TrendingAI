@@ -71,6 +71,8 @@
     <string name="chat_image_generation_hint">Describe the image you want…</string>
     <string name="chat_generating_image">Generating image…</string>
     <string name="chat_image_generation_pro_title">Pro feature</string>
+    <string name="chat_search_pro_title">Pro feature</string>
+    <string name="chat_search_pro_message">Web search is available to Pro only. It uses more credits than a regular message; see the credits guide on the Me page.</string>
     <string name="chat_image_generation_pro_message">Image generation is available to Pro only. It uses more credits than a regular message; see the credits guide on the Me page.</string>
     <string name="chat_error_image_generation_unsupported">This model can&apos;t generate images. Switch to a GPT model and try again.</string>
     <string name="chat_waiting_processing">Processing…</string>

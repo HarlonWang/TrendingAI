@@ -50,6 +50,7 @@ import trendingai.chat.generated.resources.chat_retry
 import trendingai.chat.generated.resources.chat_error_image_generation_unsupported
 import trendingai.chat.generated.resources.chat_generating_image
 import trendingai.chat.generated.resources.chat_image_generation_pro_message
+import trendingai.chat.generated.resources.chat_search_pro_message
 import trendingai.chat.generated.resources.chat_searching
 import trendingai.chat.generated.resources.chat_share
 import trendingai.chat.generated.resources.chat_user_image
@@ -258,6 +259,7 @@ private fun errorMessageRes(error: ChatError): StringResource = when (error.code
     ChatError.CODE_QUOTA_DEVICE -> Res.string.chat_quota_exceeded
     "upstream_timeout" -> Res.string.chat_error_timeout
     ChatError.CODE_REGION_BLOCKED -> Res.string.chat_error_region_blocked
+    ChatError.CODE_SEARCH_REQUIRES_PRO -> Res.string.chat_search_pro_message
     ChatError.CODE_IMAGE_GENERATION_REQUIRES_PRO -> Res.string.chat_image_generation_pro_message
     ChatError.CODE_IMAGE_GENERATION_UNSUPPORTED -> Res.string.chat_error_image_generation_unsupported
     "upstream_error" -> Res.string.chat_error_server

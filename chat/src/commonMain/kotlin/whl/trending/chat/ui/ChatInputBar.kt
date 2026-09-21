@@ -93,6 +93,8 @@ import trendingai.chat.generated.resources.chat_image_generation_pro_message
 import trendingai.chat.generated.resources.chat_image_generation_pro_title
 import trendingai.chat.generated.resources.chat_input_hint
 import trendingai.chat.generated.resources.chat_model_unlock_dismiss
+import trendingai.chat.generated.resources.chat_search_pro_message
+import trendingai.chat.generated.resources.chat_search_pro_title
 import trendingai.chat.generated.resources.chat_send
 import trendingai.chat.generated.resources.chat_voice_failed
 import trendingai.chat.generated.resources.chat_voice_mic
@@ -177,6 +179,7 @@ fun ChatInputBar(
     val isPro by chatHost.isPro.collectAsState(chatHost.currentIsPro())
     var showProDialog by remember { mutableStateOf(false) }
     var showImageGenerationProDialog by remember { mutableStateOf(false) }
+    var showSearchProDialog by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     // 录音中：startedAt > 0；inCancelZone 随手指上滑切换
     var recordingStartedAt by remember { mutableLongStateOf(0L) }
@@ -215,6 +218,14 @@ fun ChatInputBar(
             message = stringResource(Res.string.chat_image_generation_pro_message),
             paywallSource = PaywallSource.IMAGE_GENERATION_GATE,
             onDismiss = { showImageGenerationProDialog = false },
+        )
+    }
+    if (showSearchProDialog) {
+        ProGateDialog(
+            title = stringResource(Res.string.chat_search_pro_title),
+            message = stringResource(Res.string.chat_search_pro_message),
+            paywallSource = PaywallSource.SEARCH_GATE,
+            onDismiss = { showSearchProDialog = false },
         )
     }
     if (showPermissionDialog) {
@@ -320,6 +331,7 @@ fun ChatInputBar(
                             onDismissRequest = { menuExpanded = false },
                         ) {
                             // 能力开关：联网搜索（勾选态 = 已开启；EchoFlow 的「菜单开启 + chip 回显」范式）
+                            // Pro 闸同生图：弹窗由点击触发，不置灰，保留转化触点
                             DropdownMenuItem(
                                 text = { MenuLabel(stringResource(Res.string.chat_web_search), enabled = caps.search) },
                                 leadingIcon = { Icon(Icons.Outlined.TravelExplore, contentDescription = null) },
@@ -329,6 +341,10 @@ fun ChatInputBar(
                                 enabled = caps.search,
                                 onClick = {
                                     menuExpanded = false
+                                    if (!isPro) {
+                                        showSearchProDialog = true
+                                        return@DropdownMenuItem
+                                    }
                                     onToggleSearch()
                                 },
                             )
