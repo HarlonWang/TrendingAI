@@ -1,0 +1,13 @@
+hostVersion 2
+tinyui 0.4.1
+
+components
+  ta.Icon     name: string, size?: dp = 24, tint?: color = primary; layout
+  ta.Loading  color?: color = primary, size?: dp = 24; layout
+
+capabilities
+  analytics.checkoutStep
+  auth.signIn
+  billing.prices
+  checkout.start
+  ui.snackbar
