@@ -290,7 +290,7 @@ enum class AuthOutcome { SUCCESS, CANCELED, ERROR }
 
 enum class UpsellTarget { PRO, SPONSOR, NEWSLETTER }
 
-enum class TinyUIUpdateOutcome { INSTALLED, SKIPPED, FAILED }
+enum class TinyUIUpdateOutcome { INSTALLED, REVERTED, SKIPPED, FAILED }
 
 enum class CheckoutStepKind { PLAN_SELECTED, OPENED, RECONCILED }
 
