@@ -3,8 +3,8 @@ package whl.trending.ai.core.analytics
 import wang.harlon.eventbase.Event
 
 /**
- * 事件词汇 v1。**唯一权威是 eventbase 仓的 `docs/telemetry-design.md` §12.9**——
- * 要加事件先改那张表，禁止在调用点就地发明。
+ * 事件词汇 v1，本文件即唯一权威：加事件加在这里，禁止在调用点就地发明。
+ * 命名规范见 eventbase 仓 `docs/telemetry-design.md` 的「事件词汇：命名规范」。
  *
  * `app_opened` / `app_backgrounded` 不在这里：由 eventbase-kt 按自己的会话口径自动上报。
  *
