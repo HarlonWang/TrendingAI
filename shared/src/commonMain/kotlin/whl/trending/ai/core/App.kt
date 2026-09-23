@@ -63,6 +63,7 @@ import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost
 import whl.trending.ai.ui.auth.LoginSheetHost
 import whl.trending.ai.ui.subscription.SubscriptionScreen
+import whl.trending.ai.tinyui.TinyUIUpdates
 import whl.trending.ai.ui.common.OAuthOutcomeHost
 import whl.trending.ai.ui.common.CheckoutResultHost
 import whl.trending.ai.ui.common.ProReconcileHost
@@ -142,6 +143,11 @@ fun App() {
     // AI 对话时 Home 被盖在栈底不组合，挂那里预热不会跑。
     LaunchedEffect(Unit) {
         ChatModelsProvider.warmUp(this)
+    }
+
+    // TinyUI 热下发：先于任何 TinyUI 页挂载 check，指针回滚才送得到已装上的用户（tinyui docs/updates.md §4.1）
+    LaunchedEffect(Unit) {
+        TinyUIUpdates.start()
     }
 
     // 外链统一出口：默认走系统浏览器（Custom Tabs / SFSafariViewController），

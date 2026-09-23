@@ -192,6 +192,21 @@ sealed class AppEvent(
      */
     data class DigestUnavailable(val source: String) :
         AppEvent("digest_unavailable", mapOf("source" to source))
+
+    /**
+     * TinyUI 热下发的结果（tinyui docs/updates.md §4.2 的 UpdateEvent）；每次启动都有的 running / up_to_date 不报。
+     * [reason] 是库给的枚举名或错误类别（skip 原因、失败阶段、回退时的 E2 / E6），不是文案。
+     */
+    data class TinyuiUpdate(
+        val step: TinyuiUpdateStep,
+        val pkg: String,
+        val version: String?,
+        val reason: String? = null,
+        val page: String? = null,
+    ) : AppEvent(
+        "tinyui_update",
+        mapOf("step" to step, "pkg" to pkg, "version" to version, "reason" to reason, "page" to page),
+    )
 }
 
 /**
@@ -271,6 +286,8 @@ enum class AuthAction { SIGN_IN, LINK }
 enum class AuthOutcome { SUCCESS, CANCELED, ERROR }
 
 enum class UpsellTarget { PRO, SPONSOR, NEWSLETTER }
+
+enum class TinyuiUpdateStep { INSTALLED, SKIPPED, FAILED, ROLLED_BACK }
 
 enum class CheckoutStepKind { PLAN_SELECTED, OPENED, RECONCILED }
 

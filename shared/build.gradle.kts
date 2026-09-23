@@ -78,6 +78,7 @@ kotlin {
             // api 而非 implementation：AppEvent 继承库里的 Event，notifier 模块看得见才编得过
             api(libs.eventbase.kt)
             implementation(libs.tinyui)
+            implementation(libs.tinyui.updates)
             implementation(libs.jetbrains.navigationevent.compose)
         }
         iosMain.dependencies {
@@ -93,4 +94,11 @@ kotlin {
             implementation(libs.ktor.client.mock)
         }
     }
+}
+
+// HostSnapshotTest 对照 tinyui-host/；-Ptinyui.updateHostSnapshot 时改为写入
+val updateHostSnapshot = providers.gradleProperty("tinyui.updateHostSnapshot")
+tasks.withType<Test>().configureEach {
+    inputs.files(layout.projectDirectory.dir("tinyui-host")).withPropertyName("hostSnapshots")
+    updateHostSnapshot.orNull?.let { systemProperty("tinyui.updateHostSnapshot", "true") }
 }

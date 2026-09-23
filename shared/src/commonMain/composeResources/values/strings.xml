@@ -35,6 +35,7 @@
     <string name="current_datasource">Current: Gemini API</string>
     <string name="about">About</string>
     <string name="check_updates">Check for updates</string>
+    <string name="tinyui_channel">Page update channel</string>
     <string name="changelog">Changelog</string>
     <string name="version_up_to_date">Up to date</string>
     <string name="check_update_failed">Check failed, try again later</string>
