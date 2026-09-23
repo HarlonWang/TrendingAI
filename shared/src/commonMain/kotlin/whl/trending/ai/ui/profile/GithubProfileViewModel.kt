@@ -312,7 +312,7 @@ class GithubProfileViewModel(
             feedItems = emptyList(),
             isFeedLoading = false,
             feedEndReached = false,
-            feedUnavailable = _uiState.value.login == null,
+            feedUnavailable = !feedPrepared,
             highlightsOnly = highlightsOnly,
         )
         loadMoreFeed()

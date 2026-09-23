@@ -401,4 +401,18 @@ class GithubProfileViewModelTest {
         assertTrue(vm.uiState.value.feedUnavailable)
         assertFalse(vm.uiState.value.isFeedLoadingVisible)
     }
+
+    @Test
+    fun switchingFilterWithMissingTokenDoesNotSpin() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val vm = viewModel(cache(), tokenProvider = FakeTokenProvider(GithubTokenLookup.Missing))
+        vm.load()
+        advanceUntilIdle()
+
+        vm.setFeedFilter(false)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.feedUnavailable)
+        assertFalse(vm.uiState.value.isFeedLoadingVisible)
+    }
 }
