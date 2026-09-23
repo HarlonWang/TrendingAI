@@ -55,6 +55,8 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.account_github_entry
+import trendingai.shared.generated.resources.account_relink_github
+import trendingai.shared.generated.resources.account_relink_github_desc
 import trendingai.shared.generated.resources.feed_created_branch
 import trendingai.shared.generated.resources.feed_created_repo
 import trendingai.shared.generated.resources.feed_created_tag
@@ -92,6 +94,8 @@ import trendingai.shared.generated.resources.time_days_ago
 import trendingai.shared.generated.resources.time_hours_ago
 import trendingai.shared.generated.resources.time_just_now
 import trendingai.shared.generated.resources.time_minutes_ago
+import whl.trending.ai.auth.isGithubOAuthSupported
+import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.TrendingScaffold
@@ -100,9 +104,8 @@ import whl.trending.ai.ui.common.TrendingTopAppBar
 /**
  * GitHub 开发者档案子页：从账户 Hub 的「GitHub 主页」入口卡进入。
  *
- * 承接原 ProfileScreen 的 GitHub 模块——身份头（头像/名/@login/bio）+ 计数行（可下钻
- * followers/following/repos）+ 贡献热力图 + 精选/全部动态流。与账户 Hub 共享同一
- * [ProfileViewModel]（nav3 Activity 级作用域），进入时数据通常已由 Hub 预加载。
+ * 身份头（头像/名/@login/bio）+ 计数行（可下钻 followers/following/repos）+ 贡献热力图 +
+ * 精选/全部动态流。数据全由 [GithubProfileViewModel] 在进入本页时拉取。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -112,9 +115,10 @@ fun GithubProfileScreen(
     onOpenFollowing: () -> Unit,
     onOpenRepos: () -> Unit,
 ) {
-    val viewModel: ProfileViewModel = viewModel { ProfileViewModel() }
+    val viewModel: GithubProfileViewModel = viewModel { GithubProfileViewModel() }
     val uiState by viewModel.uiState.collectAsState()
-    LaunchedEffect(Unit) { viewModel.load() }
+    val reloadKey by viewModel.reloadKey.collectAsState()
+    LaunchedEffect(reloadKey) { viewModel.load() }
     val uriHandler = LocalUriHandler.current
     val listState = rememberLazyListState()
     // 贡献热力图横向滚动状态提升到列表外，避免 LazyColumn item 回收时重置到最左
@@ -200,7 +204,16 @@ fun GithubProfileScreen(
                         }
                     }
                 }
-                if (uiState.feedUnavailable && uiState.feedItems.isEmpty()) {
+                // 恢复 token 的唯一手段是再走一次关联
+                if (uiState.githubTokenMissing && isGithubOAuthSupported) {
+                    item(key = "relink_github") {
+                        LinkGithubCard(
+                            title = stringResource(Res.string.account_relink_github),
+                            description = stringResource(Res.string.account_relink_github_desc),
+                            onClick = { AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT) },
+                        )
+                    }
+                } else if (uiState.feedUnavailable && uiState.feedItems.isEmpty()) {
                     item(key = "feed_unavailable") {
                         FeedNotice(stringResource(Res.string.feed_unavailable))
                     }
@@ -241,39 +254,35 @@ fun GithubProfileScreen(
 
 @Composable
 private fun GithubIdentityHeader(
-    uiState: ProfileUiState,
+    uiState: GithubProfileUiState,
     onOpenFollowers: () -> Unit,
     onOpenFollowing: () -> Unit,
     onOpenRepos: () -> Unit,
 ) {
-    val user = uiState.user ?: return
+    val login = uiState.login ?: return
+    val gh = uiState.githubUser
     Column(
         modifier = Modifier.fillMaxWidth().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (user.avatarUrl != null) {
+        if (gh?.avatarUrl != null) {
             AsyncImage(
-                model = user.avatarUrl,
+                model = gh.avatarUrl,
                 contentDescription = null,
                 modifier = Modifier.size(96.dp).clip(CircleShape)
             )
         }
-        val title = user.displayName ?: user.githubLogin.orEmpty()
-        if (title.isNotBlank()) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
-        }
-        user.githubLogin?.let {
-            Text(
-                "@$it",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        user.bio?.takeIf { it.isNotBlank() }?.let {
+        Text(gh?.name?.takeIf { it.isNotBlank() } ?: login, style = MaterialTheme.typography.titleLarge)
+        Text(
+            "@$login",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        gh?.bio?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
         }
-        uiState.githubUser?.let { gh ->
+        if (gh != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 CountCell(gh.followers, stringResource(Res.string.profile_followers), onClick = onOpenFollowers)
                 CountCell(gh.following, stringResource(Res.string.profile_following), onClick = onOpenFollowing)

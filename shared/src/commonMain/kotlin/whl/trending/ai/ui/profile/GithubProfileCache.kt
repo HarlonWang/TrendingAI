@@ -2,17 +2,15 @@ package whl.trending.ai.ui.profile
 
 import kotlinx.serialization.Serializable
 import whl.trending.ai.data.model.ContributionCalendar
-import whl.trending.ai.data.model.MeUser
 import whl.trending.ai.data.remote.GithubUser
 
 /**
- * Profile 页「上次数据缓存」快照：用户信息 + GitHub 计数 + 贡献热力图 + feed 首屏。
- * 换账号必经登出（登出时整体 remove），因此 key 固定为 [KEY]；[login] 仅作冗余校验。
+ * GitHub 子页「上次数据缓存」快照：GitHub 档案 + 贡献热力图 + feed 首屏。
+ * key 固定为 [KEY]，登出时整体 remove；[login] 校验归属，不匹配的快照不复用。
  */
 @Serializable
-data class ProfileCache(
+data class GithubProfileCache(
     val login: String,
-    val user: MeUser,
     val githubUser: GithubUser? = null,
     val contributions: ContributionCalendar? = null,
     val feedItems: List<GithubFeedItem> = emptyList(),
@@ -20,25 +18,23 @@ data class ProfileCache(
     val highlightsOnly: Boolean = true,
 ) {
     companion object {
-        const val KEY = "profile"
+        const val KEY = "github_profile"
 
         /** feed 只缓存首屏所需条数，控制文件体积 */
         const val MAX_FEED_ITEMS = 50
 
         /**
-         * 从当前 state 组装快照。写入语义是「覆盖 + 只增不减」：Profile 渐进加载，
+         * 从当前 state 组装快照。写入语义是「覆盖 + 只增不减」：页面渐进加载，
          * 刷新中途 contributions/feed 会被清空重拉，此刻落盘若纯覆盖会把完整旧缓存
-         * 冲成 header-only 的残缺快照——因此残缺字段用旧快照补齐后再覆盖。
+         * 冲成残缺快照——因此残缺字段用旧快照补齐后再覆盖。
          * feed 与档位绑定，仅档位一致时复用旧值；contributions/githubUser 档位无关。
          */
-        fun from(state: ProfileUiState, previous: ProfileCache?): ProfileCache? {
-            val user = state.user ?: return null
-            val login = user.githubLogin ?: return null
+        fun from(state: GithubProfileUiState, previous: GithubProfileCache?): GithubProfileCache? {
+            val login = state.login ?: return null
             val prev = previous?.takeIf { it.login == login }
             val prevFeed = prev?.takeIf { it.highlightsOnly == state.highlightsOnly }?.feedItems.orEmpty()
-            return ProfileCache(
+            return GithubProfileCache(
                 login = login,
-                user = user,
                 githubUser = state.githubUser ?: prev?.githubUser,
                 contributions = state.contributions ?: prev?.contributions,
                 feedItems = state.feedItems.ifEmpty { prevFeed }.take(MAX_FEED_ITEMS),

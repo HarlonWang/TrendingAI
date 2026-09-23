@@ -38,16 +38,16 @@ fun profileCalendar(total: Int = 42) = ContributionCalendar(
 fun profileMeUser(login: String? = "octo") = MeUser(userId = "u1", githubLogin = login, displayName = "Octo")
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ProfileCacheTest {
+class GithubProfileCacheTest {
 
     private fun state(
-        user: MeUser? = profileMeUser(),
+        login: String? = "octo",
         githubUser: GithubUser? = GithubUser(login = "octo", followers = 10),
         contributions: ContributionCalendar? = profileCalendar(),
         feedItems: List<GithubFeedItem> = listOf(profileFeedItem("e1")),
         highlightsOnly: Boolean = true,
-    ) = ProfileUiState(
-        user = user,
+    ) = GithubProfileUiState(
+        login = login,
         githubUser = githubUser,
         contributions = contributions,
         feedItems = feedItems,
@@ -55,31 +55,29 @@ class ProfileCacheTest {
     )
 
     @Test
-    fun fromReturnsNullWithoutUserOrLogin() {
-        assertNull(ProfileCache.from(state(user = null), previous = null))
-        assertNull(ProfileCache.from(state(user = profileMeUser(login = null)), previous = null))
+    fun fromReturnsNullWithoutLogin() {
+        assertNull(GithubProfileCache.from(state(login = null), previous = null))
     }
 
     @Test
     fun fromCapsFeedItemsAtLimit() {
         val many = (1..80).map { profileFeedItem("e$it") }
-        val snapshot = ProfileCache.from(state(feedItems = many), previous = null)!!
-        assertEquals(ProfileCache.MAX_FEED_ITEMS, snapshot.feedItems.size)
+        val snapshot = GithubProfileCache.from(state(feedItems = many), previous = null)!!
+        assertEquals(GithubProfileCache.MAX_FEED_ITEMS, snapshot.feedItems.size)
         assertEquals("e1", snapshot.feedItems.first().id)
     }
 
     @Test
     fun fromKeepsPreviousFieldsWhenCurrentMissing() {
         // 只增不减：刷新中途 contributions/feed 尚未到达时，用旧快照补齐再覆盖
-        val previous = ProfileCache(
+        val previous = GithubProfileCache(
             login = "octo",
-            user = profileMeUser(),
             githubUser = GithubUser(login = "octo", followers = 3),
             contributions = profileCalendar(total = 99),
             feedItems = listOf(profileFeedItem("old")),
             highlightsOnly = true,
         )
-        val snapshot = ProfileCache.from(
+        val snapshot = GithubProfileCache.from(
             state(githubUser = null, contributions = null, feedItems = emptyList()),
             previous,
         )!!
@@ -91,15 +89,14 @@ class ProfileCacheTest {
     @Test
     fun fromDropsPreviousFeedWhenFilterDiffers() {
         // 档位不一致时旧 feed 不可复用，但档位无关的 contributions 仍补齐
-        val previous = ProfileCache(
+        val previous = GithubProfileCache(
             login = "octo",
-            user = profileMeUser(),
             githubUser = null,
             contributions = profileCalendar(total = 99),
             feedItems = listOf(profileFeedItem("old")),
             highlightsOnly = true,
         )
-        val snapshot = ProfileCache.from(
+        val snapshot = GithubProfileCache.from(
             state(contributions = null, feedItems = emptyList(), highlightsOnly = false),
             previous,
         )!!
@@ -110,15 +107,14 @@ class ProfileCacheTest {
 
     @Test
     fun fromIgnoresPreviousOfDifferentLogin() {
-        val previous = ProfileCache(
+        val previous = GithubProfileCache(
             login = "someone-else",
-            user = profileMeUser(login = "someone-else"),
             githubUser = null,
             contributions = profileCalendar(total = 99),
             feedItems = listOf(profileFeedItem("old")),
             highlightsOnly = true,
         )
-        val snapshot = ProfileCache.from(
+        val snapshot = GithubProfileCache.from(
             state(contributions = null, feedItems = emptyList()),
             previous,
         )!!
@@ -129,8 +125,8 @@ class ProfileCacheTest {
     @Test
     fun roundTripsThroughLastDataCache() = runTest {
         val cache = LastDataCache(FakeCacheFileStore(), StandardTestDispatcher(testScheduler))
-        val snapshot = ProfileCache.from(state(), previous = null)!!
-        cache.put(ProfileCache.KEY, snapshot)
-        assertEquals(snapshot, cache.get(ProfileCache.KEY))
+        val snapshot = GithubProfileCache.from(state(), previous = null)!!
+        cache.put(GithubProfileCache.KEY, snapshot)
+        assertEquals(snapshot, cache.get(GithubProfileCache.KEY))
     }
 }
