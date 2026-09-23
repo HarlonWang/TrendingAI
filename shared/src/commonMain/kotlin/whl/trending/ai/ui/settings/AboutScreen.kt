@@ -90,8 +90,8 @@ fun AboutScreen(
     // 隐藏开关：连点版本号 7 次出现 TinyUI 页面的热下发通道，用商店版验 staging；不在 production 时常显，便于切回。
     // 切换即按新通道下载，重启一次生效
     var versionTaps by remember { mutableIntStateOf(0) }
-    val tinyuiChannel by globalSettingsManager.tinyuiChannel.collectAsState(globalSettingsManager.currentTinyuiChannel())
-    val showTinyuiChannel = versionTaps >= 7 || tinyuiChannel != TINYUI_CHANNEL_PRODUCTION
+    val tinyUIChannel by globalSettingsManager.tinyUIChannel.collectAsState(globalSettingsManager.currentTinyUIChannel())
+    val showTinyUIChannel = versionTaps >= 7 || tinyUIChannel != TINYUI_CHANNEL_PRODUCTION
 
     if (showDonateDialog) {
         DonateDialog(onDismiss = { showDonateDialog = false })
@@ -193,14 +193,14 @@ fun AboutScreen(
                     title = { Text(privacyTitle) },
                     onClick = { onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle) },
                 )
-                if (showTinyuiChannel) {
+                if (showTinyUIChannel) {
                     settingsItem(
                         icon = Icons.Default.Science,
                         title = { Text(stringResource(Res.string.tinyui_channel)) },
-                        trailing = { Text(tinyuiChannel) },
+                        trailing = { Text(tinyUIChannel) },
                         onClick = {
-                            globalSettingsManager.setTinyuiChannel(
-                                if (tinyuiChannel == TINYUI_CHANNEL_STAGING) TINYUI_CHANNEL_PRODUCTION else TINYUI_CHANNEL_STAGING,
+                            globalSettingsManager.setTinyUIChannel(
+                                if (tinyUIChannel == TINYUI_CHANNEL_STAGING) TINYUI_CHANNEL_PRODUCTION else TINYUI_CHANNEL_STAGING,
                             )
                             TinyUIUpdates.checkNow()
                         },

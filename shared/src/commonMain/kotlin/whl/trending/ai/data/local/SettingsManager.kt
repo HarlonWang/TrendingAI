@@ -658,11 +658,11 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /** TinyUI 热下发通道（关于页连点版本号出现的隐藏开关）；下次 check 起生效 */
-    val tinyuiChannel: Flow<String> = settings.getStringFlow(TINYUI_CHANNEL_KEY, TINYUI_CHANNEL_PRODUCTION)
+    val tinyUIChannel: Flow<String> = settings.getStringFlow(TINYUI_CHANNEL_KEY, TINYUI_CHANNEL_PRODUCTION)
 
-    fun currentTinyuiChannel(): String = settings.getString(TINYUI_CHANNEL_KEY, TINYUI_CHANNEL_PRODUCTION)
+    fun currentTinyUIChannel(): String = settings.getString(TINYUI_CHANNEL_KEY, TINYUI_CHANNEL_PRODUCTION)
 
-    fun setTinyuiChannel(value: String) {
+    fun setTinyUIChannel(value: String) {
         settings.putString(TINYUI_CHANNEL_KEY, value)
     }
 

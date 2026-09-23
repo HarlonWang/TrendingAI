@@ -194,19 +194,22 @@ sealed class AppEvent(
         AppEvent("digest_unavailable", mapOf("source" to source))
 
     /**
-     * TinyUI 热下发的结果（tinyui docs/updates.md §4.2 的 UpdateEvent）；每次启动都有的 running / up_to_date 不报。
-     * [reason] 是库给的枚举名或错误类别（skip 原因、失败阶段、回退时的 E2 / E6），不是文案。
+     * TinyUI 热下发一次 check 的结局（tinyui docs/updates.md §4.2）；每次启动都有的 up_to_date 不报。
+     * [reason] 是库给的枚举名（skip 原因、失败阶段），不是文案。
      */
-    data class TinyuiUpdate(
-        val step: TinyuiUpdateStep,
+    data class TinyUIUpdateChecked(
+        val outcome: TinyUIUpdateOutcome,
         val pkg: String,
         val version: String?,
         val reason: String? = null,
-        val page: String? = null,
     ) : AppEvent(
-        "tinyui_update",
-        mapOf("step" to step, "pkg" to pkg, "version" to version, "reason" to reason, "page" to page),
+        "tinyui_update_checked",
+        mapOf("outcome" to outcome, "pkg" to pkg, "version" to version, "reason" to reason),
     )
+
+    /** 热下发的包在某页报 E2 / E6（[kind]），整包退回内置（tinyui docs/updates.md §4.5）。 */
+    data class TinyUIPageRolledBack(val pkg: String, val version: String, val page: String, val kind: String) :
+        AppEvent("tinyui_page_rolled_back", mapOf("pkg" to pkg, "version" to version, "page" to page, "kind" to kind))
 }
 
 /**
@@ -287,7 +290,7 @@ enum class AuthOutcome { SUCCESS, CANCELED, ERROR }
 
 enum class UpsellTarget { PRO, SPONSOR, NEWSLETTER }
 
-enum class TinyuiUpdateStep { INSTALLED, SKIPPED, FAILED, ROLLED_BACK }
+enum class TinyUIUpdateOutcome { INSTALLED, SKIPPED, FAILED }
 
 enum class CheckoutStepKind { PLAN_SELECTED, OPENED, RECONCILED }
 

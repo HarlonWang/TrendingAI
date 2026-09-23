@@ -18,7 +18,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.MissingResourceException
 import trendingai.shared.generated.resources.Res
 import whl.trending.ai.core.analytics.AppEvent
-import whl.trending.ai.core.analytics.TinyuiUpdateStep
+import whl.trending.ai.core.analytics.TinyUIUpdateOutcome
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 
@@ -59,15 +59,15 @@ object TinyUIUpdates {
     }
 
     private suspend fun fetch(path: String): ByteArray =
-        http.get("$BASE_URL/${globalSettingsManager.currentTinyuiChannel()}/$path").readRawBytes()
+        http.get("$BASE_URL/${globalSettingsManager.currentTinyUIChannel()}/$path").readRawBytes()
 
     private fun report(event: UpdateEvent) {
         println("TinyUI updates $event")
         val tracked = when (event) {
-            is UpdateEvent.Installed -> AppEvent.TinyuiUpdate(TinyuiUpdateStep.INSTALLED, event.pkg, event.version)
-            is UpdateEvent.Skipped -> AppEvent.TinyuiUpdate(TinyuiUpdateStep.SKIPPED, event.pkg, event.version, event.reason.name)
-            is UpdateEvent.Failed -> AppEvent.TinyuiUpdate(TinyuiUpdateStep.FAILED, event.pkg, event.version, event.stage.name)
-            is UpdateEvent.RolledBack -> AppEvent.TinyuiUpdate(TinyuiUpdateStep.ROLLED_BACK, event.pkg, event.version, event.kind, event.page)
+            is UpdateEvent.Installed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.INSTALLED, event.pkg, event.version)
+            is UpdateEvent.Skipped -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.SKIPPED, event.pkg, event.version, event.reason.name)
+            is UpdateEvent.Failed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.FAILED, event.pkg, event.version, event.stage.name)
+            is UpdateEvent.RolledBack -> AppEvent.TinyUIPageRolledBack(event.pkg, event.version, event.page, event.kind)
             is UpdateEvent.Running, is UpdateEvent.UpToDate -> null
         }
         tracked?.let(::track)
