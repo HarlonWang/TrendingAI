@@ -6,7 +6,10 @@ import app.tinyui.updates.Updates
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.readRawBytes
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -42,9 +45,12 @@ object TinyUIUpdates {
         updates.check()
     }
 
+    // 不随页面取消：切换通道后马上离开关于页，下载也要跑完
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /** 切换通道后调：按新通道下载，下次启动生效（进程内不换包，tinyui docs/updates.md §4.4） */
-    suspend fun check() {
-        state.value?.check()
+    fun checkNow() {
+        scope.launch { state.value?.check() }
     }
 
     @OptIn(ExperimentalResourceApi::class)

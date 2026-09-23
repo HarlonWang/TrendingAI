@@ -33,7 +33,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,7 +54,6 @@ import whl.trending.ai.data.local.TINYUI_CHANNEL_PRODUCTION
 import whl.trending.ai.data.local.TINYUI_CHANNEL_STAGING
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.tinyui.TinyUIUpdates
-import kotlinx.coroutines.launch
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_github_desc
@@ -92,7 +90,6 @@ fun AboutScreen(
     // 隐藏开关：连点版本号 7 次出现 TinyUI 页面的热下发通道，用商店版验 staging；不在 production 时常显，便于切回。
     // 切换即按新通道下载，重启一次生效
     var versionTaps by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
     val tinyuiChannel by globalSettingsManager.tinyuiChannel.collectAsState(globalSettingsManager.currentTinyuiChannel())
     val showTinyuiChannel = versionTaps >= 7 || tinyuiChannel != TINYUI_CHANNEL_PRODUCTION
 
@@ -205,7 +202,7 @@ fun AboutScreen(
                             globalSettingsManager.setTinyuiChannel(
                                 if (tinyuiChannel == TINYUI_CHANNEL_STAGING) TINYUI_CHANNEL_PRODUCTION else TINYUI_CHANNEL_STAGING,
                             )
-                            scope.launch { TinyUIUpdates.check() }
+                            TinyUIUpdates.checkNow()
                         },
                     )
                 }
