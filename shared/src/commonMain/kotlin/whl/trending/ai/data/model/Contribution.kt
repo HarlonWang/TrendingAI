@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * GitHub 贡献日历（绿色热力图）的干净领域模型。
  * 数据仅来自 GitHub GraphQL API（REST 不暴露 contribution calendar），
  * UI 只依赖本模型，与 GraphQL 响应的深层嵌套结构解耦。
- * @Serializable 供 Profile 上次数据缓存（ProfileCache）序列化落盘。
+ * @Serializable 供 GitHub 子页上次数据缓存（GithubProfileCache）序列化落盘。
  */
 @Serializable
 data class ContributionCalendar(

@@ -67,8 +67,6 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.account_github_entry
 import trendingai.shared.generated.resources.account_github_entry_desc
 import trendingai.shared.generated.resources.account_link_github
-import trendingai.shared.generated.resources.account_relink_github
-import trendingai.shared.generated.resources.account_relink_github_desc
 import trendingai.shared.generated.resources.account_link_github_desc
 import trendingai.shared.generated.resources.account_plan_title
 import trendingai.shared.generated.resources.account_pro_active
@@ -80,7 +78,6 @@ import trendingai.shared.generated.resources.account_upgrade_cta
 import trendingai.shared.generated.resources.account_upgrade_hint
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.favorites
-import trendingai.shared.generated.resources.profile_followers
 import trendingai.shared.generated.resources.profile_load_failed
 import trendingai.shared.generated.resources.profile_quota_error
 import trendingai.shared.generated.resources.profile_quota_exhausted
@@ -88,7 +85,6 @@ import trendingai.shared.generated.resources.profile_quota_help
 import trendingai.shared.generated.resources.profile_quota_reset_hours
 import trendingai.shared.generated.resources.profile_quota_reset_soon
 import trendingai.shared.generated.resources.profile_quota_used
-import trendingai.shared.generated.resources.profile_repos
 import trendingai.shared.generated.resources.profile_retry
 import trendingai.shared.generated.resources.sign_in
 import trendingai.shared.generated.resources.sign_out
@@ -118,8 +114,8 @@ import whl.trending.ai.ui.subscription.ManageSubscriptionItem
  * 底栏要一直在，页面内套 Scaffold 会出现两层顶栏。
  *
  * 未登录用户同样可达：身份区显示登录引导、用量区显示匿名额度——不像旧个人主页那样
- * 对邮箱/匿名用户只剩空壳。GitHub 开发者档案（贡献图 + 动态流）降为
- * [GithubProfileScreen] 子页，动态数据由共享的 [ProfileViewModel] 承载。
+ * 对邮箱/匿名用户只剩空壳。GitHub 开发者档案（贡献图 + 动态流）在 [GithubProfileScreen]
+ * 子页，本页不发任何 GitHub 请求。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -233,21 +229,15 @@ fun ProfileScreen(
 
                 // 两处条件刻意不对称：githubUserId 是「是否已关联」的权威，githubLogin 才是能展示的名字；
                 // 中间态（有 id 无 login）两块都不显示，好过显示「关联 GitHub」或 @null。
-                // 已关联但服务端没存 token 时入口卡换成重新关联：主页/动态/star 全会失败，
-                // 而恢复 token 的唯一手段就是再走一次关联
-                if (uiState.user?.githubLogin != null) {
-                    if (uiState.githubTokenMissing && isGithubOAuthSupported) {
-                        item(key = "relink_github") {
-                            LinkGithubCard(
-                                title = stringResource(Res.string.account_relink_github),
-                                description = stringResource(Res.string.account_relink_github_desc),
-                                onClick = { AccountLink.openLinkGithubPage(AccountLink.SOURCE_ACCOUNT) },
-                            )
-                        }
-                    } else {
-                        item(key = "github_entry") {
-                            GithubEntryCard(uiState = uiState, onClick = onNavigateToGithubProfile)
-                        }
+                // 入口卡只用 /api/me 的字段：Hub 不发 GitHub 请求，token 丢失的重新关联引导在子页
+                val user = uiState.user
+                if (user?.githubLogin != null) {
+                    item(key = "github_entry") {
+                        GithubEntryCard(
+                            login = user.githubLogin,
+                            avatarUrl = user.avatarUrl,
+                            onClick = onNavigateToGithubProfile,
+                        )
                     }
                 } else if (uiState.loggedIn && uiState.user?.githubUserId == null && isGithubOAuthSupported) {
                     item(key = "link_github") {
@@ -586,7 +576,7 @@ private fun TierPillFree() {
  * 占据它的位置——一个账户在这里要么是「已连接的 GitHub」，要么是「去连接」。
  */
 @Composable
-private fun LinkGithubCard(title: String, description: String, onClick: () -> Unit) {
+internal fun LinkGithubCard(title: String, description: String, onClick: () -> Unit) {
     SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         settingsItem(
             leading = {
@@ -608,32 +598,15 @@ private fun LinkGithubCard(title: String, description: String, onClick: () -> Un
     }
 }
 
-/** GitHub 主页入口卡：头像 + 名称 + 计数摘要，点击进 [GithubProfileScreen]。 */
+/** GitHub 主页入口卡：头像 + @login，点击进 [GithubProfileScreen]。 */
 @Composable
-private fun GithubEntryCard(uiState: ProfileUiState, onClick: () -> Unit) {
-    val user = uiState.user ?: return
-    val gh = uiState.githubUser
-    val summary = if (gh != null) {
-        buildString {
-            append("@${user.githubLogin}")
-            append(" · ")
-            append(DateTimeUtils.formatNumber(gh.followers))
-            append(" ")
-            append(stringResource(Res.string.profile_followers))
-            append(" · ")
-            append(DateTimeUtils.formatNumber(gh.publicRepos))
-            append(" ")
-            append(stringResource(Res.string.profile_repos))
-        }
-    } else {
-        stringResource(Res.string.account_github_entry_desc)
-    }
+private fun GithubEntryCard(login: String, avatarUrl: String?, onClick: () -> Unit) {
     SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         settingsItem(
             leading = {
-                if (user.avatarUrl != null) {
+                if (avatarUrl != null) {
                     AsyncImage(
-                        model = user.avatarUrl,
+                        model = avatarUrl,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp).clip(CircleShape),
                     )
@@ -642,7 +615,13 @@ private fun GithubEntryCard(uiState: ProfileUiState, onClick: () -> Unit) {
                 }
             },
             title = { Text(stringResource(Res.string.account_github_entry)) },
-            description = { Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            description = {
+                Text(
+                    "@$login · " + stringResource(Res.string.account_github_entry_desc),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
             trailing = {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
             },

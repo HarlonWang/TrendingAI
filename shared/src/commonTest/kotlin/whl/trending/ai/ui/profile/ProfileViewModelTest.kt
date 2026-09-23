@@ -25,22 +25,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
-import whl.trending.ai.auth.FollowingProvider
-import whl.trending.ai.auth.GithubTokenLookup
-import whl.trending.ai.auth.GithubTokenProvider
-import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.data.local.FakeCacheFileStore
 import whl.trending.ai.data.local.LastDataCache
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.model.LocalizedText
 import whl.trending.ai.data.model.QuotaHelpRemoteConfig
-import whl.trending.ai.data.model.ContributionCalendar
 import whl.trending.ai.data.model.MeUser
 import whl.trending.ai.data.model.QuotaResponse
-import whl.trending.ai.data.remote.GithubApi
-import whl.trending.ai.data.remote.GithubEventDto
-import whl.trending.ai.data.remote.GithubUser
 import whl.trending.ai.data.repository.UserRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -66,45 +58,7 @@ class ProfileViewModelTest {
         override suspend fun fetchQuota(): QuotaResponse = onFetchQuota()
     }
 
-    private class FakeGithubApi : GithubApi() {
-        override suspend fun fetchUser(githubToken: String): GithubUser =
-            GithubUser(login = "octo", followers = 10, following = 5, publicRepos = 3)
-
-        override suspend fun fetchContributionCalendar(githubToken: String, login: String): ContributionCalendar =
-            profileCalendar(total = 7)
-
-        override suspend fun fetchReceivedEvents(
-            githubToken: String,
-            login: String,
-            page: Int,
-            perPage: Int,
-        ): List<GithubEventDto> = emptyList()
-    }
-
-    private class FakeTokenProvider : GithubTokenProvider() {
-        override suspend fun lookup(): GithubTokenLookup = GithubTokenLookup.Available("gh-token")
-    }
-
-    /** 服务端明确 404：已关联但 vault 为空 */
-    private class MissingTokenProvider : GithubTokenProvider() {
-        override suspend fun lookup(): GithubTokenLookup = GithubTokenLookup.Missing
-    }
-
-    /** 请求失败：有没有 token 未知 */
-    private class FailedTokenProvider : GithubTokenProvider() {
-        override suspend fun lookup(): GithubTokenLookup = GithubTokenLookup.Failed
-    }
-
-    private class FakeFollowingProvider : FollowingProvider() {
-        override suspend fun get() = null
-    }
-
-    private class FakeOwnRepoEventsProvider : OwnRepoEventsProvider() {
-        override suspend fun get(): List<GithubEventDto>? = null
-    }
-
-    private fun settings(highlightsOnly: Boolean = true): SettingsManager =
-        SettingsManager(MapSettings() as ObservableSettings).also { it.setFeedHighlightsOnly(highlightsOnly) }
+    private fun settings(): SettingsManager = SettingsManager(MapSettings() as ObservableSettings)
 
     private fun TestScope.cache(store: FakeCacheFileStore = FakeCacheFileStore()) =
         LastDataCache(store, StandardTestDispatcher(testScheduler))
@@ -114,25 +68,11 @@ class ProfileViewModelTest {
         auth: FakeAuthManager = FakeAuthManager(),
         repository: UserRepository = FakeUserRepository(),
         settingsManager: SettingsManager = settings(),
-        tokenProvider: GithubTokenProvider = FakeTokenProvider(),
     ) = ProfileViewModel(
         repository = repository,
-        githubApi = FakeGithubApi(),
-        tokenProvider = tokenProvider,
-        followingProvider = FakeFollowingProvider(),
-        ownRepoEventsProvider = FakeOwnRepoEventsProvider(),
         authManager = { auth },
         settingsManager = settingsManager,
         cache = cache,
-    )
-
-    private fun cachedSnapshot(highlightsOnly: Boolean = true) = ProfileCache(
-        login = "octo",
-        user = profileMeUser(),
-        githubUser = GithubUser(login = "octo", followers = 3),
-        contributions = profileCalendar(total = 99),
-        feedItems = listOf(profileFeedItem("cached-event")),
-        highlightsOnly = highlightsOnly,
     )
 
     @AfterTest
@@ -141,99 +81,41 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun serverSaysNoTokenFlagsRelink() = runTest {
-        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        val vm = viewModel(cache(), tokenProvider = MissingTokenProvider())
-        vm.load()
-        advanceUntilIdle()
-
-        val state = vm.uiState.value
-        assertTrue(state.loggedIn)
-        assertTrue(state.githubTokenMissing)
-        assertTrue(state.feedUnavailable)
-        assertNull(state.githubUser)
-    }
-
-    @Test
-    fun tokenLookupFailureDoesNotFlagRelink() = runTest {
-        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        val vm = viewModel(cache(), tokenProvider = FailedTokenProvider())
-        vm.load()
-        advanceUntilIdle()
-
-        val state = vm.uiState.value
-        assertTrue(state.loggedIn)
-        assertFalse(state.githubTokenMissing)
-        assertTrue(state.feedUnavailable)
-    }
-
-    @Test
-    fun cacheHitFillsWholePageAndAutoRefreshes() = runTest {
+    fun cacheHitShowsIdentityAndAutoRefreshes() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val cache = cache()
-        cache.put(ProfileCache.KEY, cachedSnapshot())
+        cache.put(ACCOUNT_CACHE_KEY, profileMeUser().copy(displayName = "Cached"))
         val gate = CompletableDeferred<MeUser>()
 
         val vm = viewModel(cache, repository = FakeUserRepository(onFetchMe = { gate.await() }))
         vm.load()
         advanceUntilIdle()
 
-        // 缓存整页秒出：header/计数/热力图/feed 都有，且顶部自动刷新中
         val mid = vm.uiState.value
         assertFalse(mid.isLoading)
         assertTrue(mid.isRefreshing)
-        assertEquals("octo", mid.user?.githubLogin)
-        assertEquals(3, mid.githubUser?.followers)
-        assertEquals(99, mid.contributions?.total)
-        assertEquals(listOf("cached-event"), mid.feedItems.map { it.id })
+        assertEquals("Cached", mid.user?.displayName)
 
         gate.complete(profileMeUser())
         advanceUntilIdle()
 
-        // 刷新完成：热力图/计数替换为最新
         val end = vm.uiState.value
         assertFalse(end.isRefreshing)
-        assertEquals(7, end.contributions?.total)
-        assertEquals(10, end.githubUser?.followers)
+        assertEquals("Octo", end.user?.displayName)
+        assertEquals("Octo", cache.get<MeUser>(ACCOUNT_CACHE_KEY)?.displayName)
     }
 
+    /** 没关联 GitHub 的邮箱用户也要能秒开：缓存不依赖 githubLogin */
     @Test
-    fun loadWithoutCachePersistsSnapshot() = runTest {
+    fun emailOnlyUserIsCached() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val cache = cache()
 
-        val vm = viewModel(cache)
+        val vm = viewModel(cache, repository = FakeUserRepository(onFetchMe = { profileMeUser(login = null) }))
         vm.load()
         advanceUntilIdle()
 
-        val persisted = cache.get<ProfileCache>(ProfileCache.KEY)
-        assertNotNull(persisted)
-        assertEquals("octo", persisted.login)
-        assertEquals(7, persisted.contributions?.total)
-        assertEquals(10, persisted.githubUser?.followers)
-    }
-
-    @Test
-    fun cacheFilterMismatchUsesHeaderOnly() = runTest {
-        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        val cache = cache()
-        cache.put(ProfileCache.KEY, cachedSnapshot(highlightsOnly = true))
-        val gate = CompletableDeferred<MeUser>()
-
-        val vm = viewModel(
-            cache,
-            repository = FakeUserRepository(onFetchMe = { gate.await() }),
-            settingsManager = settings(highlightsOnly = false),
-        )
-        vm.load()
-        advanceUntilIdle()
-
-        // 档位不一致：header/热力图可用，feed 不复用
-        val mid = vm.uiState.value
-        assertEquals("octo", mid.user?.githubLogin)
-        assertEquals(99, mid.contributions?.total)
-        assertEquals(emptyList(), mid.feedItems)
-        assertFalse(mid.highlightsOnly)
+        assertNotNull(cache.get<MeUser>(ACCOUNT_CACHE_KEY))
     }
 
     // 回归：登出重登后首次进页（无缓存路径），quota 先于 fetchMe 到达时，
@@ -241,7 +123,7 @@ class ProfileViewModelTest {
     @Test
     fun quotaSurvivesFullPageLoadRace() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        val cache = cache() // 无缓存：登出已清 ProfileCache
+        val cache = cache() // 无缓存：登出已清
         val gate = CompletableDeferred<MeUser>()
 
         val vm = viewModel(cache, repository = FakeUserRepository(onFetchMe = { gate.await() }))
@@ -259,7 +141,6 @@ class ProfileViewModelTest {
         assertFalse(end.quotaError)
     }
 
-    // 回归：token 刷新瞬态为 null 时，loadQuota 不得请求匿名档覆盖登录/Pro 用户已有的真实余额
     /**
      * Hub 对匿名用户可达，所以「不是 LoggedIn 就摆登录引导」这个判断必须等会话恢复完
      * ——冷启动直奔账户页的登录用户，否则会先被当成未登录。
@@ -306,10 +187,11 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun logoutClearsProfileCache() = runTest {
+    fun logoutClearsAccountAndGithubCaches() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val cache = cache()
-        cache.put(ProfileCache.KEY, cachedSnapshot())
+        cache.put(ACCOUNT_CACHE_KEY, profileMeUser())
+        cache.put(GithubProfileCache.KEY, GithubProfileCache(login = "octo"))
         val auth = FakeAuthManager()
 
         viewModel(cache, auth = auth)
@@ -318,7 +200,8 @@ class ProfileViewModelTest {
         auth.state.value = AuthState.LoggedOut
         advanceUntilIdle()
 
-        assertNull(cache.get<ProfileCache>(ProfileCache.KEY))
+        assertNull(cache.get<MeUser>(ACCOUNT_CACHE_KEY))
+        assertNull(cache.get<GithubProfileCache>(GithubProfileCache.KEY))
     }
 
     @Test

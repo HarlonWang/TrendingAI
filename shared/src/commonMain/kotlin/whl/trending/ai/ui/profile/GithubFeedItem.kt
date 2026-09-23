@@ -20,7 +20,7 @@ enum class GithubFeedKind {
 /**
  * 归一化后的 feed 条目：kind + primary（分支名/tag/编号/提交数/类型名，按 kind 而定），
  * 文案在 UI 层用 stringResource 按 kind 组装（i18n）。
- * @Serializable 供 Profile 上次数据缓存（ProfileCache）序列化落盘。
+ * @Serializable 供 GitHub 子页上次数据缓存（GithubProfileCache）序列化落盘。
  */
 @Serializable
 data class GithubFeedItem(
