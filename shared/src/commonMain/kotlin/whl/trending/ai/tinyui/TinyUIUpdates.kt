@@ -42,6 +42,11 @@ object TinyUIUpdates {
         updates.check()
     }
 
+    /** 切换通道后调：按新通道下载，下次启动生效（进程内不换包，tinyui docs/updates.md §4.4） */
+    suspend fun check() {
+        state.value?.check()
+    }
+
     @OptIn(ExperimentalResourceApi::class)
     private suspend fun embedded(): Bundle = Bundle.load { path ->
         try { Res.readBytes("files/tinyui/$PKG/$path") } catch (e: MissingResourceException) { null }
