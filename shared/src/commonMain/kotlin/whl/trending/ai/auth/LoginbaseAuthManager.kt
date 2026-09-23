@@ -80,10 +80,11 @@ class LoginbaseAuthManager(
 
     override fun signOut() {
         scope.launch {
-            client.signOut() // 尽力而为：服务端失败也清本地
+            // 本地清理排在 client.signOut() 前：后者要等 DELETE /sessions 返回，慢网下可达 15s
             clearLocalUserState()
             setAnalyticsUser(null)
             track(AppEvent.SignedOut)
+            client.signOut()
         }
     }
 
