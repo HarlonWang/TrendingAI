@@ -1,0 +1,46 @@
+{
+  "runtime": [
+    "tinyui-core",
+    "tinyui-native"
+  ],
+  "pages": [
+    "trendingai/subscription"
+  ],
+  "files": {
+    "tinyui-core": "runtime/core",
+    "tinyui-native": "runtime/native",
+    "trendingai/subscription": "pages/subscription"
+  },
+  "buildIds": {
+    "tinyui-core": "f8cfa1b9",
+    "tinyui-native": "a01cfe82",
+    "trendingai/subscription": "d5eb6006"
+  },
+  "name": "trendingai",
+  "publicKey": "BN5p4NkH9v5vRmeEG77xg/3NrMNqG6L92QtNyoNFFlZHJfVYVXh7ew5DTvVyrwHWHjdsFSzyv48tyNgOrYVQcyY=",
+  "version": "20260923T103859Z-54c01a9",
+  "createdAt": "2026-09-23T10:38:59Z",
+  "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
+  "protocol": 1,
+  "tinyui": "0.4.0",
+  "hashes": {
+    "tinyui-core": "e01e3f8bfd1ef21943830bfe25cc7b09a70f88c6263b88d305176d6419ad1cb6",
+    "tinyui-native": "855f16cd33f9402a58b2b00eaee06b5dbf67b9214400492393626fb2e35286aa",
+    "trendingai/subscription": "e74ce21132711f480b00fbeed616efa45596190bece63f6a35bcce3b85861e55"
+  },
+  "requires": {
+    "trendingai/subscription": {
+      "components": [
+        "ta.Icon",
+        "ta.Loading"
+      ],
+      "capabilities": [
+        "analytics.checkoutStep",
+        "auth.signIn",
+        "billing.prices",
+        "checkout.start",
+        "ui.snackbar"
+      ]
+    }
+  }
+}

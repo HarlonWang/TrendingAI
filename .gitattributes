@@ -1,0 +1,2 @@
+# host snapshots are uploaded as raw bytes (tinyui docs/updates.md §4.1)
+**/tinyui-host/*.txt text eol=lf

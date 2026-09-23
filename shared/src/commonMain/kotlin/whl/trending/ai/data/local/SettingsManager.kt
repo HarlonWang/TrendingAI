@@ -39,6 +39,9 @@ enum class ThemeMode(val title: String) {
 
 const val DEFAULT_SEED_ARGB: Long = 0xFF6750A4L
 
+const val TINYUI_CHANNEL_PRODUCTION = "production"
+const val TINYUI_CHANNEL_STAGING = "staging"
+
 /**
  * 自定义主题的风格/对比度缺省持久化值。刻意不引用 ui 层枚举（避免 data.local 反向依赖 UI），
  * 两侧对应关系由 ThemeCustomizationTest 断言守住。
@@ -163,6 +166,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
     private val TRENDING_SOURCE_KEY = "prefs_trending_source"
     private val IMMERSIVE_BROWSING_KEY = "prefs_immersive_browsing"
+    private val TINYUI_CHANNEL_KEY = "prefs_tinyui_channel"
 
     /**
      * 安装级匿名标识（卸载重装才重新生成）。埋点 install_id 与 chat 配额 X-Install-Id
@@ -651,6 +655,15 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setImmersiveBrowsing(value: Boolean) {
         settings.putBoolean(IMMERSIVE_BROWSING_KEY, value)
+    }
+
+    /** TinyUI 热下发通道（关于页连点版本号出现的隐藏开关）；下次 check 起生效 */
+    val tinyUIChannel: Flow<String> = settings.getStringFlow(TINYUI_CHANNEL_KEY, TINYUI_CHANNEL_PRODUCTION)
+
+    fun currentTinyUIChannel(): String = settings.getString(TINYUI_CHANNEL_KEY, TINYUI_CHANNEL_PRODUCTION)
+
+    fun setTinyUIChannel(value: String) {
+        settings.putString(TINYUI_CHANNEL_KEY, value)
     }
 
     /**

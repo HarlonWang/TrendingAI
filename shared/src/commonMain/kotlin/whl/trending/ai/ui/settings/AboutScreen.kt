@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,6 +49,11 @@ import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.changelog
 import trendingai.shared.generated.resources.check_update_failed
 import trendingai.shared.generated.resources.check_updates
+import trendingai.shared.generated.resources.tinyui_channel
+import whl.trending.ai.data.local.TINYUI_CHANNEL_PRODUCTION
+import whl.trending.ai.data.local.TINYUI_CHANNEL_STAGING
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.tinyui.TinyUIUpdates
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_github_desc
@@ -80,6 +87,11 @@ fun AboutScreen(
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
     val isCheckFailed by globalUpdateChecker.isCheckFailed.collectAsState()
     var showDonateDialog by remember { mutableStateOf(false) }
+    // 隐藏开关：连点版本号 7 次出现 TinyUI 页面的热下发通道，用商店版验 staging；不在 production 时常显，便于切回。
+    // 切换即按新通道下载，重启一次生效
+    var versionTaps by remember { mutableIntStateOf(0) }
+    val tinyUIChannel by globalSettingsManager.tinyUIChannel.collectAsState(globalSettingsManager.currentTinyUIChannel())
+    val showTinyUIChannel = versionTaps >= 7 || tinyUIChannel != TINYUI_CHANNEL_PRODUCTION
 
     if (showDonateDialog) {
         DonateDialog(onDismiss = { showDonateDialog = false })
@@ -118,7 +130,8 @@ fun AboutScreen(
                 Text(
                     text = appVersion,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable(interactionSource = null, indication = null) { versionTaps++ },
                 )
             }
             // 隐私政策标题要传给 WebView，须在 composable 作用域取；SettingsGroup 的 content 不是 @Composable
@@ -180,6 +193,19 @@ fun AboutScreen(
                     title = { Text(privacyTitle) },
                     onClick = { onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle) },
                 )
+                if (showTinyUIChannel) {
+                    settingsItem(
+                        icon = Icons.Default.Science,
+                        title = { Text(stringResource(Res.string.tinyui_channel)) },
+                        trailing = { Text(tinyUIChannel) },
+                        onClick = {
+                            globalSettingsManager.setTinyUIChannel(
+                                if (tinyUIChannel == TINYUI_CHANNEL_STAGING) TINYUI_CHANNEL_PRODUCTION else TINYUI_CHANNEL_STAGING,
+                            )
+                            TinyUIUpdates.checkNow()
+                        },
+                    )
+                }
             }
             Spacer(Modifier.height(24.dp))
         }
