@@ -3,6 +3,7 @@ package whl.trending.ai.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,6 +89,9 @@ class GithubProfileViewModel(
     /** 规则3：我的仓库上别人的 star/fork（精选档合流） */
     private var ownRepoItems: List<GithubFeedItem> = emptyList()
 
+    /** 关注列表与自有仓库事件已就绪；此前页面触底分页会按缺失的数据过滤 */
+    private var feedPrepared = false
+
     /** 已加载过当前账号：下钻 followers/following/repos 再返回时 [load] 据此跳过重拉 */
     private var hasLoaded = false
 
@@ -112,6 +116,7 @@ class GithubProfileViewModel(
         loadJob?.cancel()
         feedLoadJob?.cancel()
         hasLoaded = false
+        feedPrepared = false
         _uiState.value = GithubProfileUiState(highlightsOnly = settingsManager.currentFeedHighlightsOnly())
         _reloadKey.value++
     }
@@ -158,7 +163,8 @@ class GithubProfileViewModel(
         loadJob = viewModelScope.launch { fetchAll(login) }
     }
 
-    private suspend fun fetchAll(login: String) {
+    private suspend fun fetchAll(login: String) = coroutineScope {
+        feedPrepared = false
         nextFeedPage = 1
         consumedRawCount = 0
         followingInfo = null
@@ -173,7 +179,7 @@ class GithubProfileViewModel(
                     githubTokenMissing = lookup == GithubTokenLookup.Missing,
                 )
                 hasLoaded = false // 下次进页重试
-                return
+                return@coroutineScope
             }
         }
         val githubUser = try {
@@ -193,8 +199,8 @@ class GithubProfileViewModel(
         )
         persistSnapshot()
 
-        // 贡献热力图：与 feed 并行拉取，失败保留旧值，不影响 feed
-        viewModelScope.launch {
+        // 贡献热力图：与 feed 并行拉取，失败保留旧值；挂在 loadJob 下，随作废一起取消
+        launch {
             try {
                 val calendar = githubApi.fetchContributionCalendar(githubToken, login)
                 _uiState.value = _uiState.value.copy(contributions = calendar)
@@ -224,12 +230,13 @@ class GithubProfileViewModel(
             }
             .distinctBy { it.id }
 
+        feedPrepared = true
         loadMoreFeed()
     }
 
     fun loadMoreFeed() {
         val state = _uiState.value
-        if (state.isRefreshing || state.isFeedLoading || state.feedEndReached || state.feedUnavailable) return
+        if (!feedPrepared || state.isFeedLoading || state.feedEndReached || state.feedUnavailable) return
         val login = state.login ?: return
         feedLoadJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isFeedLoading = true)
@@ -305,7 +312,7 @@ class GithubProfileViewModel(
             feedItems = emptyList(),
             isFeedLoading = false,
             feedEndReached = false,
-            feedUnavailable = false,
+            feedUnavailable = _uiState.value.login == null,
             highlightsOnly = highlightsOnly,
         )
         loadMoreFeed()

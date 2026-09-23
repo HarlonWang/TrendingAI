@@ -3,7 +3,10 @@ package whl.trending.ai.core
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import wang.harlon.eventbase.Eventbase
+import whl.trending.ai.auth.FollowingProvider
+import whl.trending.ai.auth.GithubTokenProvider
 import whl.trending.ai.auth.LoginbaseAuthManager
+import whl.trending.ai.auth.OwnRepoEventsProvider
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.auth.launchGithubLink
 import whl.trending.ai.core.analytics.AppEvent
@@ -78,6 +81,10 @@ object AccountLink {
     /** 确认身份已带上 GitHub 后调用：通知界面重载。[source] 由调用方从 [consumePendingSource] 取。 */
     fun markLinked(source: String?) {
         pendingSource = null
+        // 进程级缓存可能还握着关联前失效的 token 与旧账号的关注/仓库数据
+        GithubTokenProvider.shared.clear()
+        FollowingProvider.shared.clear()
+        OwnRepoEventsProvider.shared.clear()
         track(
             AppEvent.AuthFinished(AuthAction.LINK, AuthOutcome.SUCCESS, method = "github", source = source),
             Eventbase.currentFlow(),

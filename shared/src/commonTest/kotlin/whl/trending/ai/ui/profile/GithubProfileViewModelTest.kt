@@ -52,8 +52,10 @@ class GithubProfileViewModelTest {
         val onFetchUser: suspend () -> GithubUser = {
             GithubUser(login = "octo", name = "Octo Cat", followers = 10, following = 5, publicRepos = 3)
         },
+        val onFetchContributions: suspend () -> ContributionCalendar = { profileCalendar(total = 7) },
     ) : GithubApi() {
         var requests = 0
+        var eventRequests = 0
 
         override suspend fun fetchUser(githubToken: String): GithubUser {
             requests++
@@ -62,7 +64,7 @@ class GithubProfileViewModelTest {
 
         override suspend fun fetchContributionCalendar(githubToken: String, login: String): ContributionCalendar {
             requests++
-            return profileCalendar(total = 7)
+            return onFetchContributions()
         }
 
         override suspend fun fetchReceivedEvents(
@@ -72,6 +74,7 @@ class GithubProfileViewModelTest {
             perPage: Int,
         ): List<GithubEventDto> {
             requests++
+            eventRequests++
             return emptyList()
         }
     }
@@ -340,5 +343,62 @@ class GithubProfileViewModelTest {
         assertEquals(key + 1, vm.reloadKey.value)
         assertNull(vm.uiState.value.login)
         assertNull(vm.uiState.value.githubUser)
+    }
+
+    /** 页面触底可能在关注列表 / 自有仓库事件就绪前调 loadMoreFeed，精选档会按缺失的数据过滤 */
+    @Test
+    fun loadMoreBeforePreparationIsIgnored() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val api = FakeGithubApi()
+        val tokenGate = CompletableDeferred<GithubTokenLookup>()
+        val tokenProvider = object : GithubTokenProvider() {
+            override suspend fun lookup(): GithubTokenLookup = tokenGate.await()
+        }
+        val vm = viewModel(cache(), githubApi = api, tokenProvider = tokenProvider)
+        vm.load()
+        advanceUntilIdle()
+
+        vm.loadMoreFeed()
+        advanceUntilIdle()
+        assertEquals(0, api.eventRequests)
+        assertFalse(vm.uiState.value.isFeedLoading)
+
+        tokenGate.complete(GithubTokenLookup.Available("gh-token"))
+        advanceUntilIdle()
+        assertEquals(1, api.eventRequests)
+    }
+
+    /** 作废后迟到的贡献图不得写进下一个账号的状态与缓存 */
+    @Test
+    fun invalidateCancelsInFlightContributions() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val cache = cache()
+        val auth = FakeAuthManager()
+        val gate = CompletableDeferred<ContributionCalendar>()
+        val vm = viewModel(cache, auth = auth, githubApi = FakeGithubApi(onFetchContributions = { gate.await() }))
+        vm.load()
+        advanceUntilIdle()
+
+        auth.state.value = AuthState.LoggedOut
+        advanceUntilIdle()
+        gate.complete(profileCalendar(total = 42))
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.contributions)
+        assertNull(cache.get<GithubProfileCache>(GithubProfileCache.KEY)?.contributions)
+    }
+
+    @Test
+    fun switchingFilterWithoutLoginKeepsFeedUnavailable() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val vm = viewModel(cache(), settingsManager = settings(login = null))
+        vm.load()
+        advanceUntilIdle()
+
+        vm.setFeedFilter(false)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.feedUnavailable)
+        assertFalse(vm.uiState.value.isFeedLoadingVisible)
     }
 }
