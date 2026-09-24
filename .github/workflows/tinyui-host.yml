@@ -1,14 +1,11 @@
 # TinyUI 宿主快照（tinyui docs/updates.md §4.1、§6.4）：HOST_VERSION 加 1 的提交一进 main 就上传并冻结，
-# JS 仓才能在新宿主版本下发布。同版本同字节重传无害；409 = 改了已合入 main 的 HOST_VERSION 的契约，再加 1
+# JS 仓才能在新宿主版本下发布。同版本同字节重传无害，所以不设并发组（排队会丢掉中间的推送）；
+# 409 = 改了已合入 main 的 HOST_VERSION 的契约，再加 1
 name: TinyUI host snapshot
 
 on:
   push:
     branches: [main]
-
-concurrency:
-  group: tinyui-host
-  cancel-in-progress: false
 
 jobs:
   snapshot:
@@ -16,6 +13,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
