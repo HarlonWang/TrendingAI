@@ -17,7 +17,7 @@
 上报走 `wang.harlon:eventbase-kt`（仓库 `~/eventbase-kt`，服务端 `~/eventbase`），Aptabase 已下线。
 调用面是 `shared/.../core/analytics/AppEvent.kt` 的 sealed class + `track(event)`，**没有裸字符串入口**。
 
-- **新增或修改事件前**，先改 `~/eventbase/docs/telemetry-design.md` §12.9 的事件词汇表——那是唯一权威，
+- **新增或修改事件前**，先改 `~/TrendingProjects/docs/telemetry-vocabulary.md`（私有仓）的事件词汇表——那是唯一权威，
   **禁止在调用点就地发明事件名**；`AppEvent` 只是它的 Kotlin 投影，两边必须同步改。
 - **页面浏览不要手写埋点**：`screen_viewed` 由导航层自动产生（`core/analytics/ScreenTracking.kt`），
   两个源分别是 `App.kt` 的 backStack 栈顶变化和 `HomeScreen` 的 tab 变化。
