@@ -1,31 +1,20 @@
 {
-  "runtime": [
-    "tinyui-core",
-    "tinyui-native"
-  ],
   "pages": [
     "trendingai/subscription"
   ],
   "files": {
-    "tinyui-core": "runtime/core",
-    "tinyui-native": "runtime/native",
     "trendingai/subscription": "pages/subscription"
   },
   "buildIds": {
-    "tinyui-core": "03a37a10",
-    "tinyui-native": "003bc680",
     "trendingai/subscription": "d5eb6006"
   },
   "name": "trendingai",
   "publicKey": "BN5p4NkH9v5vRmeEG77xg/3NrMNqG6L92QtNyoNFFlZHJfVYVXh7ew5DTvVyrwHWHjdsFSzyv48tyNgOrYVQcyY=",
-  "version": "20260924T030750Z-0510689",
-  "createdAt": "2026-09-24T03:07:50Z",
+  "version": "20260924T145311Z-3e14ed0d906d",
+  "createdAt": "2026-09-24T14:53:11Z",
   "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
-  "protocol": 1,
-  "tinyui": "0.5.0",
+  "tinyui": "0.7.0",
   "hashes": {
-    "tinyui-core": "45d9bee85eb024b6d43b79b9306f0c36e071ccdac2fb90a17f0b7f886dcc4e73",
-    "tinyui-native": "da58d272ebfdc962a96d6088a05618893fad49dfb5a4eaee06b9aae6a3aec450",
     "trendingai/subscription": "e74ce21132711f480b00fbeed616efa45596190bece63f6a35bcce3b85861e55"
   },
   "requires": {
@@ -43,5 +32,5 @@
       ]
     }
   },
-  "hostVersion": "3"
+  "hostVersion": "5"
 }
