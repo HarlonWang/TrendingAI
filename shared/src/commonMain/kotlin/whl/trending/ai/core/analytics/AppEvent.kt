@@ -1,5 +1,6 @@
 package whl.trending.ai.core.analytics
 
+import app.tinyui.updates.Source
 import wang.harlon.eventbase.Event
 
 /**
@@ -213,6 +214,16 @@ sealed class AppEvent(
      */
     data class TinyUIEmbeddedRejected(val pkg: String, val version: String, val mismatch: String) :
         AppEvent("tinyui_embedded_rejected", mapOf("pkg" to pkg, "version" to version, "mismatch" to mismatch))
+
+    /**
+     * 当天首次以这组（包、版本、来源、通道）启动（tinyui docs/updates.md §4.2 的 Running），日界 UTC+8 与 eventbase 的 day 一致；
+     * 当天换了版本或来源会再报一条。[updateChannel] 是热下发通道，不是分发渠道 `channel`。
+     */
+    data class TinyUIRunning(val pkg: String, val version: String, val source: Source, val updateChannel: String, val hostVersion: String) :
+        AppEvent(
+            "tinyui_running",
+            mapOf("pkg" to pkg, "version" to version, "source" to source, "update_channel" to updateChannel, "host_version" to hostVersion),
+        )
 
     /** 热下发的包在某页报 E2 / E6（[kind]），整包退回内置（tinyui docs/updates.md §4.5）。 */
     data class TinyUIPageRolledBack(val pkg: String, val version: String, val page: String, val kind: String) :

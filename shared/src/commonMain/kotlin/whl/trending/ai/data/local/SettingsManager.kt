@@ -167,6 +167,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val TRENDING_SOURCE_KEY = "prefs_trending_source"
     private val IMMERSIVE_BROWSING_KEY = "prefs_immersive_browsing"
     private val TINYUI_CHANNEL_KEY = "prefs_tinyui_channel"
+    private val TINYUI_RUNNING_REPORTED_KEY = "prefs_tinyui_running_reported_"
 
     /**
      * 安装级匿名标识（卸载重装才重新生成）。埋点 install_id 与 chat 配额 X-Install-Id
@@ -664,6 +665,13 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setTinyUIChannel(value: String) {
         settings.putString(TINYUI_CHANNEL_KEY, value)
+    }
+
+    /** 包 [pkg] 最近一次上报 tinyui_running 的去重键 */
+    fun tinyUIRunningReported(pkg: String): String? = settings.getStringOrNull(TINYUI_RUNNING_REPORTED_KEY + pkg)
+
+    fun setTinyUIRunningReported(pkg: String, key: String) {
+        settings.putString(TINYUI_RUNNING_REPORTED_KEY + pkg, key)
     }
 
     /**

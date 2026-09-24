@@ -13,6 +13,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import okio.Path
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.MissingResourceException
@@ -20,7 +22,10 @@ import trendingai.shared.generated.resources.Res
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.TinyUIUpdateOutcome
 import whl.trending.ai.core.analytics.track
+import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.local.globalSettingsManager
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /** Android filesDir/tinyui、iOS Application Support/tinyui */
 internal expect fun tinyuiUpdatesDir(): Path
@@ -69,8 +74,22 @@ object TinyUIUpdates {
             is UpdateEvent.Skipped -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.SKIPPED, event.pkg, event.version, event.reason.name)
             is UpdateEvent.Failed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.FAILED, event.pkg, event.version, event.stage.name)
             is UpdateEvent.RolledBack -> AppEvent.TinyUIPageRolledBack(event.pkg, event.version, event.page, event.kind)
-            is UpdateEvent.Running, is UpdateEvent.UpToDate -> null
+            is UpdateEvent.Running -> {
+                reportRunningOnce(event, globalSettingsManager.currentTinyUIChannel(), Clock.System.now(), globalSettingsManager, ::track)
+                null
+            }
+            is UpdateEvent.UpToDate -> null
         }
         tracked?.let(::track)
     }
+}
+
+private val EVENTBASE_DAY = TimeZone.of("UTC+08:00")
+
+/** 同一天同一组（包、版本、来源、通道）只报一次 tinyui_running；先入队再记键，入队的事件离线也不丢 */
+internal fun reportRunningOnce(event: UpdateEvent.Running, channel: String, now: Instant, settings: SettingsManager, track: (AppEvent) -> Unit) {
+    val key = "${now.toLocalDateTime(EVENTBASE_DAY).date}|${event.version}|${event.source}|$channel"
+    if (settings.tinyUIRunningReported(event.pkg) == key) return
+    track(AppEvent.TinyUIRunning(event.pkg, event.version, event.source, channel, HOST_VERSION))
+    settings.setTinyUIRunningReported(event.pkg, key)
 }
