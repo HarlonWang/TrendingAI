@@ -208,7 +208,7 @@ sealed class AppEvent(
     )
 
     /**
-     * 启动时发现内置包不能在本宿主上跑（[mismatch]：ENGINE / PROTOCOL，逗号分隔）：页面走错误页，直到 check 装上兼容版本。
+     * 启动时发现内置包不能在本宿主上跑（[mismatch]：ENGINE / TINYUI，逗号分隔）：页面走错误页，直到 check 装上兼容版本。
      * 发版检查本该拦住，出现即说明检查被绕过（tinyui docs/updates.md §4.4）。
      */
     data class TinyUIEmbeddedRejected(val pkg: String, val version: String, val mismatch: String) :
