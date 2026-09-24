@@ -14,7 +14,7 @@ SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 EMBEDDED="shared/src/commonMain/composeResources/files/tinyui/trendingai"
 host=$(sed -n 's/^const val HOST_VERSION = "\([0-9]*\)"$/\1/p' shared/src/commonMain/kotlin/whl/trending/ai/tinyui/TrendingTinyUI.kt)
 tinyui=$(sed -n 's/^tinyui = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
-echo "==> 刷新 TinyUI 内置包（宿主版本 $host）"
+echo "==> 刷新 TinyUI 内置包（宿主版本 ${host}）"
 if npx --yes -p "tinyui-cli@$tinyui" tinyui pull --app trendingai --channel production --host-version "$host" --out "$EMBEDDED"; then
   if [ -n "$(git status --porcelain -- "$EMBEDDED")" ]; then
     v=$(node -p "require('./$EMBEDDED/manifest.json').version")
