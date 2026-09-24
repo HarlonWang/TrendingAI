@@ -27,11 +27,11 @@ import whl.trending.ai.data.repository.BillingRepository
 import whl.trending.ai.tinyui.generated.HostSchemas
 
 /**
- * 宿主给 TinyUI 页面的东西变了（`ta.*` 组件、能力、tinyui 版本）就加 1，并生成 `shared/tinyui-host/<n>.txt`
- * （HostSnapshotTest，tinyui docs/updates.md §4.1）。页面源码在 ../trendingai-tinyui。
+ * 宿主对 TinyUI 页面的承诺变了（`ta.*` 组件、能力、tinyui 下限、引擎）就加 1，并生成 `shared/tinyui-host/<n>.txt`
+ * （HostSnapshotTest，tinyui docs/updates.md §4.1）；单纯升 tinyui 不加。页面源码在 ../trendingai-tinyui。
  * 快照只认组件 schema 与能力名，以下变了测试不会拦、同样要加 1：能力的参数 / 返回形状 / 行为、页面 props（SubscriptionProps）、页面名、store key。
  */
-const val HOST_VERSION = "4"
+const val HOST_VERSION = "5"
 
 /** 当前屏的 SnackbarHostState，`ui.snackbar` 从这里取；挂页面的屏经 HostServices.locals 提供 */
 val PageSnackbar = PageLocal<SnackbarHostState>()
