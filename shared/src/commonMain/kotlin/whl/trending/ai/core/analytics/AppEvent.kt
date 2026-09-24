@@ -207,6 +207,13 @@ sealed class AppEvent(
         mapOf("outcome" to outcome, "pkg" to pkg, "version" to version, "reason" to reason),
     )
 
+    /**
+     * 启动时发现内置包不能在本宿主上跑（[mismatch]：ENGINE / PROTOCOL，逗号分隔）：页面走错误页，直到 check 装上兼容版本。
+     * 发版检查本该拦住，出现即说明检查被绕过（tinyui docs/updates.md §4.4）。
+     */
+    data class TinyUIEmbeddedRejected(val pkg: String, val version: String, val mismatch: String) :
+        AppEvent("tinyui_embedded_rejected", mapOf("pkg" to pkg, "version" to version, "mismatch" to mismatch))
+
     /** 热下发的包在某页报 E2 / E6（[kind]），整包退回内置（tinyui docs/updates.md §4.5）。 */
     data class TinyUIPageRolledBack(val pkg: String, val version: String, val page: String, val kind: String) :
         AppEvent("tinyui_page_rolled_back", mapOf("pkg" to pkg, "version" to version, "page" to page, "kind" to kind))
@@ -290,7 +297,7 @@ enum class AuthOutcome { SUCCESS, CANCELED, ERROR }
 
 enum class UpsellTarget { PRO, SPONSOR, NEWSLETTER }
 
-enum class TinyUIUpdateOutcome { INSTALLED, REVERTED, SKIPPED, FAILED }
+enum class TinyUIUpdateOutcome { INSTALLED, SKIPPED, FAILED }
 
 enum class CheckoutStepKind { PLAN_SELECTED, OPENED, RECONCILED }
 

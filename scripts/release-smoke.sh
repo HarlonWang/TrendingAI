@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 发布前冒烟：构建 r2 渠道 release 包（minify 与线上一致），装模拟器验证启动不崩。
+# 发布前冒烟：刷新 TinyUI 内置包并做发版检查，构建 r2 渠道 release 包（minify 与线上一致），装模拟器验证启动不崩。
 # 背景：0.20.0 因 R8 裁掉 WorkDatabase_Impl 构造器启动即崩——debug 包不混淆测不出这类问题，
 # 所以打 tag 前必须跑一次本脚本。用法：scripts/release-smoke.sh
 set -euo pipefail
@@ -9,6 +9,25 @@ PKG="whl.trending.ai"
 AVD="Pixel_9_2"
 APK="androidApp/build/outputs/apk/r2/release/androidApp-r2-release.apk"
 SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+
+# TinyUI 内置包（tinyui docs/updates.md §1.4）：production 比内置新且已全量才换，有变化就提交，冒烟测的就是要发出去的字节
+EMBEDDED="shared/src/commonMain/composeResources/files/tinyui/trendingai"
+host=$(sed -n 's/^const val HOST_VERSION = "\([0-9]*\)"$/\1/p' shared/src/commonMain/kotlin/whl/trending/ai/tinyui/TrendingTinyUI.kt)
+tinyui=$(sed -n 's/^tinyui = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
+echo "==> 刷新 TinyUI 内置包（宿主版本 $host）"
+if npx --yes -p "tinyui-cli@$tinyui" tinyui pull --app trendingai --channel production --host-version "$host" --out "$EMBEDDED"; then
+  if [ -n "$(git status --porcelain -- "$EMBEDDED")" ]; then
+    v=$(node -p "require('./$EMBEDDED/manifest.json').version")
+    git add -A -- "$EMBEDDED"
+    git commit -q -m "chore(tinyui): 内置包 trendingai@$v" -- "$EMBEDDED"
+    echo "    已提交内置包 $v"
+  fi
+else
+  echo "    WARN: 刷新失败，沿用现有内置包（原因见上）"
+fi
+
+echo "==> TinyUI 发版检查（宿主快照、内置包）"
+./gradlew :shared:testAndroidHostTest --tests 'whl.trending.ai.tinyui.HostSnapshotTest' --tests 'whl.trending.ai.tinyui.EmbeddedPackageTest' -Ptinyui.releaseCheck -q
 
 echo "==> 构建 r2 release"
 ./gradlew :androidApp:assembleR2Release -q

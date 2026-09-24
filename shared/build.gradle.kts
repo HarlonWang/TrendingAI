@@ -96,9 +96,13 @@ kotlin {
     }
 }
 
-// HostSnapshotTest 对照 tinyui-host/；-Ptinyui.updateHostSnapshot 时改为写入
+// HostSnapshotTest 对照 tinyui-host/，-Ptinyui.updateHostSnapshot 时改为写入；
+// EmbeddedPackageTest 是发版检查，-Ptinyui.releaseCheck 时才跑
 val updateHostSnapshot = providers.gradleProperty("tinyui.updateHostSnapshot")
+val releaseCheck = providers.gradleProperty("tinyui.releaseCheck")
 tasks.withType<Test>().configureEach {
     inputs.files(layout.projectDirectory.dir("tinyui-host")).withPropertyName("hostSnapshots")
+    inputs.dir(layout.projectDirectory.dir("src/commonMain/composeResources/files/tinyui")).withPropertyName("embeddedPackages")
     updateHostSnapshot.orNull?.let { systemProperty("tinyui.updateHostSnapshot", "true") }
+    releaseCheck.orNull?.let { systemProperty("tinyui.releaseCheck", "true") }
 }

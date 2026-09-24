@@ -65,7 +65,7 @@ object TinyUIUpdates {
         println("TinyUI updates $event")
         val tracked = when (event) {
             is UpdateEvent.Installed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.INSTALLED, event.pkg, event.version)
-            is UpdateEvent.Reverted -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.REVERTED, event.pkg, event.version)
+            is UpdateEvent.EmbeddedIncompatible -> AppEvent.TinyUIEmbeddedRejected(event.pkg, event.version, event.mismatch.sorted().joinToString(","))
             is UpdateEvent.Skipped -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.SKIPPED, event.pkg, event.version, event.reason.name)
             is UpdateEvent.Failed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.FAILED, event.pkg, event.version, event.stage.name)
             is UpdateEvent.RolledBack -> AppEvent.TinyUIPageRolledBack(event.pkg, event.version, event.page, event.kind)
