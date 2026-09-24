@@ -31,7 +31,7 @@ import whl.trending.ai.tinyui.generated.HostSchemas
  * （HostSnapshotTest，tinyui docs/updates.md §4.1）。页面源码在 ../trendingai-tinyui。
  * 快照只认组件 schema 与能力名，以下变了测试不会拦、同样要加 1：能力的参数 / 返回形状 / 行为、页面 props（SubscriptionProps）、页面名、store key。
  */
-const val HOST_VERSION = "3"
+const val HOST_VERSION = "4"
 
 /** 当前屏的 SnackbarHostState，`ui.snackbar` 从这里取；挂页面的屏经 HostServices.locals 提供 */
 val PageSnackbar = PageLocal<SnackbarHostState>()
