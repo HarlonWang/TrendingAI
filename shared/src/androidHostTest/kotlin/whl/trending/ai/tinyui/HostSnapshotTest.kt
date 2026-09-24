@@ -20,7 +20,7 @@ class HostSnapshotTest {
             file.writeText(current)
             return
         }
-        val hint = "HOST_VERSION $HOST_VERSION 还没随发版带出去就加 -Ptinyui.updateHostSnapshot 重跑，否则先把它加 1 再重跑"
+        val hint = "HOST_VERSION $HOST_VERSION 还没合入 main 就加 -Ptinyui.updateHostSnapshot 重跑，否则先把它加 1 再重跑"
         assertTrue(file.exists(), "没有 ${file.path}；$hint")
         assertEquals(file.readText(), current, "宿主契约与 ${file.path} 不一致；$hint")
     }

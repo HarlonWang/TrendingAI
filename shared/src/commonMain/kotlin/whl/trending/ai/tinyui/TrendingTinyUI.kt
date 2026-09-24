@@ -30,7 +30,7 @@ import whl.trending.ai.tinyui.generated.HostSchemas
  * 宿主给 TinyUI 页面的东西变了（`ta.*` 组件、能力、tinyui 版本）就加 1，并生成 `shared/tinyui-host/<n>.txt`
  * （HostSnapshotTest，tinyui docs/updates.md §4.1）。页面源码在 ../trendingai-tinyui。
  */
-const val HOST_VERSION = "2"
+const val HOST_VERSION = "3"
 
 /** 当前屏的 SnackbarHostState，`ui.snackbar` 从这里取；挂页面的屏经 HostServices.locals 提供 */
 val PageSnackbar = PageLocal<SnackbarHostState>()

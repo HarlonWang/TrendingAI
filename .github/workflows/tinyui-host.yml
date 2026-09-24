@@ -1,0 +1,33 @@
+# TinyUI 宿主快照（tinyui docs/updates.md §4.1、§6.4）：HOST_VERSION 加 1 的提交一进 main 就上传并冻结，
+# JS 仓才能在新宿主版本下发布。同版本同字节重传无害，所以不设并发组（排队会丢掉中间的推送）；
+# 409 = 改了已合入 main 的 HOST_VERSION 的契约，再加 1
+name: TinyUI host snapshot
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: ./gradlew :shared:testAndroidHostTest --tests 'whl.trending.ai.tinyui.HostSnapshotTest'
+      - name: Upload
+        env:
+          TINYUI_ADMIN_TOKEN: ${{ secrets.TINYUI_APP_TOKEN }}
+        run: |
+          host=$(sed -n 's/^const val HOST_VERSION = "\([0-9]*\)"$/\1/p' shared/src/commonMain/kotlin/whl/trending/ai/tinyui/TrendingTinyUI.kt)
+          tinyui=$(sed -n 's/^tinyui = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
+          npx --yes -p "tinyui-cli@$tinyui" tinyui hosts upload "shared/tinyui-host/$host.txt" --host-version "$host" --app trendingai

@@ -151,13 +151,13 @@ jobs:
               print(f"⚠️ whatsnew.json generation failed, keep placeholder: {e}")
           EOF
 
-      # TinyUI 宿主快照（tinyui docs/updates.md §4.1、§6.4）：契约变了而 HOST_VERSION 没加 1 就不发版；
-      # 上传后 JS 包发布前据此核对。同版本同字节重传无害，不同字节 409 = 改了已发版的 HOST_VERSION 的契约
-      - name: Check & Upload TinyUI Host Snapshot
+      # TinyUI 发版检查（tinyui docs/updates.md §4.1）：宿主契约与快照一致，内置包能跑在本宿主上且是给当前 HOST_VERSION 发布过的。
+      # 快照在合入 main 时已上传（tinyui-host.yml），这里重传是幂等复核；409 = 改了已合入的 HOST_VERSION 的契约
+      - name: Check TinyUI Host & Embedded Package
         env:
           TINYUI_ADMIN_TOKEN: ${{ secrets.TINYUI_APP_TOKEN }}
         run: |
-          ./gradlew :shared:testAndroidHostTest --tests 'whl.trending.ai.tinyui.HostSnapshotTest'
+          ./gradlew :shared:testAndroidHostTest --tests 'whl.trending.ai.tinyui.HostSnapshotTest' --tests 'whl.trending.ai.tinyui.EmbeddedPackageTest' -Ptinyui.releaseCheck
           host=$(sed -n 's/^const val HOST_VERSION = "\([0-9]*\)"$/\1/p' shared/src/commonMain/kotlin/whl/trending/ai/tinyui/TrendingTinyUI.kt)
           tinyui=$(sed -n 's/^tinyui = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
           npx --yes -p "tinyui-cli@$tinyui" tinyui hosts upload "shared/tinyui-host/$host.txt" --host-version "$host" --app trendingai
