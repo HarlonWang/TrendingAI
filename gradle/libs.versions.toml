@@ -37,7 +37,7 @@ kmp-webview = "0.1.12"
 # 改了 loginbase-kt 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
 loginbase-kt = "0.5.1"
 # 与 loginbase-kt 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
-eventbase-kt = "0.2.1"
+eventbase-kt = "0.3.0"
 # 本地联调走 local.properties 的 tinyui.dir（composite build），CI 与发版解析这里的 Maven 版本
 tinyui = "0.5.0"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode

@@ -37,6 +37,10 @@ fun track(event: AppEvent, flow: String? = null) {
     Eventbase.track(event, flow)
 }
 
+fun setGlobalProperty(property: GlobalProperty, value: Any?) {
+    Eventbase.setProperty(property.key, value)
+}
+
 /** 登录成功后关联账号：此后事件带 user_id，并在服务端建立 install↔identity 映射。 */
 fun setAnalyticsUser(userId: String?) {
     Eventbase.setUserId(userId)
