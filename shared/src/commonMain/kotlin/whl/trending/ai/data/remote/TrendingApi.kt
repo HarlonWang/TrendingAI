@@ -44,8 +44,9 @@ import kotlinx.serialization.json.put
 class ApiException(val statusCode: Int, message: String) : Exception(message)
 
 open class TrendingApi {
-    private companion object {
+    internal companion object {
         // 进程级共享、从不 close：每实例自建 client 会随导航反复付连接池/线程池与冷连接 TLS 的成本
+        /** 也是 TinyUI 页 `app` 通道的底座（tinyui/TrendingTinyUI.kt）：同一套登录态与刷新 */
         val sharedClient by lazy {
             HttpClient {
                 install(ContentNegotiation) {

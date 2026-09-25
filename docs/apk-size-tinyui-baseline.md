@@ -90,3 +90,23 @@ asset 里字节码（`.bin`）共 18 KiB、source map（`.js.map`）共 22 KiB�
 3. `diffuse diff <old.apk> <new.apk> > diff.txt`（`brew install diffuse`）。首表看分类，`==== APK ====`
    节看逐文件，`==== DEX ====` 节看类 / 方法级明细。
 4. 看 ABI 覆盖：`unzip -l <new.apk> 'lib/*'`，arm64-v8a / armeabi-v7a / x86_64 三个目录的 `.so` 清单应一致；`lib/x86/` 缺 `libquickjs_kmp.so` 是待决项 2 的已知现状，待决后按其结论（排除 x86 或补 so）改这条校验。
+
+## 增量：tinyui 0.8.0（ADR-007 职责边界，2026-09-25）
+
+订阅页的请求、文案、Pro 态、下单、图标搬进页面包，框架自带 http（ktor）/ 存储（okio）/ i18n / toast 等。
+同机同口径：main（tinyui 0.7.0）与 `feat/tinyui-framework-boundary`（tinyui 0.8.0，Maven 坐标、非 composite）
+各 `clean` 后 `assembleGithubRelease`，`diffuse 0.3.0` 对比。
+
+| 分类 | 增量（compressed） | 增量（uncompressed） |
+|---|---|---|
+| dex | +2.3 KiB | +3.3 KiB |
+| native | -4.8 KiB | 0（`libandroidx.graphics.path.so` 压缩波动） |
+| asset | +4.3 KiB | +5.7 KiB |
+| **total** | **+1.9 KiB** | **+9.1 KiB** |
+
+dex 类数 6419 → 6403（-16：宿主能力、props、PaywallContent 删掉，框架新代码抵消）。ktor 与 okio 本来就在 App 里，
+框架改依赖它们不增加体积。asset 增量是页面字节码（6.5 → 12.3 KB，逻辑从 Kotlin 搬进 JS）与两份 i18n（1.6 KB）。
+
+**测量踩坑**：Compose 资源拷到 assets 时不删旧文件，同一构建目录里早期布局遗留的 `files/tinyui/runtime/*`、`*.js.map`
+会一直留在 APK 里（这次未 clean 时多出 64 KiB）。测体积前先删 `androidApp/build` 与 `shared/build`。
+

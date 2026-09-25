@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.CheckoutStepKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.local.globalSettingsManager
 
 /**
@@ -29,17 +28,13 @@ object ProCheckout {
     /** 埋点 source 词汇。新增购买入口时在这里登记，否则漏斗按 source 分组会漏。 */
     const val SOURCE_ACCOUNT = "account"
 
-    const val PLAN_ANNUAL = "annual"
-    const val PLAN_MONTHLY = "monthly"
-
     /**
-     * 打开收银台。**必须经此函数**：落购买意图时间戳，[reconcile] 才知道该对账。
-     * 强制应用外打开——内置 WebView 跑不通 Paddle 三方支付跳转，且外跳才保证回来触发 ON_RESUME。
+     * 收银台已打开（订阅页的 `trendingai.checkout.opened` 事件）：落购买意图时间戳，[reconcile] 才知道该对账。
+     * 收银台由页面经 `linking.openUrl` 打开，宿主的链接打开器只会应用外打开——内置 WebView 跑不通 Paddle
+     * 三方支付跳转，且外跳才保证回来触发 ON_RESUME。
      */
-    fun openCheckout(url: String, plan: String) {
-        track(AppEvent.CheckoutStep(CheckoutStepKind.OPENED, plan = plan))
+    fun markOpened() {
         globalSettingsManager.setCheckoutOpenedAt(Clock.System.now().toEpochMilliseconds())
-        openUrl(url)
     }
 
     /** 是否处于「刚去过收银台」的对账窗口内。 */
