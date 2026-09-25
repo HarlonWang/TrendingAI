@@ -1,5 +1,6 @@
 package whl.trending.ai.core.analytics
 
+import wang.harlon.eventbase.Event
 import wang.harlon.eventbase.Eventbase
 import wang.harlon.eventbase.EventbaseConfig
 import whl.trending.ai.core.platform.ChannelHolder
@@ -36,6 +37,13 @@ fun analyticsConfig(isDebug: Boolean): EventbaseConfig = EventbaseConfig(
 fun track(event: AppEvent, flow: String? = null) {
     Eventbase.track(event, flow)
 }
+
+/** TinyUI 页经 `analytics.track` 发来的事件，名与字段由页面包定义（词汇表 docs/telemetry-vocabulary.md） */
+fun trackPageEvent(name: String, props: Map<String, Any?>) {
+    Eventbase.track(PageEvent(name, props))
+}
+
+private class PageEvent(override val name: String, override val props: Map<String, Any?>) : Event
 
 fun setGlobalProperty(property: GlobalProperty, value: Any?) {
     Eventbase.setProperty(property.key, value)

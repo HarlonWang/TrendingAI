@@ -24,7 +24,6 @@ import whl.trending.ai.core.platform.getSystemLocaleTag
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
-import whl.trending.ai.data.model.ProPaywallRemoteConfig
 import whl.trending.ai.data.model.QuotaHelpRemoteConfig
 import whl.trending.ai.data.model.SummaryLangOption
 
@@ -161,7 +160,6 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val CHAT_IMAGES_MAX_KEY = "prefs_chat_images_max"
     private val CHAT_IMAGES_PER_KB_KEY = "prefs_chat_images_per_kb"
     private val CHAT_VOICE_MAX_MS_KEY = "prefs_chat_voice_max_ms"
-    private val PRO_PAYWALL_KEY = "prefs_pro_paywall"
     private val QUOTA_HELP_KEY = "prefs_quota_help"
     private val SUMMARY_LANGS_KEY = "prefs_summary_langs"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
@@ -422,18 +420,6 @@ class SettingsManager(private val settings: ObservableSettings) {
 
     fun setChatVoiceConfig(maxDurationMs: Int?) {
         if (maxDurationMs != null) settings.putInt(CHAT_VOICE_MAX_MS_KEY, maxDurationMs)
-    }
-
-    /** 最近一次成功拉取的订阅页文案；从未拉到或解码失败为 null，订阅页逐键回落本地默认 */
-    fun proPaywall(): ProPaywallRemoteConfig? {
-        val json = settings.getStringOrNull(PRO_PAYWALL_KEY) ?: return null
-        return runCatching { Json.decodeFromString<ProPaywallRemoteConfig>(json) }.getOrNull()
-    }
-
-    /** 与 min_version 同一语义：响应里没有即清除，回落本地默认 */
-    fun setProPaywall(config: ProPaywallRemoteConfig?) {
-        if (config == null) settings.remove(PRO_PAYWALL_KEY)
-        else settings.putString(PRO_PAYWALL_KEY, Json.encodeToString(config))
     }
 
     /** 最近一次成功拉取的额度说明；从未拉到或解码失败为 null，账户页不显示说明入口 */

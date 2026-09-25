@@ -1,0 +1,16 @@
+{
+  "subscription.title": "Upgrade to Pro",
+  "subscription.intro": "Trending and Picks stay free. Pro raises your AI allowance and models.",
+  "subscription.benefitsFallback": "A higher allowance and more models",
+  "subscription.plan.annual": "Yearly",
+  "subscription.plan.monthly": "Monthly",
+  "subscription.plan.annualUnit": "per year",
+  "subscription.plan.monthlyUnit": "per month",
+  "subscription.savings": "Save {percent}",
+  "subscription.cta.subscribe": "Subscribe to Pro",
+  "subscription.cta.signIn": "Sign in to subscribe",
+  "subscription.cta.viewPrice": "See price and subscribe",
+  "subscription.refundNote": "Cancel anytime. Full refund available within 14 days.",
+  "subscription.alreadyPro": "You're already a Pro member — thank you!",
+  "subscription.checkoutFailed": "Couldn't start the subscription right now. Please try again."
+}

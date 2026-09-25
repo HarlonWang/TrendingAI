@@ -1,0 +1,16 @@
+{
+  "subscription.title": "升级 Pro",
+  "subscription.intro": "榜单与精选始终免费，Pro 提升 AI 用量与模型",
+  "subscription.benefitsFallback": "更高的额度与更多模型",
+  "subscription.plan.annual": "年付",
+  "subscription.plan.monthly": "月付",
+  "subscription.plan.annualUnit": "每年",
+  "subscription.plan.monthlyUnit": "每月",
+  "subscription.savings": "省 {percent}",
+  "subscription.cta.subscribe": "订阅 Pro",
+  "subscription.cta.signIn": "登录后订阅",
+  "subscription.cta.viewPrice": "查看价格并订阅",
+  "subscription.refundNote": "支持随时取消，14 天内可申请全额退款。",
+  "subscription.alreadyPro": "你已经是 Pro，感谢支持",
+  "subscription.checkoutFailed": "暂时无法发起订阅，请稍后再试"
+}
