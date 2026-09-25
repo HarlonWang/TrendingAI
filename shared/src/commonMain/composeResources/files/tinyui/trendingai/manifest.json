@@ -6,16 +6,16 @@
     "trendingai/subscription": "pages/subscription"
   },
   "buildIds": {
-    "trendingai/subscription": "fc4df642"
+    "trendingai/subscription": "b90b1f72"
   },
   "name": "trendingai",
   "publicKey": "BN5p4NkH9v5vRmeEG77xg/3NrMNqG6L92QtNyoNFFlZHJfVYVXh7ew5DTvVyrwHWHjdsFSzyv48tyNgOrYVQcyY=",
-  "version": "20260925T105701Z-3e14ed0d906d",
-  "createdAt": "2026-09-25T10:57:01Z",
+  "version": "20260925T111035Z-13c0b6b011e4",
+  "createdAt": "2026-09-25T11:10:35Z",
   "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
   "tinyui": "0.8.0",
   "hashes": {
-    "trendingai/subscription": "144481815d073734f9cd4f83327f9fadcd9fa2fc860c6b9cd115a688bdb20632",
+    "trendingai/subscription": "06642883731e7588c93e809fc74139b10743bc3483bfc1db86ef91c1e01ffa22",
     "i18n/en.json": "470bf27e78fad9bcc598a74fa16b53d9f556fb3c132f09304e2c3f954d8e2b32",
     "i18n/zh.json": "27c39e27f98811c158fd4954990ef5973945996e890c66fa3631b1a5844d0def"
   },
