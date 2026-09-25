@@ -144,7 +144,7 @@ actual fun isIosPlatform(): Boolean = false
 actual fun getSystemLanguage(): String = java.util.Locale.getDefault().language
 
 actual fun getSystemLanguageDisplayName(): String {
-    val locale = java.util.Locale.getDefault()
+    val locale = android.content.res.Resources.getSystem().configuration.locales[0]
     return locale.getDisplayLanguage(locale).replaceFirstChar { it.uppercase() }
 }
 

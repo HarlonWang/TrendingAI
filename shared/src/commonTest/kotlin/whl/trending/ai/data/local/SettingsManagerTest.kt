@@ -1,6 +1,7 @@
 package whl.trending.ai.data.local
 
 import com.russhwolf.settings.MapSettings
+import whl.trending.ai.data.model.SummaryLangOption
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -185,5 +186,35 @@ class SettingsManagerTest {
         assertEquals("profile", rebuilt.accountLinkSource())
 
         assertNull(rebuilt.also { it.setAccountLinkSource(null) }.accountLinkSource())
+    }
+    @Test
+    fun summaryLangs_default_to_builtin_zh_en() = runTest {
+        assertEquals(BUILTIN_SUMMARY_LANGS, manager.summaryLangs.first())
+        assertEquals(BUILTIN_SUMMARY_LANGS, manager.currentSummaryLangs())
+    }
+
+    @Test
+    fun summaryLangs_follow_server_and_clear_back_to_builtin() = runTest {
+        val remote = BUILTIN_SUMMARY_LANGS + SummaryLangOption("ru", "Русский")
+        manager.setSummaryLangs(remote)
+        assertEquals(remote, manager.summaryLangs.first())
+        manager.setSummaryLangs(null)
+        assertEquals(BUILTIN_SUMMARY_LANGS, manager.currentSummaryLangs())
+    }
+
+    @Test
+    fun summaryLanguage_storage_keeps_legacy_values_and_accepts_new_codes() {
+        assertEquals(SummaryLanguage.FOLLOW_SYSTEM, SummaryLanguage.fromStorage("system"))
+        assertEquals(SummaryLanguage.FOLLOW_SYSTEM, SummaryLanguage.fromStorage(null))
+        assertEquals(SummaryLanguage.CHINESE, SummaryLanguage.fromStorage("zh"))
+        assertEquals(SummaryLanguage("ru"), SummaryLanguage.fromStorage("ru"))
+        manager.setSummaryLanguage(SummaryLanguage("ru"))
+        assertEquals(SummaryLanguage("ru"), SummaryLanguage.fromStorage(settings.getStringOrNull("prefs_summary_language")))
+    }
+
+    @Test
+    fun resolveSummaryLang_keeps_explicit_choice_even_if_not_listed() {
+        assertEquals("ru", manager.resolveSummaryLang(SummaryLanguage("ru"), BUILTIN_SUMMARY_LANGS))
+        assertEquals("zh", manager.resolveSummaryLang(SummaryLanguage.CHINESE, BUILTIN_SUMMARY_LANGS))
     }
 }

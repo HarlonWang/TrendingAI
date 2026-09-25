@@ -38,6 +38,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -92,8 +93,9 @@ import trendingai.shared.generated.resources.summary_lang_capture_message
 import trendingai.shared.generated.resources.summary_lang_capture_title
 import trendingai.shared.generated.resources.summary_language
 import trendingai.shared.generated.resources.summary_language_desc
-import trendingai.shared.generated.resources.summary_language_feedback
+import trendingai.shared.generated.resources.summary_language_follow_system_resolved
 import trendingai.shared.generated.resources.summary_language_message
+import trendingai.shared.generated.resources.summary_language_request
 import trendingai.shared.generated.resources.summary_language_upgrade
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
@@ -103,17 +105,19 @@ import whl.trending.ai.core.analytics.FeedbackKind
 import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.isValidEmail
-import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.core.platform.getSystemLocaleTag
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.openAppSettings
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SummaryLanguage
+import whl.trending.ai.data.model.SummaryLangOption
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.notification.globalDailyPicksNotifier
 import whl.trending.ai.ui.common.SettingsGroup
+import whl.trending.ai.ui.common.TrendingBottomSheet
 import whl.trending.ai.ui.common.TrendingDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
@@ -152,6 +156,9 @@ fun SettingsScreen(
     val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(
         remember { globalSettingsManager.currentSummaryLanguage() }
     )
+    val summaryLangs by globalSettingsManager.summaryLangs.collectAsState(
+        remember { globalSettingsManager.currentSummaryLangs() }
+    )
     val openLinksInCustomTab by globalSettingsManager.openLinksInCustomTab.collectAsState(
         remember { globalSettingsManager.currentOpenLinksInCustomTab() }
     )
@@ -167,12 +174,11 @@ fun SettingsScreen(
     val authState by globalAuthManager.authState.collectAsState()
     val isLoggedIn = authState is AuthState.LoggedIn
 
-    var showSummaryLanguageDialog by remember { mutableStateOf(false) }
+    var showSummaryLanguageSheet by remember { mutableStateOf(false) }
     var showLangCaptureDialog by remember { mutableStateOf(false) }
-    // 三个下拉菜单的展开态提到页面作用域：SettingsGroup 的 content 是收集用的普通 lambda，
+    // 下拉菜单的展开态提到页面作用域：SettingsGroup 的 content 是收集用的普通 lambda，
     // 不是 @Composable，里面调不了 remember
     var appLanguageMenuExpanded by remember { mutableStateOf(false) }
-    var summaryLanguageMenuExpanded by remember { mutableStateOf(false) }
     var homeTabMenuExpanded by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -180,32 +186,21 @@ fun SettingsScreen(
     val permissionDeniedMsg = stringResource(Res.string.notification_permission_denied)
     val openSystemSettingsLabel = stringResource(Res.string.open_system_settings)
 
-    if (showSummaryLanguageDialog) {
-        AlertDialog(
-            onDismissRequest = { showSummaryLanguageDialog = false },
-            title = { Text(stringResource(Res.string.summary_language)) },
-            text = { Text(stringResource(Res.string.summary_language_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSummaryLanguageDialog = false
-                    showLangCaptureDialog = true
-                }) {
-                    Text(stringResource(Res.string.summary_language_upgrade))
-                }
+    if (showSummaryLanguageSheet) {
+        SummaryLanguageSheet(
+            current = summaryLanguage,
+            langs = summaryLangs,
+            onSelect = { language ->
+                showSummaryLanguageSheet = false
+                track(AppEvent.SettingChanged(SettingKey.SUMMARY_LANGUAGE, language.storageValue))
+                globalSettingsManager.setSummaryLanguage(language)
             },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { showSummaryLanguageDialog = false }) {
-                        Text(stringResource(Res.string.close))
-                    }
-                    TextButton(onClick = {
-                        showSummaryLanguageDialog = false
-                        onNavigateToFeedback()
-                    }) {
-                        Text(stringResource(Res.string.summary_language_feedback))
-                    }
-                }
-            }
+            onRequestLanguage = {
+                showSummaryLanguageSheet = false
+                track(AppEvent.SettingsItemClicked(SettingKey.SUMMARY_LANGUAGE_REQUEST))
+                showLangCaptureDialog = true
+            },
+            onDismiss = { showSummaryLanguageSheet = false },
         )
     }
 
@@ -282,39 +277,20 @@ fun SettingsScreen(
                             if (isIos) openAppSettings() else appLanguageMenuExpanded = true
                         },
                     )
-                    // 摘要语言：独立决定 AI 摘要/解读的请求语言；行点击弹说明（含「更多语言」引导采集 + 赞助），
-                    // 点右侧当前值才是直接换语言——两个动作分开，别合并
+                    // 摘要语言：独立决定 AI 摘要/解读的请求语言。整行只做选语言一件事，「请求新语言」收在面板底部
                     settingsItem(
                         icon = Icons.Default.Translate,
                         title = { Text(stringResource(Res.string.summary_language)) },
                         description = { Text(stringResource(Res.string.summary_language_desc)) },
                         trailing = {
-                            Box {
-                                Text(
-                                    text = languageOptionText(summaryLanguage),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clickable { summaryLanguageMenuExpanded = true },
-                                )
-                                TrendingDropdownMenu(
-                                    expanded = summaryLanguageMenuExpanded,
-                                    onDismissRequest = { summaryLanguageMenuExpanded = false },
-                                ) {
-                                    SummaryLanguage.entries.forEach { language ->
-                                        DropdownMenuItem(
-                                            text = { Text(languageOptionText(language)) },
-                                            onClick = {
-                                                summaryLanguageMenuExpanded = false
-                                                track(AppEvent.SettingChanged(SettingKey.SUMMARY_LANGUAGE, language.name.lowercase()))
-                                                globalSettingsManager.setSummaryLanguage(language)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
+                            Text(
+                                text = summaryLanguageLabel(summaryLanguage, summaryLangs),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         },
                         onClick = {
                             track(AppEvent.SettingsItemClicked(SettingKey.SUMMARY_LANGUAGE))
-                            showSummaryLanguageDialog = true
+                            showSummaryLanguageSheet = true
                         },
                     )
                     // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
@@ -490,14 +466,54 @@ private fun languageOptionText(language: AppLanguage): String {
     return stringResource(labelRes)
 }
 
+/** 语言码 → 该语言自己的写法；清单里没有（如已下线）就显示码本身 */
+private fun nativeName(code: String, langs: List<SummaryLangOption>): String =
+    langs.firstOrNull { it.code == code }?.native ?: code
+
 @Composable
-private fun languageOptionText(language: SummaryLanguage): String {
-    val labelRes = when (language) {
-        SummaryLanguage.FOLLOW_SYSTEM -> Res.string.language_option_follow_system
-        SummaryLanguage.CHINESE -> Res.string.language_option_chinese
-        SummaryLanguage.ENGLISH -> Res.string.language_option_english
+private fun summaryLanguageLabel(language: SummaryLanguage, langs: List<SummaryLangOption>): String =
+    language.isoCode?.let { nativeName(it, langs) }
+        ?: stringResource(Res.string.language_option_follow_system)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SummaryLanguageSheet(
+    current: SummaryLanguage,
+    langs: List<SummaryLangOption>,
+    onSelect: (SummaryLanguage) -> Unit,
+    onRequestLanguage: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val resolved = nativeName(globalSettingsManager.resolveSummaryLang(SummaryLanguage.FOLLOW_SYSTEM, langs), langs)
+    val options = listOf(SummaryLanguage.FOLLOW_SYSTEM) + langs.map { SummaryLanguage(it.code) } +
+        listOfNotNull(current.takeIf { c -> c.isoCode != null && langs.none { it.code == c.isoCode } })
+    val followSystemLabel = stringResource(Res.string.summary_language_follow_system_resolved, resolved)
+
+    TrendingBottomSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(Res.string.summary_language),
+    ) {
+        Text(
+            text = stringResource(Res.string.summary_language_message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        SettingsGroup {
+            options.forEach { option ->
+                settingsItem(
+                    title = {
+                        Text(if (option.isoCode == null) followSystemLabel else nativeName(option.isoCode, langs))
+                    },
+                    trailing = { RadioButton(selected = option == current, onClick = null) },
+                    onClick = { onSelect(option) },
+                )
+            }
+        }
+        TextButton(onClick = onRequestLanguage, modifier = Modifier.padding(top = 8.dp)) {
+            Text(stringResource(Res.string.summary_language_request))
+        }
     }
-    return stringResource(labelRes)
 }
 
 @Composable
@@ -589,7 +605,7 @@ private fun LanguageCaptureDialog(isLoggedIn: Boolean, onDismiss: () -> Unit) {
                             }
                         } else null
                         val content = buildString {
-                            append("【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLanguage()}")
+                            append("【摘要语言支持请求】期望语言：$lang · 系统语言：${getSystemLocaleTag()}")
                             identityLine?.let { append(" · $it") }
                         }
                         val submitEmail = if (!isLoggedIn) email.ifEmpty { null } else null

@@ -331,5 +331,6 @@ enum class SettingKey {
     OPEN_LINKS_IN_BROWSER,
     SEED_COLOR,
     SUMMARY_LANGUAGE,
+    SUMMARY_LANGUAGE_REQUEST,
     THEME,
 }
