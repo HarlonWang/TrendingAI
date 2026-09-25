@@ -1,11 +1,13 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "zh": [
-    "GitHub 与 Product Hunt 条目新增 AI 解读页，点开即读一分钟解读",
-    "AI 对话里双击消息可全屏查看"
+    "沉浸式浏览改为默认开启，阅读更专注",
+    "修复大字号下首页第一条标题被遮挡的问题",
+    "其他体验优化与问题修复"
   ],
   "en": [
-    "AI digests now cover GitHub and Product Hunt: open any item for a one-minute read",
-    "Double-tap a message in AI chat to view it full-screen"
+    "Immersive browsing is now on by default for distraction-free reading",
+    "Fixed the first headline on Home being cut off at large font sizes",
+    "Other experience improvements and bug fixes"
   ]
 }

@@ -1,0 +1,3 @@
+• Immersive browsing is now on by default for distraction-free reading
+• Fixed the first headline on Home being cut off at large font sizes
+• Other experience improvements and bug fixes
