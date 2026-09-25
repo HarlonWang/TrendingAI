@@ -20,11 +20,13 @@ import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getSystemLanguage
+import whl.trending.ai.core.platform.getSystemLocaleTag
 import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.model.ProPaywallRemoteConfig
 import whl.trending.ai.data.model.QuotaHelpRemoteConfig
+import whl.trending.ai.data.model.SummaryLangOption
 
 /**
  * 持久化存的是 ordinal，新档位只能追加在末尾，否则老用户的选择会错位。
@@ -61,24 +63,24 @@ enum class AppLanguage(val isoCode: String?) {
     ENGLISH("en")
 }
 
-/** 后端已支持的摘要语言；「跟随系统」钳制到该清单，清单外的系统语言回落英文 */
-val SUPPORTED_SUMMARY_LANGS = setOf("zh", "en")
+/** 从未拉到 app-config 时的可选摘要语言；拉到后以服务端 summary_langs 为准 */
+val BUILTIN_SUMMARY_LANGS = listOf(SummaryLangOption("zh", "中文"), SummaryLangOption("en", "English"))
 private const val FALLBACK_SUMMARY_LANG = "en"
 
 /**
  * 摘要内容语言，与 App 界面语言（[AppLanguage]）解耦——两者扩展节奏独立。
- * 持久化存 [storageValue] 字符串而非 ordinal，便于任意位置插入新语言。
+ * [isoCode] 为 null 即跟随系统；可选值由服务端下发，故不是枚举。持久化存 [storageValue]。
  */
-enum class SummaryLanguage(val isoCode: String?) {
-    FOLLOW_SYSTEM(null),
-    CHINESE("zh"),
-    ENGLISH("en");
-
+data class SummaryLanguage(val isoCode: String?) {
     val storageValue: String get() = isoCode ?: "system"
 
     companion object {
+        val FOLLOW_SYSTEM = SummaryLanguage(null)
+        val CHINESE = SummaryLanguage("zh")
+        val ENGLISH = SummaryLanguage("en")
+
         fun fromStorage(value: String?): SummaryLanguage =
-            entries.firstOrNull { it.storageValue == value } ?: FOLLOW_SYSTEM
+            if (value.isNullOrEmpty() || value == "system") FOLLOW_SYSTEM else SummaryLanguage(value)
     }
 }
 
@@ -161,6 +163,7 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val CHAT_VOICE_MAX_MS_KEY = "prefs_chat_voice_max_ms"
     private val PRO_PAYWALL_KEY = "prefs_pro_paywall"
     private val QUOTA_HELP_KEY = "prefs_quota_help"
+    private val SUMMARY_LANGS_KEY = "prefs_summary_langs"
     private val DAILY_PICKS_NOTIFICATION_KEY = "prefs_daily_picks_notification"
     private val PICKS_NEWSLETTER_BANNER_DISMISSED_KEY = "prefs_picks_newsletter_banner_dismissed"
     private val DEFAULT_HOME_TAB_KEY = "prefs_default_home_tab"
@@ -349,15 +352,35 @@ class SettingsManager(private val settings: ObservableSettings) {
         settings.putString(SUMMARY_LANGUAGE_KEY, language.storageValue)
     }
 
-    /**
-     * 当前内容语言：FOLLOW_SYSTEM 时取系统语言并钳制到后端支持清单（清单外回落英文，
-     * 避免发出后端无数据的 lang 导致摘要整页为空）。摘要请求与邮件订阅共用，免得口径分叉。
-     */
-    suspend fun currentContentLang(): String {
-        summaryLanguage.first().isoCode?.let { return it }
-        val system = getSystemLanguage()
-        return if (system in SUPPORTED_SUMMARY_LANGS) system else FALLBACK_SUMMARY_LANG
+    /** 最近一次拉到的可选摘要语言；从未拉到或解码失败时为内置 zh/en */
+    val summaryLangs: Flow<List<SummaryLangOption>> = settings.getStringOrNullFlow(SUMMARY_LANGS_KEY)
+        .map { decodeSummaryLangs(it) }
+
+    fun currentSummaryLangs(): List<SummaryLangOption> =
+        decodeSummaryLangs(settings.getStringOrNull(SUMMARY_LANGS_KEY))
+
+    fun setSummaryLangs(langs: List<SummaryLangOption>?) {
+        if (langs.isNullOrEmpty()) settings.remove(SUMMARY_LANGS_KEY)
+        else settings.putString(SUMMARY_LANGS_KEY, Json.encodeToString(langs))
     }
+
+    private fun decodeSummaryLangs(json: String?): List<SummaryLangOption> =
+        json?.let { runCatching { Json.decodeFromString<List<SummaryLangOption>>(it) }.getOrNull() }
+            ?.takeIf { it.isNotEmpty() } ?: BUILTIN_SUMMARY_LANGS
+
+    /**
+     * 「跟随系统」解析出的语言：取真实系统 locale（不被 App 内界面语言覆盖），钳制到可选清单，清单外回落英文。
+     * 显式选过的语言原样返回，即使暂不在清单里——服务端对缺失内容回退英文。
+     */
+    fun resolveSummaryLang(language: SummaryLanguage, langs: List<SummaryLangOption>): String {
+        language.isoCode?.let { return it }
+        val system = getSystemLocaleTag().substringBefore('-').lowercase()
+        return if (langs.any { it.code == system }) system else FALLBACK_SUMMARY_LANG
+    }
+
+    /** 当前内容语言。摘要请求与邮件订阅共用，免得口径分叉。 */
+    suspend fun currentContentLang(): String =
+        resolveSummaryLang(summaryLanguage.first(), currentSummaryLangs())
 
     fun getLastUpdateCheckTime(): Long =
         settings.getLong(LAST_UPDATE_CHECK_KEY, 0L)

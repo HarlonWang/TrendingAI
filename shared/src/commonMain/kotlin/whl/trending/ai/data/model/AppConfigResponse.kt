@@ -14,6 +14,14 @@ data class AppConfigResponse(
     @SerialName("chat_voice") val chatVoice: ChatVoiceRemoteConfig? = null,
     @SerialName("pro_paywall") val proPaywall: ProPaywallRemoteConfig? = null,
     @SerialName("quota_help") val quotaHelp: QuotaHelpRemoteConfig? = null,
+    @SerialName("summary_langs") val summaryLangs: List<SummaryLangOption>? = null,
+)
+
+/** 可选的摘要语言（服务端单源见后端 lib/content-langs.js）；[native] 是该语言自己的写法，如「Русский」 */
+@Serializable
+data class SummaryLangOption(
+    val code: String,
+    val native: String,
 )
 
 /** chat 图片参数（服务端 KV 单源下发，与服务端校验闸同值；见后端 lib/chat-images.js） */
