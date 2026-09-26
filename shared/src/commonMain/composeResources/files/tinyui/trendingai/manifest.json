@@ -1,25 +1,34 @@
 {
   "pages": [
+    "trendingai/data-sources",
     "trendingai/subscription"
   ],
   "files": {
+    "trendingai/data-sources": "pages/data-sources",
     "trendingai/subscription": "pages/subscription"
   },
   "buildIds": {
+    "trendingai/data-sources": "2e600578",
     "trendingai/subscription": "b90b1f72"
   },
   "name": "trendingai",
   "publicKey": "BN5p4NkH9v5vRmeEG77xg/3NrMNqG6L92QtNyoNFFlZHJfVYVXh7ew5DTvVyrwHWHjdsFSzyv48tyNgOrYVQcyY=",
-  "version": "20260925T134154Z-58f5eb2a4c57",
-  "createdAt": "2026-09-25T13:41:54Z",
+  "version": "20260926T125529Z-71f599c23881",
+  "createdAt": "2026-09-26T12:55:29Z",
   "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
   "tinyui": "0.8.0",
   "hashes": {
+    "trendingai/data-sources": "f3a3c4a555df5c604abf0d04f523c62aa6df3871495d7fa1d6a8d8d9803e8b2c",
     "trendingai/subscription": "06642883731e7588c93e809fc74139b10743bc3483bfc1db86ef91c1e01ffa22",
-    "i18n/en.json": "470bf27e78fad9bcc598a74fa16b53d9f556fb3c132f09304e2c3f954d8e2b32",
-    "i18n/zh.json": "27c39e27f98811c158fd4954990ef5973945996e890c66fa3631b1a5844d0def"
+    "i18n/en.json": "c0be2cfced7a8ea5af564cc9d4ab63aaf1e993631fbc07598237c2c5221bdb39",
+    "i18n/zh.json": "0358727f188d14cdb7524b3d52d5d65b39366978464e39bdabfb44db21e42cf8"
   },
   "requires": {
+    "trendingai/data-sources": {
+      "components": [],
+      "capabilities": [],
+      "channels": []
+    },
     "trendingai/subscription": {
       "components": [],
       "capabilities": [

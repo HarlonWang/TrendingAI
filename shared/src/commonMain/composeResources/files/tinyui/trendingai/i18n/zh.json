@@ -12,5 +12,13 @@
   "subscription.cta.viewPrice": "查看价格并订阅",
   "subscription.refundNote": "支持随时取消，14 天内可申请全额退款。",
   "subscription.alreadyPro": "你已经是 Pro，感谢支持",
-  "subscription.checkoutFailed": "暂时无法发起订阅，请稍后再试"
+  "subscription.checkoutFailed": "暂时无法发起订阅，请稍后再试",
+  "dataSources.intro": "各来源的更新节奏与收录范围",
+  "dataSources.github.source": "官方 Trending 榜 · 每天更新两次",
+  "dataSources.github.scope": "NEW 标表示项目刚首次登上榜单",
+  "dataSources.hn.source": "官方热门榜 · 每天更新一次",
+  "dataSources.hn.scope": "按天归档，所以一天之内榜面不变",
+  "dataSources.ph.source": "每日热门产品 · 每天更新一次",
+  "dataSources.ph.scope": "收录的是前一天发布的产品，此时社区投票已充分积累",
+  "dataSources.picks.source": "由 AI 从三个来源中精选 · 每天生成一次"
 }

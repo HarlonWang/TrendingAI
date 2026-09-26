@@ -12,5 +12,13 @@
   "subscription.cta.viewPrice": "See price and subscribe",
   "subscription.refundNote": "Cancel anytime. Full refund available within 14 days.",
   "subscription.alreadyPro": "You're already a Pro member — thank you!",
-  "subscription.checkoutFailed": "Couldn't start the subscription right now. Please try again."
+  "subscription.checkoutFailed": "Couldn't start the subscription right now. Please try again.",
+  "dataSources.intro": "How often each source updates and what it covers",
+  "dataSources.github.source": "The official Trending board · updated twice a day",
+  "dataSources.github.scope": "NEW marks a repo that just reached the board for the first time",
+  "dataSources.hn.source": "Official top stories · updated once a day",
+  "dataSources.hn.scope": "Archived by day, so the board stays put within a single day",
+  "dataSources.ph.source": "Daily top products · updated once a day",
+  "dataSources.ph.scope": "Covers the previous day's launches, by which point community voting has settled",
+  "dataSources.picks.source": "Curated by AI across all three sources · generated once a day"
 }
