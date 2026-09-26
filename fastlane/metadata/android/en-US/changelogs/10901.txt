@@ -1,0 +1,3 @@
+• Russian summaries: choose Русский under Settings → Summary language
+• Summary language is now a simple picker
+• Other experience improvements and bug fixes

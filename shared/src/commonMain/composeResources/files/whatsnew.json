@@ -1,13 +1,13 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "zh": [
-    "沉浸式浏览改为默认开启，阅读更专注",
-    "修复大字号下首页第一条标题被遮挡的问题",
+    "新增俄语摘要：在「设置 → 摘要语言」中选择 Русский",
+    "摘要语言改为单选面板，切换更直观",
     "其他体验优化与问题修复"
   ],
   "en": [
-    "Immersive browsing is now on by default for distraction-free reading",
-    "Fixed the first headline on Home being cut off at large font sizes",
+    "Russian summaries: choose Русский under Settings → Summary language",
+    "Summary language is now a simple picker",
     "Other experience improvements and bug fixes"
   ]
 }
