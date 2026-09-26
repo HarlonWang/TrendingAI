@@ -39,7 +39,7 @@ loginbase-kt = "0.5.1"
 # 与 loginbase-kt 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
 eventbase-kt = "0.3.0"
 # 本地联调走 local.properties 的 tinyui.dir（composite build），CI 与发版解析这里的 Maven 版本
-tinyui = "0.8.0"
+tinyui = "0.8.1"
 # 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
 # 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
 room = "2.8.5"
