@@ -10,8 +10,8 @@
   },
   "name": "trendingai",
   "publicKey": "BN5p4NkH9v5vRmeEG77xg/3NrMNqG6L92QtNyoNFFlZHJfVYVXh7ew5DTvVyrwHWHjdsFSzyv48tyNgOrYVQcyY=",
-  "version": "20260925T111035Z-13c0b6b011e4",
-  "createdAt": "2026-09-25T11:10:35Z",
+  "version": "20260925T134154Z-58f5eb2a4c57",
+  "createdAt": "2026-09-25T13:41:54Z",
   "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
   "tinyui": "0.8.0",
   "hashes": {
@@ -36,5 +36,6 @@
       "en": "i18n/en.json",
       "zh": "i18n/zh.json"
     }
-  }
+  },
+  "hostVersion": "6"
 }
