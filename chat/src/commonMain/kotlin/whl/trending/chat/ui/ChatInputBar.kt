@@ -50,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -158,8 +159,14 @@ fun ChatInputBar(
 ) {
     // 进入页面自动聚焦输入框，键盘随焦点自动弹出（官方做法：focusRequester + 在组合外 requestFocus）
     val inputFocusRequester = remember { FocusRequester() }
+    // 只在首次进入时聚焦：从二级页预测式返回时本页会重新组合，若此时弹键盘，IME 在手势中途接管返回回调，
+    // 系统跳过本页的 onBackInvoked，Nav3 转场冻在半透明中间态（小米 13 实测，2026-09-26）
+    var autoFocused by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(autoFocus) {
-        if (autoFocus) inputFocusRequester.requestFocus()
+        if (autoFocus && !autoFocused) {
+            autoFocused = true
+            inputFocusRequester.requestFocus()
+        }
     }
     val loggedIn by chatHost.isLoggedIn.collectAsState(chatHost.isLoggedInNow())
 
