@@ -69,7 +69,7 @@ object TinyUIUpdates {
             is UpdateEvent.Installed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.INSTALLED, event.pkg, event.version)
             is UpdateEvent.EmbeddedIncompatible -> AppEvent.TinyUIEmbeddedRejected(event.pkg, event.version, event.mismatch.sorted().joinToString(","))
             is UpdateEvent.Skipped -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.SKIPPED, event.pkg, event.version, event.reason.name)
-            is UpdateEvent.Failed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.FAILED, event.pkg, event.version, event.stage.name)
+            is UpdateEvent.Failed -> AppEvent.TinyUIUpdateChecked(TinyUIUpdateOutcome.FAILED, event.pkg, event.version, event.stage.name, event.message)
             is UpdateEvent.RolledBack -> {
                 // 回退已把本进程换回内置包，此后的事件跟着记内置版本
                 state.value?.let { setGlobalProperty(GlobalProperty.TINYUI_VERSION, it.current(event.pkg).manifest.version) }

@@ -195,16 +195,17 @@ sealed class AppEvent(
 
     /**
      * TinyUI 热下发一次 check 的结局（tinyui docs/updates.md §4.2）；每次启动都有的 up_to_date 不报。
-     * [reason] 是库给的枚举名（skip 原因、失败阶段），不是文案。
+     * [reason] 是库给的枚举名（skip 原因、失败阶段），不是文案；[detail] 只在 failed 时带，是库给的异常文案。
      */
     data class TinyUIUpdateChecked(
         val outcome: TinyUIUpdateOutcome,
         val pkg: String,
         val version: String?,
         val reason: String? = null,
+        val detail: String? = null,
     ) : AppEvent(
         "tinyui_update_checked",
-        mapOf("outcome" to outcome, "pkg" to pkg, "version" to version, "reason" to reason),
+        mapOf("outcome" to outcome, "pkg" to pkg, "version" to version, "reason" to reason, "detail" to detail?.truncateCodePoints(120)),
     )
 
     /**
