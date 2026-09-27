@@ -1,12 +1,12 @@
 [versions]
-agp = "9.4.0"
+agp = "9.4.1"
 android-compileSdk = "37"
 android-minSdk = "24"
 android-targetSdk = "37"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.8.0"
 androidx-browser = "1.10.0"
-androidx-core = "1.19.0"
+androidx-core = "1.19.1"
 androidx-exifinterface = "1.4.2"
 
 # 💡 注意：此版本号由 Google (androidx.*) 与 JetBrains (org.jetbrains.androidx.*) 共用。
@@ -14,21 +14,21 @@ androidx-exifinterface = "1.4.2"
 # 目前统一为两者的共同稳定版本，以避免依赖解析冲突。
 androidx-lifecycle = "2.11.0"
 
-multiplatform-nav3-ui = "1.1.1"
+multiplatform-nav3-ui = "1.1.2"
 multiplatform-navigationevent = "1.1.0"
 multiplatform-settings = "1.3.0"
-composeMultiplatform = "1.12.0"
+composeMultiplatform = "1.12.1"
 kotlin = "2.4.20"
 # 独立版本线，**不跟 composeMultiplatform 的版本号走**（该坐标只发 alpha，没有 1.12.0）。
 # 必须与 CMP 同代：落后会在渲染 TextField 时 AbstractMethodError，而编译/单测/冒烟全绿，只在真机炸
 material3 = "1.12.0-alpha03"
 graphics-shapes = "1.1.0"
-ktor = "3.5.2"
+ktor = "3.6.0"
 kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.8.0"
 kotlinx-coroutines = "1.11.0"
 composeIcons = "1.7.3"
-coil = "3.6.2"
+coil = "3.6.3"
 material-kolor = "5.0.1"
 commonmark = "0.30.0"
 highlights = "1.1.0"
@@ -49,7 +49,7 @@ sqlite = "2.7.1"
 okio = "3.18.2"
 # KSP2 起版本线与 Kotlin 解耦（不再是 kotlin-x.y.z 配对命名）
 ksp = "2.3.10"
-robolectric = "4.16.1"
+robolectric = "4.17"
 androidx-test-core = "1.7.0"
 
 [libraries]
