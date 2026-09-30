@@ -344,7 +344,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
                             AppEvent.AuthStarted(AuthAction.SIGN_IN, method = "github", source = source),
                             Eventbase.currentFlow(),
                         )
-                        // 浏览器环节归 loginbase-kt-browser（Auth Tab/CCT/系统浏览器
+                        // 浏览器环节归 loginbase-kmp-browser（Auth Tab/CCT/系统浏览器
                         // 按可用性回退），结果从上方的 oauthResults 收
                         if (!launchGithubSignIn(client)) {
                             busy = false

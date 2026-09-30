@@ -78,7 +78,7 @@ android {
         manifestPlaceholders["appName"] = "Trending AI"
 
         // loginbase 的 OAuth 回跳 scheme。中转页 intent-filter 与运行时 redirect 推导都由
-        // loginbase-kt-browser 从这一个占位符取值（库内同源、不会漂移），App 不再写
+        // loginbase-kmp-browser 从这一个占位符取值（库内同源、不会漂移），App 不再写
         // intent-filter / BuildConfig。完整 redirect 为 `cn.trendingai:/loginbase/callback`
         // （Loginbase.redirectUri(context) 可查，debug 构建首次发起会打进日志）。
         //
@@ -196,6 +196,6 @@ dependencies {
     // 社交登录浏览器环节：只由本模块（持有 Activity 的那层）依赖，经
     // globalOAuthLauncher 注入给 shared——直接让 shared 依赖会把它的 manifest
     // 合并进所有中间模块的单测（placeholder 无值即构建失败）
-    implementation(libs.loginbase.kt.browser)
+    implementation(libs.loginbase.kmp.browser)
     debugImplementation(libs.compose.uiTooling)
 }

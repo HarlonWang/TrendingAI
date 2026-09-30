@@ -9,7 +9,7 @@ import whl.trending.ai.core.platform.AndroidContextHolder
 import whl.trending.ai.core.platform.ChannelHolder
 
 /**
- * app_opened / app_backgrounded 与会话时长全部由 eventbase-kt 自己算——它挂
+ * app_opened / app_backgrounded 与会话时长全部由 eventbase-kmp 自己算——它挂
  * ProcessLifecycleOwner，无界面的后台唤醒进程不会造出空会话，口径已定死在库里。
  * 这里只负责初始化。
  */

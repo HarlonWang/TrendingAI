@@ -16,7 +16,7 @@ private val authorizedClients = MutableStateFlow<List<HttpClient>>(emptyList())
 
 /**
  * 给自家 API 的 client 装鉴权：带 token、认 401、刷新、重试一次全在这一处，业务代码因此
- * 不再出现 token。接法出自 loginbase-kt README「接入指南」第 2 步（可执行版本是该库的
+ * 不再出现 token。接法出自 loginbase-kmp README「接入指南」第 2 步（可执行版本是该库的
  * `ReadmeIntegrationTest`）。
  *
  * 刷新必须走 [AuthManager.refreshAccessToken]——ktor 插件的单飞只覆盖单个 client，自己去

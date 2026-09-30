@@ -6,7 +6,7 @@ import wang.harlon.eventbase.Event
  * 事件词汇 v1，本文件即唯一权威：加事件加在这里，禁止在调用点就地发明。
  * 命名规范见 eventbase 仓 `docs/telemetry-design.md` 的「事件词汇：命名规范」。
  *
- * `app_opened` / `app_backgrounded` 不在这里：由 eventbase-kt 按自己的会话口径自动上报。
+ * `app_opened` / `app_backgrounded` 不在这里：由 eventbase-kmp 按自己的会话口径自动上报。
  *
  * 枚举值经库的 props 归一化输出为小写名（`CACHE_MISS` → `cache_miss` 这样的规则），
  * 值域因此也有编译期保护，不只是键名。null 属性在归一化时丢弃，无需调用点判空。
@@ -300,7 +300,7 @@ enum class UpsellTarget { PRO, SPONSOR, NEWSLETTER }
 
 enum class TinyUIUpdateOutcome { INSTALLED, SKIPPED, FAILED }
 
-/** 全局属性：设置后本进程此后的每条事件都带上（eventbase-kt 的 setProperty），键与事件同属词汇表 */
+/** 全局属性：设置后本进程此后的每条事件都带上（eventbase-kmp 的 setProperty），键与事件同属词汇表 */
 enum class GlobalProperty(val key: String) {
     /** 本进程在跑的 TinyUI 页面包版本（tinyui docs/updates.md §4.2 的 Running） */
     TINYUI_VERSION("tinyui_version"),

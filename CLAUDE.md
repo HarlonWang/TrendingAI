@@ -14,7 +14,7 @@
 
 ## 埋点（自建 eventbase，2026-08-19 起）
 
-上报走 `wang.harlon:eventbase-kt`（仓库 `~/eventbase-kt`，服务端 `~/eventbase`），Aptabase 已下线。
+上报走 `wang.harlon:eventbase-kmp`（仓库 `~/eventbase-kmp`，服务端 `~/eventbase`），Aptabase 已下线。
 调用面是 `shared/.../core/analytics/AppEvent.kt` 的 sealed class + `track(event)`，**没有裸字符串入口**。
 
 - **新增或修改事件前**，先改 `~/TrendingProjects/docs/telemetry-vocabulary.md`（私有仓）的事件词汇表——那是唯一权威，
@@ -25,7 +25,7 @@
   唯一手写的例外是登录浮层（不进 backStack，见 `LoginSheetHost`）。
   **外链、静默动作、说明弹窗不是页面**，别往 `Screen` 里加，它们进 `SettingsItemClicked` 或各自的业务事件。
 - `app_opened` / `app_backgrounded` 与会话时长由库自己算（挂 ProcessLifecycleOwner），App 侧不要碰。
-- **eventbase-kt 与 loginbase-kt 同一套双轨**：本机可经 `local.properties` 的 `eventbase-kt.dir` 走
+- **eventbase-kmp 与 loginbase-kmp 同一套双轨**：本机可经 `local.properties` 的 `eventbase-kmp.dir` 走
   composite build，CI 与 F-Droid 源码构建一律走 `libs.versions.toml` 的 Maven 坐标。
   **改了库就发版并 bump 那里**——两条路构建的不是同一份代码，分岔不会有任何报错。
 - `docs/analytics-notes.md` 只负责**本 App 的历史断点与坑**（含这次词汇换代那节）；口径、指标定义、数据模型的权威在 eventbase 仓。

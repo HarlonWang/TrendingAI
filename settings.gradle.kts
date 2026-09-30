@@ -52,7 +52,7 @@ include(":androidLibrary:notifier")
 // 当成「没走本地源码」。
 //
 // 「Maven 坐标 → included build 里的项目路径」这层映射由**库自己**声明在 `gradle/composite-substitutions`
-// （坐标与 Gradle 项目名天然对不上：artifactId 是 wang.harlon:eventbase-kt，项目名却是 :library），
+// （坐标与 Gradle 项目名天然对不上：artifactId 是 wang.harlon:eventbase-kmp，项目名却是 :library），
 // 所以这里不出现任何库名，新增一个库只需往 local.properties 加一行。
 val localProperties = java.util.Properties().apply {
     val file = rootDir.resolve("local.properties")

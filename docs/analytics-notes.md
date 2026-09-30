@@ -387,7 +387,7 @@ Play 渠道几乎不留存（新装集中在 IN/NG/ID 的商店闲逛流量）�
 
 | 旧 | 新 | 读数时注意 |
 |---|---|---|
-| `app_started` / `app_session` | `app_opened` / `app_backgrounded` | 会话口径**移进了 eventbase-kt 库**，挂 ProcessLifecycleOwner。1.2.0 那次后台唤醒把日活推高 55% 的污染在库层就不成立了，新数据不需要再按那节的方法修正 |
+| `app_started` / `app_session` | `app_opened` / `app_backgrounded` | 会话口径**移进了 eventbase-kmp 库**，挂 ProcessLifecycleOwner。1.2.0 那次后台唤醒把日活推高 55% 的污染在库层就不成立了，新数据不需要再按那节的方法修正 |
 | `item_click` | `content_opened` | 新增 `content_id`；`title` 截断从 100 改为 **60** 字符 |
 | 21 个 `settings_*` | `setting_changed(key, value)` + `screen_viewed(screen)` | 「改了某个设置」与「进了某个页面」在旧词汇里混在同一批事件名里，现在分成两个事件。做设置项使用率要查 `setting_changed`，做页面到达率查 `screen_viewed` |
 | `sign_in_start` ×2（sheet + github） | `auth_started` 仍是每次登录两条 | 上一节那条「算转化率必须先按 method 分组」**继续成立** |

@@ -36,7 +36,7 @@ object AccountLink {
         set(value) = globalSettingsManager.setAccountLinkSource(value)
 
     /**
-     * 发起绑定。浏览器环节归 loginbase-kt-browser，授权阶段的失败从 `client.oauthResults` 送达宿主；
+     * 发起绑定。浏览器环节归 loginbase-kmp-browser，授权阶段的失败从 `client.oauthResults` 送达宿主；
      * **发起阶段**的失败到不了那条通道（浏览器还没开），走 [launchFailed] 汇到同一个宿主提示。
      */
     fun openLinkGithubPage(source: String) {

@@ -72,11 +72,11 @@ kotlin {
             implementation(libs.kmp.webview)
             // api 而非 implementation：shared 的 public API 直接暴露了库的类型
             // （LoginbaseAuthManager.client、globalOAuthLauncher、initLoginbaseAuth），
-            // 消费者必须在编译期看得见它们。眼下 androidApp 是从 loginbase-kt-browser
+            // 消费者必须在编译期看得见它们。眼下 androidApp 是从 loginbase-kmp-browser
             // 的 api(library) 间接拿到的，哪天那条依赖动了就会编译不过
-            api(libs.loginbase.kt)
+            api(libs.loginbase.kmp)
             // api 而非 implementation：AppEvent 继承库里的 Event，notifier 模块看得见才编得过
-            api(libs.eventbase.kt)
+            api(libs.eventbase.kmp)
             implementation(libs.tinyui)
             implementation(libs.tinyui.updates)
             implementation(libs.jetbrains.navigationevent.compose)
@@ -85,7 +85,7 @@ kotlin {
             implementation(libs.ktor.client.darwin)
             // GitHub 授权的 iOS 承载（ASWebAuthenticationSession）。Android 侧那个同名 artifact
             // 因 manifest 合并只能由 androidApp 依赖，iOS 没有 manifest，直接在这里接
-            implementation(libs.loginbase.kt.browser)
+            implementation(libs.loginbase.kmp.browser)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
