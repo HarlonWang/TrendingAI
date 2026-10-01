@@ -26,7 +26,7 @@ import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.ui.home.HomeTabRequest
-import whl.trending.chat.ui.ChatScreen
+import wang.harlon.chatbase.ui.ChatScreen
 import whl.trending.notifier.AndroidDailyPicksNotifier
 import whl.trending.notifier.EXTRA_OPEN_TAB
 import whl.trending.notifier.TAB_PICKS

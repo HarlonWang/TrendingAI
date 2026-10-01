@@ -35,7 +35,6 @@ dependencyResolutionManagement {
 include(":shared")
 include(":androidApp")
 include(":androidLibrary:updater")
-include(":chat")
 include(":androidLibrary:notifier")
 
 // 本地源码 ↔ Maven 坐标双轨：在 local.properties 里写 `<库>.dir=<路径>`（绝对路径或相对工程根目录）

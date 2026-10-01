@@ -24,8 +24,7 @@ class TrendingApplication : Application() {
         // 晚了（如放在 MainActivity）全部事件的 app_version 都会静默变成兜底值，版本切片作废
         AndroidContextHolder.initialize(this)
         Eventbase.init(context = this, config = analyticsConfig(isDebug = BuildConfig.DEBUG))
-        // 放 Application 而非 MainActivity：debug 桌面的 Chat Demo 直启不经 MainActivity，
-        // 晚装会让 Demo 落到 SDK 的最小契约兜底、真实链路（鉴权/埋点）静默缺席
+        // chat SDK 要求在任何 UI/引擎被触达之前装好宿主契约
         installTrendingChatHost()
     }
 }

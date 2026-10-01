@@ -6,7 +6,6 @@ import whl.trending.ai.data.model.CheckoutResponse
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.FavoritesResponse
 import whl.trending.ai.data.model.FeedResponse
-import whl.trending.chat.model.ChatModelsResponse
 import whl.trending.ai.data.model.DigestResponse
 import whl.trending.ai.data.model.HiringResponse
 import whl.trending.ai.data.model.MeResponse
@@ -290,14 +289,6 @@ open class TrendingApi {
         return response.body<AppConfigResponse>()
     }
 
-    /** 聊天可选模型目录 + 服务端默认（公开只读；后端从 OpenAI 动态取 + 缓存）。 */
-    open suspend fun fetchChatModels(): ChatModelsResponse {
-        val response = client.get("$baseHost/api/chat/models")
-        if (response.status.value !in 200..299) {
-            throw ApiException(response.status.value, response.bodyAsText())
-        }
-        return response.body<ChatModelsResponse>()
-    }
 
     // 收藏接口全部经 Bearer 鉴权；调用方（FavoriteRepository）负责传入 externalId 已回填的条目。
 
