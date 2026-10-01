@@ -7,7 +7,6 @@ androidx-activity = "1.13.0"
 androidx-appcompat = "1.8.0"
 androidx-browser = "1.10.0"
 androidx-core = "1.19.1"
-androidx-exifinterface = "1.4.2"
 
 # 💡 注意：此版本号由 Google (androidx.*) 与 JetBrains (org.jetbrains.androidx.*) 共用。
 # 由于两者的发布节奏并不完全同步，升级前需确认该版本在 Google Maven 与 JetBrains 仓库中均已发布。
@@ -30,27 +29,16 @@ kotlinx-coroutines = "1.11.0"
 composeIcons = "1.7.3"
 coil = "3.6.3"
 material-kolor = "5.0.1"
-commonmark = "0.30.0"
-highlights = "1.1.0"
 kmp-webview = "0.1.12"
 # CI 只认这个版本；本机可经 composite build 改吃本地源码（见 settings.gradle.kts 的双轨说明）。
 # 改了 loginbase-kmp 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
 loginbase-kmp = "0.6.0"
 # 与 loginbase-kmp 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
 eventbase-kmp = "0.4.0"
+# chat 客户端 SDK（原 :chat 模块），同一套双轨与纪律
+chatbase-kmp = "0.1.0"
 # 本地联调走 local.properties 的 tinyui.dir（composite build），CI 与发版解析这里的 Maven 版本
 tinyui = "0.8.1"
-# 会话持久化（androidLibrary/chat）。必须 ≥2.7.0：2.6.x 的老 keep 规则在 R8 full mode
-# 下裁掉 *Database_Impl 构造器导致启动即崩（0.20.0 事故，见 memory r8-room-workdatabase-crash）
-room = "2.8.5"
-# Room KMP 的 iOS 驱动；版本随 room 的 androidx.sqlite 依赖走
-sqlite = "2.7.1"
-# chat 的跨平台文件操作；版本对齐 coil 传递的 okio
-okio = "3.18.2"
-# KSP2 起版本线与 Kotlin 解耦（不再是 kotlin-x.y.z 配对命名）
-ksp = "2.3.10"
-robolectric = "4.17"
-androidx-test-core = "1.7.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -61,7 +49,6 @@ androidx-browser = { module = "androidx.browser:browser", version.ref = "android
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "androidx-activity" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
-androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
 jetbrains-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "multiplatform-nav3-ui" }
 jetbrains-navigationevent-compose = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "multiplatform-navigationevent" }
 compose-uiTooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
@@ -93,22 +80,14 @@ compose-icons-extended = { module = "org.jetbrains.compose.material:material-ico
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "material-kolor" }
-commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
-commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
-highlights = { module = "dev.snipme:highlights", version.ref = "highlights" }
 kmp-webview = { module = "wang.harlon:kmp-webview", version.ref = "kmp-webview" }
 loginbase-kmp = { module = "wang.harlon:loginbase-kmp", version.ref = "loginbase-kmp" }
 # 浏览器环节的可选模块（中转页/管理页/CCT），Android-only，与核心同版本发布
 loginbase-kmp-browser = { module = "wang.harlon:loginbase-kmp-browser", version.ref = "loginbase-kmp" }
 eventbase-kmp = { module = "wang.harlon:eventbase-kmp", version.ref = "eventbase-kmp" }
+chatbase-kmp = { module = "wang.harlon:chatbase-kmp", version.ref = "chatbase-kmp" }
 tinyui = { module = "app.tinyui:tinyui", version.ref = "tinyui" }
 tinyui-updates = { module = "app.tinyui:tinyui-updates", version.ref = "tinyui" }
-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
-okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
-androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -117,5 +96,3 @@ androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.lib
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-room = { id = "androidx.room", version.ref = "room" }

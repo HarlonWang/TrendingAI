@@ -9,7 +9,7 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.ui.home.HomeTabRequest
-import whl.trending.chat.model.ChatModelsProvider
+import wang.harlon.chatbase.model.ChatModelsProvider
 import whl.trending.ai.ui.profile.GithubProfileScreen
 import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
@@ -56,8 +56,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.chat_suggest_what_can_you_do
 import trendingai.shared.generated.resources.feedback_report_image_prefix
 import trendingai.shared.generated.resources.chat_suggest_what_can_you_do_prompt
-import whl.trending.chat.ui.ChatScreen
-import whl.trending.chat.ui.ChatSuggestion
+import wang.harlon.chatbase.ui.ChatScreen
+import wang.harlon.chatbase.ui.ChatSuggestion
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.ui.common.ForceUpdateGate
 import whl.trending.ai.ui.common.SignInHintHost

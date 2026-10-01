@@ -21,7 +21,7 @@ import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLocaleTag
-import whl.trending.chat.model.FOLLOW_SERVER_DEFAULT
+import wang.harlon.chatbase.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
 import whl.trending.ai.data.model.QuotaHelpRemoteConfig

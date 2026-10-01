@@ -18,16 +18,14 @@ import whl.trending.ai.core.analytics.VoiceInputOutcome
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.data.remote.TrendingApi
 import whl.trending.ai.data.remote.installTrendingAuth
 import whl.trending.ai.data.remote.trackAuthTokenCache
 import whl.trending.ai.ui.profile.ProBadge
-import whl.trending.chat.host.ChatAiEvent
-import whl.trending.chat.host.ChatAiOutcome
-import whl.trending.chat.host.ChatHost
-import whl.trending.chat.host.ChatVoiceOutcome
-import whl.trending.chat.host.chatHost
-import whl.trending.chat.model.ChatModelsResponse
+import wang.harlon.chatbase.host.ChatAiEvent
+import wang.harlon.chatbase.host.ChatAiOutcome
+import wang.harlon.chatbase.host.ChatHost
+import wang.harlon.chatbase.host.ChatVoiceOutcome
+import wang.harlon.chatbase.host.chatHost
 
 /**
  * chat SDK 宿主契约的 TrendingAI 实现：登录接 [globalAuthManager]、偏好接
@@ -35,7 +33,7 @@ import whl.trending.chat.model.ChatModelsResponse
  * 在 chat 任何 UI/引擎被触达之前调用 [installTrendingChatHost]（幂等）。
  */
 private object TrendingChatHost : ChatHost {
-    private val modelsApi = TrendingApi()
+    override val apiBaseUrl = "https://api.trendingai.cn/api"
 
     override val canSignIn: Boolean get() = globalAuthManager.isSupported
     override fun isLoggedInNow() = globalAuthManager.authState.value is AuthState.LoggedIn
@@ -65,8 +63,6 @@ private object TrendingChatHost : ChatHost {
         val appLang = globalSettingsManager.appLanguage.first()
         return appLang.isoCode ?: if (getSystemLanguage() == "zh") "zh" else "en"
     }
-
-    override suspend fun fetchChatModels(): ChatModelsResponse = modelsApi.fetchChatModels()
 
     override fun configureHttpAuth(config: HttpClientConfig<*>) = config.installTrendingAuth()
     override fun registerAuthorizedClient(client: HttpClient) {

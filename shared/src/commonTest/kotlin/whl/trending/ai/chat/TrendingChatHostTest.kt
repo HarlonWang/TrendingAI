@@ -11,8 +11,8 @@ import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.NoopAuthManager
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProPaywall
-import whl.trending.chat.host.PaywallSource
-import whl.trending.chat.host.chatHost
+import wang.harlon.chatbase.host.PaywallSource
+import wang.harlon.chatbase.host.chatHost
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
