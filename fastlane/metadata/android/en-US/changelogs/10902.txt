@@ -1,0 +1,4 @@
+• Fixed chat screen overlapping the previous screen on quick back navigation
+• Redesigned the Data Sources & Updates page
+• Restored F-Droid updates
+• Other improvements
