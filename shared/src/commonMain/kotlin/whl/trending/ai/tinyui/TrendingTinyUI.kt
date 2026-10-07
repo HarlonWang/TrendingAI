@@ -34,7 +34,7 @@ import whl.trending.ai.data.remote.TrendingApi
  * 并生成 `shared/tinyui-host/<n>.txt`（HostSnapshotTest，tinyui docs/updates.md §4.1）；单纯升 tinyui 不加。
  * 页面源码在 ../trendingai-tinyui。快照只认名字，`app` 通道带的身份与请求头变了测试不会拦、同样要加 1。
  */
-const val HOST_VERSION = "6"
+const val HOST_VERSION = "7"
 
 /** 订阅页打开收银台后发来，宿主据此开始对账（ProCheckout.reconcile） */
 private const val CHECKOUT_OPENED = "trendingai.checkout.opened"

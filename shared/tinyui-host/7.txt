@@ -1,0 +1,10 @@
+hostVersion 7
+tinyui 0.9.0
+
+components
+
+capabilities
+  session.signIn
+
+channels
+  app

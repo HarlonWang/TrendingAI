@@ -38,7 +38,7 @@ eventbase-kmp = "0.4.0"
 # chat 客户端 SDK（原 :chat 模块），同一套双轨与纪律
 chatbase-kmp = "0.1.0"
 # 本地联调走 local.properties 的 tinyui.dir（composite build），CI 与发版解析这里的 Maven 版本
-tinyui = "0.8.1"
+tinyui = "0.9.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
