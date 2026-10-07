@@ -13,10 +13,10 @@
   },
   "name": "trendingai",
   "publicKey": "BN5p4NkH9v5vRmeEG77xg/3NrMNqG6L92QtNyoNFFlZHJfVYVXh7ew5DTvVyrwHWHjdsFSzyv48tyNgOrYVQcyY=",
-  "version": "20260926T125529Z-71f599c23881",
-  "createdAt": "2026-09-26T12:55:29Z",
+  "version": "20261007T051105Z-fe4ec117836b",
+  "createdAt": "2026-10-07T05:11:05Z",
   "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
-  "tinyui": "0.8.0",
+  "tinyui": "0.9.0",
   "hashes": {
     "trendingai/data-sources": "f3a3c4a555df5c604abf0d04f523c62aa6df3871495d7fa1d6a8d8d9803e8b2c",
     "trendingai/subscription": "06642883731e7588c93e809fc74139b10743bc3483bfc1db86ef91c1e01ffa22",
@@ -46,5 +46,5 @@
       "zh": "i18n/zh.json"
     }
   },
-  "hostVersion": "6"
+  "hostVersion": "7"
 }
