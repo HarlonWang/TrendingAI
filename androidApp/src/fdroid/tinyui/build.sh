@@ -12,8 +12,8 @@ EMBEDDED="$ROOT/shared/src/commonMain/composeResources/files/tinyui"
 OUT=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --out) OUT="${2:?--out 需要一个目录}"; shift 2 ;;
-    *) echo "用法：$0 [--out <dir>]" >&2; exit 2 ;;
+    --out) OUT="${2:?--out needs a directory}"; shift 2 ;;
+    *) echo "usage: $0 [--out <dir>]" >&2; exit 2 ;;
   esac
 done
 
@@ -31,16 +31,16 @@ for manifest in "$EMBEDDED"/*/manifest.json; do
   # 1. 来源校验：快照必须正是 manifest 记录的页面 commit
   version="$(node -p "require(process.argv[1]).version" "$manifest")"
   short="${version##*-}"
-  [ -f "$src/SOURCE" ] || { echo "FAIL: 缺少 $src/SOURCE，先跑 sync.sh" >&2; exit 1; }
+  [ -f "$src/SOURCE" ] || { echo "FAIL: $src/SOURCE is missing; run sync.sh" >&2; exit 1; }
   commit="$(sed -n 's/^commit=//p' "$src/SOURCE")"
   case "$commit" in
     "$short"*) ;;
-    *) echo "FAIL: 快照 commit [$commit] 与 manifest version [$version] 不符，先跑 sync.sh" >&2; exit 1 ;;
+    *) echo "FAIL: snapshot commit [$commit] does not match manifest version [$version]; run sync.sh" >&2; exit 1 ;;
   esac
 
   # 2. F-Droid 模式下提交进仓库的字节码必须已被配方删掉，否则说明配方漏了这个包的 rm
   if [ -z "$OUT" ] && [ -e "$pkg_dir/pages" ]; then
-    echo "FAIL: $pkg_dir/pages 仍存在——fdroiddata 配方缺 rm: …/tinyui/$pkg/pages" >&2
+    echo "FAIL: $pkg_dir/pages still exists; the fdroiddata recipe is missing rm: .../tinyui/$pkg/pages" >&2
     exit 1
   fi
 
@@ -59,16 +59,16 @@ const expected = new Set(m.pages.map((p) => `${m.files[p]}.jsb`));
 let ok = true;
 for (const p of m.pages) {
   const file = path.join(dist, `${m.files[p]}.jsb`);
-  if (!fs.existsSync(file)) { console.error(`FAIL: 未生成 ${p}`); ok = false; continue; }
+  if (!fs.existsSync(file)) { console.error(`FAIL: ${p} was not generated`); ok = false; continue; }
   const sha = crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
-  if (sha !== m.hashes[p]) { console.error(`FAIL: ${p} sha256 ${sha}，manifest 记录 ${m.hashes[p]}`); ok = false; }
+  if (sha !== m.hashes[p]) { console.error(`FAIL: ${p} sha256 ${sha}, manifest records ${m.hashes[p]}`); ok = false; }
   else console.log(`    ok ${p} ${sha}`);
 }
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true })
   .flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
 for (const f of walk(dist).filter((f) => f.endsWith(".jsb"))) {
   const rel = path.relative(dist, f).split(path.sep).join("/");
-  if (!expected.has(rel)) { console.error(`FAIL: 多出 manifest 没有的页 ${rel}`); ok = false; }
+  if (!expected.has(rel)) { console.error(`FAIL: ${rel} is not listed in the manifest`); ok = false; }
 }
 process.exit(ok ? 0 : 1);
 EOF
@@ -86,5 +86,5 @@ EOF
   count=$((count + 1))
 done
 
-[ "$count" -gt 0 ] || { echo "FAIL: $EMBEDDED 下没有任何内置包" >&2; exit 1; }
-echo "PASS: $count 个包从源码重建，哈希与 manifest 一致"
+[ "$count" -gt 0 ] || { echo "FAIL: no embedded package under $EMBEDDED" >&2; exit 1; }
+echo "PASS: rebuilt $count package(s) from source; every page matches its manifest sha256"
