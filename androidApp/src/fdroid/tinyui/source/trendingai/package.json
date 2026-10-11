@@ -1,0 +1,22 @@
+{
+  "name": "trendingai-tinyui",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "i18n": "tinyui i18n --ts src/generated/i18n.ts",
+    "typecheck": "tinyui i18n --ts src/generated/i18n.ts --check && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "tinyui-core": "0.9.0",
+    "tinyui-native": "0.9.0"
+  },
+  "devDependencies": {
+    "@material-symbols/svg-400": "0.47.5",
+    "tinyui-cli": "0.9.0",
+    "typescript": "7.0.2"
+  }
+}

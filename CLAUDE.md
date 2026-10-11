@@ -99,6 +99,8 @@
 
 **打 tag 前必须跑 `scripts/release-smoke.sh` 并看到 PASS。** 它构建 r2 渠道 release 包（与线上同样开 R8 minify）、安装到 Pixel_9_2 模拟器、启动并检查崩溃日志与进程存活。日常开发全用 debug 包（不混淆），R8 裁剪类问题只有 release 包能暴露——0.20.0 曾因此启动即崩、发布后才发现（room 2.6.1 老 keep 规则 + R8 full mode 裁掉 WorkDatabase_Impl 构造器）。FAIL 时禁止发布，先按崩溃堆栈排查。
 
+冒烟脚本同时负责 F-Droid 那条构建路径：刷新内置包后跑 `androidApp/src/fdroid/tinyui/sync.sh` 同步页面源码快照（与内置包同一个 commit 提交），再用 `build.sh --out` 从快照重编、对 manifest 哈希。这一步 FAIL 意味着 F-Droid 版会打不出订阅页，同样禁止发布。**快照勿手改**；新增 TinyUI 包时 fdroiddata 配方要加一行 `rm`，见该目录 README 与 `docs/fdroid-tinyui-build.md`。
+
 做包大小优化或评估依赖体积影响前，先读 `docs/apk-size-tinyui-baseline.md`——订阅页接入 TinyUI 的 diffuse 拆解基线（+2.2 MiB，96% 是 QuickJS native 库）、复现协议与三条待决项（universal 包多带 ABI、x86 空洞、source map 随包），别重新分析一遍。
 
 ## 版本更新说明（whatsnew）发布流程

@@ -1,6 +1,6 @@
 # F-Droid 构建 TinyUI 内置包：方案说明
 
-起草于 2026-10-10，起因是 issue #153。状态：**方案已定，待审核员表态后实施**（实施步骤见 §8）。
+起草于 2026-10-10，起因是 issue #153。状态：**审核员已同意从源码构建；F-Droid CI 实测通过（2026-10-11），TrendingAI 侧已实施**，待随版本发出后提交配方（进度见 §8）。
 
 ## 1. 背景
 
@@ -29,7 +29,9 @@ F-Droid 的扫描器拦下了这些字节码（当时还是 `.bin`，issue #153�
 3. **以线上 manifest 为唯一依据。** 内置包的 `manifest.json` 是线上原件，记录了页面源码 commit（`version` 字段的后缀）、页面列表（`files`）和每页的 sha256（`hashes`）。脚本据此确定生成哪些页面，并逐页校验，任何地方都不写死文件名。
 4. **构建工具链和线上发布完全相同。** 线上页面由页面仓库的 CI（`staging.yml`）在 `ubuntu-latest` 上执行 `pnpm install --frozen-lockfile` + `tinyui build` 产出。F-Droid 走同一条命令、同一份 lockfile，qjsc-kmp、esbuild、oxc-parser 都来自 npm 的同一版本。
 
-**已验证**（2026-10-10，macOS arm64）：把页面源码切到 commit `fe4ec117` 后构建，两个页面的 `.jsb` 和两份 i18n 文件都和仓库当前提交的版本逐字节一致。编译器分别试了 npm 的预编译版和从源码编的 quickjs-kmp 0.1.2（`294538d3`），结果相同。本地构建出的 `manifest.json` 只在 `createdAt`、`version` 时间戳和缺少 `hostVersion` 上与线上原件不同，所以只替换 `.jsb`、不替换 manifest。
+**已验证**（2026-10-10，macOS arm64）：把页面源码切到 commit `fe4ec117` 后构建，两个页面的 `.jsb` 和两份 i18n 文件都和仓库当前提交的版本逐字节一致。编译器分别试了 npm 的预编译版和从源码编的 quickjs-kmp 0.1.2（`294538d3`），结果相同。
+
+**F-Droid CI 实测**（2026-10-11，fork 上的 fdroiddata 探测分支，镜像 `fdroidserver:buildserver-trixie`、amd64 runner）：配方 `rm` 掉 `pages/` 后在 `build:` 里从页面源码重编，两页 sha256 与 manifest 一致，`assembleFdroidRelease` 成功，`check apk` 通过；产物装到模拟器，日志显示 `source=EMBEDDED`，订阅页与数据来源页渲染、交互正常。本地构建出的 `manifest.json` 只在 `createdAt`、`version` 时间戳和缺少 `hostVersion` 上与线上原件不同，所以只替换 `.jsb`、不替换 manifest。
 
 为什么不能用本地构建的 manifest：
 - 它的 `createdAt` 和 `version` 是构建时刻，每次构建都不同，APK 不可复现。
@@ -68,7 +70,7 @@ AGP 会忽略 flavor 目录里不认识的子目录，这个目录对 Android �
 对每个包：
 1. **来源校验**：`source/<pkg>/SOURCE` 里的 commit 必须等于 manifest `version` 的后缀。
 2. **删除检查**：在 F-Droid 模式下，`pages/` 必须已经被删除。没删说明配方漏了这个包的 `rm`，直接报错。
-3. **构建**：在快照目录执行 `pnpm install --frozen-lockfile` 和 `tinyui build`。编译器默认用 npm 的 qjsc-kmp；设置了 `TINYUI_QJSC` 时用它指定的那份，这是留给 §7 预案 A 的接口。
+3. **构建**：把快照复制到临时目录，执行 `pnpm install --frozen-lockfile` 和 `tinyui build`。pnpm 版本取快照 `package.json` 的 `packageManager`，经 `npx` 调用，配方里不写死。编译器默认用 npm 的 qjsc-kmp；设置了 `TINYUI_QJSC` 时用它指定的那份，这是留给 §7 预案 A 的接口。
 4. **逐页校验**：
    - manifest `files` 里列出的每一页，都必须生成出来，且 sha256 等于 `hashes` 里的值；
    - 生成结果里出现 manifest 没有的页面，同样算失败。
@@ -104,10 +106,12 @@ AGP 会忽略 flavor 目录里不认识的子目录，这个目录对 Android �
     build: src/fdroid/tinyui/build.sh
 ```
 
+- 新条目要同时把 `CurrentVersion` / `CurrentVersionCode` 改到本版，否则 CI 的 `checkupdates` 失败；超长的 `build:` 行要按 `fdroid rewritemeta` 的格式折行（探测时这两项都报过）。
+
 - `rm` 删除整个 `pages/` 目录，不逐个列文件名，新增页面时不需要改。
 - 生成步骤放在 `build:`，在扫描器之后执行。
 - 不需要 srclib，不需要 cmake。qjsc-kmp 的版本由页面仓库的 lockfile 决定，和线上构建天然一致。
-- Node 的安装方式（构建机自带的版本不够时）要看构建机的实际环境，见 §7。
+- Node 直接用 trixie 的 apt 包（实测 v20.19.2、npm 9.2.0）。页面仓库声明 `engines.node >=22`，pnpm 只报 `WARN Unsupported engine`，安装与构建不受影响。
 - **提交配方的 MR 说明里主动列出**：构建时会从 npm 获取 esbuild、oxc-parser、qjsc-kmp 三个预编译工具，都是 MIT 许可；其中 qjsc-kmp 可以随时改为从源码构建，并附上切换方式（§7 预案 A）。
 
 ## 6. 迭代场景
@@ -126,9 +130,9 @@ AGP 会忽略 flavor 目录里不认识的子目录，这个目录对 Android �
 
 **风险**
 1. **npm 上的预编译构建工具。** esbuild（Go 编写）、oxc-parser（Rust 编写）、qjsc-kmp（C 编写）都通过 npm 获取预编译二进制。F-Droid 收录政策允许的预编译来源只有 Debian 和几个 Maven 仓库，npm 不在其中（Hermes 是点名豁免），有被要求改动的可能。**这是最大的不确定性。**
-2. **F-Droid 构建机的 Node 版本。** 页面仓库要求 Node ≥22，构建机的 Debian 自带版本可能不够，还没查证。
+2. ~~**F-Droid 构建机的 Node 版本。**~~ 已排除：构建机是 Debian 13 trixie，apt 装出 Node 20.19.2，能完成 `pnpm install` 和 `tinyui build`（见 §3 实测）。
 3. **热下发。** fdroid 渠道会在运行时下载页面字节码，和 F-Droid 收录政策里「未经用户 opt-in 不得下载可执行代码」那一条有冲突。本次暂不处理，风险依然存在。
-4. **Linux 上的一致性。** 逐字节一致目前只在 macOS 上实测过。不过线上字节本来就是在 Linux 上用同一套工具链产出的，风险很低，还是要在 §8 第 3 步确认。
+4. ~~**Linux 上的一致性。**~~ 已排除：F-Droid CI 的 amd64 Linux 上实测逐字节一致。
 
 **预案 A：只有 qjsc-kmp 被要求从源码构建。** 只改 fdroiddata 配方，TrendingAI 不用发版：
 
@@ -150,12 +154,12 @@ AGP 会忽略 flavor 目录里不认识的子目录，这个目录对 Android �
 
 ## 8. 实施步骤
 
-1. 在 #153 回复审核员，说明本方案的思路，等对方表态。
-2. TrendingAI 开分支，写 `androidApp/src/fdroid/tinyui/` 下的三个文件，改 `release-smoke.sh`，生成首份快照。
-3. 在 Linux 环境（Debian 容器）里验证：删掉 `pages/` 后跑 `build.sh`，哈希全部一致。顺带验证预案 A 的从源码构建路径。
-4. 本地模拟 F-Droid 流程：删掉 `pages/`，跑 `build.sh`，再执行 `assembleFdroidRelease`，在模拟器上打开订阅页确认正常。
+1. ~~在 #153 回复审核员，说明本方案的思路~~：2026-10-10 已回复，审核员此前已表示 "yes, please do"。
+2. ~~写 `androidApp/src/fdroid/tinyui/` 下的三个文件，改 `release-smoke.sh`，生成首份快照~~：已完成。本机验证了正常路径与三种失败（`pages/` 未删、快照代码被改、快照 commit 不符）。
+3. ~~Linux 环境验证~~：用 fdroiddata CI 代替 Debian 容器，见 §3 实测。预案 A 的从源码构建路径未在 CI 上跑，需要时再验。
+4. ~~本地模拟 F-Droid 流程并在模拟器上打开订阅页~~：用 CI 产出的 APK 完成，见 §3 实测。
 5. 发一个包含上述改动的版本。
-6. 向 fdroiddata 提交构建配方，替换 bot 生成的 1.9.1 条目，MR 说明里列出三个 npm 预编译工具。
+6. 向 fdroiddata 提交构建配方，替换 bot 生成的 1.9.1 条目（!50109），MR 说明里列出三个 npm 预编译工具。
 7. 视审核员的答复，决定是否启用预案 A 或 B。
 
 ## 9. 待定

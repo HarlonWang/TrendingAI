@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 发布前冒烟：刷新 TinyUI 内置包并做发版检查，构建 r2 渠道 release 包（minify 与线上一致），装模拟器验证启动不崩。
+# 发布前冒烟：刷新 TinyUI 内置包与 F-Droid 页面源码快照并做发版检查，构建 r2 渠道 release 包（minify 与线上一致），装模拟器验证启动不崩。
 # 背景：0.20.0 因 R8 裁掉 WorkDatabase_Impl 构造器启动即崩——debug 包不混淆测不出这类问题，
 # 所以打 tag 前必须跑一次本脚本。用法：scripts/release-smoke.sh
 set -euo pipefail
@@ -12,19 +12,32 @@ SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 
 # TinyUI 内置包（tinyui docs/updates.md §1.4）：production 比内置新且已全量才换，有变化就提交，冒烟测的就是要发出去的字节
 EMBEDDED="shared/src/commonMain/composeResources/files/tinyui/trendingai"
+# F-Droid 构建时从这份页面源码快照重编 .jsb（docs/fdroid-tinyui-build.md），快照必须跟着内置包走、同一个 commit 提交
+FDROID_TINYUI="androidApp/src/fdroid/tinyui"
 host=$(sed -n 's/^const val HOST_VERSION = "\([0-9]*\)"$/\1/p' shared/src/commonMain/kotlin/whl/trending/ai/tinyui/TrendingTinyUI.kt)
 tinyui=$(sed -n 's/^tinyui = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
 echo "==> 刷新 TinyUI 内置包（宿主版本 ${host}）"
-if npx --yes -p "tinyui-cli@$tinyui" tinyui pull --app trendingai --channel production --host-version "$host" --out "$EMBEDDED"; then
-  if [ -n "$(git status --porcelain -- "$EMBEDDED")" ]; then
-    v=$(node -p "require('./$EMBEDDED/manifest.json').version")
-    git add -A -- "$EMBEDDED"
-    git commit -q -m "chore(tinyui): 内置包 trendingai@$v" -- "$EMBEDDED"
-    echo "    已提交内置包 $v"
-  fi
-else
+if ! npx --yes -p "tinyui-cli@$tinyui" tinyui pull --app trendingai --channel production --host-version "$host" --out "$EMBEDDED"; then
   echo "    WARN: 刷新失败，沿用现有内置包（原因见上）"
 fi
+echo "==> 同步 F-Droid 页面源码快照"
+"$FDROID_TINYUI/sync.sh"
+if [ -n "$(git status --porcelain -- "$EMBEDDED" "$FDROID_TINYUI/source")" ]; then
+  v=$(node -p "require('./$EMBEDDED/manifest.json').version")
+  git add -A -- "$EMBEDDED" "$FDROID_TINYUI/source"
+  git commit -q -m "chore(tinyui): 内置包 trendingai@$v" -- "$EMBEDDED" "$FDROID_TINYUI/source"
+  echo "    已提交内置包与快照 $v"
+fi
+
+echo "==> F-Droid 构建路径检查（从快照重编字节码，哈希须与 manifest 一致）"
+fdroid_out=$(mktemp -d)
+if ! "$FDROID_TINYUI/build.sh" --out "$fdroid_out" > "$fdroid_out.log" 2>&1; then
+  tail -30 "$fdroid_out.log"
+  echo "FAIL: F-Droid 构建路径不通，F-Droid 版会打不出订阅页——禁止发版"
+  exit 1
+fi
+grep -E '^    ok |^PASS' "$fdroid_out.log"
+rm -rf "$fdroid_out" "$fdroid_out.log"
 
 echo "==> TinyUI 发版检查（宿主快照、内置包）"
 ./gradlew :shared:testAndroidHostTest --tests 'whl.trending.ai.tinyui.HostSnapshotTest' --tests 'whl.trending.ai.tinyui.EmbeddedPackageTest' -Ptinyui.releaseCheck -q
