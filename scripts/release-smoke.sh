@@ -2,11 +2,12 @@
 # 发布前冒烟：刷新 TinyUI 内置包与 F-Droid 页面源码快照并做发版检查，构建 r2 渠道 release 包（minify 与线上一致），装模拟器验证启动不崩。
 # 背景：0.20.0 因 R8 裁掉 WorkDatabase_Impl 构造器启动即崩——debug 包不混淆测不出这类问题，
 # 所以打 tag 前必须跑一次本脚本。用法：scripts/release-smoke.sh
+# 设备：ANDROID_SERIAL 指定的那台；否则唯一在线的设备（模拟器、真机均可）；都没有时启动 SMOKE_AVD，
+# 未设 SMOKE_AVD 且本机只有一个 AVD 就启动它。多台在线或多个 AVD 时不猜，报错列出供选。
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PKG="whl.trending.ai"
-AVD="Pixel_9_2"
 APK="androidApp/build/outputs/apk/r2/release/androidApp-r2-release.apk"
 SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 
@@ -46,28 +47,43 @@ echo "==> 构建 r2 release"
 ./gradlew :androidApp:assembleR2Release -q
 [ -f "$APK" ] || { echo "FAIL: 未找到产物 $APK"; exit 1; }
 
-echo "==> 定位 $AVD 模拟器"
-serial=""
-for s in $(adb devices | awk 'NR>1 && $2=="device" {print $1}'); do
-  # 真机不认 emu 命令（pipefail 下赋值即非零），且不匹配时 [ ] && 串联同样会被 set -e 判定失败——
-  # 两处都必须兜住，否则真机在线就会让脚本在这里静默退出
-  name=$(adb -s "$s" emu avd name 2>/dev/null | head -1 | tr -d '\r') || name=""
-  if [ "$name" = "$AVD" ]; then serial="$s"; break; fi
-done
+online() { adb devices | awk 'NR>1 && $2=="device" {print $1}'; }
+
+echo "==> 选择设备"
+serial="${ANDROID_SERIAL:-}"
 if [ -z "$serial" ]; then
-  echo "==> $AVD 未在线，启动中"
-  "$SDK/emulator/emulator" -avd "$AVD" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
-  for _ in $(seq 1 60); do
-    for s in $(adb devices | awk 'NR>1 && $2=="device" {print $1}'); do
-      name=$(adb -s "$s" emu avd name 2>/dev/null | head -1 | tr -d '\r') || name=""
-      if [ "$name" = "$AVD" ]; then serial="$s"; break 2; fi
+  devices=$(online)
+  count=$(printf '%s' "$devices" | grep -c . || true)
+  if [ "$count" -gt 1 ]; then
+    echo "FAIL: 有 $count 台设备在线，用 ANDROID_SERIAL 指定一台："
+    printf '%s\n' "$devices" | sed 's/^/    /'
+    exit 1
+  elif [ "$count" -eq 1 ]; then
+    serial="$devices"
+  else
+    avd="${SMOKE_AVD:-}"
+    if [ -z "$avd" ]; then
+      avds=$("$SDK/emulator/emulator" -list-avds 2>/dev/null | grep -v '^INFO' || true)
+      if [ "$(printf '%s' "$avds" | grep -c . || true)" -ne 1 ]; then
+        echo "FAIL: 没有设备在线，且无法确定启动哪个 AVD；先开一台，或用 SMOKE_AVD 指定："
+        printf '%s\n' "${avds:-（本机没有 AVD）}" | sed 's/^/    /'
+        exit 1
+      fi
+      avd="$avds"
+    fi
+    echo "==> 没有设备在线，启动 $avd"
+    "$SDK/emulator/emulator" -avd "$avd" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
+    for _ in $(seq 1 60); do
+      serial=$(online | head -1)
+      [ -n "$serial" ] && break
+      sleep 3
     done
-    sleep 3
-  done
-  [ -n "$serial" ] || { echo "FAIL: $AVD 启动超时"; exit 1; }
-  adb -s "$serial" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+    [ -n "$serial" ] || { echo "FAIL: $avd 启动超时"; exit 1; }
+  fi
 fi
-echo "    使用设备 $serial"
+adb -s "$serial" wait-for-device
+adb -s "$serial" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+echo "    使用设备 ${serial}（$(adb -s "$serial" shell getprop ro.product.model | tr -d '\r')）"
 
 echo "==> 安装（覆盖升级路径；签名不兼容时回退全新安装）"
 adb -s "$serial" install -r "$APK" >/dev/null 2>&1 || {
@@ -91,6 +107,20 @@ echo "==> 启动并观察 10 秒"
 adb -s "$serial" logcat -c
 adb -s "$serial" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 10
+# 16 KB 页面设备上，未按 16 KB 对齐的 .so（目前是 quickjs-kmp）会让系统弹「App 兼容性」提示，挡住后面的点击。
+# 按系统对话框的按钮 id 点掉（与界面语言无关），并打 WARN 让这个问题保持可见
+# 点完要重新确认弹窗已退场：退场动画期间的点击会被吞掉，后面打开聊天页那一下就落空了
+if [ "$(adb -s "$serial" shell getconf PAGE_SIZE | tr -d '\r')" = "16384" ]; then
+  for _ in 1 2 3; do
+    adb -s "$serial" shell uiautomator dump /sdcard/smoke_ui.xml >/dev/null 2>&1 || true
+    ok=$(adb -s "$serial" shell cat /sdcard/smoke_ui.xml 2>/dev/null | grep -o 'resource-id="android:id/button1"[^>]*package="android"[^>]*bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' | grep -o '\[[0-9,]*\]\[[0-9,]*\]' || true)
+    [ -n "$ok" ] || break
+    read -r x1 y1 x2 y2 <<<"$(echo "$ok" | tr -c '0-9' ' ')"
+    adb -s "$serial" shell input tap $(((x1 + x2) / 2)) $(((y1 + y2) / 2))
+    echo "  WARN: 16 KB 页面设备上弹出了兼容性提示（有 .so 未按 16 KB 对齐），已点掉继续"
+    sleep 2
+  done
+fi
 check_alive "启动冒烟"
 
 # 首页不含 TextField，只验启动会漏掉「渲染输入框才炸」的那一类。material3 与 CMP 版本
