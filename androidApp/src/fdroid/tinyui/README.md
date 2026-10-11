@@ -15,7 +15,7 @@ AGP 不认识 flavor 目录下的 `tinyui/`，这里的东西不进任何 APK。
 
 ## 约定
 
-- **manifest 与 i18n 始终是线上原件，只重编 `.jsb`。** 本地构建的 manifest 时间戳每次不同、缺 `hostVersion`，还会让热下发误判「内置更新」。
+- **manifest 与 i18n 始终是线上原件，只重编 `.jsb`。** 本地构建的 manifest 时间戳每次不同、缺 `hostVersion`，还会让热下发误判「内置更新」。快照里的 `i18n/*.json` 与内置包的那份逐字节相同（来自同一页面 commit），只是整仓导出带进来供 `tinyui build` 跑通，构建出的 i18n 会被丢弃，打进 APK 的始终是内置包那份。
 - **以 manifest 为唯一依据**：生成哪些页、每页的哈希都从 manifest 读，脚本里不写任何页面名。新增或删除页面不用改这里，也不用改 fdroiddata。
 - **pnpm 版本取快照 `package.json` 的 `packageManager`**，经 `npx` 调用；F-Droid 配方只装 `nodejs npm`，页面仓库升 pnpm 不用改配方。
 - **编译器**：默认是页面仓库 lockfile 里的 npm 版 `qjsc-kmp`；设了 `TINYUI_QJSC` 时 tinyui-cli 优先用它（F-Droid 要求从源码编 qjsc-kmp 时的接口，见文档 §7 预案 A）。
