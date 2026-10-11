@@ -112,7 +112,7 @@ AGP 会忽略 flavor 目录里不认识的子目录，这个目录对 Android �
 - 生成步骤放在 `build:`，在扫描器之后执行。
 - 不需要 srclib，不需要 cmake。qjsc-kmp 的版本由页面仓库的 lockfile 决定，和线上构建天然一致。
 - Node 直接用 trixie 的 apt 包（实测 v20.19.2、npm 9.2.0）。页面仓库声明 `engines.node >=22`，pnpm 只报 `WARN Unsupported engine`，安装与构建不受影响。
-- **提交配方的 MR 说明里主动列出**：构建时会从 npm 获取 esbuild、oxc-parser、qjsc-kmp 三个预编译工具，都是 MIT 许可；其中 qjsc-kmp 可以随时改为从源码构建，并附上切换方式（§7 预案 A）。
+- **提交配方的 MR 说明里主动列出**：构建时会从 npm 获取 esbuild、oxc-parser、qjsc-kmp 三个预编译工具，都是 MIT 许可。**只列工具，不提切换方式、也不主动表态可改为源码构建**：预案 A 未在 F-Droid CI 上实测，写进 MR 就成了未经验证的承诺；是否需要源码构建由审核员按政策提出，届时再按 §7 预案 A 实施并实测。
 
 ## 6. 迭代场景
 
