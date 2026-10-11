@@ -1,15 +1,11 @@
 {
-  "version": "1.9.2",
+  "version": "1.9.3",
   "zh": [
-    "修复快速返回时聊天页与上一页重叠的问题",
-    "数据来源与更新页改版",
-    "恢复 F-Droid 渠道的版本更新",
-    "其他体验优化"
+    "优化 F-Droid 版本的构建",
+    "其他稳定性优化"
   ],
   "en": [
-    "Fixed chat screen overlapping the previous screen on quick back navigation",
-    "Redesigned the Data Sources & Updates page",
-    "Restored F-Droid updates",
-    "Other improvements"
+    "Improved the F-Droid build",
+    "Other stability improvements"
   ]
 }
