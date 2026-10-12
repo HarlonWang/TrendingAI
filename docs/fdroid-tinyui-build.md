@@ -1,6 +1,6 @@
 # F-Droid 构建 TinyUI 内置包：方案说明
 
-起草于 2026-10-10，起因是 issue #153。状态：**审核员已同意从源码构建；F-Droid CI 实测通过（2026-10-11），TrendingAI 侧已实施**，待随版本发出后提交配方（进度见 §8）。
+起草于 2026-10-10，起因是 issue #153。状态：**已完成**。1.9.3 随这套改动发布，配方于 2026-10-11 由 fdroiddata !52104 合入（取代 bot 的 !50109），issue #153 已关闭（进度见 §8）。
 
 ## 1. 背景
 
@@ -158,19 +158,20 @@ AGP 会忽略 flavor 目录里不认识的子目录，这个目录对 Android �
 2. ~~写 `androidApp/src/fdroid/tinyui/` 下的三个文件，改 `release-smoke.sh`，生成首份快照~~：已完成。本机验证了正常路径与三种失败（`pages/` 未删、快照代码被改、快照 commit 不符）。
 3. ~~Linux 环境验证~~：用 fdroiddata CI 代替 Debian 容器，见 §3 实测。预案 A 的从源码构建路径未在 CI 上跑，需要时再验。
 4. ~~本地模拟 F-Droid 流程并在模拟器上打开订阅页~~：用 CI 产出的 APK 完成，见 §3 实测。
-5. 发一个包含上述改动的版本。
-6. 向 fdroiddata 提交构建配方，替换 bot 生成的 1.9.1 条目（!50109），MR 说明里列出三个 npm 预编译工具。
-7. 视审核员的答复，决定是否启用预案 A 或 B。
+5. ~~发一个包含上述改动的版本~~：1.9.3（2026-10-11）。
+6. ~~向 fdroiddata 提交构建配方~~：!52104，先在 fork 上用 1.9.3 tag 跑通全部 job 再开 MR；2026-10-11 由维护者合入，未提修改意见，bot 的 !50109 同时关闭。
+7. 视审核员的答复，决定是否启用预案 A 或 B：合入时未要求从源码构建 qjsc-kmp 等工具，暂不需要。
 
 ## 9. 待定
 
-- 承接这些改动的版本号，比如 1.9.3。
+- ~~承接这些改动的版本号~~：1.9.3。
 
 ## 参考
 
 - issue：https://github.com/HarlonWang/TrendingAI/issues/153
 - fdroiddata 元数据：https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/whl.trending.ai.yml
 - bot 生成的 1.9.1 条目：https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50109
+- 合入的 1.9.3 配方：https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52104
 - F-Droid 收录政策：https://f-droid.org/docs/Inclusion_Policy/
 - fdroiddata 的 React Native 构建模板：https://gitlab.com/fdroid/fdroiddata/-/raw/master/templates/build-react-native.yml
 - tinyui 内置包与热下发设计：tinyui 仓库 `docs/updates.md`（§1.1 manifest 字段、§1.4 内置包、§4.3 更新判定）
