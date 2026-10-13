@@ -107,7 +107,7 @@ echo "==> 启动并观察 10 秒"
 adb -s "$serial" logcat -c
 adb -s "$serial" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 10
-# 16 KB 页面设备上，未按 16 KB 对齐的 .so（目前是 quickjs-kmp）会让系统弹「App 兼容性」提示，挡住后面的点击。
+# 16 KB 页面设备上，未按 16 KB 对齐的 .so 会让系统弹「App 兼容性」提示，挡住后面的点击（quickjs-kmp 0.1.2 曾如此，tinyui 0.10.1 起已对齐）。
 # 按系统对话框的按钮 id 点掉（与界面语言无关），并打 WARN 让这个问题保持可见
 # 点完要重新确认弹窗已退场：退场动画期间的点击会被吞掉，后面打开聊天页那一下就落空了
 if [ "$(adb -s "$serial" shell getconf PAGE_SIZE | tr -d '\r')" = "16384" ]; then
