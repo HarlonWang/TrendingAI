@@ -1,6 +1,6 @@
 package whl.trending.updater
 
-import whl.trending.ai.update.WhatsNewInfo
+import wang.harlon.appsettings.whatsnew.WhatsNewInfo
 
 data class UpdateInfo(
     val latestVersion: String,

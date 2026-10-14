@@ -68,7 +68,11 @@ import whl.trending.ai.ui.common.OAuthOutcomeHost
 import whl.trending.ai.ui.common.CheckoutResultHost
 import whl.trending.ai.ui.common.ProReconcileHost
 import whl.trending.ai.ui.common.SponsorLinkHost
-import whl.trending.ai.ui.common.WhatsNewHost
+import wang.harlon.appsettings.whatsnew.WhatsNewHost
+import wang.harlon.appsettings.whatsnew.rememberWhatsNewState
+import whl.trending.ai.data.local.globalSettings
+import whl.trending.ai.core.platform.getAppVersion
+import whl.trending.ai.core.platform.getSystemLanguage
 
 // 路由即页面身份：实现 [Route] 才能进 backStack，`screen` 是必填的——
 // 新增页面在这里填一个枚举值，其余埋点代码一行都不用写（见 core/analytics/ScreenTracking.kt）。
@@ -174,7 +178,16 @@ fun App() {
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
                 ForceUpdateGate {
-                    WhatsNewHost()
+                    // 升级后首启弹一次更新说明：状态与弹窗在 appsettings-kmp，这里只给版本、JSON 与展示语言
+                    val whatsNew = rememberWhatsNewState(
+                        settings = globalSettings,
+                        currentVersion = remember { getAppVersion() },
+                        load = { Res.readBytes("files/whatsnew.json").decodeToString() },
+                    )
+                    val appLanguage by globalSettingsManager.appLanguage.collectAsState(
+                        remember { globalSettingsManager.currentAppLanguage() }
+                    )
+                    WhatsNewHost(whatsNew, language = appLanguage.isoCode ?: getSystemLanguage())
                     SignInHintHost()
                     LoginSheetHost()
                     SponsorLinkHost()

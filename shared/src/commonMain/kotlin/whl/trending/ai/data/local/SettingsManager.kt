@@ -136,7 +136,6 @@ class SettingsManager(private val settings: ObservableSettings) {
     private val LANGUAGE_KEY = "prefs_language"
     private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
-    private val LAST_SEEN_WHATSNEW_KEY = "prefs_last_seen_whatsnew_version"
     private val FAVORITES_KEY = "prefs_favorites"
     private val FAVORITES_PENDING_KEY = "prefs_favorites_pending"
     private val FAVORITES_MERGED_KEY = "prefs_favorites_merged"
@@ -441,13 +440,6 @@ class SettingsManager(private val settings: ObservableSettings) {
         val lang = language.isoCode ?: getSystemLanguage()
         return if (lang.startsWith("zh")) "zh" else "en"
     }
-
-    /** 最近一次看过更新说明的版本号；null 表示首次安装（从未记录） */
-    fun getLastSeenWhatsNewVersion(): String? =
-        settings.getStringOrNull(LAST_SEEN_WHATSNEW_KEY)
-
-    fun setLastSeenWhatsNewVersion(version: String) =
-        settings.putString(LAST_SEEN_WHATSNEW_KEY, version)
 
     val favorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_KEY)
         .map { json ->

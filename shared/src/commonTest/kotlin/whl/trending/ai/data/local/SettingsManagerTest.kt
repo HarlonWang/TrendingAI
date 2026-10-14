@@ -56,12 +56,6 @@ class SettingsManagerTest {
         assertEquals(0xFF1976D2L, manager.seedColor.first())
     }
 
-    @Test
-    fun lastSeenWhatsNewVersion_defaults_to_null_and_persists() {
-        assertNull(manager.getLastSeenWhatsNewVersion())
-        manager.setLastSeenWhatsNewVersion("0.9.0")
-        assertEquals("0.9.0", manager.getLastSeenWhatsNewVersion())
-    }
 
     @Test
     fun cachedMinVersion_defaults_to_null_and_persists() {

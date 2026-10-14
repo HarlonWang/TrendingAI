@@ -44,7 +44,8 @@ kotlin {
             // api 而非 implementation：ChatContext / ChatScreen 直接出现在 shared 的
             // public API（globalChatScreen、各入口页），消费者要在编译期看得见
             api(libs.chatbase.kmp)
-            implementation(libs.appsettings.kmp)
+            // api 而非 implementation：androidLibrary/updater 直接调库的 isWhatsNewPending
+            api(libs.appsettings.kmp)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
