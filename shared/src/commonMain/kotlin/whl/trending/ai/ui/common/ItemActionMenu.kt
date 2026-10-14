@@ -29,6 +29,7 @@ import trendingai.shared.generated.resources.action_favorite
 import trendingai.shared.generated.resources.action_star
 import trendingai.shared.generated.resources.action_unfavorite
 import trendingai.shared.generated.resources.share_to_ai
+import wang.harlon.appsettings.ui.SettingsDropdownMenu
 
 @Composable
 fun ItemActionMenu(
@@ -66,7 +67,7 @@ fun ItemActionMenu(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            TrendingDropdownMenu(
+            SettingsDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {

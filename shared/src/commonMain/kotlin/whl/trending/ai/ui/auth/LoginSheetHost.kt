@@ -74,7 +74,7 @@ import whl.trending.ai.core.analytics.AuthOutcome
 import whl.trending.ai.core.analytics.Screen
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.analytics.trackOverlayScreenView
-import whl.trending.ai.ui.common.TrendingBottomSheet
+import wang.harlon.appsettings.ui.SettingsBottomSheet
 import whl.trending.ai.ui.home.githubLogoPainter
 
 /**
@@ -100,7 +100,7 @@ fun LoginSheetHost() {
 
 private enum class Step { EMAIL, CODE }
 
-// TrendingBottomSheet 的默认 sheetState 与 LoadingIndicator 都是实验 API
+// SettingsBottomSheet 的默认 sheetState 与 LoadingIndicator 都是实验 API
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun LoginSheet(source: String, onDismiss: () -> Unit) {
@@ -259,7 +259,7 @@ private fun LoginSheet(source: String, onDismiss: () -> Unit) {
         }
     }
 
-    TrendingBottomSheet(
+    SettingsBottomSheet(
         onDismissRequest = onDismiss,
         title = stringResource(if (step == Step.EMAIL) Res.string.login_title else Res.string.login_code_title),
     ) {

@@ -68,7 +68,7 @@ import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.isIosPlatform
-import whl.trending.ai.ui.common.SettingsGroup
+import wang.harlon.appsettings.ui.SettingsGroup
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.githubLogoPainter

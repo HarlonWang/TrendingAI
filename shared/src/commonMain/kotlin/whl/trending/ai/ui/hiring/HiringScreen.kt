@@ -115,8 +115,8 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.hnDiscussionUrl
 import whl.trending.ai.data.model.HiringPost
 import whl.trending.ai.ui.common.BetaBadge
-import whl.trending.ai.ui.common.TrendingBottomSheet
-import whl.trending.ai.ui.common.TrendingDropdownMenu
+import wang.harlon.appsettings.ui.SettingsBottomSheet
+import wang.harlon.appsettings.ui.SettingsDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HackerNewsOrange
@@ -509,7 +509,7 @@ private fun JobCard(post: HiringPost, onOpenUrl: (String) -> Unit, onOpenDetail:
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun JobDetailSheet(post: HiringPost, onOpenUrl: (String) -> Unit, onDismiss: () -> Unit) {
-    TrendingBottomSheet(onDismissRequest = onDismiss, title = post.title ?: post.company.orEmpty()) {
+    SettingsBottomSheet(onDismissRequest = onDismiss, title = post.title ?: post.company.orEmpty()) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             if (post.roles.isNotEmpty()) {
                 DetailRow(stringResource(Res.string.hiring_detail_all_roles), post.roles.joinToString("\n"))
@@ -655,7 +655,7 @@ private fun MonthSwitcher(s: HiringUiState.Ready, onPick: (String) -> Unit) {
             Text(s.month, style = MaterialTheme.typography.labelLarge)
             Icon(Icons.Default.ArrowDropDown, null)
         }
-        TrendingDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        SettingsDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             s.months.forEach { m ->
                 DropdownMenuItem(text = { Text(m) }, onClick = {
                     expanded = false

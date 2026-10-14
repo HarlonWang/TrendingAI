@@ -76,7 +76,9 @@
   - `TrendingScaffold` 只透传各页实际用到的 `Scaffold` 参数，缺什么补什么。
   - 没有例外页：`ReadmeScreen` 曾因 WebView 滚动不走 nestedScroll、收不到变色事件而保留原生 `Scaffold` + 写死底色，顶栏改为恒定后这个理由消失，已并回统一写法。
 
-- **设置项用卡片组**：设置页 / 关于页 /「我的」页的列表行一律用 `ui/common` 的 `SettingsGroup`，slot API 写法（`settingsItem(...)`），不要再用裸 `ListItem` + `HorizontalDivider`。图标进 40dp 圆形容器（`secondaryContainer`），头像这类自带形状的前导元素走 `leading` slot。规格与取舍见 `docs/settings-style-comparison.md`。
+- **设置 UI 基元在 appsettings-kmp**（包 `wang.harlon.appsettings.ui`，仓库 BaseProjects/appsettings-kmp）：`SettingsGroup`、`InfoDialog`、`SettingsBottomSheet`、`SettingsDropdownMenu` 四个组件已从 `ui/common` 搬走，本仓不再有副本。改规格先改库、发版、bump `libs.versions.toml`（与 eventbase-kmp 同一套双轨与纪律）。该库的全局设计见其 `docs/design.md`，后续外观、关于、更新说明也会搬过去。
+
+- **设置项用卡片组**：设置页 / 关于页 /「我的」页的列表行一律用 appsettings-kmp 的 `SettingsGroup`，slot API 写法（`settingsItem(...)`），不要再用裸 `ListItem` + `HorizontalDivider`。图标进 40dp 圆形容器（`secondaryContainer`），头像这类自带形状的前导元素走 `leading` slot。规格与取舍见 `docs/settings-style-comparison.md`。
 
   - **边界：纯展示的说明页不走 `SettingsGroup`**。它是为「可点击设置项 + trailing 控件」而生，整页一行都不可点时用它会长出假的可点感；且 title/description 的两段式结构逼着每条配一个标签，「来源」「收录范围」这类零信息量的标签会以 titleMedium 粗体压过灰色正文——最醒目的东西最没用。这类页面改成每块内容一张卡、卡内标题直接写实际主体（如源名）。参照 `ui/settings/DataSourcesScreen.kt`（数据来源与更新）。**这是有意偏离，别改回 `SettingsGroup`。**
 
@@ -85,14 +87,14 @@
   | 场景 | 用什么 |
   |---|---|
   | 破坏性动作确认（删除、退出、清空） | `AlertDialog`，**确认按钮 `error` 色** |
-  | 纯说明 / 引导（一个动作或「知道了」） | `ui/common` 的 `InfoDialog` |
-  | 单选，≤4 项且有明确锚点（某行的当前值） | `ui/common` 的 `TrendingDropdownMenu` |
-  | 单选，>4 项 / 选项带描述或图标 / 需要滚动 | `ui/common` 的 `TrendingBottomSheet` |
-  | 多维筛选（两个及以上维度） | `TrendingBottomSheet` + 分段控件 / Chip |
+  | 纯说明 / 引导（一个动作或「知道了」） | appsettings-kmp 的 `InfoDialog` |
+  | 单选，≤4 项且有明确锚点（某行的当前值） | appsettings-kmp 的 `SettingsDropdownMenu` |
+  | 单选，>4 项 / 选项带描述或图标 / 需要滚动 | appsettings-kmp 的 `SettingsBottomSheet` |
+  | 多维筛选（两个及以上维度） | `SettingsBottomSheet` + 分段控件 / Chip |
   | 系统级选择（日期、时间） | 对应的 `*PickerDialog`，别自绘 |
 
-  - 底部浮层**一律走 `TrendingBottomSheet`**，它固定了标题字号（`titleLarge`）、水平边距（24dp）、底部留白（`navigationBarsPadding()` + 16dp）。别直接用 `ModalBottomSheet`——四处各写各的正是 0.23 之前的状态。
-  - 下拉菜单**一律走 `TrendingDropdownMenu`**（24dp 圆角，与卡片、胶囊同一套大圆角语言）。需要特殊容器色/elevation 时传参，别绕开组件自己写 `DropdownMenu`。
+  - 底部浮层**一律走 `SettingsBottomSheet`**，它固定了标题字号（`titleLarge`）、水平边距（24dp）、底部留白（`navigationBarsPadding()` + 16dp）。别直接用 `ModalBottomSheet`——四处各写各的正是 0.23 之前的状态。
+  - 下拉菜单**一律走 `SettingsDropdownMenu`**（24dp 圆角，与卡片、胶囊同一套大圆角语言）。需要特殊容器色/elevation 时传参，别绕开组件自己写 `DropdownMenu`。
   - 浮层里的可点选项用 `SettingsGroup` 渲染，与三个页面的卡片语言一致（登录方式选择就是这么做的）。
 
 ## 发布前冒烟（必做）

@@ -116,9 +116,9 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.ApiException
 import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.notification.globalDailyPicksNotifier
-import whl.trending.ai.ui.common.SettingsGroup
-import whl.trending.ai.ui.common.TrendingBottomSheet
-import whl.trending.ai.ui.common.TrendingDropdownMenu
+import wang.harlon.appsettings.ui.SettingsGroup
+import wang.harlon.appsettings.ui.SettingsBottomSheet
+import wang.harlon.appsettings.ui.SettingsDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
@@ -255,7 +255,7 @@ fun SettingsScreen(
                                         text = languageOptionText(appLanguage),
                                         color = MaterialTheme.colorScheme.primary,
                                     )
-                                    TrendingDropdownMenu(
+                                    SettingsDropdownMenu(
                                         expanded = appLanguageMenuExpanded,
                                         onDismissRequest = { appLanguageMenuExpanded = false },
                                     ) {
@@ -304,7 +304,7 @@ fun SettingsScreen(
                                     text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
-                                TrendingDropdownMenu(
+                                SettingsDropdownMenu(
                                     expanded = homeTabMenuExpanded,
                                     onDismissRequest = { homeTabMenuExpanded = false },
                                 ) {
@@ -489,7 +489,7 @@ private fun SummaryLanguageSheet(
         listOfNotNull(current.takeIf { c -> c.isoCode != null && langs.none { it.code == c.isoCode } })
     val followSystemLabel = stringResource(Res.string.summary_language_follow_system_resolved, resolved)
 
-    TrendingBottomSheet(
+    SettingsBottomSheet(
         onDismissRequest = onDismiss,
         title = stringResource(Res.string.summary_language),
     ) {

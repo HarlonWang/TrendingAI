@@ -119,12 +119,12 @@ import whl.trending.ai.data.model.TrendingRepo
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.common.AiSummaryBox
 import whl.trending.ai.ui.common.ErrorState
-import whl.trending.ai.ui.common.InfoDialog
+import wang.harlon.appsettings.ui.InfoDialog
 import whl.trending.ai.ui.common.ItemActionMenu
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
 import whl.trending.ai.ui.common.SourceMetaFooter
-import whl.trending.ai.ui.common.TrendingBottomSheet
+import wang.harlon.appsettings.ui.SettingsBottomSheet
 import whl.trending.ai.ui.common.aiShareText
 import whl.trending.ai.ui.common.snapshotStampText
 import whl.trending.ai.ui.common.updateStampText
@@ -580,7 +580,7 @@ private fun FilterBottomSheet(
 
     // 这里曾挂一个「更新机制」InfoDialog：更新节奏与筛选周期/语言无关，位置本就错了，
     // 且那份文案已并入「数据来源与更新」页（从列表头部的抓取时机条进入）。
-    TrendingBottomSheet(
+    SettingsBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         title = stringResource(Res.string.filter_options),
@@ -704,7 +704,7 @@ private fun HistoryBottomSheet(
         }
     }
 
-    TrendingBottomSheet(
+    SettingsBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         title = stringResource(Res.string.history_trending),

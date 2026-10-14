@@ -11,6 +11,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.checkout_activated_message
 import trendingai.shared.generated.resources.checkout_activated_title
 import whl.trending.ai.core.ProCheckout
+import wang.harlon.appsettings.ui.InfoDialog
 
 /**
  * 「Pro 已开通」提示宿主。
