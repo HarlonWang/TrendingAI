@@ -35,12 +35,7 @@
     <string name="datasource_settings">Data Source</string>
     <string name="current_datasource">Current: Gemini API</string>
     <string name="about">About</string>
-    <string name="check_updates">Check for updates</string>
     <string name="tinyui_channel">Page update channel</string>
-    <string name="changelog">Changelog</string>
-    <string name="version_up_to_date">Up to date</string>
-    <string name="check_update_failed">Check failed, try again later</string>
-    <string name="official_website">Official Website</string>
     <string name="donate">Donate</string>
     <string name="donate_message">We build Trending AI in our limited spare time, hoping to help you discover global tech trends more efficiently.\nIf you find it helpful, a donation would mean a lot to us.\n\nAll donations go toward improving our servers and operations to keep the product moving forward.</string>
     <string name="donate_github_desc">Sponsor Pro on GitHub · unlock a more generous chat quota and stronger, newer models</string>
@@ -195,8 +190,6 @@
     <string name="color_lab_preview_chip">Tag</string>
     <string name="color_lab_saturation_value">Saturation and brightness</string>
     <string name="color_lab_hue">Hue</string>
-    <string name="whats_new_title">🎉 What&apos;s New in %1$s</string>
-    <string name="whats_new_got_it">Got it</string>
     <string name="force_update_title">Update Required</string>
     <string name="force_update_message">This version (%1$s) is no longer supported. Please get the latest version from the official channel to continue.</string>
     <string name="force_update_button">Get the Latest Version</string>

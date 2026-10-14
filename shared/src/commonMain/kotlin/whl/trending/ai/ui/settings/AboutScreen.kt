@@ -4,27 +4,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,21 +37,15 @@ import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.account_link_sponsor_note
 import trendingai.shared.generated.resources.app_name
 import trendingai.shared.generated.resources.back
-import trendingai.shared.generated.resources.changelog
-import trendingai.shared.generated.resources.check_update_failed
-import trendingai.shared.generated.resources.check_updates
-import trendingai.shared.generated.resources.tinyui_channel
-import whl.trending.ai.data.local.TINYUI_CHANNEL_PRODUCTION
-import whl.trending.ai.data.local.TINYUI_CHANNEL_STAGING
-import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.tinyui.TinyUIUpdates
 import trendingai.shared.generated.resources.confirm
 import trendingai.shared.generated.resources.donate
 import trendingai.shared.generated.resources.donate_github_desc
 import trendingai.shared.generated.resources.donate_message
-import trendingai.shared.generated.resources.official_website
 import trendingai.shared.generated.resources.privacy_policy
-import trendingai.shared.generated.resources.version_up_to_date
+import trendingai.shared.generated.resources.tinyui_channel
+import wang.harlon.appsettings.about.AboutContent
+import wang.harlon.appsettings.about.AboutLink
+import wang.harlon.appsettings.about.UpdateStatus
 import whl.trending.ai.core.Constants
 import whl.trending.ai.core.ProSponsor
 import whl.trending.ai.core.analytics.AppEvent
@@ -68,13 +53,20 @@ import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.isIosPlatform
-import wang.harlon.appsettings.ui.SettingsGroup
+import whl.trending.ai.data.local.TINYUI_CHANNEL_PRODUCTION
+import whl.trending.ai.data.local.TINYUI_CHANNEL_STAGING
+import whl.trending.ai.data.local.globalSettingsManager
+import whl.trending.ai.tinyui.TinyUIUpdates
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.githubLogoPainter
 import whl.trending.ai.update.globalUpdateChecker
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+/**
+ * 关于页：骨架与内置行在 appsettings-kmp 的 [AboutContent]，这里只做本 App 的事——
+ * 更新检查怎么做（渠道相关）、链接在哪打开、埋哪些点、赞助弹窗与 TinyUI 调试通道。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
     onBack: () -> Unit,
@@ -86,6 +78,14 @@ fun AboutScreen(
     val isChecking by globalUpdateChecker.isChecking.collectAsState()
     val isUpToDate by globalUpdateChecker.isUpToDate.collectAsState()
     val isCheckFailed by globalUpdateChecker.isCheckFailed.collectAsState()
+    // iOS 的「检查更新」只是跳官网，没有状态可显示
+    val updateStatus = when {
+        isIos -> UpdateStatus.Idle
+        isChecking -> UpdateStatus.Checking
+        isUpToDate -> UpdateStatus.UpToDate
+        isCheckFailed -> UpdateStatus.Failed
+        else -> UpdateStatus.Idle
+    }
     var showDonateDialog by remember { mutableStateOf(false) }
     // 隐藏开关：连点版本号 7 次出现 TinyUI 页面的热下发通道，用商店版验 staging；不在 production 时常显，便于切回。
     // 切换即按新通道下载，重启一次生效
@@ -96,6 +96,9 @@ fun AboutScreen(
     if (showDonateDialog) {
         DonateDialog(onDismiss = { showDonateDialog = false })
     }
+
+    // 隐私政策标题要传给 WebView，须在 composable 作用域取
+    val privacyTitle = stringResource(Res.string.privacy_policy)
 
     TrendingScaffold(
         topBar = {
@@ -109,92 +112,47 @@ fun AboutScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+        AboutContent(
+            name = stringResource(Res.string.app_name),
+            version = appVersion,
+            modifier = Modifier.padding(innerPadding),
+            onVersionClick = { versionTaps++ },
+            onLinkClick = { link ->
+                when (link) {
+                    is AboutLink.Changelog -> {
+                        track(AppEvent.SettingsItemClicked(SettingKey.CHANGELOG))
+                        uriHandler.openUri(link.url)
+                    }
+                    // 隐私政策在 App 内 WebView 打开，其余走系统浏览器
+                    is AboutLink.Privacy -> onNavigateToWebPage(link.url, privacyTitle)
+                    else -> uriHandler.openUri(link.url)
+                }
+            },
         ) {
-            // 应用信息 header：居中展示应用名 + 版本号（logo 位暂留白，后续经平台图标接入）
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 32.dp)
-            ) {
-                Text(
-                    text = stringResource(Res.string.app_name),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = appVersion,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable(interactionSource = null, indication = null) { versionTaps++ },
-                )
-            }
-            // 隐私政策标题要传给 WebView，须在 composable 作用域取；SettingsGroup 的 content 不是 @Composable
-            val privacyTitle = stringResource(Res.string.privacy_policy)
-            SettingsGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
+            group {
                 // 检查更新：apk 渠道点按自建检查，iOS 跳官网；play/fdroid 渠道由商店接管，不显示
                 if (globalUpdateChecker.isEnabled || isIos) {
-                    settingsItem(
-                        icon = Icons.Default.Refresh,
-                        title = { Text(stringResource(Res.string.check_updates)) },
-                        enabled = !isChecking,
-                        trailing = {
-                            when {
-                                !isIos && isChecking -> LoadingIndicator(
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                !isIos && isUpToDate -> Text(
-                                    stringResource(Res.string.version_up_to_date),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                !isIos && isCheckFailed -> Text(
-                                    stringResource(Res.string.check_update_failed),
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        },
-                        onClick = {
-                            track(AppEvent.SettingsItemClicked(SettingKey.CHECK_UPDATE))
-                            if (isIos) {
-                                uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
-                            } else {
-                                globalUpdateChecker.manualCheck()
-                            }
-                        },
-                    )
+                    updateCheck(status = updateStatus) {
+                        track(AppEvent.SettingsItemClicked(SettingKey.CHECK_UPDATE))
+                        if (isIos) {
+                            uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL)
+                        } else {
+                            globalUpdateChecker.manualCheck()
+                        }
+                    }
                 }
-                settingsItem(
-                    icon = Icons.Default.History,
-                    title = { Text(stringResource(Res.string.changelog)) },
-                    onClick = {
-                        track(AppEvent.SettingsItemClicked(SettingKey.CHANGELOG))
-                        uriHandler.openUri(Constants.CHANGELOG_URL)
-                    },
-                )
-                settingsItem(
-                    icon = Icons.Default.Public,
-                    title = { Text(stringResource(Res.string.official_website)) },
-                    onClick = { uriHandler.openUri(Constants.OFFICIAL_WEBSITE_URL) },
-                )
-                settingsItem(
+                link(AboutLink.Changelog(Constants.CHANGELOG_URL))
+                link(AboutLink.Website(Constants.OFFICIAL_WEBSITE_URL))
+                item(
                     icon = Icons.Default.VolunteerActivism,
                     title = { Text(stringResource(Res.string.donate)) },
                     // 打开弹窗不埋点：赞助点击统一由 ProSponsor.openSponsorPage 报
                     // upsell_clicked(target=sponsor)，这里再报一条会让转化率分母翻倍
                     onClick = { showDonateDialog = true },
                 )
-                settingsItem(
-                    icon = Icons.Default.PrivacyTip,
-                    title = { Text(privacyTitle) },
-                    onClick = { onNavigateToWebPage(Constants.PRIVACY_POLICY_URL, privacyTitle) },
-                )
+                link(AboutLink.Privacy(Constants.PRIVACY_POLICY_URL))
                 if (showTinyUIChannel) {
-                    settingsItem(
+                    item(
                         icon = Icons.Default.Science,
                         title = { Text(stringResource(Res.string.tinyui_channel)) },
                         trailing = { Text(tinyUIChannel) },
@@ -207,7 +165,6 @@ fun AboutScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
