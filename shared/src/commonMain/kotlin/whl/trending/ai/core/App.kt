@@ -22,7 +22,9 @@ import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.hiring.HiringScreen
 import whl.trending.ai.ui.digest.DigestScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
-import whl.trending.ai.ui.theme.TrendingTheme
+import wang.harlon.appsettings.appearance.AppearanceTheme
+import wang.harlon.appsettings.appearance.rememberAppearanceState
+import whl.trending.ai.ui.theme.trackAppearanceEvent
 import whl.trending.ai.ui.webview.WebViewScreen
 
 import androidx.compose.animation.core.tween
@@ -169,10 +171,12 @@ fun App() {
         }
     }
 
-    TrendingTheme {
+    // 外观状态挂在根上：深浅、配色、切换动画与系统栏都在 appsettings-kmp；事件映射到本 App 的埋点词汇
+    val appearance = rememberAppearanceState(settings = globalSettings, onEvent = ::trackAppearanceEvent)
+    AppearanceTheme(appearance) {
         // 转场兜底底色：NavDisplay 的 enter/exit 都带 fadeIn/fadeOut，那 200ms 内新旧页 alpha 都 <1，
         // 没有这层就会透出 Android window 背景。window 主题是 AppCompat.DayNight，跟的是系统深浅，
-        // 而深色/AMOLED 是应用内 ThemeMode——系统浅色 + app 内深色时露出的是 #fafafa，整屏白闪。
+        // 而深色 / 纯黑是应用内的外观模式——系统浅色 + app 内深色时露出的是 #fafafa，整屏白闪。
         // 取 background 与各页 TrendingScaffold 的 containerColor 对齐；纯黑档不特判
         //（主题层的 isAmoled 已把 background 压到全黑）。
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {

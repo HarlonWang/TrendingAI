@@ -76,7 +76,7 @@
   - `TrendingScaffold` 只透传各页实际用到的 `Scaffold` 参数，缺什么补什么。
   - 没有例外页：`ReadmeScreen` 曾因 WebView 滚动不走 nestedScroll、收不到变色事件而保留原生 `Scaffold` + 写死底色，顶栏改为恒定后这个理由消失，已并回统一写法。
 
-- **设置 UI 基元在 appsettings-kmp**（包 `wang.harlon.appsettings.ui`，仓库 BaseProjects/appsettings-kmp）：`SettingsGroup`、`InfoDialog`、`SettingsBottomSheet`、`SettingsDropdownMenu` 四个组件已从 `ui/common` 搬走，本仓不再有副本。改规格先改库、发版、bump `libs.versions.toml`（与 eventbase-kmp 同一套双轨与纪律）。该库的全局设计见其 `docs/design.md`，后续外观、关于、更新说明也会搬过去。
+- **设置 UI 基元在 appsettings-kmp**（包 `wang.harlon.appsettings.ui`，仓库 BaseProjects/appsettings-kmp）：`SettingsGroup`、`InfoDialog`、`SettingsBottomSheet`、`SettingsDropdownMenu` 四个组件已从 `ui/common` 搬走，本仓不再有副本。改规格先改库、发版、bump `libs.versions.toml`（与 eventbase-kmp 同一套双轨与纪律）。外观（主题、色板、调色台、动态图标机制）、关于页骨架、更新说明也在库里；本仓只剩 `ui/settings` 下的薄壳、`ui/theme/AppearanceEvents.kt` 的埋点映射和 `ui/settings/AppIcons.kt` 的图标档位声明。该库的全局设计见其 `docs/design.md`。
 
 - **设置项用卡片组**：设置页 / 关于页 /「我的」页的列表行一律用 appsettings-kmp 的 `SettingsGroup`，slot API 写法（`settingsItem(...)`），不要再用裸 `ListItem` + `HorizontalDivider`。图标进 40dp 圆形容器（`secondaryContainer`），头像这类自带形状的前导元素走 `leading` slot。规格与取舍见 `docs/settings-style-comparison.md`。
 

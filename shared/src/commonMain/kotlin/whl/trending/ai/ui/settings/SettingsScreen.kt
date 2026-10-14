@@ -122,6 +122,8 @@ import wang.harlon.appsettings.ui.SettingsDropdownMenu
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
+import wang.harlon.appsettings.appearance.LocalAppearanceState
+import wang.harlon.appsettings.appearance.label
 
 /**
  * 设置页：应用偏好的唯一落点，从账户页（后续版本为「我的」tab 的扩展菜单）进入。
@@ -147,9 +149,7 @@ fun SettingsScreen(
     // 初值一律同步读，不写默认常量：flow 的首次发射晚于首帧组合，写常量等于先渲染一次
     // 默认值再跳到真实值——开关会当成「用户刚拨动」播一遍 thumb 滑动动画（M3 Switch 的
     // checked 是 Transition 驱动），下拉行的 trailing 文案也会闪一下。
-    val themeMode by globalSettingsManager.themeMode.collectAsState(
-        remember { globalSettingsManager.currentThemeMode() }
-    )
+    val appearance = LocalAppearanceState.current
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(
         remember { globalSettingsManager.currentAppLanguage() }
     )
@@ -232,7 +232,7 @@ fun SettingsScreen(
                         title = { Text(stringResource(Res.string.appearance)) },
                         trailing = {
                             Text(
-                                text = themeModeText(themeMode),
+                                text = appearance.appearance.mode.label(),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },

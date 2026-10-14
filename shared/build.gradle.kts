@@ -50,7 +50,6 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
-            implementation(libs.androidx.graphics.shapes)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
@@ -70,7 +69,6 @@ kotlin {
             implementation(libs.multiplatform.settings.coroutines)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
-            implementation(libs.material.kolor)
             implementation(libs.kmp.webview)
             // api 而非 implementation：shared 的 public API 直接暴露了库的类型
             // （LoginbaseAuthManager.client、globalOAuthLauncher、initLoginbaseAuth），

@@ -1,17 +1,12 @@
 package whl.trending.ai
 
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
@@ -22,7 +17,6 @@ import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.NotificationKind
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.AppLanguage
-import whl.trending.ai.data.local.ThemeMode
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.ui.home.HomeTabRequest
@@ -62,28 +56,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContent {
-            val themeMode by globalSettingsManager.themeMode.collectAsState(ThemeMode.FOLLOW_SYSTEM)
-            val isSystemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val isDark = when (themeMode) {
-                ThemeMode.FOLLOW_SYSTEM -> isSystemDark
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK, ThemeMode.AMOLED -> true
-            }
-
-            DisposableEffect(isDark) {
-                enableEdgeToEdge(
-                    statusBarStyle = SystemBarStyle.auto(
-                        android.graphics.Color.TRANSPARENT,
-                        android.graphics.Color.TRANSPARENT,
-                    ) { isDark },
-                    navigationBarStyle = SystemBarStyle.auto(
-                        android.graphics.Color.TRANSPARENT,
-                        android.graphics.Color.TRANSPARENT,
-                    ) { isDark },
-                )
-                onDispose {}
-            }
-
+            // 系统栏深浅由 appsettings-kmp 的 AppearanceTheme 按外观模式同步（App 根上），这里不再重抄一遍 isDark
             UpdateWrapper {
                 App()
             }
