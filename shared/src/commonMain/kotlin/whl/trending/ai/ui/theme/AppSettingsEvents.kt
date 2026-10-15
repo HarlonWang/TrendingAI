@@ -7,12 +7,19 @@ import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
 import wang.harlon.appsettings.AppSettingsEvent
+import wang.harlon.appsettings.language.LanguageEvent
 
 /**
- * appsettings-kmp 的事件 → 本 App 的埋点词汇（`telemetry-vocabulary.md`）。目前只映射外观事件。
- * 取值沿用库化前的口径：theme 是 follow_system / light / dark / amoled，seed_color 是预设 id、custom 或 system。
+ * appsettings-kmp 的事件 → 本 App 的埋点词汇（`telemetry-vocabulary.md`）。映射外观与界面语言事件。
+ * 取值沿用库化前的口径：theme 是 follow_system / light / dark / amoled，seed_color 是预设 id、custom 或 system，
+ * app_language 是 follow_system / chinese / english（库给的是标签，这里翻回旧词，词汇表不用动）。
  */
 fun trackAppSettingsEvent(event: AppSettingsEvent) {
+    if (event is LanguageEvent.Changed) {
+        val value = when (val tag = event.tag) { null -> "follow_system"; "zh" -> "chinese"; "en" -> "english"; else -> tag }
+        track(AppEvent.SettingChanged(SettingKey.APP_LANGUAGE, value))
+        return
+    }
     if (event !is AppearanceEvent) return   // 更新说明等暂不入词汇表
     when (event) {
         is AppearanceEvent.ModeChanged -> track(AppEvent.SettingChanged(SettingKey.THEME, event.mode.analyticsValue))

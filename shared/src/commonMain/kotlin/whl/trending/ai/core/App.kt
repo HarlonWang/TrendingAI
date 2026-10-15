@@ -5,6 +5,7 @@ import whl.trending.ai.core.analytics.TrackRouteScreenViews
 import whl.trending.ai.ui.detail.ReadmeScreen
 import whl.trending.ai.ui.favorites.FavoriteListScreen
 import whl.trending.ai.ui.feedback.FeedbackScreen
+import whl.trending.ai.data.local.UI_LANGUAGES
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.home.HomeScreen
 import whl.trending.ai.ui.home.HomeTab
@@ -65,7 +66,6 @@ import whl.trending.ai.ui.common.CheckoutResultHost
 import whl.trending.ai.ui.common.ProReconcileHost
 import whl.trending.ai.ui.common.SponsorLinkHost
 import whl.trending.ai.data.local.globalSettings
-import whl.trending.ai.core.platform.getSystemLanguage
 import wang.harlon.appsettings.AppSettingsRoot
 import wang.harlon.appsettings.AppearanceScreen
 import wang.harlon.appsettings.ColorLabScreen
@@ -185,7 +185,6 @@ fun App() {
     }
 
     // 设置层的全部配置在这里：主题、系统栏、更新说明、关于页数据，事件映射到本 App 的埋点词汇
-    val appLanguage by globalSettingsManager.appLanguage.collectAsState(remember { globalSettingsManager.currentAppLanguage() })
     val privacyTitle = stringResource(Res.string.privacy_policy)
     val isIos = isIosPlatform()
     // 强更门亮着时更新说明弹窗要让路：弹窗由库在根上承载、在门外，靠这个状态压住。
@@ -199,6 +198,8 @@ fun App() {
         // 全 app 顶栏恒定 surfaceContainer（TrendingTopAppBar 同一约定）
         topBar { containerColor = { MaterialTheme.colorScheme.surfaceContainer } }
         appearance { appIcons = trendingAppIcons }
+        // 界面语言：选择、持久化、Android per-app locale、iOS 跳系统设置都在库里；更新说明的展示语言自动跟它
+        language { languages = UI_LANGUAGES }
         about {
             changelog = Constants.CHANGELOG_URL
             website = Constants.OFFICIAL_WEBSITE_URL
@@ -225,7 +226,6 @@ fun App() {
         }
         whatsNew {
             bundled = { Res.readBytes("files/whatsnew.json").decodeToString() }
-            language = { appLanguage.isoCode ?: getSystemLanguage() }
             enabled = { !forceUpdateBlocked }
         }
     }

@@ -11,21 +11,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import whl.trending.ai.core.Constants
-import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.openDownloadUrl
 import whl.trending.ai.core.platform.openUrl
-import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, downloadUrl: String, onDismiss: () -> Unit) {
-    val appLanguage by globalSettingsManager.appLanguage
-        .collectAsState(AppLanguage.FOLLOW_SYSTEM)
-    val lang = appLanguage.isoCode ?: getSystemLanguage()
+    // 更新说明的展示语言跟界面语言（appsettings-kmp 管的），初值同步读，不闪
+    val lang by globalSettingsManager.uiLanguageFlow.collectAsState(remember { globalSettingsManager.uiLanguage() })
     val items = updateInfo.whatsNew?.pick(lang).orEmpty()
 
     AlertDialog(
