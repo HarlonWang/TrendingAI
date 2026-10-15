@@ -7,11 +7,7 @@
     <string name="settings">Settings</string>
     <string name="personalization">Personalization</string>
     <string name="subscription_reminders">Subscription &amp; Reminders</string>
-    <string name="language_settings">App Language</string>
-    <string name="app_language_desc">Interface display language</string>
     <string name="language_option_follow_system">Follow system</string>
-    <string name="language_option_chinese">Chinese</string>
-    <string name="language_option_english">English</string>
     <string name="open_system_settings">Open system settings</string>
     <string name="summary_language">Summary Language</string>
     <string name="summary_language_desc">Language of AI summaries and deep dives</string>

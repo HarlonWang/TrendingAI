@@ -4,7 +4,6 @@ import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.coroutines.getBooleanFlow
-import com.russhwolf.settings.coroutines.getIntFlow
 import com.russhwolf.settings.coroutines.getLongFlow
 import com.russhwolf.settings.coroutines.getLongOrNullFlow
 import com.russhwolf.settings.coroutines.getStringFlow
@@ -19,8 +18,9 @@ import kotlinx.serialization.json.Json
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLocaleTag
+import wang.harlon.appsettings.language.APP_LANGUAGE_STORAGE_KEY
+import wang.harlon.appsettings.language.AppLanguage
 import wang.harlon.chatbase.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
@@ -36,18 +36,19 @@ private const val DEFAULT_HOME_TAB_NAME = "Home"
 /** TrendingSource.name 缺省值 */
 private const val DEFAULT_TRENDING_SOURCE_NAME = "GitHub"
 
-enum class AppLanguage(val isoCode: String?) {
-    FOLLOW_SYSTEM(null),
-    CHINESE("zh"),
-    ENGLISH("en")
-}
+/**
+ * 界面语言由 appsettings-kmp 的 language 包管（选择、持久化、per-app locale）；本 App 的非 Compose 代码
+ * （聊天请求语言、邮件语言、TinyUI 文案）用库公开的 key 与解析函数读同一份值，不自己解释存储格式。
+ * 清单与 `core/App.kt` 里 `language { languages }` 同一份；第一项是默认资源语言。
+ */
+val UI_LANGUAGES = listOf("en", "zh")
 
 /** 从未拉到 app-config 时的可选摘要语言；拉到后以服务端 summary_langs 为准 */
 val BUILTIN_SUMMARY_LANGS = listOf(SummaryLangOption("zh", "中文"), SummaryLangOption("en", "English"))
 private const val FALLBACK_SUMMARY_LANG = "en"
 
 /**
- * 摘要内容语言，与 App 界面语言（[AppLanguage]）解耦——两者扩展节奏独立。
+ * 摘要内容语言，与 App 界面语言（appsettings-kmp 的 language 包）解耦——两者扩展节奏独立。
  * [isoCode] 为 null 即跟随系统；可选值由服务端下发，故不是枚举。持久化存 [storageValue]。
  */
 data class SummaryLanguage(val isoCode: String?) {
@@ -65,7 +66,9 @@ data class SummaryLanguage(val isoCode: String?) {
 
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {
-    private val LANGUAGE_KEY = "prefs_language"
+    // 旧 key prefs_language 存的是 AppLanguage 的 Int ordinal，界面语言库化后不再写、不迁移（老用户回到跟随系统一次），
+    // 只在摘要语言的一次性初始化里读；勿复用
+    private val LEGACY_LANGUAGE_KEY = "prefs_language"
     private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val FAVORITES_KEY = "prefs_favorites"
@@ -117,31 +120,19 @@ class SettingsManager(private val settings: ObservableSettings) {
 
 
     init {
-        // 摘要语言一次性迁移：首次构造用当时的 App 语言初始化，解耦不改变既有用户看到的摘要语言
+        // 摘要语言一次性迁移：首次构造用当时的 App 语言初始化，解耦不改变既有用户看到的摘要语言。
+        // 从摘要语言上线前的版本直接升上来的用户，App 语言还在旧 key prefs_language（Int ordinal：1 中文、2 英文）里，
+        // 这里是它唯一还被读的地方
         if (!settings.hasKey(SUMMARY_LANGUAGE_KEY)) {
-            val app = AppLanguage.entries.getOrElse(
-                settings.getInt(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
-            ) { AppLanguage.FOLLOW_SYSTEM }
-            val initial = when (app) {
-                AppLanguage.CHINESE -> SummaryLanguage.CHINESE
-                AppLanguage.ENGLISH -> SummaryLanguage.ENGLISH
-                AppLanguage.FOLLOW_SYSTEM -> SummaryLanguage.FOLLOW_SYSTEM
-            }
+            val legacy = when (settings.getIntOrNull(LEGACY_LANGUAGE_KEY)) { 1 -> "zh"; 2 -> "en"; else -> null }
+            val initial = (explicitAppLanguage() ?: legacy)?.let(::SummaryLanguage) ?: SummaryLanguage.FOLLOW_SYSTEM
             settings.putString(SUMMARY_LANGUAGE_KEY, initial.storageValue)
         }
     }
 
-    val appLanguage: Flow<AppLanguage> = settings.getIntFlow(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
-        .map { AppLanguage.entries.getOrElse(it) { AppLanguage.FOLLOW_SYSTEM } }
-
-    /** 同步读当前 App 语言，供非 Compose 上下文使用（如拼外链的 ui_locales 参数）。 */
-    fun currentAppLanguage(): AppLanguage = AppLanguage.entries.getOrElse(
-        settings.getInt(LANGUAGE_KEY, AppLanguage.FOLLOW_SYSTEM.ordinal)
-    ) { AppLanguage.FOLLOW_SYSTEM }
-
-    fun setLanguage(language: AppLanguage) {
-        settings.putInt(LANGUAGE_KEY, language.ordinal)
-    }
+    /** 用户在界面语言里明确选的标签；跟随系统或清单外为 null。 */
+    private fun explicitAppLanguage(stored: String? = settings.getStringOrNull(APP_LANGUAGE_STORAGE_KEY)): String? =
+        AppLanguage.fromStorage(stored, UI_LANGUAGES).tag
 
     val summaryLanguage: Flow<SummaryLanguage> =
         settings.getStringFlow(SUMMARY_LANGUAGE_KEY, SummaryLanguage.FOLLOW_SYSTEM.storageValue)
@@ -237,16 +228,13 @@ class SettingsManager(private val settings: ObservableSettings) {
         else settings.putString(QUOTA_HELP_KEY, Json.encodeToString(config))
     }
 
-    /** 服务端双语文案按此取字段：App 内语言优先，跟随系统时取系统语言 */
-    fun uiLanguage(): String = uiLanguageOf(currentAppLanguage())
+    /** 服务端双语文案、聊天请求、邮件语言按此取：App 内语言优先，跟随系统时取系统语言钳到清单（清单外回落 en） */
+    fun uiLanguage(): String = uiLanguageOf(settings.getStringOrNull(APP_LANGUAGE_STORAGE_KEY))
 
     /** [uiLanguage] 的响应式版本，语言切换后重取文案 */
-    val uiLanguageFlow: Flow<String> = appLanguage.map { uiLanguageOf(it) }
+    val uiLanguageFlow: Flow<String> = settings.getStringOrNullFlow(APP_LANGUAGE_STORAGE_KEY).map { uiLanguageOf(it) }
 
-    private fun uiLanguageOf(language: AppLanguage): String {
-        val lang = language.isoCode ?: getSystemLanguage()
-        return if (lang.startsWith("zh")) "zh" else "en"
-    }
+    private fun uiLanguageOf(stored: String?): String = AppLanguage.fromStorage(stored, UI_LANGUAGES).resolve(UI_LANGUAGES)
 
     val favorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_KEY)
         .map { json ->

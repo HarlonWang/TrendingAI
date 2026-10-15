@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Schedule
@@ -48,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.app_language_desc
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.close
@@ -65,11 +63,8 @@ import trendingai.shared.generated.resources.feedback_rate_limit
 import trendingai.shared.generated.resources.home_title
 import trendingai.shared.generated.resources.immersive_browsing
 import trendingai.shared.generated.resources.immersive_browsing_desc
-import trendingai.shared.generated.resources.language_option_chinese
-import trendingai.shared.generated.resources.language_option_english
-import trendingai.shared.generated.resources.language_option_follow_system
-import trendingai.shared.generated.resources.language_settings
 import trendingai.shared.generated.resources.me_title
+import trendingai.shared.generated.resources.language_option_follow_system
 import trendingai.shared.generated.resources.notification_permission_denied
 import trendingai.shared.generated.resources.open_links_in_browser
 import trendingai.shared.generated.resources.open_links_in_browser_desc
@@ -99,9 +94,7 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.isValidEmail
 import whl.trending.ai.core.platform.getSystemLocaleTag
 import whl.trending.ai.core.platform.getSystemLanguageDisplayName
-import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.core.platform.openAppSettings
-import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.SummaryLanguage
 import whl.trending.ai.data.model.SummaryLangOption
 import whl.trending.ai.data.local.globalSettingsManager
@@ -110,6 +103,7 @@ import whl.trending.ai.data.repository.TrendingRepository
 import whl.trending.ai.notification.globalDailyPicksNotifier
 import wang.harlon.appsettings.ui.SettingsGroup
 import wang.harlon.appsettings.ui.SettingsBottomSheet
+import wang.harlon.appsettings.language.languageItem
 import wang.harlon.appsettings.ui.SettingsDropdownMenu
 import whl.trending.ai.ui.home.HomeTab
 import wang.harlon.appsettings.SettingsScreen as AppSettingsScreen
@@ -136,13 +130,9 @@ fun SettingsScreen(
     onNavigateToFeedback: () -> Unit = {},
     onNavigateToDataSources: () -> Unit = {},
 ) {
-    val isIos = isIosPlatform()
     // 初值一律同步读，不写默认常量：flow 的首次发射晚于首帧组合，写常量等于先渲染一次
     // 默认值再跳到真实值——开关会当成「用户刚拨动」播一遍 thumb 滑动动画（M3 Switch 的
     // checked 是 Transition 驱动），下拉行的 trailing 文案也会闪一下。
-    val appLanguage by globalSettingsManager.appLanguage.collectAsState(
-        remember { globalSettingsManager.currentAppLanguage() }
-    )
     val summaryLanguage by globalSettingsManager.summaryLanguage.collectAsState(
         remember { globalSettingsManager.currentSummaryLanguage() }
     )
@@ -168,7 +158,6 @@ fun SettingsScreen(
     var showLangCaptureDialog by remember { mutableStateOf(false) }
     // 下拉菜单的展开态提到页面作用域：SettingsGroup 的 content 是收集用的普通 lambda，
     // 不是 @Composable，里面调不了 remember
-    var appLanguageMenuExpanded by remember { mutableStateOf(false) }
     var homeTabMenuExpanded by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -204,45 +193,8 @@ fun SettingsScreen(
                     title = stringResource(Res.string.personalization),
             ) {
                 appearanceItem()
-                // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
-                settingsItem(
-                    icon = Icons.Default.Language,
-                    title = { Text(stringResource(Res.string.language_settings)) },
-                    description = { Text(stringResource(Res.string.app_language_desc)) },
-                    trailing = {
-                        if (isIos) {
-                            Text(
-                                text = stringResource(Res.string.open_system_settings),
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        } else {
-                            Box {
-                                Text(
-                                    text = languageOptionText(appLanguage),
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                SettingsDropdownMenu(
-                                    expanded = appLanguageMenuExpanded,
-                                    onDismissRequest = { appLanguageMenuExpanded = false },
-                                ) {
-                                    AppLanguage.entries.forEach { language ->
-                                        DropdownMenuItem(
-                                            text = { Text(languageOptionText(language)) },
-                                            onClick = {
-                                                appLanguageMenuExpanded = false
-                                                track(AppEvent.SettingChanged(SettingKey.APP_LANGUAGE, language.name.lowercase()))
-                                                globalSettingsManager.setLanguage(language)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    onClick = {
-                        if (isIos) openAppSettings() else appLanguageMenuExpanded = true
-                    },
-                )
+                // 应用语言：行、下拉、iOS 跳系统设置都由库出
+                languageItem()
                 // 摘要语言：独立决定 AI 摘要/解读的请求语言。整行只做选语言一件事，「请求新语言」收在面板底部
                 settingsItem(
                     icon = Icons.Default.Translate,
@@ -406,17 +358,6 @@ fun SettingsScreen(
                 aboutItem()
             }
     }
-}
-
-/** 设置分组标题，账户页与设置页共用。 */
-@Composable
-private fun languageOptionText(language: AppLanguage): String {
-    val labelRes = when (language) {
-        AppLanguage.FOLLOW_SYSTEM -> Res.string.language_option_follow_system
-        AppLanguage.CHINESE -> Res.string.language_option_chinese
-        AppLanguage.ENGLISH -> Res.string.language_option_english
-    }
-    return stringResource(labelRes)
 }
 
 /** 语言码 → 该语言自己的写法；清单里没有（如已下线）就显示码本身 */

@@ -5,19 +5,12 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.os.LocaleListCompat
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 import whl.trending.ai.core.App
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.NotificationKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.data.local.AppLanguage
-import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.home.HomeTab
 import whl.trending.ai.ui.home.HomeTabRequest
 import wang.harlon.chatbase.ui.ChatScreen
@@ -42,21 +35,9 @@ class MainActivity : AppCompatActivity() {
         AndroidDailyPicksNotifier.syncOnAppStart(applicationContext)
         handleOpenTabIntent(intent)
 
-        lifecycleScope.launch {
-            globalSettingsManager.appLanguage
-                .distinctUntilChanged()
-                .collect { language ->
-                    val localeList = when (language) {
-                        AppLanguage.CHINESE -> LocaleListCompat.forLanguageTags("zh")
-                        AppLanguage.ENGLISH -> LocaleListCompat.forLanguageTags("en")
-                        AppLanguage.FOLLOW_SYSTEM -> LocaleListCompat.getEmptyLocaleList()
-                    }
-                    AppCompatDelegate.setApplicationLocales(localeList)
-                }
-        }
-
         setContent {
-            // 系统栏深浅由 appsettings-kmp 的 AppearanceTheme 按外观模式同步（App 根上），这里不再重抄一遍 isDark
+            // 系统栏深浅由 appsettings-kmp 的 AppearanceTheme 按外观模式同步（App 根上）；
+            // 界面语言的 per-app locale 同样由库在根上应用（要求本 Activity 是 AppCompatActivity），这里都不再重抄
             UpdateWrapper {
                 App()
             }

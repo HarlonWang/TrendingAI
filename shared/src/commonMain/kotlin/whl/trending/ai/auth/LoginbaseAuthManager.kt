@@ -22,7 +22,6 @@ import whl.trending.ai.core.analytics.setAnalyticsUser
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.getDeviceInfo
-import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.clearAuthTokenCache
@@ -200,7 +199,7 @@ fun initLoginbaseAuth(
         // 邮件语言取 App 自己的语言开关，不走库的平台推断：Compose 的资源不进 iOS bundle 的
         // .lproj，NSBundle.preferredLocalizations 因此恒为 en，界面中文的用户会收到英文验证码邮件
         // （2026-09-01 实测）
-        localeProvider = { globalSettingsManager.currentAppLanguage().isoCode ?: getSystemLanguage() }
+        localeProvider = { globalSettingsManager.uiLanguage() }
         this.client = loginbaseClientInfo()
     }
     val manager = LoginbaseAuthManager(client)

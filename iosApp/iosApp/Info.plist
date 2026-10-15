@@ -4,5 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- 声明了多语言，iOS 系统设置里才有本 App 的「语言」项；appsettings-kmp 的界面语言行在 iOS 上就是跳到那里。
+	     Compose 资源不进 .lproj，这里只是让系统认得，与 values / values-zh 同一份清单 -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+	</array>
 </dict>
 </plist>

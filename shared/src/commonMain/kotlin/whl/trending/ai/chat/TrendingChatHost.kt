@@ -4,7 +4,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import whl.trending.ai.auth.AuthState
@@ -16,7 +15,6 @@ import whl.trending.ai.core.analytics.AiOutcome
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.VoiceInputOutcome
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.remote.installTrendingAuth
 import whl.trending.ai.data.remote.trackAuthTokenCache
@@ -59,10 +57,7 @@ private object TrendingChatHost : ChatHost {
     override fun installId() = globalSettingsManager.getOrCreateInstallId()
 
     /** 仅 app 语言为中文（或跟随系统且系统为中文）时用 zh，其余 en（与后端默认一致）。 */
-    override suspend fun requestLang(): String {
-        val appLang = globalSettingsManager.appLanguage.first()
-        return appLang.isoCode ?: if (getSystemLanguage() == "zh") "zh" else "en"
-    }
+    override suspend fun requestLang(): String = globalSettingsManager.uiLanguage()
 
     override fun configureHttpAuth(config: HttpClientConfig<*>) = config.installTrendingAuth()
     override fun registerAuthorizedClient(client: HttpClient) {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ 系统设置里本 App 的语言清单，与 SettingsManager.UI_LANGUAGES / 库的 language { languages } 同一份；
+     用户在系统设置里改了，appsettings-kmp 启动时会采纳 -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="zh" />
+</locale-config>
