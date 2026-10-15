@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.feedback
 
 import whl.trending.ai.core.Constants
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 
 import androidx.compose.foundation.layout.Column
@@ -53,6 +52,7 @@ import trendingai.shared.generated.resources.feedback_rate_limit
 import trendingai.shared.generated.resources.feedback_error
 import trendingai.shared.generated.resources.feedback_email_invalid
 import trendingai.shared.generated.resources.feedback_github_issues
+import androidx.compose.material3.Scaffold
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -89,7 +89,7 @@ fun FeedbackScreen(
         }
     }
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.feedback)) },

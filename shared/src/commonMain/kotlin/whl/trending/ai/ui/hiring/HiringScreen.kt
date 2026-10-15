@@ -117,10 +117,10 @@ import whl.trending.ai.data.model.HiringPost
 import whl.trending.ai.ui.common.BetaBadge
 import wang.harlon.appsettings.ui.SettingsBottomSheet
 import wang.harlon.appsettings.ui.SettingsDropdownMenu
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HackerNewsOrange
 import whl.trending.ai.ui.home.hackerNewsIcon
+import androidx.compose.material3.Scaffold
 
 private const val SOURCE = "hn_whoishiring"
 
@@ -156,7 +156,7 @@ fun HiringScreen(
     val uiState by viewModel.uiState.collectAsState()
     val ready = uiState as? HiringUiState.Ready
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 // 标题恒为页面名，期次挪到右侧：两者是「这是什么页」和「看的是哪一期」两件事，

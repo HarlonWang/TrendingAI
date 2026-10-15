@@ -87,6 +87,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import whl.trending.ai.update.isVersionBlocked
 import whl.trending.ai.core.platform.getAppVersion
+import androidx.compose.material3.Scaffold
 
 // 路由即页面身份：实现 [Route] 才能进 backStack，`screen` 是必填的——
 // 新增页面在这里填一个枚举值，其余埋点代码一行都不用写（见 core/analytics/ScreenTracking.kt）。
@@ -232,7 +233,7 @@ fun App() {
         // 转场兜底底色：NavDisplay 的 enter/exit 都带 fadeIn/fadeOut，那 200ms 内新旧页 alpha 都 <1，
         // 没有这层就会透出 Android window 背景。window 主题是 AppCompat.DayNight，跟的是系统深浅，
         // 而深色 / 纯黑是应用内的外观模式——系统浅色 + app 内深色时露出的是 #fafafa，整屏白闪。
-        // 取 background 与各页 TrendingScaffold 的 containerColor 对齐；纯黑档不特判
+        // 取 background 与各页 Scaffold 的 containerColor 对齐；纯黑档不特判
         //（主题层的 isAmoled 已把 background 压到全黑）。
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CompositionLocalProvider(LocalUriHandler provides customUriHandler) {

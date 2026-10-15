@@ -56,9 +56,9 @@ import whl.trending.ai.core.toDigestPage
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.repository.globalFavoriteRepository
 import whl.trending.ai.ui.common.AiSummaryBox
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.picks.SourceTag
+import androidx.compose.material3.Scaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +69,7 @@ fun FavoriteListScreen(
 ) {
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.favorites)) },

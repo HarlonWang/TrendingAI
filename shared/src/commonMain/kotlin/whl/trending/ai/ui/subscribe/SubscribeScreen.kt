@@ -1,7 +1,6 @@
 package whl.trending.ai.ui.subscribe
 
 import whl.trending.ai.data.model.SubscribeStatus
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 
 import androidx.compose.foundation.layout.Column
@@ -55,6 +54,7 @@ import trendingai.shared.generated.resources.subscribe_success_resubscribed
 import trendingai.shared.generated.resources.subscribe_success_cancelled
 import trendingai.shared.generated.resources.subscribe_not_subscribed
 import trendingai.shared.generated.resources.subscribe_error
+import androidx.compose.material3.Scaffold
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -93,7 +93,7 @@ fun SubscribeScreen(
         }
     }
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.subscribe_title)) },

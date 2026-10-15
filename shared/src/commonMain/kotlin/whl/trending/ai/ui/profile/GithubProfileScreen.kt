@@ -98,8 +98,8 @@ import whl.trending.ai.auth.isGithubOAuthSupported
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
 import wang.harlon.appsettings.ui.SettingsBottomSheet
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import androidx.compose.material3.Scaffold
 
 /**
  * GitHub 开发者档案子页：从账户 Hub 的「GitHub 主页」入口卡进入。
@@ -136,7 +136,7 @@ fun GithubProfileScreen(
         if (shouldLoadMore) viewModel.loadMoreFeed()
     }
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.account_github_entry)) },

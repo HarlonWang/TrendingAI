@@ -17,8 +17,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import whl.trending.ai.tinyui.TinyUIUpdates
 import whl.trending.ai.tinyui.TrendingTinyUI
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import androidx.compose.material3.Scaffold
 
 /**
  * 订阅页（付费墙本体）。触点是门，这一页是门后面的东西。
@@ -42,7 +42,7 @@ fun SubscriptionScreen(onBack: () -> Unit) {
     // App 启动时已建好（TinyUIUpdates.start），这里通常一进来就有
     val updates by TinyUIUpdates.updates.collectAsState()
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = {},

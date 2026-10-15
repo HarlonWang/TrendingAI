@@ -72,8 +72,8 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.repository.globalFavoriteRepository
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import androidx.compose.material3.Scaffold
 
 private val HnOrange = Color(0xFFFF6600)
 private val GithubDark = Color(0xFF24292F)
@@ -104,7 +104,7 @@ fun DigestScreen(
     val favorites by globalSettingsManager.favorites.collectAsState(emptyList())
     val isFavorite = remember(favorites) { favorites.any { it.url == page.url } }
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = {},
