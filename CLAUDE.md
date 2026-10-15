@@ -56,10 +56,10 @@
     ```
     不传 `indicator` 会回落到默认的 `CircularProgressIndicator`，与全 app 的 `LoadingIndicator` 风格不一致。参照 `Picks/Feed/Trending/Profile` 各 Screen 的写法。
 
-- **页面骨架统一**：所有页面用 `whl.trending.ai.ui.common` 的 `TrendingScaffold` + `TrendingTopAppBar`，**不直接用 `Scaffold` + `TopAppBar`**。
+- **顶栏统一**：所有页面的顶栏用 `whl.trending.ai.ui.common` 的 `TrendingTopAppBar`（或把 `trendingTopAppBarColors()` 传给自己的 `TopAppBar`），页面骨架直接用 M3 `Scaffold`。
 
   ```kotlin
-  TrendingScaffold(
+  Scaffold(
       topBar = {
           TrendingTopAppBar(
               title = { Text(stringResource(Res.string.xxx)) },
@@ -69,15 +69,12 @@
   ) { padding -> /* content */ }
   ```
 
-  - 效果：**顶栏底色恒定为 `surfaceContainer`**，比内容区（`background`）深一档，靠这层固定的层次差把顶栏和内容分开——**不随滚动变色**。全 app 统一为 `pinnedScrollBehavior`——顶栏不走 M3 折叠。**唯一例外是首页的沉浸式浏览**（设置项，默认开）：开启时首页顶栏/子 tab 行/底栏随滚动经 `translationY` 退场（`ui/home/HomeImmersive.kt`，不改测量高度、内容不重排），与 M3 折叠机制无关；二级页不受影响。
+  - 规范的全部内容就是一个颜色：**顶栏底色恒定为 `surfaceContainer`**，比内容区（`background`）深一档，靠这层固定的层次差把顶栏和内容分开——**不随滚动变色**，顶栏不走 M3 折叠。**唯一例外是首页的沉浸式浏览**（设置项，默认开）：开启时首页顶栏/子 tab 行/底栏随滚动经 `translationY` 退场（`ui/home/HomeImmersive.kt`，不改测量高度、内容不重排），与 M3 折叠机制无关；二级页不受影响。
   - **不要改回 M3 默认的滚动变色**（`surface` → `scrolledContainerColor`）。0.22.0～0.23.0 期间用过那套，代价是：顶栏下面挂子 tab 的页面头部会被劈成两截——首页的三源 `SecondaryTabRow` 是内容区的第一项、底色跟着 `background`，顶栏一变色就出现一条突兀的横向断层，而 tab 行自带的 divider 早已承担了分隔职责；pinned 行为下那个变色还是 0→1 的阶跃，断层是"啪"地出现的。参照物 Echo 从一开始就是恒定底色（`MainActivity.kt` 的 `topAppBarColors` 里 `containerColor` 与 `scrolledContainerColor` 同值）。
-  - `scrollBehavior` 的创建、`Modifier.nestedScroll` 挂载、传给 `TopAppBar` 这三步都封在组件内部，经 `LocalTopAppBarScrollBehavior` 送达。**页面不要自己 `remember` behavior，也不要把它当参数往下传**。底色恒定后这套接线只剩"让顶栏正常参与 nestedScroll"这一层作用，保留是为了将来要折叠时不用重接。
-  - 顶栏拆成子 composable 时，子函数里直接调 `TrendingTopAppBar` 即可，不需要任何参数透传。
-  - `TrendingScaffold` 只透传各页实际用到的 `Scaffold` 参数，缺什么补什么。
-  - 没有例外页：`ReadmeScreen` 曾因 WebView 滚动不走 nestedScroll、收不到变色事件而保留原生 `Scaffold` + 写死底色，顶栏改为恒定后这个理由消失，已并回统一写法。
-  - **唯一例外是 appsettings-kmp 自带的页面**（设置页框架、外观、调色台、关于）：它们用库的 M3 `Scaffold` + `TopAppBar`，顶栏颜色由 `core/App.kt` 里 `rememberAppSettings { topBar { containerColor } }` 配成同样的恒定 `surfaceContainer`，视觉与本规范一致。改这些页面去库里改，别在本仓包一层壳。
+  - **历史**：之前这条规则是「所有页面用 `TrendingScaffold` + `TrendingTopAppBar`」，`TrendingScaffold` 在 `Scaffold` 外面包了一层 pinned 滚动行为、`nestedScroll` 和 CompositionLocal 接线。颜色恒定又不折叠时那套接线没有任何可见效果，却把一个颜色约定变成了页面骨架，逼着可复用的页面（appsettings-kmp）也要套它。2026-10-15 删除，骨架回到 M3 `Scaffold`；将来真要折叠顶栏再按需接 `scrollBehavior`，别为假想需求预留。
+  - appsettings-kmp 自带的页面（设置页框架、外观、调色台、关于）用库的 `Scaffold` + `TopAppBar`，顶栏颜色由 `core/App.kt` 里 `rememberAppSettings { topBar { containerColor } }` 配成同一个 `surfaceContainer`。改这些页面去库里改，别在本仓包一层壳。
 
-- **设置 UI 基元在 appsettings-kmp**（包 `wang.harlon.appsettings.ui`，仓库 BaseProjects/appsettings-kmp）：`SettingsGroup`、`InfoDialog`、`SettingsBottomSheet`、`SettingsDropdownMenu` 四个组件已从 `ui/common` 搬走，本仓不再有副本。改规格先改库、发版、bump `libs.versions.toml`（与 eventbase-kmp 同一套双轨与纪律）。设置页框架、外观 / 调色台 / 关于三个整页屏、主题、更新说明都在库里，配置集中在 `core/App.kt` 的 `rememberAppSettings { }`；本仓只剩 `ui/settings/SettingsScreen.kt` 里的业务行、`TrendingAboutScreen` 追加的两行、`ui/settings/AppIcons.kt` 的图标档位声明和 `ui/theme/AppSettingsEvents.kt` 的埋点映射。库自带页面不走 `TrendingScaffold`，靠 `topBar { containerColor }` 配成同样的恒定 `surfaceContainer`——这满足了下一条规范真正的要求（顶栏颜色），`TrendingScaffold` 的 nestedScroll 接线在 pinned + 恒定色下没有可见效果。该库的接入面与设计见其 README 与 `docs/design.md`。
+- **设置 UI 基元在 appsettings-kmp**（包 `wang.harlon.appsettings.ui`，仓库 BaseProjects/appsettings-kmp）：`SettingsGroup`、`InfoDialog`、`SettingsBottomSheet`、`SettingsDropdownMenu` 四个组件已从 `ui/common` 搬走，本仓不再有副本。改规格先改库、发版、bump `libs.versions.toml`（与 eventbase-kmp 同一套双轨与纪律）。设置页框架、外观 / 调色台 / 关于三个整页屏、主题、更新说明都在库里，配置集中在 `core/App.kt` 的 `rememberAppSettings { }`；本仓只剩 `ui/settings/SettingsScreen.kt` 里的业务行、`TrendingAboutScreen` 追加的两行、`ui/settings/AppIcons.kt` 的图标档位声明和 `ui/theme/AppSettingsEvents.kt` 的埋点映射。库自带页面靠 `topBar { containerColor }` 配成同样的恒定 `surfaceContainer`。该库的接入面与设计见其 README 与 `docs/design.md`。
 
 - **设置项用卡片组**：设置页 / 关于页 /「我的」页的列表行一律用 appsettings-kmp 的 `SettingsGroup`，slot API 写法（`settingsItem(...)`），不要再用裸 `ListItem` + `HorizontalDivider`。图标进 40dp 圆形容器（`secondaryContainer`），头像这类自带形状的前导元素走 `leading` slot。规格与取舍见 `docs/settings-style-comparison.md`。
 

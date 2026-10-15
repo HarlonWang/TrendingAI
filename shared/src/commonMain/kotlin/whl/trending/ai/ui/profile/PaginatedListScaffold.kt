@@ -34,8 +34,8 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.list_load_failed
 import trendingai.shared.generated.resources.profile_retry
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import androidx.compose.material3.Scaffold
 
 /**
  * GitHub 下钻列表的通用骨架：TopAppBar + loading/error/empty/列表 四态 + 触底翻页。
@@ -65,7 +65,7 @@ fun <T> PaginatedListScaffold(
         if (shouldLoadMore) onLoadMore()
     }
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = { Text(title) },

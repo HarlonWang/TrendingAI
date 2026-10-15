@@ -58,9 +58,9 @@ import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.shareText
 import whl.trending.ai.ui.common.ErrorState
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.common.aiShareText
+import androidx.compose.material3.Scaffold
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -112,7 +112,7 @@ fun ReadmeScreen(
         }
     }
 
-    TrendingScaffold(
+    Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TrendingTopAppBar(

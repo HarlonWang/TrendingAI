@@ -19,8 +19,8 @@ import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.data_sources_title
 import whl.trending.ai.tinyui.TinyUIUpdates
 import whl.trending.ai.tinyui.TrendingTinyUI
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
+import androidx.compose.material3.Scaffold
 
 /**
  * 数据来源与更新 —— 三源 + Picks 的更新节奏与收录范围，全 app 唯一的口径文案载体。
@@ -37,7 +37,7 @@ import whl.trending.ai.ui.common.TrendingTopAppBar
 fun DataSourcesScreen(onBack: () -> Unit) {
     val updates by TinyUIUpdates.updates.collectAsState()
 
-    TrendingScaffold(
+    Scaffold(
         topBar = {
             TrendingTopAppBar(
                 title = { Text(stringResource(Res.string.data_sources_title)) },

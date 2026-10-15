@@ -59,7 +59,6 @@ import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.ui.common.HeaderOverlayLayout
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
-import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.WorkOutline
@@ -72,6 +71,7 @@ import whl.trending.ai.ui.picks.PicksViewModel
 import whl.trending.ai.ui.profile.ProfileScreen
 import whl.trending.ai.ui.trending.TrendingScreen
 import whl.trending.ai.ui.trending.TrendingViewModel
+import androidx.compose.material3.Scaffold
 
 /**
  * 首页骨架：底栏胶囊三项（首页 / Picks / 我的）+ 右侧独立的 AI 对话 FAB。
@@ -130,7 +130,7 @@ fun HomeScreen(
         selectedTab.screen?.let(::trackScreenView)
     }
 
-    TrendingScaffold(
+    Scaffold(
         // 顶栏不占 Scaffold 的 topBar 槽位：与悬浮底栏不占 bottomBar 同理——头部要浮在
         // 铺满全高的内容之上（沉浸式地基，见 LocalContentTopPadding 的 KDoc），
         // 占了槽位内容就被顶下去，将来头部收起时内容没法原地全展开。
