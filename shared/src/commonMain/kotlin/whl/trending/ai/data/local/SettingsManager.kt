@@ -68,7 +68,9 @@ data class SummaryLanguage(val isoCode: String?) {
 
 @OptIn(ExperimentalSettingsApi::class)
 class SettingsManager(private val settings: ObservableSettings) {
-    // 旧 key prefs_language 存的是 AppLanguage 的 Int ordinal，界面语言库化后废弃、不迁移（老用户回到跟随系统一次），勿复用
+    // 旧 key prefs_language 存的是 AppLanguage 的 Int ordinal，界面语言库化后不再写、不迁移（老用户回到跟随系统一次），
+    // 只在摘要语言的一次性初始化里读；勿复用
+    private val LEGACY_LANGUAGE_KEY = "prefs_language"
     private val SUMMARY_LANGUAGE_KEY = "prefs_summary_language"
     private val LAST_UPDATE_CHECK_KEY = "prefs_last_update_check"
     private val FAVORITES_KEY = "prefs_favorites"
@@ -120,9 +122,12 @@ class SettingsManager(private val settings: ObservableSettings) {
 
 
     init {
-        // 摘要语言一次性迁移：首次构造用当时的 App 语言初始化，解耦不改变既有用户看到的摘要语言
+        // 摘要语言一次性迁移：首次构造用当时的 App 语言初始化，解耦不改变既有用户看到的摘要语言。
+        // 从摘要语言上线前的版本直接升上来的用户，App 语言还在旧 key prefs_language（Int ordinal：1 中文、2 英文）里，
+        // 这里是它唯一还被读的地方
         if (!settings.hasKey(SUMMARY_LANGUAGE_KEY)) {
-            val initial = explicitAppLanguage()?.let(::SummaryLanguage) ?: SummaryLanguage.FOLLOW_SYSTEM
+            val legacy = when (settings.getIntOrNull(LEGACY_LANGUAGE_KEY)) { 1 -> "zh"; 2 -> "en"; else -> null }
+            val initial = (explicitAppLanguage() ?: legacy)?.let(::SummaryLanguage) ?: SummaryLanguage.FOLLOW_SYSTEM
             settings.putString(SUMMARY_LANGUAGE_KEY, initial.storageValue)
         }
     }
