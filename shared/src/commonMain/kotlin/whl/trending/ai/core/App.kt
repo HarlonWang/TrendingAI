@@ -83,6 +83,8 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.isIosPlatform
 import whl.trending.ai.update.globalUpdateChecker
 import trendingai.shared.generated.resources.privacy_policy
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 // 路由即页面身份：实现 [Route] 才能进 backStack，`screen` 是必填的——
 // 新增页面在这里填一个枚举值，其余埋点代码一行都不用写（见 core/analytics/ScreenTracking.kt）。
@@ -183,6 +185,8 @@ fun App() {
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(remember { globalSettingsManager.currentAppLanguage() })
     val privacyTitle = stringResource(Res.string.privacy_policy)
     val isIos = isIosPlatform()
+    // 强更门亮着时更新说明弹窗要让路：弹窗由库在根上承载、在门外，靠这个状态压住
+    var forceUpdateBlocked by remember { mutableStateOf(false) }
     val appSettings = rememberAppSettings {
         settings = globalSettings
         onEvent = ::trackAppSettingsEvent
@@ -206,7 +210,8 @@ fun App() {
                         track(AppEvent.SettingsItemClicked(SettingKey.CHANGELOG))
                         openExternalUrl(link.url, "")
                     }
-                    // 隐私政策在 App 内 WebView 打开，其余走统一出口
+                    // 所有链接走统一出口（开了 Custom Tab 就 Custom Tab，否则 App 内 WebView 兜底）；
+                    // 隐私政策带上标题，WebView 兜底时顶栏才有字
                     is AboutLink.Privacy -> openExternalUrl(link.url, privacyTitle)
                     else -> openExternalUrl(link.url, "")
                 }
@@ -215,6 +220,7 @@ fun App() {
         whatsNew {
             bundled = { Res.readBytes("files/whatsnew.json").decodeToString() }
             language = { appLanguage.isoCode ?: getSystemLanguage() }
+            enabled = { !forceUpdateBlocked }
         }
     }
     AppSettingsRoot(appSettings) {
@@ -225,7 +231,7 @@ fun App() {
         //（主题层的 isAmoled 已把 background 压到全黑）。
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
-                ForceUpdateGate {
+                ForceUpdateGate(onBlockedChange = { forceUpdateBlocked = it }) {
                     SignInHintHost()
                     LoginSheetHost()
                     SponsorLinkHost()

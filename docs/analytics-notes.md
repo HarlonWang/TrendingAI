@@ -489,7 +489,7 @@ Android 的 Custom Tab 没有这层系统框，`canceled` 只来自用户看到 
 
 ## 外观设置库化（appsettings-kmp，2026-10-14 起）
 
-外观状态与设置页搬到 appsettings-kmp，埋点由 `ui/theme/AppearanceEvents.kt` 从库事件映射，口径有三处变化：
+外观状态与设置页搬到 appsettings-kmp，埋点由 `ui/theme/AppSettingsEvents.kt` 从库事件映射，口径有三处变化：
 
 - `setting_changed(key=seed_color)` 新增取值 `system`（壁纸取色，Android 12+ 才有入口）；预设 id、`custom` 不变。
 - `setting_changed(key=app_icon)` 从「点击即报」改为「切换成功后报」，失败不计。之前点击与落定几乎同义，曲线不会有可见断点。

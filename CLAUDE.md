@@ -75,6 +75,7 @@
   - 顶栏拆成子 composable 时，子函数里直接调 `TrendingTopAppBar` 即可，不需要任何参数透传。
   - `TrendingScaffold` 只透传各页实际用到的 `Scaffold` 参数，缺什么补什么。
   - 没有例外页：`ReadmeScreen` 曾因 WebView 滚动不走 nestedScroll、收不到变色事件而保留原生 `Scaffold` + 写死底色，顶栏改为恒定后这个理由消失，已并回统一写法。
+  - **唯一例外是 appsettings-kmp 自带的页面**（设置页框架、外观、调色台、关于）：它们用库的 M3 `Scaffold` + `TopAppBar`，顶栏颜色由 `core/App.kt` 里 `rememberAppSettings { topBar { containerColor } }` 配成同样的恒定 `surfaceContainer`，视觉与本规范一致。改这些页面去库里改，别在本仓包一层壳。
 
 - **设置 UI 基元在 appsettings-kmp**（包 `wang.harlon.appsettings.ui`，仓库 BaseProjects/appsettings-kmp）：`SettingsGroup`、`InfoDialog`、`SettingsBottomSheet`、`SettingsDropdownMenu` 四个组件已从 `ui/common` 搬走，本仓不再有副本。改规格先改库、发版、bump `libs.versions.toml`（与 eventbase-kmp 同一套双轨与纪律）。设置页框架、外观 / 调色台 / 关于三个整页屏、主题、更新说明都在库里，配置集中在 `core/App.kt` 的 `rememberAppSettings { }`；本仓只剩 `ui/settings/SettingsScreen.kt` 里的业务行、`TrendingAboutScreen` 追加的两行、`ui/settings/AppIcons.kt` 的图标档位声明和 `ui/theme/AppSettingsEvents.kt` 的埋点映射。库自带页面不走 `TrendingScaffold`，靠 `topBar { containerColor }` 配成同样的恒定 `surfaceContainer`——这满足了下一条规范真正的要求（顶栏颜色），`TrendingScaffold` 的 nestedScroll 接线在 pinned + 恒定色下没有可见效果。该库的接入面与设计见其 README 与 `docs/design.md`。
 
