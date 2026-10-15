@@ -96,10 +96,10 @@ import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
 import whl.trending.ai.data.local.globalSettingsManager
 import whl.trending.ai.data.model.QuotaResponse
-import whl.trending.ai.ui.common.InfoDialog
+import wang.harlon.appsettings.ui.InfoDialog
 import whl.trending.ai.ui.common.LocalContentBottomPadding
 import whl.trending.ai.ui.common.LocalContentTopPadding
-import whl.trending.ai.ui.common.SettingsGroup
+import wang.harlon.appsettings.ui.SettingsGroup
 import whl.trending.ai.ui.subscription.ManageSubscriptionItem
 
 /**

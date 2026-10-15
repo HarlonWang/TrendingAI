@@ -97,7 +97,7 @@ import trendingai.shared.generated.resources.time_minutes_ago
 import whl.trending.ai.auth.isGithubOAuthSupported
 import whl.trending.ai.core.AccountLink
 import whl.trending.ai.core.DateTimeUtils
-import whl.trending.ai.ui.common.TrendingBottomSheet
+import wang.harlon.appsettings.ui.SettingsBottomSheet
 import whl.trending.ai.ui.common.TrendingScaffold
 import whl.trending.ai.ui.common.TrendingTopAppBar
 
@@ -243,7 +243,7 @@ fun GithubProfileScreen(
     }
 
     if (showRulesSheet) {
-        TrendingBottomSheet(
+        SettingsBottomSheet(
             onDismissRequest = { showRulesSheet = false },
             title = stringResource(Res.string.feed_rules_title),
         ) {

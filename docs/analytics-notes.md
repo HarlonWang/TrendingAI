@@ -486,3 +486,11 @@ Android 的 Custom Tab 没有这层系统框，`canceled` 只来自用户看到 
 
 反过来的一条：iOS 用户一旦通过系统框，GitHub 授权页在共享 cookie 的会话里多半直接回跳，
 `auth_started → auth_finished(success)` 的耗时会明显短于 Android。比较登录时长也要分平台。
+
+## 外观设置库化（appsettings-kmp，2026-10-14 起）
+
+外观状态与设置页搬到 appsettings-kmp，埋点由 `ui/theme/AppSettingsEvents.kt` 从库事件映射，口径有三处变化：
+
+- `setting_changed(key=seed_color)` 新增取值 `system`（壁纸取色，Android 12+ 才有入口）；预设 id、`custom` 不变。
+- `setting_changed(key=app_icon)` 从「点击即报」改为「切换成功后报」，失败不计。之前点击与落定几乎同义，曲线不会有可见断点。
+- 外观存储换成库的 JSON key、不读旧 key：升级到该版本的老用户主题重置一次为默认，`theme` / `seed_color` 的分布在该版本首启后会出现一次向默认值的回摆，不是用户行为。

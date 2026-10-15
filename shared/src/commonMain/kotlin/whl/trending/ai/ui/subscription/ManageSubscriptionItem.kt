@@ -32,8 +32,8 @@ import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.model.PaddleSubscription
 import whl.trending.ai.data.repository.BillingRepository
-import whl.trending.ai.ui.common.InfoDialog
-import whl.trending.ai.ui.common.SettingsGroup
+import wang.harlon.appsettings.ui.InfoDialog
+import wang.harlon.appsettings.ui.SettingsGroup
 
 /**
  * 账户页的「管理订阅」行。取消订阅本身完全由 Paddle 客户门户承担，这里只做跳转入口——

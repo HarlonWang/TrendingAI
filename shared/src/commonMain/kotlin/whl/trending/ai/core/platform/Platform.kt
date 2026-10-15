@@ -1,6 +1,5 @@
 package whl.trending.ai.core.platform
 
-import whl.trending.ai.data.local.AppIconPreset
 import whl.trending.ai.data.local.globalSettingsManager
 
 interface Platform {
@@ -56,12 +55,6 @@ expect fun shareText(text: String)
 const val UNKNOWN_APP_VERSION: String = "unknown"
 
 expect fun getAppVersion(): String
-
-/** 是否支持切换桌面图标（Android activity-alias 机制）。false 时外观页隐藏「应用图标」整块。 */
-expect fun supportsAlternateAppIcons(): Boolean
-
-/** 切换桌面图标：启用 [preset] 对应的 launcher alias、禁用其余；不支持的平台为空操作。 */
-expect fun applyAppIcon(preset: AppIconPreset)
 
 expect fun isIosPlatform(): Boolean
 

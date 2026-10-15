@@ -20,14 +20,13 @@ import whl.trending.ai.core.platform.openDownloadUrl
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.local.AppLanguage
 import whl.trending.ai.data.local.globalSettingsManager
-import whl.trending.ai.update.pickByLanguage
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, downloadUrl: String, onDismiss: () -> Unit) {
     val appLanguage by globalSettingsManager.appLanguage
         .collectAsState(AppLanguage.FOLLOW_SYSTEM)
     val lang = appLanguage.isoCode ?: getSystemLanguage()
-    val items = updateInfo.whatsNew?.let { pickByLanguage(lang, it.zh, it.en) }.orEmpty()
+    val items = updateInfo.whatsNew?.pick(lang).orEmpty()
 
     AlertDialog(
         onDismissRequest = onDismiss,

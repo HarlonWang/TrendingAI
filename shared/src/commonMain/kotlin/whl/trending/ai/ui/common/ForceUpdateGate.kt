@@ -48,7 +48,11 @@ import whl.trending.ai.update.refreshAppConfig
  * - 整屏替换而非弹窗：没有 dismiss 语义可绕过，也天然避免与 What's New 双弹窗叠加。
  */
 @Composable
-fun ForceUpdateGate(content: @Composable () -> Unit) {
+fun ForceUpdateGate(
+    /** 阻断状态变化时回调，供根上挂在门外的东西（如库承载的更新说明弹窗）让路。 */
+    onBlockedChange: (Boolean) -> Unit = {},
+    content: @Composable () -> Unit,
+) {
     val current = remember { getAppVersion() }
     var minVersion by remember { mutableStateOf(globalSettingsManager.getCachedMinVersion()) }
 
@@ -56,7 +60,10 @@ fun ForceUpdateGate(content: @Composable () -> Unit) {
         refreshAppConfig()?.let { minVersion = it.minVersion }
     }
 
-    if (isVersionBlocked(current, minVersion)) {
+    val blocked = isVersionBlocked(current, minVersion)
+    LaunchedEffect(blocked) { onBlockedChange(blocked) }
+
+    if (blocked) {
         LaunchedEffect(minVersion) {
             track(AppEvent.ForceUpdate(ForceUpdateStep.SHOWN, current, minVersion.orEmpty()))
         }

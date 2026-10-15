@@ -44,11 +44,12 @@ kotlin {
             // api 而非 implementation：ChatContext / ChatScreen 直接出现在 shared 的
             // public API（globalChatScreen、各入口页），消费者要在编译期看得见
             api(libs.chatbase.kmp)
+            // api 而非 implementation：androidLibrary/updater 直接调库的 isWhatsNewPending
+            api(libs.appsettings.kmp)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
-            implementation(libs.androidx.graphics.shapes)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
@@ -68,7 +69,6 @@ kotlin {
             implementation(libs.multiplatform.settings.coroutines)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
-            implementation(libs.material.kolor)
             implementation(libs.kmp.webview)
             // api 而非 implementation：shared 的 public API 直接暴露了库的类型
             // （LoginbaseAuthManager.client、globalOAuthLauncher、initLoginbaseAuth），

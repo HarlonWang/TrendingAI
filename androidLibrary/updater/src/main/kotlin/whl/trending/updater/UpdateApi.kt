@@ -9,8 +9,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import whl.trending.ai.update.WhatsNewInfo
-import whl.trending.ai.update.parseWhatsNew
+import wang.harlon.appsettings.whatsnew.WhatsNewInfo
+import wang.harlon.appsettings.whatsnew.parseWhatsNew
 
 @Serializable
 private data class GitHubRelease(

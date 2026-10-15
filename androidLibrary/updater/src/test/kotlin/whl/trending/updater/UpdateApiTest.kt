@@ -3,7 +3,7 @@ package whl.trending.updater
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import whl.trending.ai.update.WhatsNewInfo
+import wang.harlon.appsettings.whatsnew.WhatsNewInfo
 
 class UpdateApiTest {
 
@@ -60,19 +60,19 @@ class UpdateApiTest {
 
     @Test
     fun accept_matching_version_with_content() {
-        val info = WhatsNewInfo("0.21.0", zh = listOf("修复崩溃"), en = listOf("Fix crash"))
+        val info = WhatsNewInfo("0.21.0", mapOf("zh" to listOf("修复崩溃"), "en" to listOf("Fix crash")))
         assertEquals(info, acceptWhatsNew(info, "0.21.0"))
     }
 
     @Test
     fun reject_version_mismatch() {
-        val info = WhatsNewInfo("0.20.0", zh = listOf("旧内容"), en = emptyList())
+        val info = WhatsNewInfo("0.20.0", mapOf("zh" to listOf("旧内容"), "en" to emptyList()))
         assertNull(acceptWhatsNew(info, "0.21.0"))
     }
 
     @Test
     fun reject_empty_content() {
-        val info = WhatsNewInfo("0.21.0", zh = emptyList(), en = emptyList())
+        val info = WhatsNewInfo("0.21.0", mapOf("zh" to emptyList(), "en" to emptyList()))
         assertNull(acceptWhatsNew(info, "0.21.0"))
     }
 
