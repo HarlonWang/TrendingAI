@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,10 +15,7 @@ import trendingai.shared.generated.resources.Res
 import trendingai.shared.generated.resources.app_icon_cream
 import trendingai.shared.generated.resources.ic_app_glyph
 import wang.harlon.appsettings.appearance.AppIconOption
-import wang.harlon.appsettings.appearance.AppIconState
-import wang.harlon.appsettings.appearance.AppearanceEvent
 import wang.harlon.appsettings.appearance.DefaultPalette
-import wang.harlon.appsettings.appearance.rememberAppIconState
 
 /**
  * 动态图标档位。alias 在 androidApp 的 manifest 里声明，图标资源在 res；切换机制、真实状态读取与选择 UI 在 appsettings-kmp。
@@ -46,20 +42,15 @@ private val iconVariants = listOf(
     IconVariant("cream", "whl.trending.ai.MainActivityCream", 0xFFF1E7D8, darkGlyph = true, label = { stringResource(Res.string.app_icon_cream) }),
 )
 
-@Composable
-fun rememberTrendingAppIcons(onEvent: (AppearanceEvent) -> Unit): AppIconState {
-    val options = remember {
-        iconVariants.map { variant ->
-            AppIconOption(
-                id = variant.id,
-                androidAlias = variant.alias,
-                iosIconName = null,
-                label = variant.label,
-                preview = { GlyphPreview(variant) },
-            )
-        }
-    }
-    return rememberAppIconState(options, onEvent)
+/** 交给 `rememberAppSettings { appearance { appIcons = trendingAppIcons } }`。 */
+val trendingAppIcons: List<AppIconOption> = iconVariants.map { variant ->
+    AppIconOption(
+        id = variant.id,
+        androidAlias = variant.alias,
+        iosIconName = null,
+        label = variant.label,
+        preview = { GlyphPreview(variant) },
+    )
 }
 
 /** 「底色圆 + 箭头 glyph」实时合成，与真实图标同构、零位图资源。 */

@@ -14,17 +14,11 @@ import whl.trending.ai.ui.profile.GithubProfileScreen
 import whl.trending.ai.ui.profile.GithubUserListMode
 import whl.trending.ai.ui.profile.GithubUserListScreen
 import whl.trending.ai.ui.profile.RepoListScreen
-import whl.trending.ai.ui.settings.AboutScreen
-import whl.trending.ai.ui.settings.AppearanceScreen
-import whl.trending.ai.ui.settings.ColorLabScreen
 import whl.trending.ai.ui.settings.DataSourcesScreen
 import whl.trending.ai.ui.settings.SettingsScreen
 import whl.trending.ai.ui.hiring.HiringScreen
 import whl.trending.ai.ui.digest.DigestScreen
 import whl.trending.ai.ui.subscribe.SubscribeScreen
-import wang.harlon.appsettings.appearance.AppearanceTheme
-import wang.harlon.appsettings.appearance.rememberAppearanceState
-import whl.trending.ai.ui.theme.trackAppearanceEvent
 import whl.trending.ai.ui.webview.WebViewScreen
 
 import androidx.compose.animation.core.tween
@@ -70,11 +64,25 @@ import whl.trending.ai.ui.common.OAuthOutcomeHost
 import whl.trending.ai.ui.common.CheckoutResultHost
 import whl.trending.ai.ui.common.ProReconcileHost
 import whl.trending.ai.ui.common.SponsorLinkHost
-import wang.harlon.appsettings.whatsnew.WhatsNewHost
-import wang.harlon.appsettings.whatsnew.rememberWhatsNewState
 import whl.trending.ai.data.local.globalSettings
-import whl.trending.ai.core.platform.getAppVersion
 import whl.trending.ai.core.platform.getSystemLanguage
+import wang.harlon.appsettings.AppSettingsRoot
+import wang.harlon.appsettings.AppearanceScreen
+import wang.harlon.appsettings.ColorLabScreen
+import wang.harlon.appsettings.rememberAppSettings
+import wang.harlon.appsettings.about.AboutLink
+import wang.harlon.appsettings.ui.SettingsPage
+import whl.trending.ai.ui.settings.TrendingAboutScreen
+import whl.trending.ai.ui.settings.trendingAppIcons
+import whl.trending.ai.ui.settings.trendingUpdateStatus
+import whl.trending.ai.ui.theme.trackAppSettingsEvent
+import whl.trending.ai.core.Constants
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.SettingKey
+import whl.trending.ai.core.analytics.track
+import whl.trending.ai.core.platform.isIosPlatform
+import whl.trending.ai.update.globalUpdateChecker
+import trendingai.shared.generated.resources.privacy_policy
 
 // 路由即页面身份：实现 [Route] 才能进 backStack，`screen` 是必填的——
 // 新增页面在这里填一个枚举值，其余埋点代码一行都不用写（见 core/analytics/ScreenTracking.kt）。
@@ -171,9 +179,45 @@ fun App() {
         }
     }
 
-    // 外观状态挂在根上：深浅、配色、切换动画与系统栏都在 appsettings-kmp；事件映射到本 App 的埋点词汇
-    val appearance = rememberAppearanceState(settings = globalSettings, onEvent = ::trackAppearanceEvent)
-    AppearanceTheme(appearance) {
+    // 设置层的全部配置在这里：主题、系统栏、更新说明、关于页数据，事件映射到本 App 的埋点词汇
+    val appLanguage by globalSettingsManager.appLanguage.collectAsState(remember { globalSettingsManager.currentAppLanguage() })
+    val privacyTitle = stringResource(Res.string.privacy_policy)
+    val isIos = isIosPlatform()
+    val appSettings = rememberAppSettings {
+        settings = globalSettings
+        onEvent = ::trackAppSettingsEvent
+        // 全 app 顶栏恒定 surfaceContainer（TrendingTopAppBar 同一约定）
+        topBar { containerColor = { MaterialTheme.colorScheme.surfaceContainer } }
+        appearance { appIcons = trendingAppIcons }
+        about {
+            changelog = Constants.CHANGELOG_URL
+            website = Constants.OFFICIAL_WEBSITE_URL
+            privacy = Constants.PRIVACY_POLICY_URL
+            // 检查更新：apk 渠道点按自建检查，iOS 跳官网；play/fdroid 渠道由商店接管，不显示
+            if (globalUpdateChecker.isEnabled || isIos) {
+                checkUpdates(status = { trendingUpdateStatus(isIos) }) {
+                    track(AppEvent.SettingsItemClicked(SettingKey.CHECK_UPDATE))
+                    if (isIos) openExternalUrl(Constants.OFFICIAL_WEBSITE_URL, "") else globalUpdateChecker.manualCheck()
+                }
+            }
+            onLinkClick = { link ->
+                when (link) {
+                    is AboutLink.Changelog -> {
+                        track(AppEvent.SettingsItemClicked(SettingKey.CHANGELOG))
+                        openExternalUrl(link.url, "")
+                    }
+                    // 隐私政策在 App 内 WebView 打开，其余走统一出口
+                    is AboutLink.Privacy -> openExternalUrl(link.url, privacyTitle)
+                    else -> openExternalUrl(link.url, "")
+                }
+            }
+        }
+        whatsNew {
+            bundled = { Res.readBytes("files/whatsnew.json").decodeToString() }
+            language = { appLanguage.isoCode ?: getSystemLanguage() }
+        }
+    }
+    AppSettingsRoot(appSettings) {
         // 转场兜底底色：NavDisplay 的 enter/exit 都带 fadeIn/fadeOut，那 200ms 内新旧页 alpha 都 <1，
         // 没有这层就会透出 Android window 背景。window 主题是 AppCompat.DayNight，跟的是系统深浅，
         // 而深色 / 纯黑是应用内的外观模式——系统浅色 + app 内深色时露出的是 #fafafa，整屏白闪。
@@ -182,16 +226,6 @@ fun App() {
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CompositionLocalProvider(LocalUriHandler provides customUriHandler) {
                 ForceUpdateGate {
-                    // 升级后首启弹一次更新说明：状态与弹窗在 appsettings-kmp，这里只给版本、JSON 与展示语言
-                    val whatsNew = rememberWhatsNewState(
-                        settings = globalSettings,
-                        currentVersion = remember { getAppVersion() },
-                        load = { Res.readBytes("files/whatsnew.json").decodeToString() },
-                    )
-                    val appLanguage by globalSettingsManager.appLanguage.collectAsState(
-                        remember { globalSettingsManager.currentAppLanguage() }
-                    )
-                    WhatsNewHost(whatsNew, language = appLanguage.isoCode ?: getSystemLanguage())
                     SignInHintHost()
                     LoginSheetHost()
                     SponsorLinkHost()
@@ -261,33 +295,15 @@ fun App() {
                             }
 
                             is Appearance -> NavEntry(key) {
-                                AppearanceScreen(
-                                    onBack = {
-                                        backStack.safePop()
-                                    },
-                                    onNavigateToColorLab = {
-                                        backStack.add(ColorLab)
-                                    }
-                                )
+                                AppearanceScreen(onBack = { backStack.safePop() }, onOpenColorLab = { backStack.add(ColorLab) })
                             }
 
                             is ColorLab -> NavEntry(key) {
-                                ColorLabScreen(
-                                    onBack = {
-                                        backStack.safePop()
-                                    }
-                                )
+                                ColorLabScreen(onBack = { backStack.safePop() })
                             }
 
                             is About -> NavEntry(key) {
-                                AboutScreen(
-                                    onBack = {
-                                        backStack.safePop()
-                                    },
-                                    onNavigateToWebPage = { url, title ->
-                                        openExternalUrl(url, title)
-                                    }
-                                )
+                                TrendingAboutScreen(onBack = { backStack.safePop() })
                             }
 
                             is DataSources -> NavEntry(key) {
@@ -338,10 +354,11 @@ fun App() {
                             is Settings -> NavEntry(key) {
                                 SettingsScreen(
                                     onBack = { backStack.safePop() },
-                                    onNavigateToAppearance = { backStack.add(Appearance) },
+                                    onOpen = { page ->
+                                        backStack.add(when (page) { SettingsPage.Appearance -> Appearance; SettingsPage.About -> About })
+                                    },
                                     onNavigateToSubscribe = { backStack.add(Subscribe) },
                                     onNavigateToFeedback = { backStack.add(Feedback()) },
-                                    onNavigateToAbout = { backStack.add(About) },
                                     onNavigateToDataSources = { backStack.add(DataSources) },
                                 )
                             }

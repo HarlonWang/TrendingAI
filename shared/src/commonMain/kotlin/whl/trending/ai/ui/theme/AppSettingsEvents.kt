@@ -6,12 +6,14 @@ import wang.harlon.appsettings.appearance.ThemeMode
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.SettingKey
 import whl.trending.ai.core.analytics.track
+import wang.harlon.appsettings.AppSettingsEvent
 
 /**
- * appsettings-kmp 的外观事件 → 本 App 的埋点词汇（`telemetry-vocabulary.md`）。
+ * appsettings-kmp 的事件 → 本 App 的埋点词汇（`telemetry-vocabulary.md`）。目前只映射外观事件。
  * 取值沿用库化前的口径：theme 是 follow_system / light / dark / amoled，seed_color 是预设 id、custom 或 system。
  */
-fun trackAppearanceEvent(event: AppearanceEvent) {
+fun trackAppSettingsEvent(event: AppSettingsEvent) {
+    if (event !is AppearanceEvent) return   // 更新说明等暂不入词汇表
     when (event) {
         is AppearanceEvent.ModeChanged -> track(AppEvent.SettingChanged(SettingKey.THEME, event.mode.analyticsValue))
         is AppearanceEvent.ColorSelected -> when (val choice = event.choice) {

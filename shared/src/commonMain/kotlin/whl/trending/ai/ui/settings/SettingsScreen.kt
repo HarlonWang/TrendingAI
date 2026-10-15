@@ -10,17 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwipeVertical
 import androidx.compose.material.icons.filled.Translate
@@ -52,10 +48,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import trendingai.shared.generated.resources.Res
-import trendingai.shared.generated.resources.about
 import trendingai.shared.generated.resources.app_language_desc
-import trendingai.shared.generated.resources.appearance
-import trendingai.shared.generated.resources.back
 import trendingai.shared.generated.resources.cancel
 import trendingai.shared.generated.resources.chat_title
 import trendingai.shared.generated.resources.close
@@ -83,7 +76,6 @@ import trendingai.shared.generated.resources.open_links_in_browser_desc
 import trendingai.shared.generated.resources.open_system_settings
 import trendingai.shared.generated.resources.personalization
 import trendingai.shared.generated.resources.picks_title
-import trendingai.shared.generated.resources.settings
 import trendingai.shared.generated.resources.settings_group_general
 import trendingai.shared.generated.resources.subscribe_title
 import trendingai.shared.generated.resources.subscription_reminders
@@ -119,11 +111,11 @@ import whl.trending.ai.notification.globalDailyPicksNotifier
 import wang.harlon.appsettings.ui.SettingsGroup
 import wang.harlon.appsettings.ui.SettingsBottomSheet
 import wang.harlon.appsettings.ui.SettingsDropdownMenu
-import whl.trending.ai.ui.common.TrendingScaffold
-import whl.trending.ai.ui.common.TrendingTopAppBar
 import whl.trending.ai.ui.home.HomeTab
-import wang.harlon.appsettings.appearance.LocalAppearanceState
-import wang.harlon.appsettings.appearance.label
+import wang.harlon.appsettings.SettingsScreen as AppSettingsScreen
+import wang.harlon.appsettings.appearanceItem
+import wang.harlon.appsettings.aboutItem
+import wang.harlon.appsettings.ui.SettingsPage
 
 /**
  * 设置页：应用偏好的唯一落点，从账户页（后续版本为「我的」tab 的扩展菜单）进入。
@@ -139,17 +131,15 @@ import wang.harlon.appsettings.appearance.label
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onNavigateToAppearance: () -> Unit = {},
+    onOpen: (SettingsPage) -> Unit,
     onNavigateToSubscribe: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
     onNavigateToDataSources: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {},
 ) {
     val isIos = isIosPlatform()
     // 初值一律同步读，不写默认常量：flow 的首次发射晚于首帧组合，写常量等于先渲染一次
     // 默认值再跳到真实值——开关会当成「用户刚拨动」播一遍 thumb 滑动动画（M3 Switch 的
     // checked 是 Transition 驱动），下拉行的 trailing 文案也会闪一下。
-    val appearance = LocalAppearanceState.current
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(
         remember { globalSettingsManager.currentAppLanguage() }
     )
@@ -208,250 +198,213 @@ fun SettingsScreen(
         LanguageCaptureDialog(isLoggedIn = isLoggedIn, onDismiss = { showLangCaptureDialog = false })
     }
 
-    TrendingScaffold(
-        topBar = {
-            TrendingTopAppBar(
-                title = { Text(stringResource(Res.string.settings)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
-                    }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            item(key = "group_personalization") {
-                SettingsGroup(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+    // 页面壳、滚动与边距由 appsettings-kmp 的设置页框架给，这里只摆组与行；通用行（外观 / 关于）由库出
+    AppSettingsScreen(onBack = onBack, onOpen = onOpen, snackbarHost = { SnackbarHost(snackbarHostState) }) {
+            SettingsGroup(
                     title = stringResource(Res.string.personalization),
-                ) {
-                    settingsItem(
-                        icon = Icons.Default.Palette,
-                        title = { Text(stringResource(Res.string.appearance)) },
-                        trailing = {
+            ) {
+                appearanceItem()
+                // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
+                settingsItem(
+                    icon = Icons.Default.Language,
+                    title = { Text(stringResource(Res.string.language_settings)) },
+                    description = { Text(stringResource(Res.string.app_language_desc)) },
+                    trailing = {
+                        if (isIos) {
                             Text(
-                                text = appearance.appearance.mode.label(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        },
-                        onClick = onNavigateToAppearance,
-                    )
-                    // 应用语言：只管界面文案；iOS 由系统的按 App 语言设置接管，跳系统设置
-                    settingsItem(
-                        icon = Icons.Default.Language,
-                        title = { Text(stringResource(Res.string.language_settings)) },
-                        description = { Text(stringResource(Res.string.app_language_desc)) },
-                        trailing = {
-                            if (isIos) {
-                                Text(
-                                    text = stringResource(Res.string.open_system_settings),
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            } else {
-                                Box {
-                                    Text(
-                                        text = languageOptionText(appLanguage),
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    SettingsDropdownMenu(
-                                        expanded = appLanguageMenuExpanded,
-                                        onDismissRequest = { appLanguageMenuExpanded = false },
-                                    ) {
-                                        AppLanguage.entries.forEach { language ->
-                                            DropdownMenuItem(
-                                                text = { Text(languageOptionText(language)) },
-                                                onClick = {
-                                                    appLanguageMenuExpanded = false
-                                                    track(AppEvent.SettingChanged(SettingKey.APP_LANGUAGE, language.name.lowercase()))
-                                                    globalSettingsManager.setLanguage(language)
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        onClick = {
-                            if (isIos) openAppSettings() else appLanguageMenuExpanded = true
-                        },
-                    )
-                    // 摘要语言：独立决定 AI 摘要/解读的请求语言。整行只做选语言一件事，「请求新语言」收在面板底部
-                    settingsItem(
-                        icon = Icons.Default.Translate,
-                        title = { Text(stringResource(Res.string.summary_language)) },
-                        description = { Text(stringResource(Res.string.summary_language_desc)) },
-                        trailing = {
-                            Text(
-                                text = summaryLanguageLabel(summaryLanguage, summaryLangs),
+                                text = stringResource(Res.string.open_system_settings),
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                        },
-                        onClick = {
-                            track(AppEvent.SettingsItemClicked(SettingKey.SUMMARY_LANGUAGE))
-                            showSummaryLanguageSheet = true
-                        },
-                    )
-                    // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
-                    settingsItem(
-                        icon = Icons.Default.Home,
-                        title = { Text(stringResource(Res.string.default_home_tab)) },
-                        description = { Text(stringResource(Res.string.default_home_tab_desc)) },
-                        trailing = {
+                        } else {
                             Box {
                                 Text(
-                                    text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
+                                    text = languageOptionText(appLanguage),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                                 SettingsDropdownMenu(
-                                    expanded = homeTabMenuExpanded,
-                                    onDismissRequest = { homeTabMenuExpanded = false },
+                                    expanded = appLanguageMenuExpanded,
+                                    onDismissRequest = { appLanguageMenuExpanded = false },
                                 ) {
-                                    HomeTab.defaultCandidates.forEach { tab ->
+                                    AppLanguage.entries.forEach { language ->
                                         DropdownMenuItem(
-                                            text = { Text(homeTabOptionText(tab)) },
+                                            text = { Text(languageOptionText(language)) },
                                             onClick = {
-                                                homeTabMenuExpanded = false
-                                                track(AppEvent.SettingChanged(SettingKey.DEFAULT_HOME_TAB, tab.name.lowercase()))
-                                                globalSettingsManager.setDefaultHomeTab(tab.name)
+                                                appLanguageMenuExpanded = false
+                                                track(AppEvent.SettingChanged(SettingKey.APP_LANGUAGE, language.name.lowercase()))
+                                                globalSettingsManager.setLanguage(language)
                                             }
                                         )
                                     }
                                 }
                             }
-                        },
-                        onClick = { homeTabMenuExpanded = true },
-                    )
-                    // 沉浸式浏览：默认关。行点击与开关同为切换（与「外链打开方式」一致）
-                    settingsItem(
-                        icon = Icons.Default.SwipeVertical,
-                        title = { Text(stringResource(Res.string.immersive_browsing)) },
-                        description = { Text(stringResource(Res.string.immersive_browsing_desc)) },
-                        trailing = {
-                            Switch(
-                                checked = immersiveBrowsing,
-                                onCheckedChange = { enabled ->
-                                    track(AppEvent.SettingChanged(SettingKey.IMMERSIVE_BROWSING, enabled.toString()))
-                                    globalSettingsManager.setImmersiveBrowsing(enabled)
-                                },
+                        }
+                    },
+                    onClick = {
+                        if (isIos) openAppSettings() else appLanguageMenuExpanded = true
+                    },
+                )
+                // 摘要语言：独立决定 AI 摘要/解读的请求语言。整行只做选语言一件事，「请求新语言」收在面板底部
+                settingsItem(
+                    icon = Icons.Default.Translate,
+                    title = { Text(stringResource(Res.string.summary_language)) },
+                    description = { Text(stringResource(Res.string.summary_language_desc)) },
+                    trailing = {
+                        Text(
+                            text = summaryLanguageLabel(summaryLanguage, summaryLangs),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    onClick = {
+                        track(AppEvent.SettingsItemClicked(SettingKey.SUMMARY_LANGUAGE))
+                        showSummaryLanguageSheet = true
+                    },
+                )
+                // 默认首页 tab：只决定冷启动进入哪个 tab，会话内切换不回写
+                settingsItem(
+                    icon = Icons.Default.Home,
+                    title = { Text(stringResource(Res.string.default_home_tab)) },
+                    description = { Text(stringResource(Res.string.default_home_tab_desc)) },
+                    trailing = {
+                        Box {
+                            Text(
+                                text = homeTabOptionText(HomeTab.fromNameOrDefault(defaultHomeTab)),
+                                color = MaterialTheme.colorScheme.primary,
                             )
-                        },
-                        onClick = {
-                            val enabled = !immersiveBrowsing
-                            track(AppEvent.SettingChanged(SettingKey.IMMERSIVE_BROWSING, enabled.toString()))
-                            globalSettingsManager.setImmersiveBrowsing(enabled)
-                        },
-                    )
-                }
+                            SettingsDropdownMenu(
+                                expanded = homeTabMenuExpanded,
+                                onDismissRequest = { homeTabMenuExpanded = false },
+                            ) {
+                                HomeTab.defaultCandidates.forEach { tab ->
+                                    DropdownMenuItem(
+                                        text = { Text(homeTabOptionText(tab)) },
+                                        onClick = {
+                                            homeTabMenuExpanded = false
+                                            track(AppEvent.SettingChanged(SettingKey.DEFAULT_HOME_TAB, tab.name.lowercase()))
+                                            globalSettingsManager.setDefaultHomeTab(tab.name)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    onClick = { homeTabMenuExpanded = true },
+                )
+                // 沉浸式浏览：默认关。行点击与开关同为切换（与「外链打开方式」一致）
+                settingsItem(
+                    icon = Icons.Default.SwipeVertical,
+                    title = { Text(stringResource(Res.string.immersive_browsing)) },
+                    description = { Text(stringResource(Res.string.immersive_browsing_desc)) },
+                    trailing = {
+                        Switch(
+                            checked = immersiveBrowsing,
+                            onCheckedChange = { enabled ->
+                                track(AppEvent.SettingChanged(SettingKey.IMMERSIVE_BROWSING, enabled.toString()))
+                                globalSettingsManager.setImmersiveBrowsing(enabled)
+                            },
+                        )
+                    },
+                    onClick = {
+                        val enabled = !immersiveBrowsing
+                        track(AppEvent.SettingChanged(SettingKey.IMMERSIVE_BROWSING, enabled.toString()))
+                        globalSettingsManager.setImmersiveBrowsing(enabled)
+                    },
+                )
             }
 
-            item(key = "group_subscription") {
-                SettingsGroup(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+            SettingsGroup(
                     title = stringResource(Res.string.subscription_reminders),
-                ) {
+            ) {
+                settingsItem(
+                    icon = Icons.Default.Email,
+                    title = { Text(stringResource(Res.string.subscribe_title)) },
+                    onClick = onNavigateToSubscribe,
+                )
+                if (globalDailyPicksNotifier.isSupported) {
                     settingsItem(
-                        icon = Icons.Default.Email,
-                        title = { Text(stringResource(Res.string.subscribe_title)) },
-                        onClick = onNavigateToSubscribe,
-                    )
-                    if (globalDailyPicksNotifier.isSupported) {
-                        settingsItem(
-                            icon = Icons.Default.Notifications,
-                            title = { Text(stringResource(Res.string.daily_picks_notification)) },
-                            trailing = {
-                                Switch(
-                                    checked = dailyPicksNotificationEnabled,
-                                    // 埋点记落定后的状态而非用户请求的状态：权限被拒时
-                                    // 持久化的是 false，记 true 会让「开了通知的人数」虚高
-                                    onCheckedChange = { enabled ->
-                                        if (enabled) {
-                                            settingsScope.launch {
-                                                val granted = globalDailyPicksNotifier.enable()
-                                                globalSettingsManager.setDailyPicksNotificationEnabled(granted)
-                                                track(
-                                                    AppEvent.SettingChanged(
-                                                        SettingKey.DAILY_PICKS_NOTIFICATION,
-                                                        granted.toString(),
-                                                    )
-                                                )
-                                                if (!granted) {
-                                                    val result = snackbarHostState.showSnackbar(
-                                                        message = permissionDeniedMsg,
-                                                        actionLabel = openSystemSettingsLabel,
-                                                    )
-                                                    if (result == SnackbarResult.ActionPerformed) {
-                                                        openAppSettings()
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            globalDailyPicksNotifier.disable()
-                                            globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                        icon = Icons.Default.Notifications,
+                        title = { Text(stringResource(Res.string.daily_picks_notification)) },
+                        trailing = {
+                            Switch(
+                                checked = dailyPicksNotificationEnabled,
+                                // 埋点记落定后的状态而非用户请求的状态：权限被拒时
+                                // 持久化的是 false，记 true 会让「开了通知的人数」虚高
+                                onCheckedChange = { enabled ->
+                                    if (enabled) {
+                                        settingsScope.launch {
+                                            val granted = globalDailyPicksNotifier.enable()
+                                            globalSettingsManager.setDailyPicksNotificationEnabled(granted)
                                             track(
                                                 AppEvent.SettingChanged(
                                                     SettingKey.DAILY_PICKS_NOTIFICATION,
-                                                    "false",
+                                                    granted.toString(),
                                                 )
                                             )
+                                            if (!granted) {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    message = permissionDeniedMsg,
+                                                    actionLabel = openSystemSettingsLabel,
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    openAppSettings()
+                                                }
+                                            }
                                         }
+                                    } else {
+                                        globalDailyPicksNotifier.disable()
+                                        globalSettingsManager.setDailyPicksNotificationEnabled(false)
+                                        track(
+                                            AppEvent.SettingChanged(
+                                                SettingKey.DAILY_PICKS_NOTIFICATION,
+                                                "false",
+                                            )
+                                        )
                                     }
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-
-            item(key = "group_general") {
-                SettingsGroup(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    title = stringResource(Res.string.settings_group_general),
-                ) {
-                    // 外链打开方式：行点击与开关同为切换
-                    settingsItem(
-                        icon = Icons.Default.OpenInBrowser,
-                        title = { Text(stringResource(Res.string.open_links_in_browser)) },
-                        description = { Text(stringResource(Res.string.open_links_in_browser_desc)) },
-                        trailing = {
-                            Switch(
-                                checked = openLinksInCustomTab,
-                                onCheckedChange = { enabled ->
-                                    track(AppEvent.SettingChanged(SettingKey.OPEN_LINKS_IN_BROWSER, enabled.toString()))
-                                    globalSettingsManager.setOpenLinksInCustomTab(enabled)
                                 }
                             )
                         },
-                        onClick = {
-                            val enabled = !openLinksInCustomTab
-                            track(AppEvent.SettingChanged(SettingKey.OPEN_LINKS_IN_BROWSER, enabled.toString()))
-                            globalSettingsManager.setOpenLinksInCustomTab(enabled)
-                        },
-                    )
-                    // 三源抓取时机与收录口径。挂在设置而非「关于」里：它解释的是**每天看到的
-                    // 内容从哪来**，属于日常疑问，不是版本/致谢那类身份信息
-                    settingsItem(
-                        icon = Icons.Default.Schedule,
-                        title = { Text(stringResource(Res.string.data_sources_title)) },
-                        description = { Text(stringResource(Res.string.data_sources_desc)) },
-                        onClick = onNavigateToDataSources,
-                    )
-                    settingsItem(
-                        icon = Icons.Default.Feedback,
-                        title = { Text(stringResource(Res.string.feedback)) },
-                        onClick = onNavigateToFeedback,
-                    )
-                    // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
-                    settingsItem(
-                        icon = Icons.Default.Info,
-                        title = { Text(stringResource(Res.string.about)) },
-                        onClick = onNavigateToAbout,
                     )
                 }
             }
-            item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
-        }
+
+            SettingsGroup(
+                    title = stringResource(Res.string.settings_group_general),
+            ) {
+                // 外链打开方式：行点击与开关同为切换
+                settingsItem(
+                    icon = Icons.Default.OpenInBrowser,
+                    title = { Text(stringResource(Res.string.open_links_in_browser)) },
+                    description = { Text(stringResource(Res.string.open_links_in_browser_desc)) },
+                    trailing = {
+                        Switch(
+                            checked = openLinksInCustomTab,
+                            onCheckedChange = { enabled ->
+                                track(AppEvent.SettingChanged(SettingKey.OPEN_LINKS_IN_BROWSER, enabled.toString()))
+                                globalSettingsManager.setOpenLinksInCustomTab(enabled)
+                            }
+                        )
+                    },
+                    onClick = {
+                        val enabled = !openLinksInCustomTab
+                        track(AppEvent.SettingChanged(SettingKey.OPEN_LINKS_IN_BROWSER, enabled.toString()))
+                        globalSettingsManager.setOpenLinksInCustomTab(enabled)
+                    },
+                )
+                // 三源抓取时机与收录口径。挂在设置而非「关于」里：它解释的是**每天看到的
+                // 内容从哪来**，属于日常疑问，不是版本/致谢那类身份信息
+                settingsItem(
+                    icon = Icons.Default.Schedule,
+                    title = { Text(stringResource(Res.string.data_sources_title)) },
+                    description = { Text(stringResource(Res.string.data_sources_desc)) },
+                    onClick = onNavigateToDataSources,
+                )
+                settingsItem(
+                    icon = Icons.Default.Feedback,
+                    title = { Text(stringResource(Res.string.feedback)) },
+                    onClick = onNavigateToFeedback,
+                )
+                // 关于页同时挂在底栏的「⋯」菜单上——那里是快捷入口，这里是设置的完整清单
+                aboutItem()
+            }
     }
 }
 

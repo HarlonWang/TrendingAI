@@ -6,7 +6,6 @@
     <string name="period_monthly">本月</string>
     <string name="settings">设置</string>
     <string name="personalization">个性化</string>
-    <string name="appearance">外观</string>
     <string name="subscription_reminders">订阅与提醒</string>
     <string name="language_settings">应用语言</string>
     <string name="app_language_desc">界面显示语言</string>
@@ -145,8 +144,6 @@
     <string name="star_need_github_link">关联 GitHub 后即可 Star，请到「我的」页操作</string>
     <string name="favorites_delete_confirm">确定从收藏中移除？</string>
     <string name="app_icon_cream">奶油</string>
-    <string name="color_lab_title">自定义主题色</string>
-    <string name="color_lab_discard">撤销修改</string>
     <string name="force_update_title">需要更新</string>
     <string name="force_update_message">当前版本（%1$s）已停止支持，请前往官方渠道获取最新版本后继续使用。</string>
     <string name="force_update_button">前往获取最新版</string>

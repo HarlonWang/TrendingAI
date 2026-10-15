@@ -6,7 +6,6 @@
     <string name="period_monthly">This Month</string>
     <string name="settings">Settings</string>
     <string name="personalization">Personalization</string>
-    <string name="appearance">Appearance</string>
     <string name="subscription_reminders">Subscription &amp; Reminders</string>
     <string name="language_settings">App Language</string>
     <string name="app_language_desc">Interface display language</string>
@@ -145,8 +144,6 @@
     <string name="star_need_github_link">Link GitHub in the Me tab to star repositories</string>
     <string name="favorites_delete_confirm">Remove this item from favorites?</string>
     <string name="app_icon_cream">Cream</string>
-    <string name="color_lab_title">Custom Color</string>
-    <string name="color_lab_discard">Discard changes</string>
     <string name="force_update_title">Update Required</string>
     <string name="force_update_message">This version (%1$s) is no longer supported. Please get the latest version from the official channel to continue.</string>
     <string name="force_update_button">Get the Latest Version</string>
