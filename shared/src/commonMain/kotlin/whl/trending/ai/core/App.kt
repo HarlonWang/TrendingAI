@@ -85,6 +85,8 @@ import whl.trending.ai.update.globalUpdateChecker
 import trendingai.shared.generated.resources.privacy_policy
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import whl.trending.ai.update.isVersionBlocked
+import whl.trending.ai.core.platform.getAppVersion
 
 // 路由即页面身份：实现 [Route] 才能进 backStack，`screen` 是必填的——
 // 新增页面在这里填一个枚举值，其余埋点代码一行都不用写（见 core/analytics/ScreenTracking.kt）。
@@ -185,8 +187,11 @@ fun App() {
     val appLanguage by globalSettingsManager.appLanguage.collectAsState(remember { globalSettingsManager.currentAppLanguage() })
     val privacyTitle = stringResource(Res.string.privacy_policy)
     val isIos = isIosPlatform()
-    // 强更门亮着时更新说明弹窗要让路：弹窗由库在根上承载、在门外，靠这个状态压住
-    var forceUpdateBlocked by remember { mutableStateOf(false) }
+    // 强更门亮着时更新说明弹窗要让路：弹窗由库在根上承载、在门外，靠这个状态压住。
+    // 初值同步按缓存的 min_version 算，与 ForceUpdateGate 的首帧判定一致，不留「先弹再被压住」的窗口
+    var forceUpdateBlocked by remember {
+        mutableStateOf(isVersionBlocked(getAppVersion(), globalSettingsManager.getCachedMinVersion()))
+    }
     val appSettings = rememberAppSettings {
         settings = globalSettings
         onEvent = ::trackAppSettingsEvent
