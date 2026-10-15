@@ -34,7 +34,7 @@ kmp-webview = "0.1.12"
 # 改了 loginbase-kmp 必须发版并 bump 这里，否则 CI 仍在用旧版本、而本地构建不会报任何错
 loginbase-kmp = "0.6.0"
 # 与 loginbase-kmp 同一套双轨与同一条纪律：改了库必须发版并 bump 这里
-eventbase-kmp = "0.4.0"
+eventbase-kmp = "0.5.0"
 # chat 客户端 SDK（原 :chat 模块），同一套双轨与纪律
 chatbase-kmp = "0.1.3"
 # 设置 UI 基元（后续外观 / 关于 / 更新说明）所在的库，同一套双轨与同一条纪律

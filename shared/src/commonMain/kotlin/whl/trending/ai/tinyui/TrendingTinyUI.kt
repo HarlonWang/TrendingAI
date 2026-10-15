@@ -12,6 +12,7 @@ import app.tinyui.SessionSource
 import app.tinyui.TinyUIHost
 import app.tinyui.components.registerBuiltins
 import app.tinyui.schema.ComponentRegistry
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,8 @@ import okio.Path
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.auth.globalAuthManager
 import whl.trending.ai.core.ProCheckout
+import whl.trending.ai.core.analytics.AppEvent
+import whl.trending.ai.core.analytics.track
 import whl.trending.ai.core.analytics.trackPageEvent
 import whl.trending.ai.core.platform.openUrl
 import whl.trending.ai.data.local.globalSettingsManager
@@ -38,6 +41,9 @@ const val HOST_VERSION = "7"
 
 /** 订阅页打开收银台后发来，宿主据此开始对账（ProCheckout.reconcile） */
 private const val CHECKOUT_OPENED = "trendingai.checkout.opened"
+
+/** 进埋点的页面错误分类（词汇表 `tinyui_page_error`）：E5 是 schema 软降级不算错误 */
+private val REPORTED_ERROR_KINDS = setOf("E1", "E2", "E6", "E7")
 
 object TrendingTinyUI {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -59,7 +65,19 @@ object TrendingTinyUI {
     internal fun build(locale: StateFlow<String>, session: StateFlow<Session>, dataDir: Path?) = TinyUIHost(
         components = ComponentRegistry().registerBuiltins(),
         sink = object : PageSink {
-            override fun error(error: PageError) = println("TinyUI $error")
+            // 各页的 Runtime 在 Default 线程上独立回调；写时复制的不可变集合，并发时最坏多报一条，不会炸
+            @Volatile
+            private var reported: Set<Triple<String, String, String>> = emptySet()
+
+            override fun error(error: PageError) {
+                println("TinyUI $error")
+                if (error.kind !in REPORTED_ERROR_KINDS) return
+                val key = Triple(error.page, error.kind, error.buildId)
+                if (key in reported) return
+                reported = reported + key
+                track(AppEvent.TinyUIPageError(error.page, error.kind, error.buildId, error.message, error.entry))
+            }
+
             override fun log(line: String) = println("TinyUI $line")
         },
         channels = mapOf("app" to appChannel()),

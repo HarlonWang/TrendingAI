@@ -218,6 +218,17 @@ sealed class AppEvent(
     /** 热下发的包在某页报 E2 / E6（[kind]），整包退回内置（tinyui docs/updates.md §4.5）。 */
     data class TinyUIPageRolledBack(val pkg: String, val version: String, val page: String, val kind: String) :
         AppEvent("tinyui_page_rolled_back", mapOf("pkg" to pkg, "version" to version, "page" to page, "kind" to kind))
+
+    /**
+     * TinyUI 页面错误（tinyui ADR-002 的 E1 / E2 / E6 与 ADR-005 的 E7），内置包与下发包都报；E5 是 schema 软降级，不报。
+     * 同一进程按 (page, kind, buildId) 只报首次——E1 挂在交互路径上会连发，E2 点重试会重复。包版本看全局属性 tinyui_version。
+     * 不带 JS 栈：[buildId] 对 source map 线下还原即可。
+     */
+    data class TinyUIPageError(val page: String, val kind: String, val buildId: String, val message: String, val entry: String?) :
+        AppEvent(
+            "tinyui_page_error",
+            mapOf("page" to page, "kind" to kind, "build_id" to buildId, "message" to message.truncateCodePoints(120), "entry" to entry),
+        )
 }
 
 /**

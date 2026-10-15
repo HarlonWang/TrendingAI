@@ -494,3 +494,15 @@ Android 的 Custom Tab 没有这层系统框，`canceled` 只来自用户看到 
 - `setting_changed(key=seed_color)` 新增取值 `system`（壁纸取色，Android 12+ 才有入口）；预设 id、`custom` 不变。
 - `setting_changed(key=app_icon)` 从「点击即报」改为「切换成功后报」，失败不计。之前点击与落定几乎同义，曲线不会有可见断点。
 - 外观存储换成库的 JSON key、不读旧 key：升级到该版本的老用户主题重置一次为默认，`theme` / `seed_color` 的分布在该版本首启后会出现一次向默认值的回摆，不是用户行为。
+
+## ⚠️ `app_version` 在 1.9.3 及以前按发送批次打，升级当天会出现混合行（2026-10-15 修库，随 eventbase-kmp 0.5.0 的下个版本发出）
+
+eventbase-kmp ≤ 0.4.1 把 `config.appVersion` 写在批次级 `sys.version`，而队列落盘跨进程：升级前积压未发出的事件会在新版本进程里发出去，落库 `app_version` 是**发送时**的版本，不是事件发生时的。表现是同一 install 首次出现新 `app_version` 的那一天，有个位数几条「新 `app_version` + 旧上下文」的行。
+
+TinyUI 的全局属性 `tinyui_version` 最容易撞上：1.9.2 / 1.9.3（宿主版本 7）上有十几台设备「跑着」宿主 6 的页面包，逐台核对全是升级当天的积压事件，不是启动选择漏删旧包。读法：
+
+- 按 `tinyui_version` 评估「启动选择 / 旧包清理 / 采用率」时，剔除该 install 首次出现该 `app_version` 的那一天，或按该 install 当天**最后一条**带 `tinyui_version` 的事件判定；
+- `app_version` 低于 1.9.x 的数据同理，任何「新版本上出现只有旧版本才会发的事件 / 取值」先怀疑是这条。
+
+0.5.0 起库在入队时定格 `app_version` 并按版本分批（与 `session` / `user` 同一原则），修复后的版本不再有这种行。库升级那次启动会丢掉升级前落盘未发出的事件（有界：≤500 条、7 天自清），升级当天的事件量会有一次性小幅缺口。
+
