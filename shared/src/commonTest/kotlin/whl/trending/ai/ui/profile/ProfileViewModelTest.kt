@@ -27,7 +27,7 @@ import whl.trending.ai.auth.AuthManager
 import whl.trending.ai.auth.AuthState
 import whl.trending.ai.data.local.FakeCacheFileStore
 import whl.trending.ai.data.local.LastDataCache
-import whl.trending.ai.data.local.APP_LANGUAGE_KEY
+import wang.harlon.appsettings.language.APP_LANGUAGE_STORAGE_KEY
 import whl.trending.ai.data.local.SettingsManager
 import whl.trending.ai.data.model.LocalizedText
 import whl.trending.ai.data.model.QuotaHelpRemoteConfig
@@ -207,8 +207,8 @@ class ProfileViewModelTest {
     @Test
     fun quotaHelpFollowsCacheWrittenAfterCreationAndLanguageSwitch() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        // 界面语言由 appsettings-kmp 写在 Settings 里，这里直接写它的 key
-        val store = MapSettings().apply { putString(APP_LANGUAGE_KEY, "en") }
+        // 界面语言由 appsettings-kmp 写在 Settings 里，用库公开的 key 写测试数据
+        val store = MapSettings().apply { putString(APP_LANGUAGE_STORAGE_KEY, "en") }
         val settings = SettingsManager(store as ObservableSettings)
         val vm = viewModel(cache(), settingsManager = settings)
         val collector = launch { vm.quotaHelp.collect {} }
@@ -224,7 +224,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
         assertEquals(QuotaHelpContent("About", listOf("One")), vm.quotaHelp.value)
 
-        store.putString(APP_LANGUAGE_KEY, "zh")
+        store.putString(APP_LANGUAGE_STORAGE_KEY, "zh")
         advanceUntilIdle()
         assertEquals(QuotaHelpContent("说明", listOf("一")), vm.quotaHelp.value)
         collector.cancel()

@@ -18,8 +18,9 @@ import kotlinx.serialization.json.Json
 import whl.trending.ai.core.analytics.AppEvent
 import whl.trending.ai.core.analytics.ContentActionKind
 import whl.trending.ai.core.analytics.track
-import whl.trending.ai.core.platform.getSystemLanguage
 import whl.trending.ai.core.platform.getSystemLocaleTag
+import wang.harlon.appsettings.language.APP_LANGUAGE_STORAGE_KEY
+import wang.harlon.appsettings.language.AppLanguage
 import wang.harlon.chatbase.model.FOLLOW_SERVER_DEFAULT
 import whl.trending.ai.data.model.FavoriteItem
 import whl.trending.ai.data.model.PendingFavoriteOp
@@ -37,12 +38,9 @@ private const val DEFAULT_TRENDING_SOURCE_NAME = "GitHub"
 
 /**
  * 界面语言由 appsettings-kmp 的 language 包管（选择、持久化、per-app locale）；本 App 的非 Compose 代码
- * （聊天请求语言、邮件语言、TinyUI 文案）只读它落在 Settings 里的值。key 与取值是该库的稳定契约：
- * `"system"` 为跟随系统，否则是 BCP 47 标签。
+ * （聊天请求语言、邮件语言、TinyUI 文案）用库公开的 key 与解析函数读同一份值，不自己解释存储格式。
+ * 清单与 `core/App.kt` 里 `language { languages }` 同一份；第一项是默认资源语言。
  */
-internal const val APP_LANGUAGE_KEY = "appsettings.language.tag"
-
-/** 界面翻译了的语言，与 `core/App.kt` 里 `language { languages }` 同一份；第一项是默认资源语言 */
 val UI_LANGUAGES = listOf("en", "zh")
 
 /** 从未拉到 app-config 时的可选摘要语言；拉到后以服务端 summary_langs 为准 */
@@ -133,8 +131,8 @@ class SettingsManager(private val settings: ObservableSettings) {
     }
 
     /** 用户在界面语言里明确选的标签；跟随系统或清单外为 null。 */
-    private fun explicitAppLanguage(stored: String? = settings.getStringOrNull(APP_LANGUAGE_KEY)): String? =
-        stored?.takeIf { it in UI_LANGUAGES }
+    private fun explicitAppLanguage(stored: String? = settings.getStringOrNull(APP_LANGUAGE_STORAGE_KEY)): String? =
+        AppLanguage.fromStorage(stored, UI_LANGUAGES).tag
 
     val summaryLanguage: Flow<SummaryLanguage> =
         settings.getStringFlow(SUMMARY_LANGUAGE_KEY, SummaryLanguage.FOLLOW_SYSTEM.storageValue)
@@ -230,16 +228,13 @@ class SettingsManager(private val settings: ObservableSettings) {
         else settings.putString(QUOTA_HELP_KEY, Json.encodeToString(config))
     }
 
-    /** 服务端双语文案、聊天请求、邮件语言按此取：App 内语言优先，跟随系统时取系统语言，钳到 zh / en */
-    fun uiLanguage(): String = uiLanguageOf(settings.getStringOrNull(APP_LANGUAGE_KEY))
+    /** 服务端双语文案、聊天请求、邮件语言按此取：App 内语言优先，跟随系统时取系统语言钳到清单（清单外回落 en） */
+    fun uiLanguage(): String = uiLanguageOf(settings.getStringOrNull(APP_LANGUAGE_STORAGE_KEY))
 
     /** [uiLanguage] 的响应式版本，语言切换后重取文案 */
-    val uiLanguageFlow: Flow<String> = settings.getStringOrNullFlow(APP_LANGUAGE_KEY).map { uiLanguageOf(it) }
+    val uiLanguageFlow: Flow<String> = settings.getStringOrNullFlow(APP_LANGUAGE_STORAGE_KEY).map { uiLanguageOf(it) }
 
-    private fun uiLanguageOf(stored: String?): String {
-        val lang = explicitAppLanguage(stored) ?: getSystemLanguage()
-        return if (lang.startsWith("zh")) "zh" else "en"
-    }
+    private fun uiLanguageOf(stored: String?): String = AppLanguage.fromStorage(stored, UI_LANGUAGES).resolve(UI_LANGUAGES)
 
     val favorites: Flow<List<FavoriteItem>> = settings.getStringOrNullFlow(FAVORITES_KEY)
         .map { json ->
