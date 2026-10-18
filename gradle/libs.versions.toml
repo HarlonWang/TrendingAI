@@ -16,7 +16,7 @@ androidx-lifecycle = "2.11.0"
 multiplatform-nav3-ui = "1.1.2"
 multiplatform-navigationevent = "1.1.0"
 multiplatform-settings = "1.3.0"
-composeMultiplatform = "1.12.1"
+composeMultiplatform = "1.12.2"
 kotlin = "2.4.21"
 # 独立版本线，**不跟 composeMultiplatform 的版本号走**（该坐标只发 alpha，没有 1.12.0）。
 # 必须与 CMP 同代：落后会在渲染 TextField 时 AbstractMethodError，而编译/单测/冒烟全绿，只在真机炸
