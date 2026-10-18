@@ -4,8 +4,11 @@ import app.tinyui.Bundle
 import app.tinyui.updates.UpdateEvent
 import app.tinyui.updates.Updates
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.readRawBytes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,8 +63,24 @@ object TinyUIUpdates {
         try { Res.readBytes("files/tinyui/$PKG/$path") } catch (e: MissingResourceException) { null }
     }
 
-    private suspend fun fetch(path: String): ByteArray =
+    /**
+     * 取包文件；异常文案归一后再交给库，它原样进 `tinyui_update_checked.detail`（截 120 字符）：
+     * - 非 2xx：Ktor 原话被 URL 占满、body 全被截掉。改记状态码 + `cf-ray` + `server` + body 前 60 字符，
+     *   cf-ray 是 Cloudflare 必带的响应头，中间代理伪造的 5xx 没有，看一眼就能分清是源站还是链路问题
+     * - 超时：去掉 Ktor 附带的 `[url=…]`，文案本身已足够
+     * - 其余（DNS / 连接失败等 OkHttp 原话）本来就短，不动
+     */
+    private suspend fun fetch(path: String): ByteArray = try {
         http.get("$BASE_URL/${globalSettingsManager.currentTinyUIChannel()}/$path").readRawBytes()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: ResponseException) {
+        val r = e.response
+        val body = runCatching { r.bodyAsText() }.getOrDefault("").trim().take(60)
+        throw IllegalStateException("HTTP ${r.status.value} cf-ray=${r.headers["cf-ray"] ?: "-"} server=${r.headers["server"] ?: "-"} body=$body", e)
+    } catch (e: Exception) {
+        throw IllegalStateException(e.message?.substringBefore(" [url=") ?: e.toString(), e)
+    }
 
     private fun report(event: UpdateEvent) {
         println("TinyUI updates $event")
