@@ -1,0 +1,4 @@
+• View Pro benefits and pricing without signing in
+• Supports 16 KB memory pages, no more compatibility notice on new devices
+• Settings and Appearance rebuilt; pick your theme again after upgrading
+• Other stability improvements
