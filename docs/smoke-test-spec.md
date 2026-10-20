@@ -23,7 +23,7 @@
 | 包 | 脚本产出的 r2 渠道 release 包（R8 开启，与线上同配置），本地用 debug 签名。四个渠道只差 `UpdateWrapper` 一个文件，验 r2 即可 |
 | 设备 | 模拟器 `Pixel_10`（Android 17，arm64，**16 KB 页面**）。16 KB 页面设备是硬要求：原生库对齐问题只在这类设备上显形。手动启动时带上 `-http-proxy "$http_proxy"`，否则检查更新直连 GitHub API 不通（脚本自己启动 AVD 时会带） |
 | 装前 | **先卸旧包**。残留的登录态与本地数据会让首启类用例失真 |
-| 账号 | 商店审核演示账号，见 `TrendingProjects/auth-regression-checklist.md` §1.3（私有仓，本文不写账号）。要点：固定验证码、不发信、不吃验证码限流；**已手工挂 Pro**；**没绑 GitHub**，所以 Star 与 GitHub 个人页走不通；「管理订阅」行会出现、点开报「打开失败」是预期 |
+| 账号 | 商店审核演示账号，见 `TrendingProjects/auth-regression-checklist.md` §1.3（私有仓，本文不写账号）。要点：固定验证码、不发信，但**同邮箱 10 分钟内最多 3 次发送的限流照样算**（第 4 次提示「10 分钟后再试」），一轮冒烟加发后核对的登录次数要省着用，撞上就等 10 分钟；**已手工挂 Pro**；**没绑 GitHub**，所以 Star 与 GitHub 个人页走不通；「管理订阅」行会出现、点开报「打开失败」是预期 |
 | 看板 | <https://dashboard.trendingai.cn>（Cloudflare Access），TinyUI 专题，按 `app_version` 过滤 |
 
 ## 第一层：产物断言
@@ -76,7 +76,7 @@ tag 推出、CI 出包之后做。不挡发版，但要做，否则这两类问�
 | ID | 核对 | 预期 |
 |---|---|---|
 | P1 | 看板按本版本 `app_version` 过滤 | 有本设备的 `screen_viewed`（含 `paywall`）；TinyUI 专题里 `tinyui_version` 等于内置包 `manifest.json` 的 `version`；没有 `update_checked` 失败、`embedded_rejected`、`page_rolled_back` |
-| P2 | 覆盖升级 | 模拟器上先装 GitHub Release **上一版**的 APK（CI 签名），登录并随便用一下，再 `adb install -r` 本版 CI 签名的 APK，冷启动 | 登录态、设置、收藏都在；不崩；无迁移类异常。本地 release 用 debug 签名盖不上线上包，所以只能在这一层做 |
+| P2 | 覆盖升级 | 模拟器上先装 GitHub Release **上一版**的 APK（CI 签名），登录、改一个设置，再 `adb install -r` 本版 CI 签名的 APK，冷启动 | 登录态在；设置按本版说明的预期保留或重置；不崩；无迁移类异常；首启弹本版的更新说明。本地 release 用 debug 签名盖不上线上包，所以只能在这一层做。顺带能核对两件事：上一版的自动更新检查会弹出本版并带上 whatsnew；本版的 AAB 解出 `base/lib` 跑一遍 A5 |
 
 ## 改到时才验
 
@@ -100,3 +100,4 @@ tag 推出、CI 出包之后做。不挡发版，但要做，否则这两类问�
 |---|---|---|---|---|
 | 2026-10-20 | main `878f239`，1.9.3 之后 24 个 commit（10903，未打 tag） | 王海龙（Claude Code 执行） | A1–A6 过；订阅页**未执行**，其余过（编号按当时的表） | 首轮脚本在聊天入口那一下被吞，改为按 content-desc 定位加重试后通过。订阅页走不到：演示账号是 Pro，当时入口只对「已登录且非 Pro」开放。热下发用数据来源页替代，`TinyUI updates` 为 `source=EMBEDDED` / `UpToDate`。检查更新提示「新版本 1.9.3」是本地 versionName 带 git 后缀所致。A5 确认全部 .so LOAD 段 2**14（quickjs-kmp 0.1.4） |
 | 2026-10-20 | main，上一行 + 订阅页向未登录开放（随后打 tag 1.10.0 / 11000） | 王海龙（Claude Code 执行） | A1–A6 过；S01–S10 **全过** | 全量重跑。**两轮都在 `local.properties` 带着 `appsettings-kmp.dir` 下跑的**，测到的是本地源码；事后核对本地仓比 0.2.1 只多文档与工具链 commit、无源码差异，放行，并新增 A7 挡住下次。S06 未登录进订阅页渲染出文案、权益、两档价格，CTA「登录后订阅」；S07 从 CTA 登录后回到订阅页、原地切成 Pro 致谢。S08 发 ping 收到 pong（adb `input text` 不能带空格；ENTER 不触发发送，要点发送键）。S10 检查更新第一次弹「新版本 1.9.3」，之后两次「检查失败」，定位为模拟器未带主机代理、直连 GitHub API 不通，脚本已改为启动 AVD 时带 `-http-proxy`；用例预期与执行方式随之改为半秒轮询 |
+| 2026-10-20 | 1.10.0（11000）发后核对 | 王海龙（Claude Code 执行） | P2 过；P1 待看板有数据后由本人看 | CI 成功，Release 带 APK / Play AAB / whatsnew，AAB 的 `base/lib` 全部 .so 2**14，签名与 1.9.3 一致。1.9.3 的 CI 包在 16 KB 模拟器上一启动就弹系统兼容性对话框、点名 `libquickjs_kmp.so`（被拒的实证）；其自动更新检查弹出「New Version 1.10.0」并带新说明。盖装 1.10.0 冷启动：不崩、无 R8 异常、无兼容弹窗、登录态保留、TinyUI `EMBEDDED` / `UpToDate`。两个预期内的观察：主题从 Dark + Plum 回到 System + Default（外观存储换 key，说明里已写）；**升级后没弹 1.10.0 的更新说明**，因为 appsettings-kmp 不迁旧的 lastSeen key（其 `docs/design.md` 2026-10-14 的决定，代价是老用户这一次少弹一回），从 1.10.0 起恢复正常。另：演示账号发码撞过一次限流，等了 10 分钟 |
