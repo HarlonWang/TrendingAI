@@ -528,9 +528,11 @@ private fun PlanUsageCard(
             }
         }
 
-        // Free 登录态的升级入口：卡片底部整行可点，与「GitHub 主页」同一套列表行语言。
+        // 非 Pro 的升级入口：卡片底部整行可点，与「GitHub 主页」同一套列表行语言。
         // 刻意不做填充按钮——带动词的行 + 尾部箭头已足够表达动作，视觉权重却低两档。
-        if (loggedIn && !isPro) {
+        // 未登录也给：先看价格与权益再决定登不登录，登录推迟到购买那一刻——订阅页自己处理
+        // （CTA 变「登录后订阅」并拉起登录浮层，登录后原地切回「订阅」）。口径变化见 docs/analytics-notes.md。
+        if (!isPro) {
             HorizontalDivider()
             ListItem(
                 headlineContent = { Text(stringResource(Res.string.account_upgrade_cta)) },

@@ -506,3 +506,11 @@ TinyUI 的全局属性 `tinyui_version` 最容易撞上：1.9.2 / 1.9.3（宿主
 
 0.5.0 起库在入队时定格 `app_version` 并按版本分批（与 `session` / `user` 同一原则），修复后的版本不再有这种行。库升级那次启动会丢掉升级前落盘未发出的事件（有界：≤500 条、7 天自清），升级当天的事件量会有一次性小幅缺口。
 
+
+## 订阅页向未登录用户开放：付费漏斗分母变大（2026-10-20 实现，随 1.9.3 的下个版本发出）
+
+「我」页套餐卡底部的「升级到 Pro」行从「已登录且非 Pro」放宽到「非 Pro」，未登录用户第一次能进订阅页；页面侧早已支持（价格与文案接口公开，CTA 变「登录后订阅」，点击拉起登录浮层，登录后原地切回「订阅」）。口径变化：
+
+- `screen_viewed(screen=paywall)` 是付费漏斗（词汇表指标 8：paywall_view → plan_selected → checkout_opened → completed）的分母，该版本起含匿名浏览，**转化率曲线在此断一截**；跨版本比较按登录态切段，判据用 `user_id` 是否为空（它只有登录用户才有）。
+- `upsell_clicked(target=pro, source=profile_plan_card)` 沿用同一个 source，入口没变只是放宽了条件；要区分登录态同样用 `user_id`，不新造 source。
+- 订阅页内「登录后订阅」拉起的登录浮层会报 `screen_viewed(screen=login)`，`from=paywall` 是新出现的来源值，登录漏斗按 `from` 分桶时会多一桶。

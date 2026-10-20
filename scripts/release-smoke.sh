@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # 发版冒烟的脚本部分。规格、用例表与执行记录在 docs/smoke-test-spec.md，本脚本只负责其中能确定性判定的条目：
 #   第一层产物断言 A1–A6（TinyUI 内置包与 F-Droid 快照、发版单测、非 debuggable、targetSdk、.so 16 KB 对齐、arm64 ABI）
-#   第二层 S01（启动不崩、无兼容弹窗、无 R8 特征异常）与 S06 的兜底（聊天页输入框渲染）
-# 脚本 PASS 之后还要按规格文档走 S02–S09，全过才打 tag。用法：scripts/release-smoke.sh
+#   第二层 S01（启动不崩、无兼容弹窗、无 R8 特征异常）与 S08 的兜底（聊天页输入框渲染）
+# 脚本 PASS 之后还要按规格文档走 S02–S10，全过才打 tag。用法：scripts/release-smoke.sh
 # 设备：ANDROID_SERIAL 指定的那台；否则唯一在线的设备（模拟器、真机均可）；都没有时启动 SMOKE_AVD，
 # 未设 SMOKE_AVD 且本机只有一个 AVD 就启动它。多台在线或多个 AVD 时不猜，报错列出供选。
 set -euo pipefail
@@ -110,7 +110,10 @@ if [ -z "$serial" ]; then
       avd="$avds"
     fi
     echo "==> 没有设备在线，启动 $avd"
-    "$SDK/emulator/emulator" -avd "$avd" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
+    # 主机的代理不会传给模拟器：不带 -http-proxy 时 S10 的「检查更新」直连 GitHub API 多半失败。手动启动的模拟器要自己加
+    proxy_args=()
+    [ -n "${http_proxy:-}" ] && proxy_args=(-http-proxy "$http_proxy")
+    "$SDK/emulator/emulator" -avd "$avd" -no-snapshot-save -no-boot-anim "${proxy_args[@]}" >/dev/null 2>&1 &
     for _ in $(seq 1 60); do
       serial=$(online | head -1)
       [ -n "$serial" ] && break
@@ -190,8 +193,8 @@ if [ -z "$chat_open" ] && ! adb -s "$serial" shell cat /sdcard/smoke_ui.xml 2>/d
   echo "FAIL: 三次都没进到含输入框的界面——聊天入口的 content-desc 或底栏布局可能已变，这一步等于没验"
   exit 1
 fi
-check_alive "S06 兜底：聊天页渲染"
+check_alive "S08 兜底：聊天页渲染"
 adb -s "$serial" shell rm -f /sdcard/smoke_ui.xml >/dev/null 2>&1 || true
 
 echo "PASS: 产物断言 A1–A6 与 S01 通过，聊天页输入框已渲染。"
-echo "      接着按 docs/smoke-test-spec.md 走 S02–S09（登录用演示账号），全过再打 tag；结果记进文档的执行记录。"
+echo "      接着按 docs/smoke-test-spec.md 走 S02–S10（订阅页在登录前验，登录用演示账号），全过再打 tag；结果记进文档的执行记录。"
