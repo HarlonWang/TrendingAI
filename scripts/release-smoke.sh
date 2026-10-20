@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 发版冒烟的脚本部分。规格、用例表与执行记录在 docs/smoke-test-spec.md，本脚本只负责其中能确定性判定的条目：
-#   第一层产物断言 A1–A6（TinyUI 内置包与 F-Droid 快照、发版单测、非 debuggable、targetSdk、.so 16 KB 对齐、arm64 ABI）
+#   第一层产物断言 A1–A7（TinyUI 内置包与 F-Droid 快照、发版单测、非 debuggable、targetSdk、.so 16 KB 对齐、arm64 ABI、无本地源码覆盖）
 #   第二层 S01（启动不崩、无兼容弹窗、无 R8 特征异常）与 S08 的兜底（聊天页输入框渲染）
 # 脚本 PASS 之后还要按规格文档走 S02–S10，全过才打 tag。用法：scripts/release-smoke.sh
 # 设备：ANDROID_SERIAL 指定的那台；否则唯一在线的设备（模拟器、真机均可）；都没有时启动 SMOKE_AVD，
@@ -45,6 +45,17 @@ rm -rf "$fdroid_out" "$fdroid_out.log"
 
 echo "==> TinyUI 发版检查（宿主快照、内置包）"
 ./gradlew :shared:testAndroidHostTest --tests 'whl.trending.ai.tinyui.HostSnapshotTest' --tests 'whl.trending.ai.tinyui.EmbeddedPackageTest' -Ptinyui.releaseCheck -q
+
+# A7：冒烟测的必须是 CI 那条路（Maven 坐标）构建出的字节。local.properties 里的 `<库>.dir` 会让本机走 composite build
+# 编本地源码，与 CI 不是同一份代码且分岔不报错（CLAUDE.md「双轨」）。判据与 settings.gradle.kts 一致：.dir 结尾且不是 SDK 的
+if [ -f local.properties ]; then
+  overrides=$(grep -E '^[A-Za-z0-9._-]+\.dir=' local.properties | grep -vE '^(sdk|ndk|cmake)\.dir=' || true)
+  if [ -n "$overrides" ]; then
+    echo "FAIL: A7 local.properties 里有库的本地源码覆盖，冒烟会测到与 CI 不同的代码——发版前删掉这些行："
+    printf '%s\n' "$overrides" | sed 's/^/    /'
+    exit 1
+  fi
+fi
 
 echo "==> 构建 r2 release"
 ./gradlew :androidApp:assembleR2Release -q

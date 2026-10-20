@@ -38,6 +38,7 @@
 | A4 | `targetSdkVersion` 等于 `libs.versions.toml` 的 `android-targetSdk` | Play 对 targetSdk 有年度下限，构建漂移时在这里拦 |
 | A5 | 包内所有 `.so` 的 ELF LOAD 段对齐 ≥ 16 KB | Play 自 2025-11 起拒绝不支持 16 KB 页面的更新。1.9.3 因 quickjs-kmp 0.1.2 的 4 KB 对齐被拒 |
 | A6 | `native-code` 含 `arm64-v8a` | 唯一的第三方原生库 `libquickjs_kmp.so` 漏打 ABI 时订阅页会崩 |
+| A7 | `local.properties` 没有库的 `<库>.dir` 覆盖（`sdk` / `ndk` / `cmake` 除外） | 有覆盖时本机走 composite build 编本地源码，CI 走 Maven 坐标，冒烟测的不是要发出去的字节，分岔不报错。1.10.0 冒烟时 `appsettings-kmp.dir` 还在，靠事后核对本地仓与 0.2.1 无源码差异才放行 |
 
 ## 第二层：设备冒烟
 
@@ -98,4 +99,4 @@ tag 推出、CI 出包之后做。不挡发版，但要做，否则这两类问�
 | 日期 | 版本 (versionCode) | 执行人 | 结果 | 问题 / 备注 |
 |---|---|---|---|---|
 | 2026-10-20 | main `878f239`，1.9.3 之后 24 个 commit（10903，未打 tag） | 王海龙（Claude Code 执行） | A1–A6 过；订阅页**未执行**，其余过（编号按当时的表） | 首轮脚本在聊天入口那一下被吞，改为按 content-desc 定位加重试后通过。订阅页走不到：演示账号是 Pro，当时入口只对「已登录且非 Pro」开放。热下发用数据来源页替代，`TinyUI updates` 为 `source=EMBEDDED` / `UpToDate`。检查更新提示「新版本 1.9.3」是本地 versionName 带 git 后缀所致。A5 确认全部 .so LOAD 段 2**14（quickjs-kmp 0.1.4） |
-| 2026-10-20 | main，上一行 + 订阅页向未登录开放（10903，未打 tag） | 王海龙（Claude Code 执行） | A1–A6 过；S01–S10 **全过** | 全量重跑。S06 未登录进订阅页渲染出文案、权益、两档价格，CTA「登录后订阅」；S07 从 CTA 登录后回到订阅页、原地切成 Pro 致谢。S08 发 ping 收到 pong（adb `input text` 不能带空格；ENTER 不触发发送，要点发送键）。S10 检查更新第一次弹「新版本 1.9.3」，之后两次「检查失败」，定位为模拟器未带主机代理、直连 GitHub API 不通，脚本已改为启动 AVD 时带 `-http-proxy`；用例预期与执行方式随之改为半秒轮询 |
+| 2026-10-20 | main，上一行 + 订阅页向未登录开放（随后打 tag 1.10.0 / 11000） | 王海龙（Claude Code 执行） | A1–A6 过；S01–S10 **全过** | 全量重跑。**两轮都在 `local.properties` 带着 `appsettings-kmp.dir` 下跑的**，测到的是本地源码；事后核对本地仓比 0.2.1 只多文档与工具链 commit、无源码差异，放行，并新增 A7 挡住下次。S06 未登录进订阅页渲染出文案、权益、两档价格，CTA「登录后订阅」；S07 从 CTA 登录后回到订阅页、原地切成 Pro 致谢。S08 发 ping 收到 pong（adb `input text` 不能带空格；ENTER 不触发发送，要点发送键）。S10 检查更新第一次弹「新版本 1.9.3」，之后两次「检查失败」，定位为模拟器未带主机代理、直连 GitHub API 不通，脚本已改为启动 AVD 时带 `-http-proxy`；用例预期与执行方式随之改为半秒轮询 |
